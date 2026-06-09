@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Inversiones FB Parts, C.A. | Repuestos de Automóviles</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&family=Roboto:wght@300;400;700&display=swap');
+
+        :root{
+            --green:#5e8877;
+            --green-dark:#4d7162;
+            --light:#f7f7f7;
+            --text:#2e2e2e;
+        }
+
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+
+        body {
+            margin: 0;
+            font-family: 'Roboto', sans-serif;
+            background: #fff;
+            color: var(--text);
+        }
+
+        h1, h2, h3, .oswald {
+            font-family: 'Oswald', sans-serif;
+            letter-spacing: .02em;
+        }
+
+        .topbar{
+            background: var(--green);
+            color: white;
+            text-align: center;
+            padding: 10px 15px;
+            position: relative;
+            line-height: 1.1;
+        }
+
+        .topbar h2{
+            margin: 0;
+            font-size: 34px;
+            font-weight: 700;
+            letter-spacing: .12em;
+        }
+
+        .topbar span{
+            position: absolute;
+            right: 18px;
+            bottom: 6px;
+            font-size: 11px;
+            font-weight: 300;
+            letter-spacing: .08em;
+        }
+
+        header{
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: white;
+            border-bottom: 1px solid #efefef;
+            box-shadow: 0 1px 12px rgba(0,0,0,.04);
+        }
+
+        .container{
+            width: min(1200px, calc(100% - 32px));
+            margin: 0 auto;
+        }
+
+        .header-wrap{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 10px 0;
+        }
+
+        .logo img{
+            height: 74px;
+            width: auto;
+            display: block;
+            object-fit: contain;
+        }
+
+        nav{
+            display: flex;
+            gap: 26px;
+            align-items: center;
+        }
+
+        nav a{
+            text-decoration: none;
+            color: var(--green);
+            font-family: 'Oswald', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        nav a:hover{ color: #000; }
+
+        .header-right{
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 8px;
+        }
+
+        .call-btn{
+            background: var(--green);
+            color: #fff;
+            text-decoration: none;
+            padding: 12px 22px;
+            font-family: 'Oswald', sans-serif;
+            font-size: 22px;
+            letter-spacing: .06em;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .call-btn:hover{
+            background: var(--green-dark);
+        }
+
+        .social{
+            display: flex;
+            gap: 14px;
+            font-size: 20px;
+            color: #000;
+        }
+
+        .social a{
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .hero{
+            position: relative;
+            min-height: 72vh;
+            background:
+                linear-gradient(rgba(0,0,0,.32), rgba(0,0,0,.32)),
+                url('https://images.unsplash.com/photo-1486006920555-c77dce18193b?q=80&w=1920&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .hero-overlay{
+            width: min(980px, calc(100% - 40px));
+            background: rgba(255,255,255,.82);
+            padding: 58px 40px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,.12);
+        }
+
+        .hero h3{
+            margin: 0 0 10px 0;
+            color: var(--green);
+            font-size: 24px;
+            letter-spacing: .22em;
+            font-weight: 700;
+        }
+
+        .hero h1{
+            margin: 0;
+            color: var(--green);
+            font-size: 62px;
+            line-height: 1.05;
+            font-weight: 700;
+        }
+
+        .hero .sub{
+            margin: 10px 0 30px;
+            color: var(--green);
+            font-family: 'Oswald', sans-serif;
+            font-size: 28px;
+            letter-spacing: .08em;
+        }
+
+        .hero .cta{
+            display: inline-block;
+            background: var(--green);
+            color: white;
+            text-decoration: none;
+            padding: 13px 24px;
+            font-family: 'Oswald', sans-serif;
+            font-size: 22px;
+            letter-spacing: .12em;
+        }
+
+        .hero .cta:hover{ background: var(--green-dark); }
+
+        .arrow{
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            color: white;
+            font-size: 74px;
+            font-weight: 300;
+            text-decoration: none;
+            opacity: .9;
+            z-index: 5;
+            padding: 0 10px;
+        }
+
+        .arrow.left{ left: 24px; }
+        .arrow.right{ right: 24px; }
+
+        .dots{
+            position: absolute;
+            bottom: 22px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 14px;
+            z-index: 5;
+        }
+
+        .dots span{
+            width: 10px;
+            height: 10px;
+            background: #fff;
+            border-radius: 50%;
+            opacity: .95;
+        }
+
+        .benefits{
+            background: #fff;
+            padding: 14px 0 10px;
+        }
+
+        .benefits-inner{
+            width: min(1540px, calc(100% - 46px));
+            margin: 0 auto;
+            background: linear-gradient(90deg, #8f9ea8 0%, #7fa090 34%, #a6a6a6 100%);
+            color: #fff;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            align-items: center;
+            min-height: 86px;
+        }
+
+        .benefit{
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            padding: 18px 12px;
+            border-right: 1px solid rgba(255,255,255,.12);
+            font-family: 'Oswald', sans-serif;
+            font-size: 34px;
+            font-weight: 700;
+            letter-spacing: .04em;
+            white-space: nowrap;
+        }
+
+        .benefit:last-child{ border-right: none; }
+
+        .benefit i{
+            font-size: 28px;
+            opacity: .95;
+        }
+
+        section.block{
+            padding: 70px 0;
+        }
+
+        .section-title{
+            text-align: center;
+            color: var(--green);
+            font-size: 54px;
+            margin: 0 0 26px;
+        }
+
+        .categories{
+            background: #f8f8f8;
+        }
+
+        .category-grid{
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .category-card{
+            background: white;
+            padding: 24px 18px;
+            text-align: center;
+            text-decoration: none;
+            color: var(--green);
+            border: 1px solid #eee;
+            box-shadow: 0 2px 8px rgba(0,0,0,.03);
+            font-family: 'Oswald', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .category-card:hover{
+            box-shadow: 0 8px 20px rgba(0,0,0,.08);
+            transform: translateY(-2px);
+        }
+
+        .about-box{
+            background: white;
+            border: 1px solid #eee;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.03);
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .about-box p{
+            font-size: 18px;
+            line-height: 1.7;
+            margin: 0 0 14px 0;
+        }
+
+        .about-box a{
+            color: var(--green);
+            text-decoration: none;
+        }
+
+        .about-box a:hover{ text-decoration: underline; }
+
+        .testimonial-wrap{
+            width: min(900px, calc(100% - 32px));
+            margin: 0 auto;
+            background: #f5f5f5;
+            border-left: 5px solid var(--green);
+            padding: 28px;
+        }
+
+        .testimonial-wrap h3{
+            margin: 0 0 8px 0;
+            font-size: 26px;
+        }
+
+        .testimonials-list{
+            display: grid;
+            gap: 18px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .contact-grid{
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 34px;
+            align-items: start;
+        }
+
+        .contact-box{
+            background: white;
+            border: 1px solid #eee;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.03);
+        }
+
+        .contact-box h3{
+            margin-top: 0;
+            color: var(--green);
+            font-size: 34px;
+        }
+
+        .contact-box p{
+            font-size: 18px;
+            line-height: 1.7;
+            margin: 0 0 14px 0;
+        }
+
+        .contact-box a{
+            color: var(--green);
+            text-decoration: none;
+        }
+
+        .contact-box a:hover{ text-decoration: underline; }
+
+        .ml-carousel{
+            position: relative;
+            max-width: 1000px;
+            margin: 0 auto;
+            overflow: hidden;
+            padding: 10px 0 35px;
+        }
+
+        .ml-track{
+            display: flex;
+            transition: transform .5s ease;
+            width: 100%;
+        }
+
+        .ml-slide{
+            min-width: 100%;
+            display: flex;
+            justify-content: center;
+            padding: 0 8px;
+            box-sizing: border-box;
+        }
+
+        .ml-card{
+            width: 100%;
+            background: white;
+            border: 1px solid #eee;
+            padding: 18px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.03);
+        }
+
+        .ml-card img{
+            width: 100%;
+            height: 240px;
+            object-fit: cover;
+            display: block;
+            margin-bottom: 12px;
+        }
+
+        .ml-card h4{
+            margin: 0 0 8px 0;
+            font-family: 'Oswald', sans-serif;
+            font-size: 28px;
+            color: var(--green);
+        }
+
+        .ml-card p{
+            margin: 0 0 12px 0;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .ml-card a{
+            display: inline-block;
+            background: var(--green);
+            color: white;
+            text-decoration: none;
+            padding: 10px 14px;
+            font-family: 'Oswald', sans-serif;
+            letter-spacing: .05em;
+        }
+
+        .ml-card a:hover{ background: var(--green-dark); }
+
+        .ml-arrow{
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 5;
+            background: rgba(255,255,255,.95);
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            color: var(--green);
+            box-shadow: 0 4px 12px rgba(0,0,0,.12);
+            cursor: pointer;
+        }
+
+        .ml-prev{ left: 8px; }
+        .ml-next{ right: 8px; }
+
+        .ml-dots{
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .ml-dots span{
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #cfcfcf;
+            display: inline-block;
+        }
+
+        .ml-dots span.active{
+            background: var(--green);
+        }
+
+        footer{
+            background: #000;
+            color: #fff;
+            text-align: center;
+            padding: 22px 16px;
+            margin-top: 0;
+        }
+
+        .mobile-menu{
+            display: none;
+        }
+
+        @media (max-width: 1100px){
+            nav{ display: none; }
+            .mobile-menu{
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 44px;
+                height: 44px;
+                border: 1px solid #ddd;
+                background: #fff;
+                color: var(--green);
+                font-size: 20px;
+            }
+            .hero h1{ font-size: 48px; }
+            .hero .sub{ font-size: 22px; }
+            .benefits-inner{ grid-template-columns: repeat(2, 1fr); }
+            .benefit{ font-size: 26px; }
+            .category-grid{ grid-template-columns: repeat(2, 1fr); }
+            .contact-grid{ grid-template-columns: 1fr; }
+            .header-right{ align-items: flex-start; }
+        }
+
+        @media (max-width: 700px){
+            .topbar h2{ font-size: 22px; }
+            .topbar span{ position: static; display: block; margin-top: 4px; }
+            .hero{ min-height: 60vh; }
+            .hero-overlay{ padding: 30px 18px; }
+            .hero h1{ font-size: 34px; }
+            .hero h3{ font-size: 18px; }
+            .hero .sub{ font-size: 18px; }
+            .call-btn{ font-size: 18px; }
+            .benefits-inner{ grid-template-columns: 1fr; }
+            .benefit{ justify-content: flex-start; font-size: 24px; }
+            .category-grid{ grid-template-columns: 1fr; }
+            .section-title{ font-size: 38px; }
+            .contact-box h3{ font-size: 28px; }
+            .ml-card img{ height: 190px; }
+            .ml-arrow{ width: 38px; height: 38px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="topbar">
+        <h2>DELIVERY GRATIS EN CARACAS</h2>
+        <span>(CIERTAS CONDICIONES APLICAN)</span>
+    </div>
+
+    <header>
+        <div class="container header-wrap">
+            <a class="logo" href="#inicio">
+                <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="LOGO F&B PARTS">
+            </a>
+
+            <nav>
+                <a href="#inicio">Inicio</a>
+                <a href="#categorias">Repuestos</a>
+                <a href="#nosotros">Quienes somos</a>
+                <a href="#mercadolibre">Mercado Libre</a>
+                <a href="#contacto">Contacto</a>
+            </nav>
+
+            <div class="header-right">
+                <a class="call-btn" href="https://api.whatsapp.com/send?phone=584120161036" target="_blank">
+                    LLAMA AHORA <i class="fas fa-phone"></i>
+                </a>
+                <div class="social">
+                    <a href="https://instagram.com/fybparts" target="_blank"><i class="fab fa-instagram"></i></a>
+                    <a href="https://www.facebook.com/FB-PARTS-109647624743542/" target="_blank"><i class="fab fa-facebook-f"></i></a>
+                    <a href="https://api.whatsapp.com/send?phone=584120161036" target="_blank"><i class="fab fa-whatsapp"></i></a>
+                </div>
+            </div>
+
+            <button class="mobile-menu" aria-label="Menú">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </header>
+
+    <section id="inicio" class="hero">
+        <a class="arrow left" href="#" aria-label="Anterior"><i class="fas fa-chevron-left"></i></a>
+        <a class="arrow right" href="#" aria-label="Siguiente"><i class="fas fa-chevron-right"></i></a>
+
+        <div class="hero-overlay">
+            <h3>REPUESTOS DE AUTOMOVILES</h3>
+            <div class="sub">TODO LO QUE NECESITES EN UN SOLO LUGAR</div>
+            <a class="cta" href="#nosotros">SOBRE NOSOTROS ...</a>
+        </div>
+
+        <div class="dots">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </section>
+
+    <section class="benefits">
+        <div class="benefits-inner">
+            <div class="benefit"><i class="fas fa-box-open"></i> GARANTIA</div>
+            <div class="benefit"><i class="fas fa-truck"></i> ENVIO GRATIS</div>
+            <div class="benefit"><i class="fas fa-headset"></i> ASESORIAS</div>
+            <div class="benefit"><i class="fas fa-circle-arrow-down"></i> BAJO COSTO</div>
+        </div>
+    </section>
+
+    <section id="categorias" class="block categories">
+        <div class="container">
+            <h2 class="section-title">CATEGORIAS</h2>
+            <div class="category-grid">
+                <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">SISTEMA DE FRENO</a>
+                <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">BOMBAS DE GASOLINA</a>
+                <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">FILTROS DE AIRES</a>
+                <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">FAROS Y MICAS</a>
+                <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">BOMBAS DE AGUA</a>
+                <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">BOMBAS DE ACEITE</a>
+                <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">MULTIPLE ADMISION</a>
+                <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">CARROCERIA</a>
+                <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">OTRAS CATEGORIAS</a>
+            </div>
+        </div>
+    </section>
+
+    <section id="nosotros" class="block">
+        <div class="container">
+            <h2 class="section-title">QUIENES SOMOS</h2>
+            <div class="about-box">
+                <p>Bienvenido a nuestra tienda de repuestos. En FB PARTS nos enorgullece ofrecer una amplia variedad de repuestos para todo tipo de vehículos. Ya sea que necesites repuestos para tu automóvil o camión, estamos aquí para ayudarte.</p>
+                <p><strong>Nuestros productos:</strong></p>
+                <p><strong>Repuestos de motor:</strong> Tenemos una gran selección de repuestos de calidad para motores. Desde filtros de aire y aceite hasta bujías y correas, contamos con todo lo que necesitas para mantener tu motor funcionando sin problemas.</p>
+                <p><strong>Repuestos de carrocería:</strong> Si necesitas reparar daños en la carrocería de tu vehículo, tenemos paneles, guardabarros, parachoques y más. Nuestros repuestos de carrocería están diseñados para adaptarse perfectamente a diferentes modelos y marcas de automóviles.</p>
+                <p><strong>Repuestos de suspensión:</strong> Si sientes que tu vehículo no está ofreciendo una experiencia de conducción suave, es posible que necesites repuestos de suspensión. Ofrecemos una amplia gama de amortiguadores, resortes y otras piezas de suspensión para mejorar la comodidad y el rendimiento de tu vehículo.</p>
+                <p><strong>Repuestos de frenos:</strong> La seguridad es nuestra máxima prioridad. Por eso ofrecemos una variedad de repuestos de frenos de alta calidad, como pastillas, discos y líquidos de frenos. Mantén tus frenos en perfecto estado con nuestros repuestos confiables.</p>
+                <p><strong>Accesorios y herramientas:</strong> Además de repuestos, también ofrecemos una variedad de accesorios y herramientas para tu vehículo. Desde aceites y lubricantes hasta herramientas de mano, tenemos todo lo que necesitas para el mantenimiento de tu vehículo.</p>
+                <p><strong>¡Llámanos hoy mismo!</strong></p>
+                <p>Nuestro amable y conocedor equipo estará encantado de ayudarte a encontrar el repuesto exacto que necesitas.</p>
+                <p><a href="mailto:fybinversiones.ccs@gmail.com">fybinversiones.ccs@gmail.com</a></p>
+            </div>
+        </div>
+    </section>
+
+    <section class="block">
+        <div class="container">
+            <h2 class="section-title">RESEÑAS DE CLIENTES</h2>
+            <div class="testimonials-list">
+                <div class="testimonial-wrap">
+                    <h3>Lux Motors, Caracas VE</h3>
+                    <p>“Servicio muy rapido, excelente precios, atención profesional y amplia gama de repuestos.”</p>
+                </div>
+
+                <div class="testimonial-wrap">
+                    <h3>Maria Romero, Caracas VE</h3>
+                    <p>“Excelente atención, buenos precios, personal calificado para dar la mejor atención y puntuales con las entregas.”</p>
+                </div>
+
+                <div class="testimonial-wrap">
+                    <h3>Luisa Ruiz, Caracas VE</h3>
+                    <p>“Buena atencion personas responsables y puntuales, vendieron lo que solicite.”</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="mercadolibre" class="block categories">
+        <div class="container">
+            <h2 class="section-title">CATALOGO MERCADO LIBRE</h2>
+
+            <div class="about-box" style="max-width: 1000px; margin-bottom: 25px;">
+                <p>Explora todas nuestras publicaciones activas de Mercado Libre desde el siguiente enlace. Aquí encontrarás repuestos disponibles, precios y detalles actualizados.</p>
+                <p>
+                    <a href="https://listado.mercadolibre.com.ve/_CustId_1156015281_NoIndex_True" target="_blank" style="display:inline-block; background:#5e8877; color:white; padding:12px 18px; text-decoration:none; font-family:'Oswald', sans-serif; letter-spacing:.05em;">
+                        VER CATÁLOGO COMPLETO
+                    </a>
+                </p>
+            </div>
+
+            <div class="ml-carousel" id="mlCarousel">
+                <button class="ml-arrow ml-prev" type="button" aria-label="Anterior">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+
+                <div class="ml-track">
+                    <div class="ml-slide active">
+                        <div class="ml-card">
+                            <img src="https://http2.mlstatic.com/D_NQ_NP_2X_776776-MLV00000000000_062026-F.jpg" alt="Alarma de carro con cierre centralizado">
+                            <h4>Alarma de carro</h4>
+                            <p>Cierre centralizado, código variable, cromo.</p>
+                            <a href="https://articulo.mercadolibre.com.ve/MLV-776776931-alarma-de-carro-cierre-centralizado-codigo-variable-cromo-_JM" target="_blank">VER EN MERCADO LIBRE</a>
+                        </div>
+                    </div>
+
+                    <div class="ml-slide">
+                        <div class="ml-card">
+                            <img src="https://http2.mlstatic.com/D_NQ_NP_2X_776144-MLV00000000000_062026-F.jpg" alt="Rin Toyota Yaris 2017-2023 15">
+                            <h4>Rin Toyota Yaris</h4>
+                            <p>2017 - 2023, 15 pulgadas.</p>
+                            <a href="https://articulo.mercadolibre.com.ve/MLV-776144781-rin-toyota-yaris-2017-2023-15-_JM" target="_blank">VER EN MERCADO LIBRE</a>
+                        </div>
+                    </div>
+
+                    <div class="ml-slide">
+                        <div class="ml-card">
+                            <img src="https://http2.mlstatic.com/D_NQ_NP_2X_776157-MLV00000000000_062026-F.jpg" alt="Parrilla frontal Mercedes-Benz">
+                            <h4>Parrilla frontal Mercedes</h4>
+                            <p>C180, C200, C280, 2007 - 2011.</p>
+                            <a href="https://articulo.mercadolibre.com.ve/MLV-776157903-parilla-frontal-mercedes-benz-c180-c200-c280-2007-2011-_JM" target="_blank">VER EN MERCADO LIBRE</a>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="ml-arrow ml-next" type="button" aria-label="Siguiente">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+
+                <div class="ml-dots">
+                    <span class="active"></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="contacto" class="block categories">
+        <div class="container">
+            <div class="contact-grid">
+                <div class="contact-box">
+                    <h3>CONTACTOS</h3>
+                    <p><strong>Dirección</strong><br>15 Pje. Porvenir, Caracas 1010, Distrito Capital</p>
+                    <p>0212 - 551 - 3003</p>
+                    <p>0412 - 016 - 1036</p>
+                    <p>0424 - 200 - 4842</p>
+                    <p><strong>Horarios</strong><br>Lunes - viernes: 9:00 am – 4:00 pm<br>Sábados: 9:00 am – 1:00 pm</p>
+                    <p><a href="mailto:fybinversiones.ccs@gmail.com">fybinversiones.ccs@gmail.com</a></p>
+                    <p><a href="mailto:fybinversiones.ccs@gmail.com">fybinversiones.ccs@gmail.com</a></p>
+                </div>
+
+                <div class="contact-box">
+                    <h3>TALLER MOTOR PERFECT</h3>
+                    <p>Espacio reservado para integrar información del taller, servicios, ubicación o enlace directo, tal como aparece en tu sitio original.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p class="oswald" style="margin:0; font-size:16px;">©2023 por F&B PARTS.</p>
+    </footer>
+
+    <script>
+        (function () {
+            const track = document.querySelector('#mlCarousel .ml-track');
+            const slides = document.querySelectorAll('#mlCarousel .ml-slide');
+            const dots = document.querySelectorAll('#mlCarousel .ml-dots span');
+            const prevBtn = document.querySelector('#mlCarousel .ml-prev');
+            const nextBtn = document.querySelector('#mlCarousel .ml-next');
+
+            if (!track || slides.length === 0) return;
+
+            let index = 0;
+            let timer = null;
+
+            function updateCarousel() {
+                track.style.transform = `translateX(-${index * 100}%)`;
+                dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
+            }
+
+            function nextSlide() {
+                index = (index + 1) % slides.length;
+                updateCarousel();
+            }
+
+            function prevSlide() {
+                index = (index - 1 + slides.length) % slides.length;
+                updateCarousel();
+            }
+
+            function startAutoplay() {
+                stopAutoplay();
+                timer = setInterval(nextSlide, 3500);
+            }
+
+            function stopAutoplay() {
+                if (timer) clearInterval(timer);
+            }
+
+            nextBtn.addEventListener('click', () => {
+                nextSlide();
+                startAutoplay();
+            });
+
+            prevBtn.addEventListener('click', () => {
+                prevSlide();
+                startAutoplay();
+            });
+
+            dots.forEach((dot, i) => {
+                dot.addEventListener('click', () => {
+                    index = i;
+                    updateCarousel();
+                    startAutoplay();
+                });
+            });
+
+            updateCarousel();
+            startAutoplay();
+        })();
+    </script>
+</body>
+</html>
