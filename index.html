@@ -140,15 +140,38 @@
         .hero{
             position: relative;
             min-height: 72vh;
-            background:
-                linear-gradient(rgba(0,0,0,.32), rgba(0,0,0,.32)),
-                url('img/fotoportada.png');
+            overflow: hidden;
+        }
+
+        .hero-carousel{
+            position: relative;
+            width: 100%;
+            height: 72vh;
+            min-height: 72vh;
+            overflow: hidden;
+        }
+
+        .hero-track{
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .hero-slide{
+            position: absolute;
+            inset: 0;
             background-size: cover;
             background-position: center;
-            overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
+            opacity: 0;
+            transition: opacity .8s ease;
+        }
+
+        .hero-slide.active{
+            opacity: 1;
+            z-index: 1;
         }
 
         .hero-overlay{
@@ -493,6 +516,31 @@
             display: none;
         }
 
+        .whatsapp-float{
+            position: fixed;
+            width: 62px;
+            height: 62px;
+            bottom: 22px;
+            right: 22px;
+            background: #25d366;
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 34px;
+            box-shadow: 0 8px 22px rgba(0,0,0,.25);
+            z-index: 9999;
+            text-decoration: none;
+            transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+        }
+
+        .whatsapp-float:hover{
+            transform: translateY(-3px) scale(1.04);
+            box-shadow: 0 10px 26px rgba(0,0,0,.28);
+            background: #1ebe57;
+        }
+
         @media (max-width: 1100px){
             nav{ display: none; }
             .mobile-menu{
@@ -519,6 +567,7 @@
             .topbar h2{ font-size: 22px; }
             .topbar span{ position: static; display: block; margin-top: 4px; }
             .hero{ min-height: 60vh; }
+            .hero-carousel{ height: 60vh; min-height: 60vh; }
             .hero-overlay{ padding: 30px 18px; }
             .hero h1{ font-size: 34px; }
             .hero h3{ font-size: 18px; }
@@ -531,6 +580,13 @@
             .contact-box h3{ font-size: 28px; }
             .ml-card img{ height: 190px; }
             .ml-arrow{ width: 38px; height: 38px; }
+            .whatsapp-float{
+                width: 56px;
+                height: 56px;
+                bottom: 16px;
+                right: 16px;
+                font-size: 30px;
+            }
         }
     </style>
 </head>
@@ -573,19 +629,47 @@
     </header>
 
     <section id="inicio" class="hero">
-        <a class="arrow left" href="#" aria-label="Anterior"><i class="fas fa-chevron-left"></i></a>
-        <a class="arrow right" href="#" aria-label="Siguiente"><i class="fas fa-chevron-right"></i></a>
+        <div class="hero-carousel" id="heroCarousel">
+            <div class="hero-track">
+                <div class="hero-slide active" style="background-image:
+                    linear-gradient(rgba(0,0,0,.32), rgba(0,0,0,.32)),
+                    url('img/fotoportada.png');">
+                    <div class="hero-overlay">
+                        <h3>REPUESTOS DE AUTOMOVILES</h3>
+                        <div class="sub">TODO LO QUE NECESITES EN UN SOLO LUGAR</div>
+                        <a class="cta" href="#nosotros">SOBRE NOSOTROS ...</a>
+                    </div>
+                </div>
 
-        <div class="hero-overlay">
-            <h3>REPUESTOS DE AUTOMOVILES</h3>
-            <div class="sub">TODO LO QUE NECESITES EN UN SOLO LUGAR</div>
-            <a class="cta" href="#nosotros">SOBRE NOSOTROS ...</a>
-        </div>
+                <div class="hero-slide" style="background-image:
+                    linear-gradient(rgba(0,0,0,.32), rgba(0,0,0,.32)),
+                    url('img/fotoportada2.png');">
+                    <div class="hero-overlay">
+                        <h3>ENVIO RAPIDO</h3>
+                        <div class="sub">ATENCION Y DESPACHO EFICIENTE</div>
+                        <a class="cta" href="#contacto">CONTACTANOS</a>
+                    </div>
+                </div>
 
-        <div class="dots">
-            <span></span>
-            <span></span>
-            <span></span>
+                <div class="hero-slide" style="background-image:
+                    linear-gradient(rgba(0,0,0,.32), rgba(0,0,0,.32)),
+                    url('img/fotoportada3.png');">
+                    <div class="hero-overlay">
+                        <h3>VARIEDAD DE REPUESTOS</h3>
+                        <div class="sub">MOTOR, FRENOS, CARROCERIA Y MAS</div>
+                        <a class="cta" href="#mercadolibre">VER PRODUCTOS</a>
+                    </div>
+                </div>
+            </div>
+
+            <a class="arrow left" href="#" aria-label="Anterior"><i class="fas fa-chevron-left"></i></a>
+            <a class="arrow right" href="#" aria-label="Siguiente"><i class="fas fa-chevron-right"></i></a>
+
+            <div class="dots hero-dots">
+                <span class="active"></span>
+                <span></span>
+                <span></span>
+            </div>
         </div>
     </section>
 
@@ -741,6 +825,13 @@
         <p class="oswald" style="margin:0; font-size:16px;">©2023 por F&B PARTS.</p>
     </footer>
 
+    <a href="https://wa.me/584120161036?text=Hola%20quiero%20informaci%C3%B3n%20sobre%20repuestos"
+       class="whatsapp-float"
+       target="_blank"
+       aria-label="Escribir por WhatsApp">
+        <i class="fab fa-whatsapp"></i>
+    </a>
+
     <script>
         (function () {
             const track = document.querySelector('#mlCarousel .ml-track');
@@ -749,55 +840,113 @@
             const prevBtn = document.querySelector('#mlCarousel .ml-prev');
             const nextBtn = document.querySelector('#mlCarousel .ml-next');
 
-            if (!track || slides.length === 0) return;
+            if (track && slides.length > 0) {
+                let index = 0;
+                let timer = null;
 
-            let index = 0;
-            let timer = null;
+                function updateCarousel() {
+                    track.style.transform = `translateX(-${index * 100}%)`;
+                    dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
+                }
 
-            function updateCarousel() {
-                track.style.transform = `translateX(-${index * 100}%)`;
-                dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
-            }
-
-            function nextSlide() {
-                index = (index + 1) % slides.length;
-                updateCarousel();
-            }
-
-            function prevSlide() {
-                index = (index - 1 + slides.length) % slides.length;
-                updateCarousel();
-            }
-
-            function startAutoplay() {
-                stopAutoplay();
-                timer = setInterval(nextSlide, 3500);
-            }
-
-            function stopAutoplay() {
-                if (timer) clearInterval(timer);
-            }
-
-            nextBtn.addEventListener('click', () => {
-                nextSlide();
-                startAutoplay();
-            });
-
-            prevBtn.addEventListener('click', () => {
-                prevSlide();
-                startAutoplay();
-            });
-
-            dots.forEach((dot, i) => {
-                dot.addEventListener('click', () => {
-                    index = i;
+                function nextSlide() {
+                    index = (index + 1) % slides.length;
                     updateCarousel();
+                }
+
+                function prevSlide() {
+                    index = (index - 1 + slides.length) % slides.length;
+                    updateCarousel();
+                }
+
+                function startAutoplay() {
+                    stopAutoplay();
+                    timer = setInterval(nextSlide, 3500);
+                }
+
+                function stopAutoplay() {
+                    if (timer) clearInterval(timer);
+                }
+
+                nextBtn.addEventListener('click', () => {
+                    nextSlide();
                     startAutoplay();
                 });
-            });
 
-            updateCarousel();
-            startAutoplay();
+                prevBtn.addEventListener('click', () => {
+                    prevSlide();
+                    startAutoplay();
+                });
+
+                dots.forEach((dot, i) => {
+                    dot.addEventListener('click', () => {
+                        index = i;
+                        updateCarousel();
+                        startAutoplay();
+                    });
+                });
+
+                updateCarousel();
+                startAutoplay();
+            }
+
+            const heroCarousel = document.querySelector('#heroCarousel');
+            if (heroCarousel) {
+                const heroSlides = heroCarousel.querySelectorAll('.hero-slide');
+                const heroDots = heroCarousel.querySelectorAll('.hero-dots span');
+                const heroPrev = heroCarousel.querySelector('.arrow.left');
+                const heroNext = heroCarousel.querySelector('.arrow.right');
+
+                let heroIndex = 0;
+                let heroTimer = null;
+
+                function updateHero() {
+                    heroSlides.forEach((slide, i) => slide.classList.toggle('active', i === heroIndex));
+                    heroDots.forEach((dot, i) => dot.classList.toggle('active', i === heroIndex));
+                }
+
+                function heroNextSlide() {
+                    heroIndex = (heroIndex + 1) % heroSlides.length;
+                    updateHero();
+                }
+
+                function heroPrevSlide() {
+                    heroIndex = (heroIndex - 1 + heroSlides.length) % heroSlides.length;
+                    updateHero();
+                }
+
+                function startHeroAutoplay() {
+                    stopHeroAutoplay();
+                    heroTimer = setInterval(heroNextSlide, 4500);
+                }
+
+                function stopHeroAutoplay() {
+                    if (heroTimer) clearInterval(heroTimer);
+                }
+
+                heroNext.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    heroNextSlide();
+                    startHeroAutoplay();
+                });
+
+                heroPrev.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    heroPrevSlide();
+                    startHeroAutoplay();
+                });
+
+                heroDots.forEach((dot, i) => {
+                    dot.addEventListener('click', () => {
+                        heroIndex = i;
+                        updateHero();
+                        startHeroAutoplay();
+                    });
+                });
+
+                updateHero();
+                startHeroAutoplay();
+            }
         })();
     </script>
 </body>
