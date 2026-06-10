@@ -7,13 +7,14 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&family=Roboto:wght@300;400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap');
 
         :root{
             --green:#5e8877;
             --green-dark:#4d7162;
             --light:#f7f7f7;
             --text:#2e2e2e;
+            --title:#4f7b6b;
         }
 
         * { box-sizing: border-box; }
@@ -24,11 +25,18 @@
             font-family: 'Roboto', sans-serif;
             background: #fff;
             color: var(--text);
+            line-height: 1.6;
+            text-rendering: optimizeLegibility;
         }
 
         h1, h2, h3, .oswald {
             font-family: 'Oswald', sans-serif;
             letter-spacing: .02em;
+            line-height: 1.08;
+        }
+
+        p, li, a, span, label, input, textarea, button {
+            font-family: 'Roboto', sans-serif;
         }
 
         .topbar{
@@ -37,14 +45,14 @@
             text-align: center;
             padding: 10px 15px;
             position: relative;
-            line-height: 1.1;
+            line-height: 1.2;
         }
 
         .topbar h2{
             margin: 0;
             font-size: 34px;
-            font-weight: 700;
-            letter-spacing: .12em;
+            font-weight: 600;
+            letter-spacing: .10em;
         }
 
         .topbar span{
@@ -53,7 +61,7 @@
             bottom: 6px;
             font-size: 11px;
             font-weight: 300;
-            letter-spacing: .08em;
+            letter-spacing: .06em;
         }
 
         header{
@@ -95,8 +103,9 @@
             text-decoration: none;
             color: var(--green);
             font-family: 'Oswald', sans-serif;
-            font-size: 22px;
-            font-weight: 700;
+            font-size: 21px;
+            font-weight: 600;
+            letter-spacing: .04em;
         }
 
         nav a:hover{ color: #000; }
@@ -114,8 +123,8 @@
             text-decoration: none;
             padding: 12px 22px;
             font-family: 'Oswald', sans-serif;
-            font-size: 22px;
-            letter-spacing: .06em;
+            font-size: 21px;
+            letter-spacing: .05em;
             display: inline-flex;
             align-items: center;
             gap: 10px;
@@ -184,18 +193,19 @@
 
         .hero h3{
             margin: 0 0 10px 0;
-            color: var(--green);
+            color: var(--title);
             font-size: 24px;
-            letter-spacing: .22em;
             font-weight: 700;
+            letter-spacing: .12em;
         }
 
         .hero .sub{
             margin: 10px 0 30px;
-            color: var(--green);
+            color: var(--title);
             font-family: 'Oswald', sans-serif;
             font-size: 28px;
-            letter-spacing: .08em;
+            font-weight: 400;
+            letter-spacing: .05em;
         }
 
         .hero .cta{
@@ -206,7 +216,7 @@
             padding: 13px 24px;
             font-family: 'Oswald', sans-serif;
             font-size: 22px;
-            letter-spacing: .12em;
+            letter-spacing: .08em;
         }
 
         .hero .cta:hover{ background: var(--green-dark); }
@@ -271,7 +281,7 @@
             font-family: 'Oswald', sans-serif;
             font-size: 34px;
             font-weight: 700;
-            letter-spacing: .04em;
+            letter-spacing: .03em;
             white-space: nowrap;
         }
 
@@ -291,6 +301,7 @@
             color: var(--green);
             font-size: 54px;
             margin: 0 0 26px;
+            letter-spacing: .04em;
         }
 
         .categories{
@@ -313,11 +324,12 @@
             box-shadow: 0 2px 8px rgba(0,0,0,.03);
             font-family: 'Oswald', sans-serif;
             font-size: 24px;
-            font-weight: 700;
+            font-weight: 600;
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 14px;
+            letter-spacing: .03em;
         }
 
         .category-card:hover{
@@ -346,11 +358,6 @@
             display: block;
         }
 
-        .category-card:hover .category-img-wrap{
-            transform: scale(1.05);
-            transition: transform .25s ease;
-        }
-
         .about-box{
             background: white;
             border: 1px solid #eee;
@@ -362,7 +369,7 @@
 
         .about-box p{
             font-size: 18px;
-            line-height: 1.7;
+            line-height: 1.75;
             margin: 0 0 14px 0;
         }
 
@@ -384,6 +391,14 @@
         .testimonial-wrap h3{
             margin: 0 0 8px 0;
             font-size: 26px;
+            font-family: 'Oswald', sans-serif;
+            letter-spacing: .02em;
+        }
+
+        .testimonial-wrap p{
+            margin: 0;
+            font-size: 18px;
+            line-height: 1.7;
         }
 
         .testimonials-list{
@@ -411,11 +426,12 @@
             margin-top: 0;
             color: var(--green);
             font-size: 34px;
+            letter-spacing: .04em;
         }
 
         .contact-box p{
             font-size: 18px;
-            line-height: 1.7;
+            line-height: 1.75;
             margin: 0 0 14px 0;
         }
 
@@ -508,12 +524,13 @@
             font-family: 'Oswald', sans-serif;
             font-size: 28px;
             color: var(--green);
+            letter-spacing: .03em;
         }
 
         .ml-card p{
             margin: 0 0 12px 0;
             font-size: 16px;
-            line-height: 1.5;
+            line-height: 1.6;
         }
 
         .ml-card a{
