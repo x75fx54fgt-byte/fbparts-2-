@@ -456,12 +456,21 @@
             box-shadow: 0 2px 8px rgba(0,0,0,.03);
         }
 
-        .ml-card img{
+        .ml-image-wrap{
             width: 100%;
-            height: 240px;
-            object-fit: cover;
-            display: block;
+            aspect-ratio: 1 / 1;
+            overflow: hidden;
+            background: #f2f2f2;
+            border-radius: 8px;
             margin-bottom: 12px;
+        }
+
+        .ml-image-wrap img{
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center center;
+            display: block;
         }
 
         .ml-card h4{
@@ -838,7 +847,9 @@
                 <div class="ml-track">
                     <div class="ml-slide active">
                         <div class="ml-card">
-                            <img src="img/ALARMA1.png" alt="Alarma de carro con cierre centralizado">
+                            <div class="ml-image-wrap">
+                                <img src="img/ALARMA1.png" alt="Alarma de carro con cierre centralizado">
+                            </div>
                             <h4>Alarma de carro</h4>
                             <p>Cierre centralizado, código variable, cromo.</p>
                             <a href="https://articulo.mercadolibre.com.ve/MLV-776776931-alarma-de-carro-cierre-centralizado-codigo-variable-cromo-_JM" target="_blank">VER EN MERCADO LIBRE</a>
@@ -847,7 +858,9 @@
 
                     <div class="ml-slide">
                         <div class="ml-card">
-                            <img src="img/RINTOYOTA.JPG" alt="Rin Toyota Yaris 2017-2023 15">
+                            <div class="ml-image-wrap">
+                                <img src="img/RINTOYOTA.JPG" alt="Rin Toyota Yaris 2017-2023 15">
+                            </div>
                             <h4>Rin Toyota Yaris</h4>
                             <p>2017 - 2023, 15 pulgadas.</p>
                             <a href="https://articulo.mercadolibre.com.ve/MLV-776144781-rin-toyota-yaris-2017-2023-15-_JM" target="_blank">VER EN MERCADO LIBRE</a>
@@ -856,7 +869,9 @@
 
                     <div class="ml-slide">
                         <div class="ml-card">
-                            <img src="img/PARRILAMERCEDES.png" alt="Parrilla frontal Mercedes-Benz">
+                            <div class="ml-image-wrap">
+                                <img src="img/PARRILAMERCEDES.png" alt="Parrilla frontal Mercedes-Benz">
+                            </div>
                             <h4>Parrilla frontal Mercedes</h4>
                             <p>C180, C200, C280, 2007 - 2011.</p>
                             <a href="https://articulo.mercadolibre.com.ve/MLV-776157903-parilla-frontal-mercedes-benz-c180-c200-c280-2007-2011-_JM" target="_blank">VER EN MERCADO LIBRE</a>
