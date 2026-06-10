@@ -426,6 +426,21 @@
 
         .contact-box a:hover{ text-decoration: underline; }
 
+        .map-wrap{
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            overflow: hidden;
+            border: 1px solid #eee;
+            box-shadow: 0 2px 8px rgba(0,0,0,.03);
+            background: #f2f2f2;
+        }
+
+        .map-wrap iframe{
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
         .ml-carousel{
             position: relative;
             max-width: 1000px;
@@ -894,6 +909,8 @@
 
     <section id="contacto" class="block categories">
         <div class="container">
+            <h2 class="section-title">CONTACTOS</h2>
+
             <div class="contact-grid">
                 <div class="contact-box">
                     <h3>CONTACTOS</h3>
@@ -903,12 +920,27 @@
                     <p>0424 - 200 - 4842</p>
                     <p><strong>Horarios</strong><br>Lunes - viernes: 9:00 am – 4:00 pm<br>Sábados: 9:00 am – 1:00 pm</p>
                     <p><a href="mailto:fybinversiones.ccs@gmail.com">fybinversiones.ccs@gmail.com</a></p>
-                    <p><a href="mailto:fybinversiones.ccs@gmail.com">fybinversiones.ccs@gmail.com</a></p>
+                    <p>
+                        <a href="https://www.google.com/maps/search/?api=1&query=15+Pje.+Porvenir,+Caracas+1010,+Distrito+Capital"
+                           target="_blank" rel="noopener">
+                            Abrir ubicación en Google Maps
+                        </a>
+                    </p>
                 </div>
 
                 <div class="contact-box">
-                    <h3>TALLER MOTOR PERFECT</h3>
-                    <p>Espacio reservado para integrar información del taller, servicios, ubicación o enlace directo, tal como aparece en tu sitio original.</p>
+                    <h3>UBICACIÓN</h3>
+                    <div class="map-wrap">
+                        <iframe
+                            src="https://www.google.com/maps?q=15+Pje.+Porvenir,+Caracas+1010,+Distrito+Capital&output=embed"
+                            width="100%"
+                            height="100%"
+                            style="border:0;"
+                            allowfullscreen=""
+                            loading="lazy"
+                            referrerpolicy="no-referrer-when-downgrade">
+                        </iframe>
+                    </div>
                 </div>
             </div>
         </div>
