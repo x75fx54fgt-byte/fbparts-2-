@@ -190,14 +190,6 @@
             font-weight: 700;
         }
 
-        .hero h1{
-            margin: 0;
-            color: var(--green);
-            font-size: 62px;
-            line-height: 1.05;
-            font-weight: 700;
-        }
-
         .hero .sub{
             margin: 10px 0 30px;
             color: var(--green);
@@ -322,11 +314,39 @@
             font-family: 'Oswald', sans-serif;
             font-size: 24px;
             font-weight: 700;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
         }
 
         .category-card:hover{
             box-shadow: 0 8px 20px rgba(0,0,0,.08);
             transform: translateY(-2px);
+        }
+
+        .category-img-wrap{
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            overflow: hidden;
+            background: #f2f2f2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 4px solid #e8e8e8;
+            transition: transform .25s ease;
+        }
+
+        .category-img-wrap img{
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .category-card:hover .category-img-wrap{
+            transform: scale(1.05);
         }
 
         .about-box{
@@ -686,15 +706,68 @@
         <div class="container">
             <h2 class="section-title">CATEGORIAS</h2>
             <div class="category-grid">
-                <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">SISTEMA DE FRENO</a>
-                <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">BOMBAS DE GASOLINA</a>
-                <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">FILTROS DE AIRES</a>
-                <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">FAROS Y MICAS</a>
-                <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">BOMBAS DE AGUA</a>
-                <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">BOMBAS DE ACEITE</a>
-                <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">MULTIPLE ADMISION</a>
-                <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">CARROCERIA</a>
-                <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">OTRAS CATEGORIAS</a>
+                <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">
+                    <div class="category-img-wrap">
+                        <img src="img/freno.jpg" alt="Sistema de freno">
+                    </div>
+                    <span>SISTEMA DE FRENO</span>
+                </a>
+
+                <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">
+                    <div class="category-img-wrap">
+                        <img src="img/bomba-gasolina.jpg" alt="Bombas de gasolina">
+                    </div>
+                    <span>BOMBAS DE GASOLINA</span>
+                </a>
+
+                <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">
+                    <div class="category-img-wrap">
+                        <img src="img/filtro-aire.jpg" alt="Filtros de aire">
+                    </div>
+                    <span>FILTROS DE AIRES</span>
+                </a>
+
+                <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">
+                    <div class="category-img-wrap">
+                        <img src="img/faros.jpg" alt="Faros y micas">
+                    </div>
+                    <span>FAROS Y MICAS</span>
+                </a>
+
+                <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">
+                    <div class="category-img-wrap">
+                        <img src="img/bomba-agua.jpg" alt="Bombas de agua">
+                    </div>
+                    <span>BOMBAS DE AGUA</span>
+                </a>
+
+                <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">
+                    <div class="category-img-wrap">
+                        <img src="img/bomba-aceite.jpg" alt="Bombas de aceite">
+                    </div>
+                    <span>BOMBAS DE ACEITE</span>
+                </a>
+
+                <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">
+                    <div class="category-img-wrap">
+                        <img src="img/multiple-admision.jpg" alt="Multiple admision">
+                    </div>
+                    <span>MULTIPLE ADMISION</span>
+                </a>
+
+                <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">
+                    <div class="category-img-wrap">
+                        <img src="img/carroceria.jpg" alt="Carrocería">
+                    </div>
+                    <span>CARROCERIA</span>
+                </a>
+
+                <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">
+                    <div class="category-img-wrap">
+                        <img src="img/otras-categorias.jpg" alt="Otras categorías">
+                    </div>
+                    <span>OTRAS CATEGORIAS</span>
+                </a>
             </div>
         </div>
     </section>
