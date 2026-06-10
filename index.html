@@ -441,6 +441,21 @@
             display: block;
         }
 
+        .map-share-btn{
+            display: inline-block;
+            margin-top: 14px;
+            background: var(--green);
+            color: #fff;
+            text-decoration: none;
+            padding: 12px 18px;
+            font-family: 'Oswald', sans-serif;
+            letter-spacing: .05em;
+        }
+
+        .map-share-btn:hover{
+            background: var(--green-dark);
+        }
+
         .ml-carousel{
             position: relative;
             max-width: 1000px;
@@ -578,30 +593,11 @@
             box-shadow: 0 8px 22px rgba(0,0,0,.25);
             z-index: 9999;
             text-decoration: none;
-            transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
-        }
-
-        .whatsapp-float:hover{
-            transform: translateY(-3px) scale(1.04);
-            box-shadow: 0 10px 26px rgba(0,0,0,.28);
-            background: #1ebe57;
         }
 
         @media (max-width: 1100px){
             nav{ display: none; }
-            .mobile-menu{
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                width: 44px;
-                height: 44px;
-                border: 1px solid #ddd;
-                background: #fff;
-                color: var(--green);
-                font-size: 20px;
-            }
-            .hero h1{ font-size: 48px; }
-            .hero .sub{ font-size: 22px; }
+            .mobile-menu{ display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid #ddd; background: #fff; color: var(--green); font-size: 20px; }
             .benefits-inner{ grid-template-columns: repeat(2, 1fr); }
             .benefit{ font-size: 26px; }
             .category-grid{ grid-template-columns: repeat(2, 1fr); }
@@ -615,7 +611,6 @@
             .hero{ min-height: 60vh; }
             .hero-carousel{ height: 60vh; min-height: 60vh; }
             .hero-overlay{ padding: 30px 18px; }
-            .hero h1{ font-size: 34px; }
             .hero h3{ font-size: 18px; }
             .hero .sub{ font-size: 18px; }
             .call-btn{ font-size: 18px; }
@@ -626,16 +621,8 @@
             .contact-box h3{ font-size: 28px; }
             .ml-card img{ height: 190px; }
             .ml-arrow{ width: 38px; height: 38px; }
-            .whatsapp-float{
-                width: 56px;
-                height: 56px;
-                bottom: 16px;
-                right: 16px;
-                font-size: 30px;
-            }
-            .category-img-wrap{
-                width: 100px;
-            }
+            .whatsapp-float{ width: 56px; height: 56px; bottom: 16px; right: 16px; font-size: 30px; }
+            .category-img-wrap{ width: 100px; }
         }
     </style>
 </head>
@@ -680,9 +667,7 @@
     <section id="inicio" class="hero">
         <div class="hero-carousel" id="heroCarousel">
             <div class="hero-track">
-                <div class="hero-slide active" style="background-image:
-                    linear-gradient(rgba(0,0,0,.32), rgba(0,0,0,.32)),
-                    url('img/fotoportada.png');">
+                <div class="hero-slide active" style="background-image: linear-gradient(rgba(0,0,0,.32), rgba(0,0,0,.32)), url('img/fotoportada.png');">
                     <div class="hero-overlay">
                         <h3>REPUESTOS DE AUTOMOVILES</h3>
                         <div class="sub">TODO LO QUE NECESITES EN UN SOLO LUGAR</div>
@@ -690,9 +675,7 @@
                     </div>
                 </div>
 
-                <div class="hero-slide" style="background-image:
-                    linear-gradient(rgba(0,0,0,.32), rgba(0,0,0,.32)),
-                    url('img/fotoportada2.png');">
+                <div class="hero-slide" style="background-image: linear-gradient(rgba(0,0,0,.32), rgba(0,0,0,.32)), url('img/fotoportada2.png');">
                     <div class="hero-overlay">
                         <h3>ENVIO RAPIDO</h3>
                         <div class="sub">ATENCION Y DESPACHO EFICIENTE</div>
@@ -700,9 +683,7 @@
                     </div>
                 </div>
 
-                <div class="hero-slide" style="background-image:
-                    linear-gradient(rgba(0,0,0,.32), rgba(0,0,0,.32)),
-                    url('img/fotoportada3.png');">
+                <div class="hero-slide" style="background-image: linear-gradient(rgba(0,0,0,.32), rgba(0,0,0,.32)), url('img/fotoportada3.png');">
                     <div class="hero-overlay">
                         <h3>VARIEDAD DE REPUESTOS</h3>
                         <div class="sub">MOTOR, FRENOS, CARROCERIA Y MAS</div>
@@ -736,65 +717,39 @@
             <h2 class="section-title">CATEGORIAS</h2>
             <div class="category-grid">
                 <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">
-                    <div class="category-img-wrap">
-                        <img src="img/freno.jpg" alt="Sistema de freno">
-                    </div>
+                    <div class="category-img-wrap"><img src="img/freno.jpg" alt="Sistema de freno"></div>
                     <span>SISTEMA DE FRENO</span>
                 </a>
-
                 <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">
-                    <div class="category-img-wrap">
-                        <img src="img/bomba-gasolina.jpg" alt="Bombas de gasolina">
-                    </div>
+                    <div class="category-img-wrap"><img src="img/bomba-gasolina.jpg" alt="Bombas de gasolina"></div>
                     <span>BOMBAS DE GASOLINA</span>
                 </a>
-
                 <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">
-                    <div class="category-img-wrap">
-                        <img src="img/filtro-aire.jpg" alt="Filtros de aire">
-                    </div>
+                    <div class="category-img-wrap"><img src="img/filtro-aire.jpg" alt="Filtros de aire"></div>
                     <span>FILTROS DE AIRES</span>
                 </a>
-
                 <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">
-                    <div class="category-img-wrap">
-                        <img src="img/faros.jpg" alt="Faros y micas">
-                    </div>
+                    <div class="category-img-wrap"><img src="img/faros.jpg" alt="Faros y micas"></div>
                     <span>FAROS Y MICAS</span>
                 </a>
-
                 <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">
-                    <div class="category-img-wrap">
-                        <img src="img/bomba-agua.jpg" alt="Bombas de agua">
-                    </div>
+                    <div class="category-img-wrap"><img src="img/bomba-agua.jpg" alt="Bombas de agua"></div>
                     <span>BOMBAS DE AGUA</span>
                 </a>
-
                 <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">
-                    <div class="category-img-wrap">
-                        <img src="img/bomba-aceite.jpg" alt="Bombas de aceite">
-                    </div>
+                    <div class="category-img-wrap"><img src="img/bomba-aceite.jpg" alt="Bombas de aceite"></div>
                     <span>BOMBAS DE ACEITE</span>
                 </a>
-
                 <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">
-                    <div class="category-img-wrap">
-                        <img src="img/multiple-admision.jpg" alt="Multiple admision">
-                    </div>
+                    <div class="category-img-wrap"><img src="img/multiple-admision.jpg" alt="Multiple admision"></div>
                     <span>MULTIPLE ADMISION</span>
                 </a>
-
                 <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">
-                    <div class="category-img-wrap">
-                        <img src="img/carroceria.jpg" alt="Carrocería">
-                    </div>
+                    <div class="category-img-wrap"><img src="img/carroceria.jpg" alt="Carrocería"></div>
                     <span>CARROCERIA</span>
                 </a>
-
                 <a class="category-card" href="https://fybinversionesccs.wixsite.com/fb-parts/repuestos">
-                    <div class="category-img-wrap">
-                        <img src="img/otras-categorias.jpg" alt="Otras categorías">
-                    </div>
+                    <div class="category-img-wrap"><img src="img/otras-categorias.jpg" alt="Otras categorías"></div>
                     <span>OTRAS CATEGORIAS</span>
                 </a>
             </div>
@@ -827,12 +782,10 @@
                     <h3>Lux Motors, Caracas VE</h3>
                     <p>“Servicio muy rapido, excelente precios, atención profesional y amplia gama de repuestos.”</p>
                 </div>
-
                 <div class="testimonial-wrap">
                     <h3>Maria Romero, Caracas VE</h3>
                     <p>“Excelente atención, buenos precios, personal calificado para dar la mejor atención y puntuales con las entregas.”</p>
                 </div>
-
                 <div class="testimonial-wrap">
                     <h3>Luisa Ruiz, Caracas VE</h3>
                     <p>“Buena atencion personas responsables y puntuales, vendieron lo que solicite.”</p>
@@ -855,38 +808,28 @@
             </div>
 
             <div class="ml-carousel" id="mlCarousel">
-                <button class="ml-arrow ml-prev" type="button" aria-label="Anterior">
-                    <i class="fas fa-chevron-left"></i>
-                </button>
+                <button class="ml-arrow ml-prev" type="button" aria-label="Anterior"><i class="fas fa-chevron-left"></i></button>
 
                 <div class="ml-track">
                     <div class="ml-slide active">
                         <div class="ml-card">
-                            <div class="ml-image-wrap">
-                                <img src="img/ALARMA1.png" alt="Alarma de carro con cierre centralizado">
-                            </div>
+                            <div class="ml-image-wrap"><img src="img/ALARMA1.png" alt="Alarma de carro con cierre centralizado"></div>
                             <h4>Alarma de carro</h4>
                             <p>Cierre centralizado, código variable, cromo.</p>
                             <a href="https://articulo.mercadolibre.com.ve/MLV-776776931-alarma-de-carro-cierre-centralizado-codigo-variable-cromo-_JM" target="_blank">VER EN MERCADO LIBRE</a>
                         </div>
                     </div>
-
                     <div class="ml-slide">
                         <div class="ml-card">
-                            <div class="ml-image-wrap">
-                                <img src="img/RINTOYOTA.JPG" alt="Rin Toyota Yaris 2017-2023 15">
-                            </div>
+                            <div class="ml-image-wrap"><img src="img/RINTOYOTA.JPG" alt="Rin Toyota Yaris 2017-2023 15"></div>
                             <h4>Rin Toyota Yaris</h4>
                             <p>2017 - 2023, 15 pulgadas.</p>
                             <a href="https://articulo.mercadolibre.com.ve/MLV-776144781-rin-toyota-yaris-2017-2023-15-_JM" target="_blank">VER EN MERCADO LIBRE</a>
                         </div>
                     </div>
-
                     <div class="ml-slide">
                         <div class="ml-card">
-                            <div class="ml-image-wrap">
-                                <img src="img/PARRILAMERCEDES.png" alt="Parrilla frontal Mercedes-Benz">
-                            </div>
+                            <div class="ml-image-wrap"><img src="img/PARRILAMERCEDES.png" alt="Parrilla frontal Mercedes-Benz"></div>
                             <h4>Parrilla frontal Mercedes</h4>
                             <p>C180, C200, C280, 2007 - 2011.</p>
                             <a href="https://articulo.mercadolibre.com.ve/MLV-776157903-parilla-frontal-mercedes-benz-c180-c200-c280-2007-2011-_JM" target="_blank">VER EN MERCADO LIBRE</a>
@@ -894,9 +837,7 @@
                     </div>
                 </div>
 
-                <button class="ml-arrow ml-next" type="button" aria-label="Siguiente">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
+                <button class="ml-arrow ml-next" type="button" aria-label="Siguiente"><i class="fas fa-chevron-right"></i></button>
 
                 <div class="ml-dots">
                     <span class="active"></span>
@@ -920,12 +861,7 @@
                     <p>0424 - 200 - 4842</p>
                     <p><strong>Horarios</strong><br>Lunes - viernes: 9:00 am – 4:00 pm<br>Sábados: 9:00 am – 1:00 pm</p>
                     <p><a href="mailto:fybinversiones.ccs@gmail.com">fybinversiones.ccs@gmail.com</a></p>
-                    <p>
-                        <a href="https://www.google.com/maps/search/?api=1&query=15+Pje.+Porvenir,+Caracas+1010,+Distrito+Capital"
-                           target="_blank" rel="noopener">
-                            Abrir ubicación en Google Maps
-                        </a>
-                    </p>
+                    <a class="map-share-btn" href="https://www.google.com/maps/search/?api=1&query=15+Pje.+Porvenir,+Caracas+1010,+Distrito+Capital" target="_blank" rel="noopener">Compartir ubicación</a>
                 </div>
 
                 <div class="contact-box">
@@ -933,9 +869,6 @@
                     <div class="map-wrap">
                         <iframe
                             src="https://www.google.com/maps?q=15+Pje.+Porvenir,+Caracas+1010,+Distrito+Capital&output=embed"
-                            width="100%"
-                            height="100%"
-                            style="border:0;"
                             allowfullscreen=""
                             loading="lazy"
                             referrerpolicy="no-referrer-when-downgrade">
@@ -950,10 +883,7 @@
         <p class="oswald" style="margin:0; font-size:16px;">©2023 por F&B PARTS.</p>
     </footer>
 
-    <a href="https://wa.me/584120161036?text=Hola%20quiero%20informaci%C3%B3n%20sobre%20repuestos"
-       class="whatsapp-float"
-       target="_blank"
-       aria-label="Escribir por WhatsApp">
+    <a href="https://wa.me/584120161036?text=Hola%20quiero%20informaci%C3%B3n%20sobre%20repuestos" class="whatsapp-float" target="_blank" aria-label="Escribir por WhatsApp">
         <i class="fab fa-whatsapp"></i>
     </a>
 
@@ -993,15 +923,8 @@
                     if (timer) clearInterval(timer);
                 }
 
-                nextBtn.addEventListener('click', () => {
-                    nextSlide();
-                    startAutoplay();
-                });
-
-                prevBtn.addEventListener('click', () => {
-                    prevSlide();
-                    startAutoplay();
-                });
+                nextBtn.addEventListener('click', () => { nextSlide(); startAutoplay(); });
+                prevBtn.addEventListener('click', () => { prevSlide(); startAutoplay(); });
 
                 dots.forEach((dot, i) => {
                     dot.addEventListener('click', () => {
