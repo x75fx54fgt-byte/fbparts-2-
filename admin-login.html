@@ -1,194 +1,130 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acceso Administrador | F&B Parts</title>
-    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Acceso Administrativo | F&B Parts</title>
+    <link rel="icon" type="image/png" href="img/favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
-    <style>
-        body {
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            background-color: #f4f6f4;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .login-card {
-            background: white;
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            width: 100%;
-            max-width: 400px;
-            box-sizing: border-box;
-            text-align: center;
-        }
-        .login-card h2 {
-            color: #5e8877;
-            font-family: 'Oswald', sans-serif;
-            font-size: 28px;
-            margin-top: 0;
-            margin-bottom: 25px;
-            text-transform: uppercase;
-        }
-        .form-group {
-            text-align: left;
-            margin-bottom: 20px;
-        }
-        .form-group label {
-            display: block;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 8px;
-            font-size: 14px;
-        }
-        .form-group input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 15px;
-            box-sizing: border-box;
-            outline: none;
-            transition: border-color 0.3s;
-        }
-        .form-group input:focus { border-color: #5e8877; }
-        .btn-login {
-            background-color: #5e8877;
-            color: white;
-            border: none;
-            padding: 14px;
-            width: 100%;
-            font-family: 'Oswald', sans-serif;
-            font-size: 18px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background 0.3s;
-            margin-top: 10px;
-        }
-        .btn-login:hover { background-color: #4a6d5f; }
-        .btn-login:disabled { background-color: #999; cursor: not-allowed; }
-        .back-link {
-            display: block;
-            margin-top: 25px;
-            color: #555;
-            text-decoration: none;
-            font-size: 14px;
-            transition: color 0.3s;
-        }
-        .back-link:hover { color: #5e8877; }
-        #error-box {
-            display: none;
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-            padding: 12px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-            font-size: 13px;
-            text-align: left;
-            word-wrap: break-word;
-        }
-    </style>
+    <!-- LIBRERÍA DE GOOGLE RECAPTCHA -->
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    
+    <link rel="stylesheet" href="styles.css">
 
-    <!-- SCRIPT CAPTURADOR DE ERRORES GLOBALES (Por si el navegador bloquea algo en silencio) -->
-    <script>
-        window.onerror = function(message, source, lineno, colno, error) {
-            alert("Error Crítico del Navegador: " + message);
-        };
-        window.onunhandledrejection = function(event) {
-            alert("Conexión Rechazada por Firebase/Navegador: " + (event.reason ? event.reason.message : "Desconocido"));
-        };
-    </script>
+    <style>
+        body { background-color: #2c3e50; } /* Fondo oscuro para diferenciarlo del portal de clientes */
+        .login-container { max-width: 400px; margin: 80px auto; padding: 0 20px; }
+        .login-card { background: white; border: none; padding: 40px 30px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center; }
+        
+        .admin-logo { height: 70px; margin-bottom: 15px; }
+        .login-card h3 { font-family: 'Oswald', sans-serif; color: #333; font-size: 24px; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .form-group { margin-bottom: 20px; text-align: left; position: relative; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 13px; color: #555; }
+        .form-group input { width: 100%; padding: 12px; padding-left: 40px; border: 1px solid #ccc; border-radius: 4px; font-size: 15px; outline: none; }
+        .form-group input:focus { border-color: #385723; }
+        
+        .input-icon { position: absolute; left: 15px; top: 38px; color: #999; }
+
+        .btn-action { background: #385723; color: white; border: none; padding: 12px; font-family: 'Oswald', sans-serif; font-size: 16px; cursor: pointer; border-radius: 4px; width: 100%; transition: background .2s; margin-top: 10px; letter-spacing: 1px; }
+        .btn-action:hover { background: #2c441b; }
+        .btn-action:disabled { background: #999; cursor: not-allowed; }
+        
+        .back-link { display: block; margin-top: 20px; color: #777; font-size: 13px; text-decoration: none; }
+        .back-link:hover { color: #333; text-decoration: underline; }
+    </style>
 </head>
 <body>
 
-    <div class="login-card">
-        <h2><i class="fas fa-lock"></i> ACCESO PERSONAL</h2>
-        
-        <div id="error-box"></div>
+    <div class="login-container">
+        <div class="login-card">
+            <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="F&B Parts Admin" class="admin-logo">
+            <h3>Control Interno</h3>
+            
+            <form id="admin-login-form">
+                <div class="form-group">
+                    <label for="email">Usuario (Correo Administrativo)</label>
+                    <i class="fas fa-envelope input-icon"></i>
+                    <input type="email" id="email" placeholder="admin@fybparts.com" required>
+                </div>
 
-        <form id="login-form">
-            <div class="form-group">
-                <label>Correo Autorizado</label>
-                <input type="email" id="email" placeholder="ejemplo@correo.com" required>
-            </div>
-            <div class="form-group">
-                <label>Contraseña</label>
-                <input type="password" id="password" placeholder="••••••••" required>
-            </div>
-            <button type="submit" id="login-btn" class="btn-login">INGRESAR AL PANEL</button>
-        </form>
+                <div class="form-group">
+                    <label for="password">Contraseña Maestra</label>
+                    <i class="fas fa-lock input-icon"></i>
+                    <input type="password" id="password" placeholder="*********" required>
+                </div>
 
-        <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> Volver a la página principal</a>
+                <!-- WIDGET DE GOOGLE RECAPTCHA -->
+                <div style="display: flex; justify-content: center; margin-bottom: 15px;">
+                    <div class="g-recaptcha" data-sitekey="6LcDRXQtAAAAAJxLJqhh1Wlw8wDdaS9cx5giKO-1"></div>
+                </div>
+
+                <button type="submit" class="btn-action" id="btnLoginAdmin">
+                    INGRESAR AL PANEL
+                </button>
+            </form>
+
+            <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> Volver a la página pública</a>
+
+            <p id="error-message" style="color: red; margin-top: 15px; font-size: 14px; font-weight: bold;"></p>
+        </div>
     </div>
 
+    <!-- Lógica de Firebase Auth -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-        const errorBox = document.getElementById('error-box');
+        const firebaseConfig = {
+            apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
+            authDomain: "fb-parts-app.firebaseapp.com",
+            projectId: "fb-parts-app",
+            storageBucket: "fb-parts-app.firebasestorage.app",
+            messagingSenderId: "21714159445",
+            appId: "1:21714159445:web:8f4946cd1c98d9b95dd1dc"
+        };
 
-        try {
-            const firebaseConfig = {
-                apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
-                authDomain: "fb-parts-app.firebaseapp.com",
-                projectId: "fb-parts-app",
-                storageBucket: "fb-parts-app.firebasestorage.app",
-                messagingSenderId: "21714159445",
-                appId: "1:21714159445:web:8f4946cd1c98d9b95dd1dc"
-            };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
 
-            const app = initializeApp(firebaseConfig);
-            const auth = getAuth(app);
+        const adminLoginForm = document.getElementById('admin-login-form');
+        const errorMessage = document.getElementById('error-message');
+        const btnLoginAdmin = document.getElementById('btnLoginAdmin');
 
-            // Redirección si ya está logueado
-            onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    window.location.replace("admin.html");
-                }
-            });
+        adminLoginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
 
-            document.getElementById('login-form').addEventListener('submit', (e) => {
-                e.preventDefault(); 
+            // VALIDACIÓN DEL CAPTCHA
+            const recaptchaResponse = grecaptcha.getResponse();
+            if (recaptchaResponse.length === 0) {
+                errorMessage.innerText = "⚠️ Demuestra que no eres un robot marcando la casilla.";
+                errorMessage.style.color = "red";
+                return;
+            }
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            errorMessage.innerText = "Verificando credenciales...";
+            errorMessage.style.color = "green";
+            btnLoginAdmin.disabled = true;
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
                 
-                const email = document.getElementById('email').value.trim();
-                const password = document.getElementById('password').value;
-                const btn = document.getElementById('login-btn');
+                // Si el login es exitoso, entra directamente al panel de control
+                window.location.href = "admin.html";
                 
-                errorBox.style.display = 'none';
-                btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> INGRESANDO...";
-                btn.disabled = true;
-
-                signInWithEmailAndPassword(auth, email, password)
-                    .then((userCredential) => {
-                        window.location.href = "admin.html";
-                    })
-                    .catch((error) => {
-                        btn.innerHTML = "INGRESAR AL PANEL";
-                        btn.disabled = false;
-                        errorBox.style.display = 'block';
-
-                        if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-                            errorBox.innerHTML = "<strong>Error:</strong> Correo o contraseña incorrectos.";
-                        } else if (error.code === 'auth/network-request-failed') {
-                            errorBox.innerHTML = "<strong>Error de Red:</strong> Revisa tu conexión a internet o intenta cambiar 127.0.0.1 por localhost en la barra de direcciones.";
-                        } else if (error.code === 'auth/operation-not-allowed') {
-                            errorBox.innerHTML = "<strong>Error Crítico:</strong> El inicio de sesión por correo no está habilitado en tu consola de Firebase (Authentication > Sign-in method).";
-                        } else {
-                            errorBox.innerHTML = `<strong>Error:</strong> ${error.message} (${error.code})`;
-                        }
-                    });
-            });
-
-        } catch (err) {
-            errorBox.style.display = 'block';
-            errorBox.innerHTML = "<strong>Error de inicialización:</strong> " + err.message;
-        }
+            } catch (error) {
+                console.error(error);
+                errorMessage.style.color = "red";
+                errorMessage.innerText = "Acceso denegado. Credenciales incorrectas.";
+                btnLoginAdmin.disabled = false;
+                grecaptcha.reset(); // Obliga a resolver el captcha de nuevo por seguridad
+            }
+        });
     </script>
 </body>
 </html>

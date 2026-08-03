@@ -8,6 +8,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
+    <!-- LIBRERÍA DE GOOGLE RECAPTCHA -->
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    
     <link rel="stylesheet" href="styles.css">
 
     <style>
@@ -22,22 +25,23 @@
         .form-group input:focus, .form-group textarea:focus { border-color: var(--green); }
         .form-group textarea { resize: vertical; height: 70px; }
 
-        .toggle-password {
-            position: absolute;
-            right: 15px;
-            top: 36px;
-            cursor: pointer;
-            color: #777;
-            font-size: 16px;
-        }
+        .toggle-password { position: absolute; right: 15px; top: 36px; cursor: pointer; color: #777; font-size: 16px; }
         .toggle-password:hover { color: var(--green); }
 
         .btn-action { background: var(--green); color: white; border: none; padding: 12px; font-family: 'Oswald', sans-serif; font-size: 16px; cursor: pointer; border-radius: 4px; width: 100%; transition: background .2s; margin-top: 10px; }
         .btn-action:hover { background: var(--green-dark); }
-        .btn-action:disabled { background: #999; cursor: not-allowed; } /* Estilo para botón deshabilitado */
+        .btn-action:disabled { background: #999; cursor: not-allowed; }
         
         .btn-secondary { background: white; color: var(--green); border: 2px solid var(--green); padding: 10px; font-family: 'Oswald', sans-serif; font-size: 15px; cursor: pointer; border-radius: 4px; width: 100%; transition: all .2s; margin-top: 10px; text-decoration: none; display: inline-block; }
         .btn-secondary:hover { background: #f0f4f1; }
+
+        .divider { display: flex; align-items: center; margin: 20px 0; }
+        .divider hr { flex: 1; border: none; border-top: 1px solid #ddd; }
+        .divider span { padding: 0 15px; color: #999; font-size: 12px; font-weight: bold; letter-spacing: 1px; }
+
+        .btn-google { background: white; color: #333; border: 1px solid #ccc; padding: 12px; font-family: 'Oswald', sans-serif; font-size: 15px; cursor: pointer; border-radius: 4px; width: 100%; transition: all .2s; display: flex; justify-content: center; align-items: center; gap: 10px; }
+        .btn-google:hover { background: #f9f9f9; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .btn-google i { color: #DB4437; font-size: 18px; }
 
         @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
     </style>
@@ -73,6 +77,16 @@
         <div class="register-card">
             <h3><i class="fas fa-user-plus"></i> REGISTRO DE CLIENTE</h3>
             
+            <button type="button" class="btn-google" id="btnGoogle">
+                <i class="fab fa-google"></i> Regístrate rápido con Google
+            </button>
+
+            <div class="divider">
+                <hr>
+                <span>O REGÍSTRATE CON TU CORREO</span>
+                <hr>
+            </div>
+
             <form id="register-form">
                 <div class="form-row">
                     <div class="form-group">
@@ -112,6 +126,11 @@
                     <textarea id="ubicacion" placeholder="Ciudad, Urbanización, Calle o Punto de Referencia..." required></textarea>
                 </div>
 
+                <!-- WIDGET DE GOOGLE RECAPTCHA -->
+                <div style="display: flex; justify-content: center; margin-bottom: 15px;">
+                    <div class="g-recaptcha" data-sitekey="6LcDRXQtAAAAAJxLJqhh1Wlw8wDdaS9cx5giKO-1"></div>
+                </div>
+
                 <button type="submit" class="btn-action" id="btnRegister">
                     CREAR CUENTA
                 </button>
@@ -128,8 +147,8 @@
     <!-- Lógica de Firebase Auth y Firestore -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getAuth, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
@@ -143,8 +162,8 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        const googleProvider = new GoogleAuthProvider();
 
-        // Control del botón del ojito
         const togglePassword = document.getElementById('togglePassword');
         const passwordInput = document.getElementById('password');
 
@@ -155,13 +174,31 @@
             this.classList.toggle('fa-eye-slash');
         });
 
-        // Registro de usuario y guardado de perfil en Firestore
         const registerForm = document.getElementById('register-form');
         const errorMessage = document.getElementById('error-message');
         const btnRegister = document.getElementById('btnRegister');
+        const btnGoogle = document.getElementById('btnGoogle');
 
+        function ejecutarRedireccion() {
+            const carritoMemoria = localStorage.getItem('carritoFB');
+            let carrito = [];
+            if (carritoMemoria) carrito = JSON.parse(carritoMemoria);
+            
+            if (carrito.length > 0) window.location.href = "tienda.html";
+            else window.location.href = "mi-cuenta.html";
+        }
+
+        // REGISTRO CON FORMULARIO
         registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+
+            // VALIDACIÓN DEL CAPTCHA
+            const recaptchaResponse = grecaptcha.getResponse();
+            if (recaptchaResponse.length === 0) {
+                errorMessage.innerText = "⚠️ Por favor, marca la casilla 'No soy un robot'.";
+                errorMessage.style.color = "red";
+                return;
+            }
 
             const nombre = document.getElementById('nombre').value.trim();
             const apellido = document.getElementById('apellido').value.trim();
@@ -173,14 +210,12 @@
 
             errorMessage.innerText = "Registrando tus datos...";
             errorMessage.style.color = "green";
-            btnRegister.disabled = true; // Bloquea el botón para no repetir el proceso
+            btnRegister.disabled = true; 
 
             try {
-                // 1. Creamos la cuenta en Firebase Auth
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
 
-                // 2. Guardamos la información detallada en la colección "usuarios"
                 await setDoc(doc(db, "usuarios", user.uid), {
                     uid: user.uid,
                     nombre: nombre,
@@ -193,27 +228,13 @@
                 });
 
                 alert("¡Cuenta registrada con éxito!");
-
-                // === INICIO DE REDIRECCIÓN INTELIGENTE ===
-                const carritoMemoria = localStorage.getItem('carritoFB');
-                let carrito = [];
-                
-                if (carritoMemoria) {
-                    carrito = JSON.parse(carritoMemoria);
-                }
-
-                // Si el cliente estaba comprando, lo devolvemos al catálogo
-                if (carrito.length > 0) {
-                    window.location.href = "tienda.html";
-                } else {
-                // Si entró a registrarse de la nada, va a su perfil
-                    window.location.href = "mi-cuenta.html";
-                }
+                ejecutarRedireccion();
 
             } catch (error) {
                 console.error(error);
                 errorMessage.style.color = "red";
-                btnRegister.disabled = false; // Reactiva el botón si hay error
+                btnRegister.disabled = false; 
+                grecaptcha.reset(); // Resetea el captcha si hay error
                 
                 if (error.code === 'auth/email-already-in-use') {
                     errorMessage.innerText = "Este correo ya está registrado.";
@@ -222,6 +243,41 @@
                 } else {
                     errorMessage.innerText = "Error al registrarse. Intenta nuevamente.";
                 }
+            }
+        });
+
+        // REGISTRO CON GOOGLE
+        btnGoogle.addEventListener('click', async () => {
+            errorMessage.innerText = "Conectando con Google...";
+            errorMessage.style.color = "green";
+            btnRegister.disabled = true;
+            btnGoogle.disabled = true;
+
+            try {
+                const result = await signInWithPopup(auth, googleProvider);
+                const user = result.user;
+                const userRef = doc(db, "usuarios", user.uid);
+                const docSnap = await getDoc(userRef);
+
+                if (!docSnap.exists()) {
+                    await setDoc(userRef, {
+                        uid: user.uid,
+                        nombre: user.displayName || "Usuario de Google",
+                        apellido: "",
+                        cedula: "Pendiente",
+                        telefono: "Pendiente",
+                        email: user.email,
+                        ubicacion: "Pendiente",
+                        fechaRegistro: new Date().toLocaleString("es-VE")
+                    });
+                }
+                ejecutarRedireccion();
+            } catch (error) {
+                console.error(error);
+                errorMessage.style.color = "red";
+                errorMessage.innerText = "Operación cancelada o hubo un error con Google.";
+                btnRegister.disabled = false;
+                btnGoogle.disabled = false;
             }
         });
     </script>
