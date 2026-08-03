@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="styles.css">
 
     <style>
-        body { background-color: #2c3e50; } /* Fondo oscuro para diferenciarlo del portal de clientes */
+        body { background-color: #2c3e50; }
         .login-container { max-width: 400px; margin: 80px auto; padding: 0 20px; }
         .login-card { background: white; border: none; padding: 40px 30px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center; }
         
@@ -56,9 +56,9 @@
                     <input type="password" id="password" placeholder="*********" required>
                 </div>
 
-                <!-- WIDGET DE GOOGLE RECAPTCHA -->
+                <!-- WIDGET DE GOOGLE RECAPTCHA V2 -->
                 <div style="display: flex; justify-content: center; margin-bottom: 15px;">
-                    <div class="g-recaptcha" data-sitekey="6LcDRXQtAAAAAJxLJqhh1Wlw8wDdaS9cx5giKO-1"></div>
+                    <div class="g-recaptcha" data-sitekey="PEGA_TU_NUEVA_CLAVE_AQUI"></div>
                 </div>
 
                 <button type="submit" class="btn-action" id="btnLoginAdmin">
@@ -72,7 +72,6 @@
         </div>
     </div>
 
-    <!-- Lógica de Firebase Auth -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -96,7 +95,6 @@
         adminLoginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            // VALIDACIÓN DEL CAPTCHA
             const recaptchaResponse = grecaptcha.getResponse();
             if (recaptchaResponse.length === 0) {
                 errorMessage.innerText = "⚠️ Demuestra que no eres un robot marcando la casilla.";
@@ -113,16 +111,13 @@
 
             try {
                 await signInWithEmailAndPassword(auth, email, password);
-                
-                // Si el login es exitoso, entra directamente al panel de control
                 window.location.href = "admin.html";
-                
             } catch (error) {
                 console.error(error);
                 errorMessage.style.color = "red";
                 errorMessage.innerText = "Acceso denegado. Credenciales incorrectas.";
                 btnLoginAdmin.disabled = false;
-                grecaptcha.reset(); // Obliga a resolver el captcha de nuevo por seguridad
+                grecaptcha.reset();
             }
         });
     </script>

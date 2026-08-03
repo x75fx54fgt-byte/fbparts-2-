@@ -66,7 +66,7 @@
             </nav>
 
             <div class="header-right">
-                <a class="call-btn" href="login.html" style="background: #5b8743; color: white; padding: 8px 15px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 13px;">
+                <a class="call-btn" href="login.html" style="background: white; color: #5b8743; border: 2px solid #5b8743; padding: 6px 15px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 13px; transition: all 0.2s;">
                     <i class="fas fa-arrow-left"></i> VOLVER 
                 </a>
             </div>
@@ -126,9 +126,9 @@
                     <textarea id="ubicacion" placeholder="Ciudad, Urbanización, Calle o Punto de Referencia..." required></textarea>
                 </div>
 
-                <!-- WIDGET DE GOOGLE RECAPTCHA -->
+                <!-- WIDGET DE GOOGLE RECAPTCHA V2 -->
                 <div style="display: flex; justify-content: center; margin-bottom: 15px;">
-                    <div class="g-recaptcha" data-sitekey="6LcDRXQtAAAAAJxLJqhh1Wlw8wDdaS9cx5giKO-1"></div>
+                    <div class="g-recaptcha" data-sitekey="PEGA_TU_NUEVA_CLAVE_AQUI"></div>
                 </div>
 
                 <button type="submit" class="btn-action" id="btnRegister">
@@ -144,7 +144,6 @@
         </div>
     </div>
 
-    <!-- Lógica de Firebase Auth y Firestore -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -188,11 +187,9 @@
             else window.location.href = "mi-cuenta.html";
         }
 
-        // REGISTRO CON FORMULARIO
         registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            // VALIDACIÓN DEL CAPTCHA
             const recaptchaResponse = grecaptcha.getResponse();
             if (recaptchaResponse.length === 0) {
                 errorMessage.innerText = "⚠️ Por favor, marca la casilla 'No soy un robot'.";
@@ -234,7 +231,7 @@
                 console.error(error);
                 errorMessage.style.color = "red";
                 btnRegister.disabled = false; 
-                grecaptcha.reset(); // Resetea el captcha si hay error
+                grecaptcha.reset();
                 
                 if (error.code === 'auth/email-already-in-use') {
                     errorMessage.innerText = "Este correo ya está registrado.";
@@ -246,7 +243,6 @@
             }
         });
 
-        // REGISTRO CON GOOGLE
         btnGoogle.addEventListener('click', async () => {
             errorMessage.innerText = "Conectando con Google...";
             errorMessage.style.color = "green";
