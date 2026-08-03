@@ -3,11 +3,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    
-    <!-- MEJORAS DE SEO -->
     <title>Catálogo de Repuestos Automotrices | F&B Parts</title>
-    <meta name="description" content="Explora nuestro catálogo completo de repuestos de carrocería, motor y accesorios. Compra seguro a través de Mercado Libre o directo por WhatsApp con entregas en Caracas.">
-    <meta name="keywords" content="catálogo repuestos, comprar repuestos online, F&B Parts tienda, repuestos Caracas, faros, parachoques, bombas, Mercado Libre Venezuela">
+    <meta name="description" content="Explora nuestro catálogo completo de repuestos.">
     
     <link rel="icon" type="image/png" href="img/favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -17,82 +14,90 @@
     <style>
         body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f8f8f8; display: flex; flex-direction: column; min-height: 100vh; margin: 0; }
         
-        /* Estructura a 3 Columnas */
         .tienda-container { max-width: 1350px; margin: 40px auto; padding: 0 20px; display: grid; grid-template-columns: 240px 1fr 300px; gap: 25px; flex: 1; align-items: start; }
         
         @media (max-width: 1100px) { 
             .tienda-container { grid-template-columns: 240px 1fr; }
-            .cart-sidebar { grid-column: 1 / -1; } /* El carrito baja si la pantalla es mediana */
+            .cart-sidebar { grid-column: 1 / -1; }
         }
-        @media (max-width: 768px) { 
-            .tienda-container { grid-template-columns: 1fr; } 
-        }
+        @media (max-width: 768px) { .tienda-container { grid-template-columns: 1fr; } }
 
-        /* Sidebar de Categorías */
+        /* Sidebar Categorías */
         .sidebar { background: white; padding: 20px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,.05); position: sticky; top: 20px; }
         .sidebar h3 { color: #385723; font-family: 'Oswald', sans-serif; font-size: 20px; margin-top: 0; margin-bottom: 15px; text-transform: uppercase; border-bottom: 2px solid #eee; padding-bottom: 10px; }
         .cat-list { list-style: none; padding: 0; margin: 0; }
-        .cat-list li { margin-bottom: 8px; }
         .cat-list button { background: none; border: none; padding: 8px 12px; width: 100%; text-align: left; font-size: 15px; color: #555; cursor: pointer; border-radius: 4px; transition: all 0.2s; }
         .cat-list button:hover, .cat-list button.active { background: #e2f0d9; color: #385723; font-weight: bold; }
 
-        /* Buscador Superior */
+        /* Buscador */
         .store-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
         .store-header h1 { font-family: 'Oswald', sans-serif; color: #385723; margin: 0; font-size: 28px; text-transform: uppercase; }
         .search-bar { flex: 1; max-width: 400px; position: relative; }
-        .search-bar input { width: 100%; padding: 12px 15px 12px 40px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; outline: none; transition: border-color 0.3s; }
+        .search-bar input { width: 100%; padding: 12px 15px 12px 40px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; outline: none; }
         .search-bar input:focus { border-color: #385723; }
         .search-bar i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #999; }
 
-        /* Grilla de Productos */
+        /* Productos */
         .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
-        
-        /* Tarjeta del Producto */
         .prod-card { background: white; border: 1px solid #eee; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,.05); transition: transform 0.2s; display: flex; flex-direction: column; }
         .prod-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,.1); }
         .prod-img-wrap { width: 100%; height: 180px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
         .prod-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
         .prod-info { padding: 15px; display: flex; flex-direction: column; flex: 1; }
-        .prod-cat { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
-        .prod-title { font-size: 14px; color: #333; margin: 0 0 10px 0; line-height: 1.3; font-weight: bold; flex: 1; }
+        .prod-cat { font-size: 11px; color: #888; text-transform: uppercase; margin-bottom: 5px; }
+        .prod-title { font-size: 14px; color: #333; margin: 0 0 10px 0; font-weight: bold; flex: 1; }
         .prod-price { font-size: 20px; color: #385723; font-weight: bold; font-family: 'Oswald', sans-serif; margin-bottom: 12px; }
         
-        /* Botones de Acción de Tarjeta */
-        .btn-add-cart { background: #385723; color: white; border: none; padding: 10px; border-radius: 4px; text-align: center; cursor: pointer; font-weight: bold; font-size: 13px; display: block; width: 100%; margin-bottom: 8px; transition: background 0.2s; }
+        .btn-add-cart { background: #385723; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 8px; transition: 0.2s; }
         .btn-add-cart:hover { background: #2c441b; }
-        
-        .btn-ml { background: #ffe600; color: #333; border: none; padding: 10px; border-radius: 4px; text-align: center; text-decoration: none; font-weight: bold; font-size: 13px; display: block; width: 100%; transition: background 0.2s; box-sizing: border-box; }
-        .btn-ml:hover { background: #e6cf00; }
+        .btn-ml { background: #ffe600; color: #333; padding: 10px; border-radius: 4px; text-align: center; text-decoration: none; font-weight: bold; display: block; width: 100%; transition: 0.2s; box-sizing: border-box; }
         
         #loading-msg { text-align: center; padding: 50px; color: #666; grid-column: 1 / -1; font-size: 18px; }
 
-        /* Estilos del Carrito (TU PEDIDO) */
-        .cart-sidebar { background: white; padding: 20px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,.05); position: sticky; top: 20px; display: flex; flex-direction: column; height: fit-content; max-height: 85vh; }
-        .cart-sidebar h3 { color: #5b8743; font-family: 'Oswald', sans-serif; font-size: 20px; margin-top: 0; margin-bottom: 15px; text-transform: uppercase; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        .cart-items-container { flex: 1; overflow-y: auto; margin-bottom: 15px; padding-right: 5px; }
+        /* Carrito */
+        .cart-sidebar { background: white; padding: 20px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,.05); position: sticky; top: 20px; display: flex; flex-direction: column; max-height: 85vh; }
+        .cart-sidebar h3 { color: #5b8743; font-family: 'Oswald', sans-serif; font-size: 20px; margin-top: 0; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .cart-items-container { flex: 1; overflow-y: auto; margin-bottom: 10px; padding-right: 5px; }
         .cart-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 10px 0; font-size: 13px; }
         .cart-item-info { flex: 1; padding-right: 10px; }
-        .cart-item-title { font-weight: bold; color: #333; margin-bottom: 3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .cart-item-title { font-weight: bold; color: #333; margin-bottom: 3px; }
         .cart-item-price { color: #666; }
         .cart-item-controls { display: flex; align-items: center; gap: 8px; }
         .btn-qty { background: #eee; border: none; width: 24px; height: 24px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .btn-remove { background: #ff4d4d; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; }
         
-        .cart-total-box { border-top: 2px solid #eee; padding-top: 15px; margin-bottom: 15px; text-align: right; }
-        .cart-total-text { font-size: 16px; color: #333; font-weight: bold; }
+        .cart-total-box { border-top: 2px solid #385723; padding-top: 10px; margin-bottom: 15px; text-align: right; }
         .cart-total-amount { font-size: 24px; color: #385723; font-weight: bold; font-family: 'Oswald', sans-serif; }
         
-        .btn-checkout { background: #25D366; color: white; border: none; padding: 15px; border-radius: 6px; text-align: center; cursor: pointer; font-weight: bold; font-size: 16px; width: 100%; transition: background 0.2s; font-family: 'Oswald', sans-serif; letter-spacing: 1px; }
+        .btn-checkout { background: #25D366; color: white; border: none; padding: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; width: 100%; transition: 0.2s; font-family: 'Oswald', sans-serif; }
         .btn-checkout:hover { background: #1ebd5a; }
-        .empty-cart-msg { text-align: center; color: #999; padding: 30px 0; font-size: 14px; }
+        
+        /* Modal de Pago / Envío */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 100; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
+        .modal-content { background: white; padding: 30px; border-radius: 8px; width: 100%; max-width: 450px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
+        .modal-content h3 { font-family: 'Oswald', sans-serif; color: #385723; margin-top: 0; font-size: 24px; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-weight: bold; font-size: 14px; margin-bottom: 5px; color: #333; }
+        .form-group select, .form-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; box-sizing: border-box; outline: none; }
+        .form-group select:focus, .form-group input:focus { border-color: #385723; }
+        
+        /* Estilos del Grupo GPS */
+        .input-gps-group { display: flex; gap: 8px; }
+        .input-gps-group input { flex: 1; }
+        .btn-gps { background: #e2f0d9; color: #385723; border: 1px solid #385723; padding: 0 15px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+        .btn-gps:hover { background: #c5e1a5; }
+
+        .btn-confirm-order { background: #385723; color: white; padding: 12px; border: none; border-radius: 4px; width: 100%; font-weight: bold; cursor: pointer; font-size: 15px; margin-top: 10px; transition: background 0.2s; }
+        .btn-confirm-order:hover { background: #2c441b; }
+        .btn-cancel { background: #e0e0e0; color: #333; padding: 10px; border: none; border-radius: 4px; width: 100%; font-weight: bold; cursor: pointer; font-size: 14px; margin-top: 10px; transition: background 0.2s; }
+        .btn-cancel:hover { background: #ccc; }
     </style>
 </head>
 <body>
 
-    <!-- CABECERA -->
     <div class="topbar">
-        <p style="margin:0; font-weight: bold; font-size: 14px; letter-spacing: 1px;">DELIVERY GRATIS EN CARACAS</p>
-        <span style="font-size: 11px;">(CIERTAS CONDICIONES APLICAN)</span>
+        <p style="margin:0; font-weight: bold; font-size: 14px; letter-spacing: 1px;">DELIVERY GRATIS EN CARACAS</p><span>(CIERTAS CONDICIONES APLICAN)</span>
     </div>
 
     <header style="background: white; border-bottom: 1px solid #eee;">
@@ -103,75 +108,107 @@
             <nav>
                 <a href="index.html">Inicio</a>
                 <a href="tienda.html" style="color: #385723; font-weight: bold; border-bottom: 2px solid #385723; padding-bottom: 5px;">Tienda</a>
-                <a href="index.html#nosotros">Quienes somos</a>
-                <a href="index.html#mercadolibre">Mercado Libre</a>
-                <a href="index.html#contacto">Contacto</a>
                 <a href="login.html" id="nav-cuenta-btn" style="color: var(--green); font-weight: bold;"><i class="fas fa-user"></i> Mi Cuenta</a>
             </nav>
         </div>
     </header>
 
-    <!-- ÁREA DE TIENDA A 3 COLUMNAS -->
     <div class="tienda-container">
         
-        <!-- COLUMNA 1: SIDEBAR DE CATEGORÍAS -->
         <aside class="sidebar">
             <h3><i class="fas fa-filter"></i> Categorías</h3>
             <ul class="cat-list" id="categorias-list">
                 <li><button class="active" onclick="filtrarPorCategoria('todos', this)">Todos los Repuestos</button></li>
-                <!-- Las categorías se cargarán desde Firebase -->
             </ul>
         </aside>
 
-        <!-- COLUMNA 2: CATÁLOGO PRINCIPAL -->
         <main>
             <div class="store-header">
                 <h1>Catálogo de Repuestos</h1>
                 <div class="search-bar">
                     <i class="fas fa-search"></i>
-                    <input type="text" id="buscador-tienda" placeholder="Buscar repuesto por nombre..." onkeyup="buscarRepuestos()">
+                    <input type="text" id="buscador-tienda" placeholder="Buscar repuesto..." onkeyup="buscarRepuestos()">
                 </div>
             </div>
-
             <div class="products-grid" id="productos-grid">
                 <div id="loading-msg"><i class="fas fa-spinner fa-spin"></i> Cargando inventario...</div>
-                <!-- Los productos se inyectarán aquí -->
             </div>
         </main>
 
-        <!-- COLUMNA 3: CARRITO DE COMPRAS (TU PEDIDO) -->
         <aside class="cart-sidebar" id="tu-pedido">
             <h3><i class="fas fa-shopping-cart"></i> TU PEDIDO</h3>
-            
-            <div class="cart-items-container" id="cart-items">
-                <div class="empty-cart-msg">El carrito está vacío</div>
-            </div>
+            <div class="cart-items-container" id="cart-items"></div>
             
             <div class="cart-total-box">
-                <span class="cart-total-text">Total: </span>
+                <span style="font-size: 16px; font-weight: bold;">Total: </span>
                 <span class="cart-total-amount" id="cart-total-amount">$0.00</span>
             </div>
             
-            <button class="btn-checkout" onclick="enviarPedidoWA()">
-                <i class="fab fa-whatsapp"></i> HACER PEDIDO
+            <button class="btn-checkout" onclick="iniciarCheckout()">
+                <i class="fas fa-check-circle"></i> PROCESAR PEDIDO
             </button>
         </aside>
     </div>
 
-    <!-- FOOTER GLOBAL -->
-    <footer style="background-color: #000; color: #fff; text-align: center; padding: 25px 0; position: relative; margin-top: auto;">
-        <p class="oswald" style="margin: 0; font-size: 16px; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 5px;">
-            &copy;<span id="year-footer">2026</span> por F&B PARTS. 
-            <a href="admin-login.html" style="color: #c9b065; text-decoration: none; font-size: 14px; margin-left: 8px;" title="Acceso Interno"><i class="fas fa-lock"></i></a>
-        </p>
+    <!-- MODAL DE CONFIRMACIÓN DE PEDIDO Y ENVÍO -->
+    <div class="modal-overlay" id="modal-pago">
+        <div class="modal-content">
+            <h3>Confirmar Pedido</h3>
+            <p style="font-size: 14px; color: #555; margin-bottom: 20px;">Indícanos cómo deseas pagar y recibir tu pedido. Serás redirigido a WhatsApp para coordinar el envío.</p>
+            
+            <div class="form-group">
+                <label>Nombre del Cliente (Para la orden)</label>
+                <input type="text" id="nombre-checkout" placeholder="Ej: Juan Pérez" required>
+            </div>
+
+            <div class="form-group">
+                <label>Método de Envío o Retiro</label>
+                <select id="metodo-envio" onchange="verificarCamposEnvio()">
+                    <option value="Retiro en persona (Sede Principal)">Retiro en persona (Sede Principal)</option>
+                    <option value="Delivery (Caracas - Costo a verificar)">Delivery en Caracas (Verificaremos si aplica gratis)</option>
+                    <option value="Encomienda Nacional (MRW, Tealca, Zoom)">Envío Nacional (MRW, Tealca, Zoom)</option>
+                </select>
+            </div>
+
+            <!-- Campo de Dirección dinámico con GPS -->
+            <div class="form-group" id="grupo-direccion" style="display: none;">
+                <label>Dirección exacta de entrega (Escribe o usa el GPS)</label>
+                <div class="input-gps-group">
+                    <input type="text" id="direccion-pedido" placeholder="Ej: Chacao, Calle Elice... o pega un link de Maps">
+                    <button type="button" id="btn-gps" class="btn-gps" onclick="obtenerUbicacionGPS()" title="Generar link automático con mi ubicación actual">
+                        <i class="fas fa-map-marker-alt"></i> GPS
+                    </button>
+                </div>
+                <small style="color: #666; font-size: 11px; display: block; margin-top: 5px;">Presiona "GPS" para adjuntar tu enlace exacto de Google Maps automáticamente.</small>
+            </div>
+
+            <div class="form-group">
+                <label>Método de Pago Preferido</label>
+                <select id="metodo-pago">
+                    <option value="Zelle">Zelle</option>
+                    <option value="Pago Móvil">Pago Móvil (Bs)</option>
+                    <option value="Efectivo Divisas">Efectivo (Divisas)</option>
+                    <option value="Transferencia Banesco">Transferencia (Banesco)</option>
+                </select>
+            </div>
+
+            <button class="btn-confirm-order" id="btn-enviar-final" onclick="finalizarPedidoBaseDatos()">
+                <i class="fab fa-whatsapp"></i> Confirmar y Enviar WhatsApp
+            </button>
+            <button class="btn-cancel" onclick="cerrarModalCheckout()">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer style="background-color: #000; color: #fff; text-align: center; padding: 25px 0; margin-top: auto;">
+        <p class="oswald" style="margin: 0; font-size: 16px; letter-spacing: 1px;">&copy;<span id="year-footer">2026</span> por F&B PARTS.</p>
         <script> document.getElementById('year-footer').textContent = new Date().getFullYear(); </script>
     </footer>
 
-    <!-- SCRIPT PRINCIPAL DE LA TIENDA -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, query, where, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
@@ -186,130 +223,81 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Control de Sesión
+        let todosLosProductos = [];
+        let mapaCategorias = {};
+        let usuarioAutenticado = null; 
+
+        window.carrito = JSON.parse(localStorage.getItem('carritoFB')) || [];
+
         onAuthStateChanged(auth, (user) => {
             const navBtn = document.getElementById('nav-cuenta-btn');
             if (user) {
+                usuarioAutenticado = user; 
                 navBtn.href = "mi-cuenta.html";
                 navBtn.innerHTML = `<i class="fas fa-user-check"></i> Mi Cuenta`;
             } else {
+                usuarioAutenticado = null;
                 navBtn.href = "login.html";
                 navBtn.innerHTML = `<i class="fas fa-user"></i> Iniciar Sesión`;
             }
         });
 
-        // Variables Globales
-        let todosLosProductos = [];
-        let mapaCategorias = {};
-        window.carrito = []; // Array global para almacenar los productos del pedido
-
-        // 1. Cargar Categorías para el menú lateral
         async function cargarCategorias() {
             const listaCat = document.getElementById('categorias-list');
-            try {
-                const snap = await getDocs(collection(db, "categorias"));
-                snap.forEach(docSnap => {
-                    const cat = docSnap.data();
-                    mapaCategorias[cat.id] = cat.nombre;
-                    listaCat.innerHTML += `<li><button data-cat="${cat.id}" onclick="filtrarPorCategoria('${cat.id}', this)">${cat.nombre}</button></li>`;
-                });
-            } catch (error) {
-                console.error("Error cargando categorías:", error);
-            }
+            const snap = await getDocs(collection(db, "categorias"));
+            snap.forEach(docSnap => {
+                const cat = docSnap.data();
+                mapaCategorias[cat.id] = cat.nombre;
+                listaCat.innerHTML += `<li><button data-cat="${cat.id}" onclick="filtrarPorCategoria('${cat.id}', this)">${cat.nombre}</button></li>`;
+            });
         }
 
-        // 2. Cargar Inventario (Solo activos)
         async function cargarInventario() {
             const grid = document.getElementById('productos-grid');
-            try {
-                const q = query(collection(db, "productos"), where("estado", "==", "activo"));
-                const snap = await getDocs(q);
-                
-                todosLosProductos = [];
-                snap.forEach(docSnap => {
-                    todosLosProductos.push({ id: docSnap.id, ...docSnap.data() });
-                });
-
-                const urlParams = new URLSearchParams(window.location.search);
-                const categoriaFiltro = urlParams.get('cat');
-
-                if (categoriaFiltro && categoriaFiltro !== 'todos') {
-                    const btn = document.querySelector(`button[data-cat="${categoriaFiltro}"]`);
-                    if(btn) {
-                        window.filtrarPorCategoria(categoriaFiltro, btn);
-                    } else {
-                        renderizarProductos(todosLosProductos);
-                    }
-                } else {
-                    renderizarProductos(todosLosProductos);
-                }
-
-            } catch (error) {
-                grid.innerHTML = '<div id="loading-msg" style="color:red;">Error al cargar el inventario.</div>';
-                console.error(error);
-            }
+            const q = query(collection(db, "productos"), where("estado", "==", "activo"));
+            const snap = await getDocs(q);
+            snap.forEach(docSnap => todosLosProductos.push({ id: docSnap.id, ...docSnap.data() }));
+            renderizarProductos(todosLosProductos);
         }
 
-        // 3. Renderizar Tarjetas HTML
         function renderizarProductos(productosArray) {
             const grid = document.getElementById('productos-grid');
             grid.innerHTML = '';
-
-            if(productosArray.length === 0) {
-                grid.innerHTML = '<div id="loading-msg">No se encontraron repuestos.</div>';
-                return;
-            }
-
+            
             productosArray.forEach(prod => {
                 const nombreCat = mapaCategorias[prod.categoria] || 'General';
                 const safeName = prod.nombre.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                 
-                // BOTÓN MERCADO LIBRE DINÁMICO CORREGIDO
                 let botonML = "";
                 if(prod.ml_id && prod.ml_id.trim() !== "") {
                     let idML = prod.ml_id.trim();
-                    if (idML.startsWith("MLV") && !idML.startsWith("MLV-")) {
-                        idML = idML.replace("MLV", "MLV-");
-                    }
-                    botonML = `
-                        <a href="https://articulo.mercadolibre.com.ve/${idML}" target="_blank" class="btn-ml">
-                            <i class="fas fa-handshake"></i> Comprar en Mercado Libre
-                        </a>
-                    `;
+                    if (idML.startsWith("MLV") && !idML.startsWith("MLV-")) idML = idML.replace("MLV", "MLV-");
+                    botonML = `<a href="https://articulo.mercadolibre.com.ve/${idML}" target="_blank" class="btn-ml"><i class="fas fa-handshake"></i> Ver en Mercado Libre</a>`;
                 }
 
                 grid.innerHTML += `
                     <div class="prod-card">
-                        <div class="prod-img-wrap">
-                            <img src="${prod.imagen}" alt="${prod.nombre}" onerror="this.src='https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png'">
-                        </div>
+                        <div class="prod-img-wrap"><img src="${prod.imagen}" alt="${prod.nombre}" onerror="this.src='https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png'"></div>
                         <div class="prod-info">
                             <div class="prod-cat">${nombreCat}</div>
                             <h4 class="prod-title">${prod.nombre}</h4>
                             <div class="prod-price">$${Number(prod.precio).toFixed(2)}</div>
-                            
                             <div style="margin-top: auto;">
-                                <button type="button" class="btn-add-cart" onclick="agregarAlCarrito('${prod.id}', '${safeName}', ${prod.precio})">
-                                    <i class="fas fa-cart-plus"></i> Añadir al pedido
-                                </button>
+                                <button type="button" class="btn-add-cart" onclick="agregarAlCarrito('${prod.id}', '${safeName}', ${prod.precio})"><i class="fas fa-cart-plus"></i> Añadir</button>
                                 ${botonML}
                             </div>
                         </div>
-                    </div>
-                `;
+                    </div>`;
             });
         }
 
         // ==========================================
-        // FUNCIONES DEL CARRITO Y WHATSAPP
+        // FUNCIONES DEL CARRITO
         // ==========================================
         window.agregarAlCarrito = function(id, nombre, precio) {
-            const itemExistente = window.carrito.find(item => item.id === id);
-            if(itemExistente) {
-                itemExistente.cantidad++;
-            } else {
-                window.carrito.push({ id, nombre, precio, cantidad: 1 });
-            }
+            const item = window.carrito.find(i => i.id === id);
+            if(item) item.cantidad++;
+            else window.carrito.push({ id, nombre, precio, cantidad: 1 });
             actualizarUICarrito();
         };
 
@@ -317,9 +305,7 @@
             const item = window.carrito.find(i => i.id === id);
             if(item) {
                 item.cantidad += delta;
-                if(item.cantidad <= 0) {
-                    window.carrito = window.carrito.filter(i => i.id !== id);
-                }
+                if(item.cantidad <= 0) window.carrito = window.carrito.filter(i => i.id !== id);
                 actualizarUICarrito();
             }
         };
@@ -330,22 +316,20 @@
         };
 
         function actualizarUICarrito() {
+            localStorage.setItem('carritoFB', JSON.stringify(window.carrito));
             const container = document.getElementById('cart-items');
             const totalDisplay = document.getElementById('cart-total-amount');
-            
             container.innerHTML = '';
             let total = 0;
 
             if(window.carrito.length === 0) {
-                container.innerHTML = '<div class="empty-cart-msg">El carrito está vacío</div>';
+                container.innerHTML = '<div style="text-align:center; color:#999; padding:20px;">Vacío</div>';
                 totalDisplay.innerText = '$0.00';
                 return;
             }
 
             window.carrito.forEach(item => {
-                const subtotal = item.precio * item.cantidad;
-                total += subtotal;
-
+                total += item.precio * item.cantidad;
                 container.innerHTML += `
                     <div class="cart-item">
                         <div class="cart-item-info">
@@ -354,69 +338,177 @@
                         </div>
                         <div class="cart-item-controls">
                             <button class="btn-qty" onclick="cambiarCantidad('${item.id}', -1)">-</button>
-                            <span style="font-weight:bold;">${item.cantidad}</span>
+                            <span>${item.cantidad}</span>
                             <button class="btn-qty" onclick="cambiarCantidad('${item.id}', 1)">+</button>
                             <button class="btn-remove" onclick="eliminarDelCarrito('${item.id}')"><i class="fas fa-trash"></i></button>
                         </div>
-                    </div>
-                `;
+                    </div>`;
             });
-
             totalDisplay.innerText = `$${total.toFixed(2)}`;
         }
 
-        // GENERADOR DE ORDEN POR WHATSAPP
-        window.enviarPedidoWA = function() {
+        // ==========================================
+        // GESTIÓN DEL FORMULARIO, GPS Y CHECKOUT
+        // ==========================================
+        window.iniciarCheckout = function() {
             if(window.carrito.length === 0) {
-                alert("Por favor añade al menos un repuesto a tu pedido primero.");
+                alert("Añade repuestos a tu pedido primero.");
+                return;
+            }
+            if (!usuarioAutenticado) {
+                alert("Para procesar tu pedido, por favor Inicia Sesión o Regístrate.");
+                window.location.href = "login.html"; 
+                return;
+            }
+            document.getElementById('modal-pago').style.display = 'flex';
+        };
+
+        window.cerrarModalCheckout = function() {
+            document.getElementById('modal-pago').style.display = 'none';
+        };
+
+        window.verificarCamposEnvio = function() {
+            const envio = document.getElementById('metodo-envio').value;
+            const grupoDireccion = document.getElementById('grupo-direccion');
+            
+            if(envio !== "Retiro en persona (Sede Principal)") {
+                grupoDireccion.style.display = 'block';
+            } else {
+                grupoDireccion.style.display = 'none';
+                document.getElementById('direccion-pedido').value = ''; 
+            }
+        };
+
+        window.obtenerUbicacionGPS = function() {
+            const inputDireccion = document.getElementById('direccion-pedido');
+            const btnGps = document.getElementById('btn-gps');
+
+            if (!navigator.geolocation) {
+                alert("Tu navegador no soporta la geolocalización. Por favor escribe tu dirección o pega tu link de Google Maps manualmente.");
                 return;
             }
 
-            let mensaje = "Hola F&B Parts, deseo realizar el siguiente pedido:\n\n";
+            btnGps.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btnGps.disabled = true;
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    const linkMaps = `https://www.google.com/maps?q=${lat},${lng}`;
+                    
+                    if (inputDireccion.value.trim() !== "") {
+                        inputDireccion.value = inputDireccion.value + " - Link GPS: " + linkMaps;
+                    } else {
+                        inputDireccion.value = linkMaps;
+                    }
+                    
+                    btnGps.innerHTML = '<i class="fas fa-check"></i> Listo';
+                    setTimeout(() => {
+                        btnGps.innerHTML = '<i class="fas fa-map-marker-alt"></i> GPS';
+                        btnGps.disabled = false;
+                    }, 3000);
+                },
+                (error) => {
+                    console.error("Error GPS: ", error);
+                    alert("No pudimos acceder a tu ubicación. Es posible que los permisos estén denegados en tu navegador. Puedes escribir tu dirección manualmente.");
+                    btnGps.innerHTML = '<i class="fas fa-map-marker-alt"></i> GPS';
+                    btnGps.disabled = false;
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        };
+
+        window.finalizarPedidoBaseDatos = async function() {
+            const nombreCliente = document.getElementById('nombre-checkout').value.trim();
+            const metodoEnvio = document.getElementById('metodo-envio').value;
+            const direccion = document.getElementById('direccion-pedido').value.trim();
+            const metodoPago = document.getElementById('metodo-pago').value;
+            
+            if(nombreCliente === "") {
+                alert("Indícanos tu nombre para la orden.");
+                return;
+            }
+
+            if(metodoEnvio !== "Retiro en persona (Sede Principal)" && direccion === "") {
+                alert("Por favor, indícanos tu dirección (puedes usar el botón GPS) para coordinar el envío.");
+                return;
+            }
+
+            const btn = document.getElementById('btn-enviar-final');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando orden...';
+            btn.disabled = true;
+
+            let mensajeWA = `Hola F&B Parts, soy ${nombreCliente}.\nYa estoy registrado en su web y deseo realizar el siguiente pedido pagando por *${metodoPago}*:\n\n`;
+            
+            mensajeWA += `📦 *Método de entrega:* ${metodoEnvio}\n`;
+            if (metodoEnvio !== "Retiro en persona (Sede Principal)") {
+                mensajeWA += `📍 *Dirección/GPS:* ${direccion}\n\n`;
+            } else {
+                mensajeWA += `\n`;
+            }
+
             let totalGeneral = 0;
+            let productosParaBaseDeDatos = [];
 
             window.carrito.forEach(item => {
                 const subtotal = item.precio * item.cantidad;
                 totalGeneral += subtotal;
-                mensaje += `✅ ${item.cantidad}x ${item.nombre} ($${subtotal.toFixed(2)})\n`;
+                mensajeWA += `✅ ${item.cantidad}x ${item.nombre} ($${subtotal.toFixed(2)})\n`;
+                productosParaBaseDeDatos.push({ nombre: item.nombre, cantidad: item.cantidad, precio: item.precio });
             });
 
-            mensaje += `\n*TOTAL DEL PEDIDO: $${totalGeneral.toFixed(2)}*\n\n¿Tienen disponibilidad para procesar la compra?`;
+            mensajeWA += `\n*TOTAL DEL PEDIDO: $${totalGeneral.toFixed(2)}*\n\nPor favor, confirmarme la viabilidad del envío y los datos para el pago.`;
 
-            const numeroWhatsApp = "584120161036";
-            const link = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensaje)}`;
-            window.open(link, '_blank');
+            // AQUÍ ESTÁ EL CAMBIO CLAVE PARA CONECTAR EL PEDIDO AL USUARIO:
+            const objetoPedidoNuevo = {
+                usuario_uid: usuarioAutenticado ? usuarioAutenticado.uid : "Sin ID", // <--- ESTO AMARRA EL PEDIDO A SU CUENTA
+                cliente: nombreCliente,
+                email: usuarioAutenticado ? usuarioAutenticado.email : "Usuario sin sesión",
+                envio: metodoEnvio !== "Retiro en persona (Sede Principal)" ? `${metodoEnvio} - ${direccion}` : metodoEnvio,
+                tracking: `Pago por: ${metodoPago}`,
+                estado: "Pendiente",
+                fecha: new Date().toLocaleDateString("es-VE"),
+                total: totalGeneral,
+                productos: productosParaBaseDeDatos
+            };
+
+            try {
+                await addDoc(collection(db, "pedidos"), objetoPedidoNuevo);
+                window.carrito = [];
+                actualizarUICarrito();
+                localStorage.removeItem('carritoFB'); 
+                cerrarModalCheckout();
+
+                const link = `https://wa.me/584120161036?text=${encodeURIComponent(mensajeWA)}`;
+                window.open(link, '_blank');
+            } catch (error) {
+                console.error("Error:", error);
+                alert("Hubo un error de conexión.");
+            }
+            btn.innerHTML = '<i class="fab fa-whatsapp"></i> Confirmar y Enviar WhatsApp';
+            btn.disabled = false;
         };
 
-        // FUNCIONES DE BÚSQUEDA Y FILTRO
+        // Filtros y Buscador
         window.filtrarPorCategoria = function(categoriaId, btnElement) {
             document.querySelectorAll('.cat-list button').forEach(btn => btn.classList.remove('active'));
             if(btnElement) btnElement.classList.add('active');
-            document.getElementById('buscador-tienda').value = '';
-
-            if (categoriaId === 'todos') {
-                renderizarProductos(todosLosProductos);
-            } else {
-                const filtrados = todosLosProductos.filter(p => p.categoria === categoriaId);
-                renderizarProductos(filtrados);
-            }
+            const f = categoriaId === 'todos' ? todosLosProductos : todosLosProductos.filter(p => p.categoria === categoriaId);
+            renderizarProductos(f);
         };
-
         window.buscarRepuestos = function() {
             const texto = document.getElementById('buscador-tienda').value.toLowerCase();
-            document.querySelectorAll('.cat-list button').forEach(btn => btn.classList.remove('active'));
-            document.querySelector('.cat-list button').classList.add('active'); 
-
-            const filtrados = todosLosProductos.filter(p => p.nombre.toLowerCase().includes(texto));
-            renderizarProductos(filtrados);
+            const f = todosLosProductos.filter(p => p.nombre.toLowerCase().includes(texto));
+            renderizarProductos(f);
         };
 
-        // INICIALIZAR
+        // Iniciar
         window.addEventListener('DOMContentLoaded', async () => {
+            actualizarUICarrito(); 
             await cargarCategorias();
             await cargarInventario();
         });
-
     </script>
 </body>
 </html>

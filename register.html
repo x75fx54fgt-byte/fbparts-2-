@@ -18,7 +18,8 @@
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .form-group { margin-bottom: 15px; text-align: left; position: relative; }
         .form-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 13px; color: #333; }
-        .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+        .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; outline: none; }
+        .form-group input:focus, .form-group textarea:focus { border-color: var(--green); }
         .form-group textarea { resize: vertical; height: 70px; }
 
         .toggle-password {
@@ -33,6 +34,7 @@
 
         .btn-action { background: var(--green); color: white; border: none; padding: 12px; font-family: 'Oswald', sans-serif; font-size: 16px; cursor: pointer; border-radius: 4px; width: 100%; transition: background .2s; margin-top: 10px; }
         .btn-action:hover { background: var(--green-dark); }
+        .btn-action:disabled { background: #999; cursor: not-allowed; } /* Estilo para botón deshabilitado */
         
         .btn-secondary { background: white; color: var(--green); border: 2px solid var(--green); padding: 10px; font-family: 'Oswald', sans-serif; font-size: 15px; cursor: pointer; border-radius: 4px; width: 100%; transition: all .2s; margin-top: 10px; text-decoration: none; display: inline-block; }
         .btn-secondary:hover { background: #f0f4f1; }
@@ -47,10 +49,10 @@
         <span>REGISTRO DE DATOS Y NUEVA CUENTA</span>
     </div>
 
-    <header>
-        <div class="container header-wrap">
+    <header style="background: white; border-bottom: 1px solid #eee;">
+        <div class="container header-wrap" style="padding: 15px 20px;">
             <a class="logo" href="index.html">
-                <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="LOGO F&B PARTS">
+                <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="LOGO F&B PARTS" style="height: 60px;">
             </a>
 
             <nav>
@@ -60,7 +62,7 @@
             </nav>
 
             <div class="header-right">
-                <a class="call-btn" href="login.html">
+                <a class="call-btn" href="login.html" style="background: #333; color: white; padding: 8px 15px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 13px;">
                     <i class="fas fa-arrow-left"></i> VOLVER 
                 </a>
             </div>
@@ -156,6 +158,7 @@
         // Registro de usuario y guardado de perfil en Firestore
         const registerForm = document.getElementById('register-form');
         const errorMessage = document.getElementById('error-message');
+        const btnRegister = document.getElementById('btnRegister');
 
         registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -170,13 +173,14 @@
 
             errorMessage.innerText = "Registrando tus datos...";
             errorMessage.style.color = "green";
+            btnRegister.disabled = true; // Bloquea el botón para no repetir el proceso
 
             try {
                 // 1. Creamos la cuenta en Firebase Auth
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
 
-                // 2. Guardamos la información detallada en una colección llamada "usuarios"
+                // 2. Guardamos la información detallada en la colección "usuarios"
                 await setDoc(doc(db, "usuarios", user.uid), {
                     uid: user.uid,
                     nombre: nombre,
@@ -189,11 +193,28 @@
                 });
 
                 alert("¡Cuenta registrada con éxito!");
-                window.location.href = "mi-cuenta.html";
+
+                // === INICIO DE REDIRECCIÓN INTELIGENTE ===
+                const carritoMemoria = localStorage.getItem('carritoFB');
+                let carrito = [];
+                
+                if (carritoMemoria) {
+                    carrito = JSON.parse(carritoMemoria);
+                }
+
+                // Si el cliente estaba comprando, lo devolvemos al catálogo
+                if (carrito.length > 0) {
+                    window.location.href = "tienda.html";
+                } else {
+                // Si entró a registrarse de la nada, va a su perfil
+                    window.location.href = "mi-cuenta.html";
+                }
 
             } catch (error) {
                 console.error(error);
                 errorMessage.style.color = "red";
+                btnRegister.disabled = false; // Reactiva el botón si hay error
+                
                 if (error.code === 'auth/email-already-in-use') {
                     errorMessage.innerText = "Este correo ya está registrado.";
                 } else if (error.code === 'auth/weak-password') {
