@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Panel de Administración | F&B Parts</title>
+    <link rel="icon" type="image/png" href="img/favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="styles.css">
+
+    <style>
+        .admin-container { max-width: 1250px; margin: 40px auto; padding: 0 20px; }
+        
+        .admin-tabs { display: flex; gap: 10px; margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 10px; flex-wrap: wrap; }
+        .tab-btn { background: #f8f8f8; color: #555; border: 1px solid #ddd; padding: 10px 20px; border-radius: 6px; font-family: 'Oswald', sans-serif; font-size: 16px; cursor: pointer; transition: all .2s; }
+        .tab-btn:hover { background: #eee; }
+        .tab-btn.active { background: #385723; color: white; border-color: #385723; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
+        .admin-header h2 { color: #385723; font-family: 'Oswald', sans-serif; font-size: 28px; margin: 0; }
+        
+        .admin-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 30px; align-items: start; }
+        
+        .card-form { background: white; border: 1px solid #eee; padding: 24px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,.05); margin-bottom: 20px; }
+        .card-form h3 { color: #385723; font-family: 'Oswald', sans-serif; font-size: 20px; margin-top: 0; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 13px; color: #444; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; outline: none; transition: border-color .3s; }
+        .form-group input:focus, .form-group select:focus { border-color: #385723; }
+
+        .table-toolbar { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px; border: 1px solid #eee; border-radius: 8px 8px 0 0; border-bottom: none; flex-wrap: wrap; gap: 15px; }
+        .table-toolbar h3 { margin: 0; color: #385723; font-family: 'Oswald', sans-serif; font-size: 20px; }
+        .filter-controls { display: flex; gap: 10px; flex-wrap: wrap; flex: 1; justify-content: flex-end; }
+        .filter-controls input { padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; outline: none; width: 100%; max-width: 280px; }
+        .filter-controls select { padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; outline: none; cursor: pointer; }
+
+        .data-table { width: 100%; background: white; border-collapse: collapse; box-shadow: 0 4px 15px rgba(0,0,0,.05); border: 1px solid #eee; border-radius: 8px; overflow: hidden; }
+        .data-table th, .data-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; vertical-align: middle; }
+        .data-table th { background-color: #385723; color: white; font-family: 'Oswald', sans-serif; letter-spacing: .05em; }
+        .data-table tr:hover { background-color: #f9f9f9; }
+
+        .badge-shipping { background-color: #e2f0d9; color: #385723; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; display: inline-block; margin-top: 4px; }
+        .badge-status-activo { background: #d4edda; color: #155724; padding: 3px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; }
+        .badge-status-inactivo { background: #f8d7da; color: #721c24; padding: 3px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; }
+        
+        .btn-action { background: #385723; color: white; border: none; padding: 12px; font-family: 'Oswald', sans-serif; font-size: 15px; cursor: pointer; border-radius: 4px; width: 100%; transition: background .2s; }
+        .btn-action:hover { background: #2c441b; }
+        .refresh-btn { background: #385723; color: white; border: none; padding: 8px 15px; font-family: 'Oswald', sans-serif; font-size: 14px; cursor: pointer; border-radius: 4px; display: inline-flex; align-items: center; gap: 8px; margin-left: 5px; }
+
+        .cotizacion-item-row { display: grid; grid-template-columns: 60px 1fr 110px 90px 90px 40px; gap: 6px; margin-bottom: 10px; align-items: center; }
+        @media (max-width: 900px) { .cotizacion-item-row { grid-template-columns: 1fr; } }
+
+        /* Estilos de Modales */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+        .modal-content { background: white; padding: 30px; border-radius: 8px; width: 90%; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
+        .modal-content h3 { font-family: 'Oswald', sans-serif; color: #385723; font-size: 22px; margin-top: 0; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .btn-cancel { background: #f8f8f8; color: #555; border: 1px solid #ccc; padding: 10px; font-family: 'Oswald', sans-serif; font-size: 15px; cursor: pointer; border-radius: 4px; flex: 1; }
+        .btn-save { background: #385723; color: white; border: none; padding: 10px; font-family: 'Oswald', sans-serif; font-size: 15px; cursor: pointer; border-radius: 4px; flex: 1; }
+        .btn-delete { background: #d9534f; color: white; border: none; padding: 10px 15px; font-family: 'Oswald', sans-serif; font-size: 15px; cursor: pointer; border-radius: 4px; }
+        .btn-delete:hover { background: #c9302c; }
+
+        /* REGLAS MÁGICAS DE IMPRESIÓN */
+        @media screen {
+            #print-container { display: none; }
+        }
+        @media print {
+            body { background-color: white; margin: 0; padding: 0; }
+            #app-wrapper { display: none !important; }
+            #print-container { display: block !important; width: 100%; }
+        }
+    </style>
+</head>
+<body style="background-color: #f8f8f8;">
+
+    <!-- ENVOLTORIO PRINCIPAL DEL PANEL (Se oculta al imprimir) -->
+    <div id="app-wrapper">
+        <div class="topbar">
+            <h2>PANEL DE CONTROL INTERNO</h2>
+            <span>LOGÍSTICA, CLIENTES Y COTIZACIONES</span>
+        </div>
+
+        <header>
+            <div class="container header-wrap">
+                <a class="logo" href="index.html">
+                    <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="LOGO F&B PARTS">
+                </a>
+
+                <nav>
+                    <a href="index.html">Sitio Web</a>
+                    <a href="tienda.html">Tienda</a>
+                    <a href="admin.html" style="color: #000; font-weight:bold;">Administración</a>
+                </nav>
+            </div>
+        </header>
+
+        <div class="admin-container">
+            
+            <div class="admin-tabs">
+                <button class="tab-btn active" onclick="mostrarPestana('pedidos', this)"><i class="fas fa-box"></i> Gestión de Pedidos</button>
+                <button class="tab-btn" onclick="mostrarPestana('catalogo', this)"><i class="fas fa-tags"></i> Catálogo y Stock</button>
+                <button class="tab-btn" onclick="mostrarPestana('clientes', this)"><i class="fas fa-address-book"></i> Base de Clientes</button>
+                <button class="tab-btn" onclick="mostrarPestana('cotizaciones', this)"><i class="fas fa-file-invoice-dollar"></i> Crear Cotización</button>
+                <button class="tab-btn" onclick="mostrarPestana('historial-cotizaciones', this)"><i class="fas fa-folder-open"></i> Base de Cotizaciones</button>
+            </div>
+
+            <!-- PESTAÑA 1: PEDIDOS -->
+            <div id="tab-pedidos" class="tab-content active">
+                <div class="admin-header">
+                    <h2>Control de Envíos y Pedidos</h2>
+                    <button class="refresh-btn" onclick="cargarPedidos()"><i class="fas fa-sync-alt"></i> Actualizar</button>
+                </div>
+
+                <div class="admin-grid">
+                    <div class="card-form">
+                        <h3><i class="fas fa-plus-circle"></i> Nuevo Pedido Manual</h3>
+                        <form id="manual-order-form">
+                            <div class="form-group">
+                                <label>Correo del Cliente</label>
+                                <input type="email" id="client-email" placeholder="cliente@correo.com" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Nombre / Teléfono</label>
+                                <input type="text" id="client-name" placeholder="Ej: Juan Pérez" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Repuesto (Dinámico)</label>
+                                <select id="product-select" required>
+                                    <option value="">Cargando catálogo...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Cantidad</label>
+                                <input type="number" id="product-qty" value="1" min="1" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Método de Envio</label>
+                                <select id="shipping-type" required>
+                                    <option value="Motorizado Caracas">Motorizado (Caracas)</option>
+                                    <option value="Encomienda Tealca">Encomienda / Tealca (Interior)</option>
+                                    <option value="Retiro en Local">Retiro en Tienda / Local</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Detalle / Nro. de Guía</label>
+                                <input type="text" id="tracking-info" placeholder="Ej: En camino con motorizado">
+                            </div>
+                            <button type="submit" class="btn-action">Registrar Pedido</button>
+                        </form>
+                    </div>
+
+                    <div style="overflow-x: auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Cliente</th>
+                                    <th>Productos</th>
+                                    <th>Total</th>
+                                    <th>Logística y Envíos</th>
+                                    <th style="text-align: center;">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orders-table-body">
+                                <tr><td colspan="6" style="text-align: center;">Cargando pedidos...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PESTAÑA 2: CATÁLOGO Y STOCK -->
+            <div id="tab-catalogo" class="tab-content">
+                <div class="admin-header">
+                    <h2>Catálogo y Categorías</h2>
+                    <div>
+                        <!-- BOTÓN NUEVO: ADMINISTRAR CATEGORÍAS -->
+                        <button class="refresh-btn" style="background: #f0ad4e; margin-right: 5px;" onclick="abrirModalCategorias()">
+                            <i class="fas fa-folder-minus"></i> Administrar Categorías
+                        </button>
+                        <button class="refresh-btn" style="background: #d9534f;" onclick="borrarTodoInventario()">
+                            <i class="fas fa-trash-alt"></i> Borrar Todo el Inventario
+                        </button>
+                        <button class="refresh-btn" onclick="cargarCatalogoAdmin()"><i class="fas fa-sync-alt"></i> Actualizar</button>
+                    </div>
+                </div>
+
+                <div class="admin-grid">
+                    <div>
+                        <!-- Carga Masiva -->
+                        <div class="card-form" style="background: #e2f0d9; border-color: #c3e6cb;">
+                            <h3 style="color: #155724; border-color: #c3e6cb;"><i class="fas fa-file-excel"></i> Carga Masiva Inteligente</h3>
+                            <p style="font-size: 12px; color: #155724; margin-top: 0; margin-bottom: 10px;">
+                                Copia todo el bloque desde tu Excel de MercadoLibre y pégalo aquí para subir stock y categorías de golpe.
+                            </p>
+                            <textarea id="excel-paste" placeholder="Pega aquí todas las filas y columnas de Excel..." style="width: 100%; height: 90px; padding: 10px; border: 1px solid #c3e6cb; border-radius: 4px; font-size: 12px; font-family: monospace; outline: none; margin-bottom: 10px; resize: vertical;"></textarea>
+                            
+                            <button type="button" id="btn-excel-upload" onclick="procesarPegadoMasivo()" style="background: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; width: 100%;">
+                                Subir y Crear Categorías
+                            </button>
+                        </div>
+
+                        <div class="card-form">
+                            <h3><i class="fas fa-box-open"></i> Cargar Repuesto Individual</h3>
+                            <form id="product-form">
+                                <div class="form-group">
+                                    <label>Nombre, Marca, Modelo y Año</label>
+                                    <input type="text" id="prod-nombre" placeholder="Ej: Bomba de Agua Yaris 2008" required>
+                                </div>
+                                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                    <div>
+                                        <label>Precio ($)</label>
+                                        <input type="number" step="0.01" id="prod-precio" placeholder="Ej: 45.00" required>
+                                    </div>
+                                    <div>
+                                        <label>Stock</label>
+                                        <input type="number" id="prod-stock" value="1" min="0" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Categoría</label>
+                                    <select id="prod-categoria" required>
+                                        <option value="">Cargando...</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Imagen (Enlace URL o ruta)</label>
+                                    <input type="text" id="prod-imagen" placeholder="Ej: img/bomba.jpg" required>
+                                </div>
+                                <button type="submit" class="btn-action">Guardar Repuesto</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div style="overflow-x: auto;">
+                        <div class="table-toolbar">
+                            <h3>Inventario Actual</h3>
+                            <div class="filter-controls">
+                                <input type="text" id="admin-search-filter" placeholder="🔍 Buscar repuesto..." onkeyup="filtrarTablaAdmin()">
+                                <select id="admin-category-filter" onchange="filtrarTablaAdmin()">
+                                    <option value="todos">Todas las Categorías</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Imagen</th>
+                                    <th>Repuesto / Estado</th>
+                                    <th>Categoría</th>
+                                    <th>Precio / Stock</th>
+                                    <th style="text-align: center;">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="products-table-body">
+                                <tr><td colspan="5" style="text-align: center;">Cargando repuestos...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PESTAÑA 3: BASE DE DATOS DE CLIENTES -->
+            <div id="tab-clientes" class="tab-content">
+                <div class="admin-header">
+                    <h2>Base de Datos de Clientes y Aseguradoras</h2>
+                    <button class="refresh-btn" onclick="cargarBaseClientes()"><i class="fas fa-sync-alt"></i> Actualizar</button>
+                </div>
+
+                <div class="admin-grid">
+                    <div class="card-form">
+                        <h3><i class="fas fa-user-plus"></i> Registrar Nuevo Cliente</h3>
+                        <form id="form-cliente-db">
+                            <div class="form-group">
+                                <label>Nombre / Aseguradora</label>
+                                <input type="text" id="db-cliente-nombre" placeholder="Ej: C.A. SEGUROS CATATUMBO" required>
+                            </div>
+                            <div class="form-group">
+                                <label>RIF o C.I.</label>
+                                <input type="text" id="db-cliente-rif" placeholder="Ej: J-07001736-8" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Dirección / Ciudad</label>
+                                <input type="text" id="db-cliente-dir" placeholder="Ej: MARACAIBO, VENEZUELA" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Teléfono</label>
+                                <input type="text" id="db-cliente-tel" placeholder="Ej: 0261-700-5555" required>
+                            </div>
+                            <button type="submit" class="btn-action">Guardar en Base de Datos</button>
+                        </form>
+                    </div>
+
+                    <div style="overflow-x: auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Cliente / Aseguradora</th>
+                                    <th>RIF o C.I.</th>
+                                    <th>Dirección</th>
+                                    <th>Teléfono</th>
+                                    <th style="text-align: center;">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clients-table-body">
+                                <tr><td colspan="5" style="text-align: center;">Cargando clientes...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PESTAÑA 4: CREAR COTIZACIÓN -->
+            <div id="tab-cotizaciones" class="tab-content">
+                <div class="admin-header">
+                    <h2>Generador Oficial de Cotizaciones</h2>
+                    <span style="font-size: 13px; color: #666;">F&B PARTS • RIF: J-503971118</span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: start;">
+                    
+                    <!-- Columna Izquierda: Formulario -->
+                    <div class="card-form" style="margin-bottom: 0;">
+
+                        <!-- AUTO COMPLETADO DE CLIENTES -->
+                        <div style="background: #e2f0d9; border: 1px solid #c3e6cb; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+                            <label style="display: block; font-weight: bold; color: #155724; font-size: 13px; margin-bottom: 8px;">
+                                <i class="fas fa-address-book"></i> Autocompletar desde Base de Clientes:
+                            </label>
+                            <select id="cot-selector-clientes" onchange="seleccionarClienteCotizacion()" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; outline: none; font-size: 14px; background: white;">
+                                <option value="">Selecciona un cliente o aseguradora guardada...</option>
+                            </select>
+                        </div>
+
+                        <h3><i class="fas fa-file-invoice"></i> Datos del Cliente y Vehículo</h3>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>Nro. Cotización</label>
+                                <input type="text" id="cot-nro" style="font-weight: bold; color: var(--green);" required oninput="actualizarPreview()">
+                            </div>
+                            <div class="form-group">
+                                <label>Nombre del Cliente / Aseguradora</label>
+                                <input type="text" id="cot-cliente" value="C.A. SEGUROS CATATUMBO" required oninput="actualizarPreview()">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>RIF o C.I.</label>
+                                <input type="text" id="cot-rif" value="J-07001736-8" required oninput="actualizarPreview()">
+                            </div>
+                            <div class="form-group">
+                                <label>Dirección / Ciudad</label>
+                                <input type="text" id="cot-direccion" value="MARACAIBO, VENEZUELA" oninput="actualizarPreview()">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>Teléfono</label>
+                                <input type="text" id="cot-telefono" value="0261-700-5555" oninput="actualizarPreview()">
+                            </div>
+                            <div class="form-group">
+                                <label>Vehículo</label>
+                                <input type="text" id="cot-vehiculo" value="DONGFENG RICH ZNA P11" oninput="actualizarPreview()">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Año del Vehículo</label>
+                            <input type="text" id="cot-anio" value="2026" oninput="actualizarPreview()">
+                        </div>
+
+                        <h3 style="margin-top: 25px;"><i class="fas fa-list"></i> Ítems Cotizados</h3>
+                        
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                            <select id="select-inventario-cot" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+                                <option value="">Selecciona un repuesto de tu inventario para agregar...</option>
+                            </select>
+                            <button type="button" onclick="agregarItemDesdeInventario()" style="background: var(--green); color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px;">
+                                <i class="fas fa-plus"></i> Añadir
+                            </button>
+                        </div>
+
+                        <div id="cotizacion-items-container">
+                            <div class="cotizacion-item-row">
+                                <input type="number" class="item-cant" value="1" min="1" placeholder="Cant" oninput="calcularTotalCotizacion()">
+                                <input type="text" class="item-desc" value="STOP LH (ORIGINAL)" placeholder="Descripción" oninput="actualizarPreview()">
+                                <input type="number" step="0.01" class="item-precio" value="145.89" placeholder="Precio" oninput="calcularTotalCotizacion()">
+                                <input type="number" step="0.01" class="item-descval" value="45.90" placeholder="Desc." oninput="calcularTotalCotizacion()">
+                                <input type="text" class="item-total-line" value="$99.99" readonly style="background: #f1f1f1; text-align: right; font-weight: bold;">
+                                <button type="button" onclick="this.parentElement.remove(); calcularTotalCotizacion();" style="background:#d9534f; color:white; border:none; border-radius:4px; cursor:pointer;"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+
+                        <button type="button" onclick="agregarFilaCotizacionVacia()" style="background: #1d6fa5; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold; margin-bottom: 20px;">
+                            <i class="fas fa-plus"></i> Fila Manual
+                        </button>
+
+                        <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #ddd; text-align: right; margin-bottom: 20px; font-size: 13px;">
+                            <div>Sub-Total: $<span id="cot-subtotal">145.89</span></div>
+                            <div style="color: #d9534f;">Descuento: -$<span id="cot-total-desc">45.90</span></div>
+                            <div>16% IVA: $<span id="cot-iva">16.00</span></div>
+                            <div style="font-size: 16px; font-weight: bold; color: var(--green); margin-top: 5px;">TOTAL: $<span id="cot-total-general">115.99</span></div>
+                        </div>
+
+                        <button type="button" class="btn-action" onclick="guardarYGenerarCotizacion()" style="font-size: 16px; padding: 15px; background: #1d6fa5;">
+                            <i class="fas fa-print"></i> Generar Cotización
+                        </button>
+                    </div>
+
+                    <!-- Columna Derecha: Vista Previa -->
+                    <div>
+                        <div style="background: white; border: 1px solid #ccc; border-radius: 8px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,.05); position: sticky; top: 20px;">
+                            <h3 style="font-family: 'Oswald', sans-serif; color: var(--green); font-size: 18px; margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 8px;">
+                                <i class="fas fa-eye"></i> Vista Previa en Tiempo Real
+                            </h3>
+                            
+                            <div id="pdf-preview-box" style="border: 1px solid #ddd; background: white; padding: 15px; font-family: Arial, sans-serif; color: #333; font-size: 10px; overflow: hidden; min-height: 650px;">
+                                <!-- Aquí se inyecta la vista previa -->
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- PESTAÑA 5: HISTORIAL -->
+            <div id="tab-historial-cotizaciones" class="tab-content">
+                <div class="admin-header">
+                    <h2>Historial y Base de Datos de Cotizaciones</h2>
+                    <button class="refresh-btn" onclick="cargarHistorialCotizaciones()"><i class="fas fa-sync-alt"></i> Actualizar</button>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nro. Cotización</th>
+                                <th>Fecha</th>
+                                <th>Cliente / Aseguradora</th>
+                                <th>Vehículo</th>
+                                <th>Total ($)</th>
+                                <th style="text-align: center;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cotizaciones-table-body">
+                            <tr><td colspan="6" style="text-align: center;">Cargando cotizaciones guardadas...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div> <!-- Cierre App Wrapper -->
+
+    <!-- CONTENEDOR EXCLUSIVO PARA IMPRESIÓN -->
+    <div id="print-container" class="print-only"></div>
+
+    <!-- MODAL PARA ADMINISTRAR CATEGORÍAS -->
+    <div id="modal-categorias" class="modal-overlay">
+        <div class="modal-content">
+            <h3><i class="fas fa-tags"></i> Administrar Categorías</h3>
+            <p style="font-size: 13px; color: #666; margin-top: -10px; margin-bottom: 15px;">Elimina las categorías que ya no uses. Esto actualizará los filtros y formularios.</p>
+            
+            <div id="lista-categorias-modal" style="max-height: 350px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; padding: 10px; background: #fdfdfd;">
+                <!-- Aquí se inyecta la lista de categorías -->
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="cerrarModalCategorias()">Cerrar Administrador</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE EDICIÓN DE PRODUCTOS -->
+    <div id="modal-edicion" class="modal-overlay">
+        <div class="modal-content">
+            <h3><i class="fas fa-edit"></i> Administrar Repuesto</h3>
+            <input type="hidden" id="edit-id">
+            
+            <div class="form-group">
+                <label>Nombre del Repuesto</label>
+                <input type="text" id="edit-nombre">
+            </div>
+            
+            <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                    <label>Precio ($)</label>
+                    <input type="number" step="0.01" id="edit-precio">
+                </div>
+                <div>
+                    <label>Cantidad en Stock</label>
+                    <input type="number" id="edit-stock" min="0">
+                </div>
+            </div>
+
+            <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                    <label>Categoría</label>
+                    <select id="edit-categoria"></select>
+                </div>
+                <div>
+                    <label>Estado</label>
+                    <select id="edit-estado">
+                        <option value="activo">Activo (Visible)</option>
+                        <option value="inactivo">Inactivo (Pausado)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>URL de la Imagen</label>
+                <textarea id="edit-imagen" style="height: 50px;"></textarea>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn-delete" onclick="eliminarProducto()"><i class="fas fa-trash"></i> Eliminar</button>
+                <button type="button" class="btn-cancel" onclick="cerrarModalEdicion()">Cancelar</button>
+                <button type="button" class="btn-save" onclick="guardarCambiosProducto()" id="btn-save-edit">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE EDICIÓN DE PEDIDOS Y ENVÍOS -->
+    <div id="modal-pedido" class="modal-overlay">
+        <div class="modal-content">
+            <h3><i class="fas fa-shipping-fast"></i> Editar Envío y Pedido</h3>
+            <input type="hidden" id="edit-pedido-id">
+            
+            <div class="form-group">
+                <label>Correo del Cliente</label>
+                <input type="email" id="edit-pedido-email">
+            </div>
+
+            <div class="form-group">
+                <label>Nombre / Cliente Registrado</label>
+                <input type="text" id="edit-pedido-cliente">
+            </div>
+
+            <div class="form-group">
+                <label>Método de Envío</label>
+                <select id="edit-pedido-envio">
+                    <option value="Motorizado Caracas">Motorizado (Caracas)</option>
+                    <option value="Encomienda Tealca">Encomienda / Tealca (Interior)</option>
+                    <option value="Retiro en Local">Retiro en Tienda / Local</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Estatus / Nro. de Guía / Tracking</label>
+                <input type="text" id="edit-pedido-tracking" placeholder="Ej: Guía Tealca #123456 o En camino">
+            </div>
+
+            <div class="form-group">
+                <label>Estado del Pedido</label>
+                <select id="edit-pedido-estado">
+                    <option value="Pendiente">Pendiente</option>
+                    <option value="Procesando">Procesando</option>
+                    <option value="Enviado">Enviado</option>
+                    <option value="Entregado">Entregado</option>
+                </select>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn-delete" onclick="eliminarPedido()"><i class="fas fa-trash"></i> Borrar</button>
+                <button type="button" class="btn-cancel" onclick="cerrarModalPedido()">Cancelar</button>
+                <button type="button" class="btn-save" onclick="guardarCambiosPedido()" id="btn-save-pedido">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts de Firebase con Bindings Globales -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, getDocs, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
+            authDomain: "fb-parts-app.firebaseapp.com",
+            projectId: "fb-parts-app",
+            storageBucket: "fb-parts-app.firebasestorage.app",
+            messagingSenderId: "21714159445",
+            appId: "1:21714159445:web:8f4946cd1c98d9b95dd1dc"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let mapaCategorias = {};
+        window.clientesDBLocal = {}; // Para guardar la lista de clientes localmente
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) window.location.href = "admin-login.html";
+        });
+
+        // ==========================================
+        // EXPOSICIÓN GLOBAL DE FUNCIONES (WINDOW)
+        // ==========================================
+        window.mostrarPestana = function(id, btnElement) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('tab-' + id).classList.add('active');
+            btnElement.classList.add('active');
+
+            if(id === 'clientes') {
+                window.cargarBaseClientes();
+            }
+            if(id === 'cotizaciones') {
+                window.cargarBaseClientes();
+                actualizarPreview();
+            }
+            if(id === 'historial-cotizaciones') {
+                cargarHistorialCotizaciones();
+            }
+        };
+
+        // ==========================================
+        // NUEVA FUNCIÓN: ADMINISTRAR CATEGORÍAS
+        // ==========================================
+        window.abrirModalCategorias = async function() {
+            document.getElementById('modal-categorias').style.display = 'flex';
+            await renderizarListaCategorias();
+        };
+
+        window.cerrarModalCategorias = function() {
+            document.getElementById('modal-categorias').style.display = 'none';
+        };
+
+        window.renderizarListaCategorias = async function() {
+            const lista = document.getElementById('lista-categorias-modal');
+            lista.innerHTML = '<p style="text-align:center; padding: 20px;">Cargando categorías...</p>';
+            try {
+                const snap = await getDocs(collection(db, "categorias"));
+                lista.innerHTML = '';
+                if (snap.empty) {
+                    lista.innerHTML = '<p style="text-align:center; color:#666; padding: 20px;">No hay categorías registradas.</p>';
+                    return;
+                }
+                snap.forEach(docSnap => {
+                    const cat = docSnap.data();
+                    lista.innerHTML += `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #e2e8f0; font-size: 14px;">
+                            <span style="font-weight: 500;">${cat.nombre}</span>
+                            <button type="button" onclick="eliminarCategoria('${docSnap.id}')" style="background:#d9534f; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;" title="Borrar Categoría">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                lista.innerHTML = '<p style="text-align:center; color:red; padding: 20px;">Error al cargar las categorías.</p>';
+            }
+        };
+
+        window.eliminarCategoria = async function(docId) {
+            if(!confirm("¿Estás seguro de eliminar esta categoría?\n\nNota: Los repuestos que usaban esta categoría NO se borrarán, pero la categoría desaparecerá de los filtros y opciones.")) return;
+            try {
+                await deleteDoc(doc(db, "categorias", docId));
+                await renderizarListaCategorias(); // Recargar el modal
+                window.cargarCatalogoAdmin(); // Recargar los dropdowns del panel de fondo
+            } catch (error) {
+                console.error(error);
+                alert("No se pudo eliminar la categoría.");
+            }
+        };
+
+        // ==========================================
+        // 1. BASE DE DATOS DE CLIENTES
+        // ==========================================
+        document.getElementById('form-cliente-db')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.innerHTML = "Guardando..."; btn.disabled = true;
+
+            const nuevoCliente = {
+                nombre: document.getElementById('db-cliente-nombre').value.trim(),
+                rif: document.getElementById('db-cliente-rif').value.trim(),
+                direccion: document.getElementById('db-cliente-dir').value.trim(),
+                telefono: document.getElementById('db-cliente-tel').value.trim()
+            };
+
+            try {
+                await addDoc(collection(db, "clientes"), nuevoCliente);
+                alert("¡Cliente registrado en la base de datos con éxito!");
+                document.getElementById('form-cliente-db').reset();
+                window.cargarBaseClientes();
+            } catch (error) {
+                console.error(error);
+                alert("Error al registrar el cliente.");
+            }
+            btn.innerHTML = "Guardar en Base de Datos"; btn.disabled = false;
+        });
+
+        window.cargarBaseClientes = async function() {
+            const tbody = document.getElementById('clients-table-body');
+            const selectCotizacion = document.getElementById('cot-selector-clientes');
+            
+            if(tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">Cargando base de datos...</td></tr>`;
+            if(selectCotizacion) selectCotizacion.innerHTML = '<option value="">Selecciona un cliente o aseguradora guardada para rellenar datos...</option>';
+            window.clientesDBLocal = {};
+
+            try {
+                const snap = await getDocs(collection(db, "clientes"));
+                if(tbody) tbody.innerHTML = '';
+                
+                if(snap.empty && tbody) {
+                     tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">No hay clientes registrados en la base de datos.</td></tr>`;
+                     return;
+                }
+                
+                snap.forEach((docSnap) => {
+                    const cli = docSnap.data();
+                    const docId = docSnap.id;
+                    window.clientesDBLocal[docId] = cli;
+
+                    if(selectCotizacion) {
+                        selectCotizacion.innerHTML += `<option value="${docId}">${cli.nombre} - ${cli.rif}</option>`;
+                    }
+
+                    if(tbody) {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td><strong>${cli.nombre}</strong></td>
+                                <td>${cli.rif}</td>
+                                <td>${cli.direccion}</td>
+                                <td>${cli.telefono}</td>
+                                <td style="text-align: center;">
+                                    <button type="button" onclick="eliminarClienteDB('${docId}')" style="background:#d9534f; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;" title="Eliminar Cliente">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                });
+            } catch (error) { 
+                console.error(error); 
+            }
+        };
+
+        window.seleccionarClienteCotizacion = function() {
+            const select = document.getElementById('cot-selector-clientes');
+            const clienteId = select.value;
+            
+            if(clienteId && window.clientesDBLocal[clienteId]) {
+                const cli = window.clientesDBLocal[clienteId];
+                document.getElementById('cot-cliente').value = cli.nombre;
+                document.getElementById('cot-rif').value = cli.rif;
+                document.getElementById('cot-direccion').value = cli.direccion;
+                document.getElementById('cot-telefono').value = cli.telefono;
+                window.actualizarPreview();
+            }
+        };
+
+        window.eliminarClienteDB = async function(docId) {
+            if(!confirm("¿Estás seguro de eliminar este cliente de la base de datos?")) return;
+            try {
+                await deleteDoc(doc(db, "clientes", docId));
+                window.cargarBaseClientes();
+            } catch (error) {
+                console.error(error);
+                alert("No se pudo eliminar el cliente.");
+            }
+        };
+
+        // ==========================================
+        // 2. GESTIÓN DE PEDIDOS Y CATÁLOGO
+        // ==========================================
+        window.cargarPedidos = async function() {
+            const tableBody = document.getElementById('orders-table-body');
+            tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center;">Actualizando pedidos...</td></tr>`;
+            try {
+                const querySnapshot = await getDocs(collection(db, "pedidos"));
+                tableBody.innerHTML = '';
+                if(querySnapshot.empty) {
+                     tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center;">No hay pedidos registrados</td></tr>`;
+                     return;
+                }
+                
+                querySnapshot.forEach((docSnap) => {
+                    const pedido = docSnap.data();
+                    const docId = docSnap.id;
+                    let prods = pedido.productos.map(p => `<li>${p.cantidad}x ${p.nombre}</li>`).join('');
+                    
+                    const safeCliente = (pedido.cliente || '').replace(/'/g, "\\'");
+                    const safeEmail = (pedido.email || '').replace(/'/g, "\\'");
+                    const safeEnvio = (pedido.envio || '').replace(/'/g, "\\'");
+                    const safeTracking = (pedido.tracking || '').replace(/'/g, "\\'");
+                    const safeEstado = (pedido.estado || 'Pendiente').replace(/'/g, "\\'");
+
+                    tableBody.innerHTML += `
+                        <tr>
+                            <td>${pedido.fecha || ''}</td>
+                            <td><strong>${pedido.cliente}</strong><br><span style="font-size:11px;color:#666;">${pedido.email}</span></td>
+                            <td><ul style="margin:0;padding-left:15px;font-size:12px;">${prods}</ul></td>
+                            <td><strong>$${Number(pedido.total || 0).toFixed(2)}</strong></td>
+                            <td>
+                                <span class="badge-shipping">${pedido.envio || 'N/D'}</span><br>
+                                <span style="font-size:12px;color:#333;"><strong>Tracking:</strong> ${pedido.tracking || 'Sin guía'}</span><br>
+                                <span style="font-size:11px;background:#e2f0d9;padding:2px 6px;border-radius:4px;">Estado: ${pedido.estado || 'Pendiente'}</span>
+                            </td>
+                            <td style="text-align: center;">
+                                <button type="button" onclick="abrirEdicionPedido('${docId}', '${safeCliente}', '${safeEmail}', '${safeEnvio}', '${safeTracking}', '${safeEstado}')" style="background:#1d6fa5; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="Editar Envío">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (error) { 
+                console.error(error); 
+                tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: red;">Error al cargar pedidos.</td></tr>`;
+            }
+        };
+
+        window.abrirEdicionPedido = function(id, cliente, email, envio, tracking, estado) {
+            document.getElementById('edit-pedido-id').value = id;
+            document.getElementById('edit-pedido-cliente').value = cliente;
+            document.getElementById('edit-pedido-email').value = email;
+            document.getElementById('edit-pedido-envio').value = envio;
+            document.getElementById('edit-pedido-tracking').value = tracking;
+            document.getElementById('edit-pedido-estado').value = estado;
+            document.getElementById('modal-pedido').style.display = 'flex';
+        };
+
+        window.cerrarModalPedido = function() {
+            document.getElementById('modal-pedido').style.display = 'none';
+        };
+
+        window.guardarCambiosPedido = async function() {
+            const docId = document.getElementById('edit-pedido-id').value;
+            const btn = document.getElementById('btn-save-pedido');
+            btn.innerHTML = "Guardando...";
+            btn.disabled = true;
+
+            const datosPedido = {
+                cliente: document.getElementById('edit-pedido-cliente').value,
+                email: document.getElementById('edit-pedido-email').value,
+                envio: document.getElementById('edit-pedido-envio').value,
+                tracking: document.getElementById('edit-pedido-tracking').value,
+                estado: document.getElementById('edit-pedido-estado').value
+            };
+
+            try {
+                await updateDoc(doc(db, "pedidos", docId), datosPedido);
+                window.cerrarModalPedido();
+                window.cargarPedidos();
+            } catch (error) {
+                console.error(error);
+                alert("Error al actualizar la información del envío.");
+            }
+            btn.innerHTML = "Guardar";
+            btn.disabled = false;
+        };
+
+        window.eliminarPedido = async function() {
+            const docId = document.getElementById('edit-pedido-id').value;
+            if(!confirm("¿Estás seguro de eliminar este registro de pedido permanentemente?")) return;
+
+            try {
+                await deleteDoc(doc(db, "pedidos", docId));
+                window.cerrarModalPedido();
+                window.cargarPedidos();
+                alert("Pedido eliminado con éxito.");
+            } catch (error) {
+                console.error(error);
+                alert("No se pudo eliminar el pedido.");
+            }
+        };
+
+        window.cargarCatalogoAdmin = async function() {
+            const selectCat = document.getElementById('prod-categoria');
+            const selectEditCat = document.getElementById('edit-categoria');
+            const selectFiltroAdmin = document.getElementById('admin-category-filter');
+            const selectProdManual = document.getElementById('product-select');
+            const selectInventarioCot = document.getElementById('select-inventario-cot');
+            
+            if(selectCat) selectCat.innerHTML = '<option value="">Selecciona una categoría...</option>';
+            if(selectEditCat) selectEditCat.innerHTML = '';
+            if(selectFiltroAdmin) selectFiltroAdmin.innerHTML = '<option value="todos">Todas las Categorías</option>';
+            if(selectProdManual) selectProdManual.innerHTML = '<option value="">Selecciona un repuesto...</option>';
+            if(selectInventarioCot) selectInventarioCot.innerHTML = '<option value="">Selecciona un repuesto de tu inventario para agregar...</option>';
+            mapaCategorias = {};
+
+            try {
+                const catSnap = await getDocs(collection(db, "categorias"));
+                catSnap.forEach(docSnap => {
+                    const cat = docSnap.data();
+                    mapaCategorias[cat.id] = cat.nombre;
+                    const optionHtml = `<option value="${cat.id}">${cat.nombre}</option>`;
+                    if(selectCat) selectCat.innerHTML += optionHtml;
+                    if(selectEditCat) selectEditCat.innerHTML += optionHtml;
+                    if(selectFiltroAdmin) selectFiltroAdmin.innerHTML += optionHtml;
+                });
+            } catch (error) { console.error(error); }
+
+            const tablaProd = document.getElementById('products-table-body');
+            if(tablaProd) tablaProd.innerHTML = `<tr><td colspan="5" style="text-align: center;">Buscando repuestos...</td></tr>`;
+            
+            try {
+                const prodSnap = await getDocs(collection(db, "productos"));
+                if(tablaProd) tablaProd.innerHTML = '';
+                if (prodSnap.empty) {
+                    if(tablaProd) tablaProd.innerHTML = `<tr><td colspan="5" style="text-align: center;">El catálogo está vacío.</td></tr>`;
+                    return;
+                }
+
+                prodSnap.forEach(docSnap => {
+                    const prod = docSnap.data();
+                    const docId = docSnap.id;
+                    
+                    const safeName = (prod.nombre || '').replace(/'/g, "\\'");
+                    const safeImg = (prod.imagen || '').replace(/'/g, "\\'");
+                    const stock = prod.stock !== undefined ? prod.stock : 1;
+                    const estado = prod.estado || 'activo';
+                    
+                    const badgeEstado = estado === 'activo' 
+                        ? `<span class="badge-status-activo">Activo</span>` 
+                        : `<span class="badge-status-inactivo">Inactivo</span>`;
+
+                    if(tablaProd) {
+                        tablaProd.innerHTML += `
+                            <tr class="admin-prod-row" data-category="${prod.categoria}">
+                                <td><img src="${prod.imagen}" width="60" style="border-radius:4px; border:1px solid #eee; background:#f0f0f0; object-fit:cover;" onerror="this.src='img/logo.png'"></td>
+                                <td class="prod-nombre-col"><strong>${prod.nombre}</strong><br>${badgeEstado}</td>
+                                <td><span style="background:#eee;padding:3px 8px;border-radius:10px;font-size:11px;">${prod.categoria}</span></td>
+                                <td><strong>$${Number(prod.precio).toFixed(2)}</strong><br><span style="font-size:12px;color:#666;">Stock: ${stock}</span></td>
+                                <td style="text-align: center;">
+                                    <button type="button" onclick="abrirEdicion('${docId}', '${safeName}', ${prod.precio}, ${stock}, '${prod.categoria}', '${estado}', '${safeImg}')" style="background:#1d6fa5; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="Administrar Repuesto">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                    if(selectProdManual) selectProdManual.innerHTML += `<option value="${prod.nombre}" data-price="${prod.precio}">${prod.nombre} - $${prod.precio}</option>`;
+                    if(selectInventarioCot) selectInventarioCot.innerHTML += `<option value="${docSnap.id}" data-nombre="${(prod.nombre || '').replace(/"/g, '&quot;')}" data-precio="${prod.precio}">${prod.nombre} - $${prod.precio}</option>`;
+                });
+            } catch (error) { console.error(error); }
+
+            window.filtrarTablaAdmin();
+        };
+
+        window.filtrarTablaAdmin = function() {
+            const filtroCategoria = document.getElementById('admin-category-filter')?.value || 'todos';
+            const textoBusqueda = document.getElementById('admin-search-filter')?.value.toLowerCase() || '';
+            const filas = document.querySelectorAll('.admin-prod-row');
+
+            filas.forEach(fila => {
+                const categoriaFila = fila.getAttribute('data-category');
+                const nombreRepuesto = fila.querySelector('.prod-nombre-col')?.textContent.toLowerCase() || '';
+                
+                const coincideCategoria = (filtroCategoria === 'todos' || categoriaFila === filtroCategoria);
+                const coincideTexto = nombreRepuesto.includes(textoBusqueda);
+                
+                if (coincideCategoria && coincideTexto) {
+                    fila.style.display = '';
+                } else {
+                    fila.style.display = 'none';
+                }
+            });
+        };
+
+        window.borrarTodoInventario = async function() {
+            if(!confirm("⚠️ ¿Estás SEGURO de que deseas borrar TODAS las publicaciones del inventario?")) return;
+
+            try {
+                const prodSnap = await getDocs(collection(db, "productos"));
+                if (prodSnap.empty) { alert("El inventario ya está vacío."); return; }
+
+                const promesas = [];
+                prodSnap.forEach((documento) => {
+                    promesas.push(deleteDoc(doc(db, "productos", documento.id)));
+                });
+
+                await Promise.all(promesas);
+                alert("¡Inventario borrado con éxito!");
+                window.cargarCatalogoAdmin();
+            } catch (error) {
+                console.error(error);
+                alert("Ocurrió un error al intentar borrar las publicaciones.");
+            }
+        };
+
+        window.abrirEdicion = function(id, nombre, precio, stock, categoria, estado, imagen) {
+            document.getElementById('edit-id').value = id;
+            document.getElementById('edit-nombre').value = nombre;
+            document.getElementById('edit-precio').value = precio;
+            document.getElementById('edit-stock').value = stock;
+            document.getElementById('edit-categoria').value = categoria;
+            document.getElementById('edit-estado').value = estado || 'activo';
+            document.getElementById('edit-imagen').value = imagen;
+            document.getElementById('modal-edicion').style.display = 'flex';
+        };
+
+        window.cerrarModalEdicion = function() {
+            document.getElementById('modal-edicion').style.display = 'none';
+        };
+
+        window.guardarCambiosProducto = async function() {
+            const docId = document.getElementById('edit-id').value;
+            const btn = document.getElementById('btn-save-edit');
+            btn.innerHTML = "Guardando...";
+            btn.disabled = true;
+
+            const datosActualizados = {
+                nombre: document.getElementById('edit-nombre').value,
+                precio: Number(document.getElementById('edit-precio').value),
+                stock: Number(document.getElementById('edit-stock').value),
+                categoria: document.getElementById('edit-categoria').value,
+                estado: document.getElementById('edit-estado').value,
+                imagen: document.getElementById('edit-imagen').value
+            };
+
+            try {
+                await updateDoc(doc(db, "productos", docId), datosActualizados);
+                window.cerrarModalEdicion();
+                window.cargarCatalogoAdmin();
+            } catch (error) {
+                console.error(error);
+                alert("Ocurrió un error al guardar los cambios.");
+            }
+            btn.innerHTML = "Guardar";
+            btn.disabled = false;
+        };
+
+        window.eliminarProducto = async function() {
+            const docId = document.getElementById('edit-id').value;
+            if(!confirm("¿Estás seguro de eliminar permanentemente este repuesto?")) return;
+
+            try {
+                await deleteDoc(doc(db, "productos", docId));
+                window.cerrarModalEdicion();
+                window.cargarCatalogoAdmin();
+                alert("Repuesto eliminado con éxito.");
+            } catch (error) {
+                console.error(error);
+                alert("No se pudo eliminar el repuesto.");
+            }
+        };
+
+        window.procesarPegadoMasivo = async function() {
+            const texto = document.getElementById('excel-paste').value.trim();
+            const btn = document.getElementById('btn-excel-upload');
+            
+            if(!texto) { alert("Pega el contenido de tu Excel."); return; }
+
+            btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Procesando...";
+            btn.disabled = true;
+            
+            const lineas = texto.split('\n');
+            let importados = 0;
+            let nuevasCatCount = 0;
+            
+            try {
+                for(let linea of lineas) {
+                    const columnas = linea.split('\t'); 
+                    const mlvIndex = columnas.findIndex(col => col.trim().startsWith('MLV'));
+
+                    if(mlvIndex !== -1) {
+                        const ml_id = columnas[mlvIndex].trim();
+                        const nombre = columnas[mlvIndex + 2] ? columnas[mlvIndex + 2].trim() : "";
+                        
+                        let stockRaw = columnas[mlvIndex + 4] ? columnas[mlvIndex + 4].trim() : "1";
+                        const stock = parseInt(stockRaw) || 1;
+
+                        let precioRaw = columnas[mlvIndex + 5] ? columnas[mlvIndex + 5].replace(/US\$|Bs\./g, '').trim() : "0";
+                        const precio = parseFloat(precioRaw.replace(',', '.')) || 0;
+                        
+                        const categoriaExcel = columnas[mlvIndex + 12] ? columnas[mlvIndex + 12].trim() : "Otros";
+                        let catId = categoriaExcel.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '-');
+                        if (catId === "") catId = "otros";
+
+                        if (!mapaCategorias[catId]) {
+                            await addDoc(collection(db, "categorias"), { nombre: categoriaExcel, id: catId });
+                            mapaCategorias[catId] = categoriaExcel;
+                            nuevasCatCount++;
+                        }
+
+                        const imagen = "https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png"; 
+                        
+                        if(nombre && precio > 0 && nombre.toLowerCase() !== "título") {
+                            await addDoc(collection(db, "productos"), {
+                                nombre, precio, stock, categoria: catId, estado: "activo", imagen, ml_id
+                            });
+                            importados++;
+                        }
+                    }
+                }
+                
+                alert(`¡Carga Completada!\n\n✅ Repuestos subidos: ${importados}\n📁 Categorías creadas: ${nuevasCatCount}`);
+                document.getElementById('excel-paste').value = "";
+                window.cargarCatalogoAdmin();
+            } catch(e) {
+                console.error(e);
+                alert("Ocurrió un error al procesar el Excel.");
+            }
+            btn.innerHTML = "Subir y Crear Categorías";
+            btn.disabled = false;
+        };
+
+        // ==========================================
+        // 3. COTIZACIONES Y VISTA PREVIA SEGURA
+        // ==========================================
+        window.agregarFilaCotizacionVacia = function() {
+            const container = document.getElementById('cotizacion-items-container');
+            const row = document.createElement('div');
+            row.className = 'cotizacion-item-row';
+            row.innerHTML = `
+                <input type="number" class="item-cant" value="1" min="1" placeholder="Cant" oninput="calcularTotalCotizacion()">
+                <input type="text" class="item-desc" placeholder="Descripción" oninput="actualizarPreview()">
+                <input type="number" step="0.01" class="item-precio" value="0.00" placeholder="Precio" oninput="calcularTotalCotizacion()">
+                <input type="number" step="0.01" class="item-descval" value="0.00" placeholder="Desc." oninput="calcularTotalCotizacion()">
+                <input type="text" class="item-total-line" value="$0.00" readonly style="background: #f1f1f1; text-align: right; font-weight: bold;">
+                <button type="button" onclick="this.parentElement.remove(); calcularTotalCotizacion();" style="background:#d9534f; color:white; border:none; border-radius:4px; cursor:pointer;"><i class="fas fa-times"></i></button>
+            `;
+            container.appendChild(row);
+            window.calcularTotalCotizacion();
+        };
+
+        window.agregarItemDesdeInventario = function() {
+            const select = document.getElementById('select-inventario-cot');
+            const selectedIndex = select.selectedIndex;
+            if (selectedIndex <= 0) {
+                alert("Selecciona un repuesto del inventario primero.");
+                return;
+            }
+
+            const opt = select.options[selectedIndex];
+            const nombre = opt.getAttribute('data-nombre');
+            const precio = parseFloat(opt.getAttribute('data-precio')) || 0;
+
+            const container = document.getElementById('cotizacion-items-container');
+            const row = document.createElement('div');
+            row.className = 'cotizacion-item-row';
+            row.innerHTML = `
+                <input type="number" class="item-cant" value="1" min="1" placeholder="Cant" oninput="calcularTotalCotizacion()">
+                <input type="text" class="item-desc" value="${nombre}" placeholder="Descripción" oninput="actualizarPreview()">
+                <input type="number" step="0.01" class="item-precio" value="${precio.toFixed(2)}" placeholder="Precio" oninput="calcularTotalCotizacion()">
+                <input type="number" step="0.01" class="item-descval" value="0.00" placeholder="Desc." oninput="calcularTotalCotizacion()">
+                <input type="text" class="item-total-line" value="$${precio.toFixed(2)}" readonly style="background: #f1f1f1; text-align: right; font-weight: bold;">
+                <button type="button" onclick="this.parentElement.remove(); calcularTotalCotizacion();" style="background:#d9534f; color:white; border:none; border-radius:4px; cursor:pointer;"><i class="fas fa-times"></i></button>
+            `;
+            container.appendChild(row);
+            select.selectedIndex = 0;
+            window.calcularTotalCotizacion();
+        };
+
+        window.calcularTotalCotizacion = function() {
+            const rows = document.querySelectorAll('.cotizacion-item-row');
+            let subtotal = 0;
+            let totalDescuento = 0;
+
+            rows.forEach(row => {
+                const cant = parseFloat(row.querySelector('.item-cant').value) || 0;
+                const precio = parseFloat(row.querySelector('.item-precio').value) || 0;
+                const desc = parseFloat(row.querySelector('.item-descval').value) || 0;
+
+                const totalLinea = (cant * precio) - desc;
+                row.querySelector('.item-total-line').value = `$${totalLinea.toFixed(2)}`;
+
+                subtotal += (cant * precio);
+                totalDescuento += desc;
+            });
+
+            const baseImponible = subtotal - totalDescuento;
+            const iva = baseImponible * 0.16;
+            const totalGeneral = baseImponible + iva;
+
+            if(document.getElementById('cot-subtotal')) document.getElementById('cot-subtotal').innerText = subtotal.toFixed(2);
+            if(document.getElementById('cot-total-desc')) document.getElementById('cot-total-desc').innerText = totalDescuento.toFixed(2);
+            if(document.getElementById('cot-iva')) document.getElementById('cot-iva').innerText = iva.toFixed(2);
+            if(document.getElementById('cot-total-general')) document.getElementById('cot-total-general').innerText = totalGeneral.toFixed(2);
+
+            window.actualizarPreview();
+        };
+
+        function construirHTMLCotizacion(datos = null) {
+            let cliente, rif, direccion, telefono, vehiculo, anio, itemsHTML = '', subtotal, descuento, iva, total, nro;
+            const fechaActual = new Date().toLocaleDateString("es-VE");
+
+            if (datos) {
+                cliente = datos.cliente;
+                rif = datos.rif;
+                direccion = datos.direccion;
+                telefono = datos.telefono;
+                vehiculo = datos.vehiculo;
+                anio = datos.anio;
+                subtotal = datos.subtotal;
+                descuento = datos.descuento;
+                iva = datos.iva;
+                total = datos.total;
+                nro = datos.nro;
+
+                datos.items.forEach(item => {
+                    const totalLinea = (parseFloat(item.cantidad) * parseFloat(item.precioUnitario)) - parseFloat(item.descuento);
+                    itemsHTML += `
+                        <tr style="border-bottom: 1px solid #eee; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                            <td style="padding: 6px 10px; text-align: center;">${item.cantidad}</td>
+                            <td style="padding: 6px 10px;">${item.descripcion}</td>
+                            <td style="padding: 6px 10px; text-align: right;">$${Number(item.precioUnitario).toFixed(2)}</td>
+                            <td style="padding: 6px 10px; text-align: right; color: #d9534f;">-$${Number(item.descuento).toFixed(2)}</td>
+                            <td style="padding: 6px 10px; text-align: right; font-weight: bold;">$${totalLinea.toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                cliente = document.getElementById('cot-cliente')?.value || '';
+                rif = document.getElementById('cot-rif')?.value || '';
+                direccion = document.getElementById('cot-direccion')?.value || '';
+                telefono = document.getElementById('cot-telefono')?.value || '';
+                vehiculo = document.getElementById('cot-vehiculo')?.value || '';
+                anio = document.getElementById('cot-anio')?.value || '';
+                subtotal = document.getElementById('cot-subtotal')?.innerText || '0.00';
+                descuento = document.getElementById('cot-total-desc')?.innerText || '0.00';
+                iva = document.getElementById('cot-iva')?.innerText || '0.00';
+                total = document.getElementById('cot-total-general')?.innerText || '0.00';
+                nro = document.getElementById('cot-nro')?.value || '0000';
+
+                const rows = document.querySelectorAll('.cotizacion-item-row');
+                rows.forEach(row => {
+                    const cant = row.querySelector('.item-cant')?.value || 1;
+                    const desc = row.querySelector('.item-desc')?.value || '';
+                    const precio = parseFloat(row.querySelector('.item-precio')?.value) || 0;
+                    const descval = parseFloat(row.querySelector('.item-descval')?.value) || 0;
+                    const totalLinea = (parseFloat(cant) * precio) - descval;
+
+                    itemsHTML += `
+                        <tr style="border-bottom: 1px solid #eee; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                            <td style="padding: 6px 10px; text-align: center;">${cant}</td>
+                            <td style="padding: 6px 10px;">${desc}</td>
+                            <td style="padding: 6px 10px; text-align: right;">$${precio.toFixed(2)}</td>
+                            <td style="padding: 6px 10px; text-align: right; color: #d9534f;">-$${descval.toFixed(2)}</td>
+                            <td style="padding: 6px 10px; text-align: right; font-weight: bold;">$${totalLinea.toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            return `
+                <div style="max-width: 800px; margin: 0 auto; background: white; padding: 25px; font-family: Arial, sans-serif; color: #333; box-sizing: border-box; width: 100%;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #385723; padding-bottom: 10px; margin-bottom: 12px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logo" style="width: 100px; height: auto; display: block;">
+                            <div>
+                                <p style="margin: 0; font-size: 11px; font-weight: bold; color: #333;">F&B PARTS</p>
+                                <p style="margin: 1px 0; font-size: 10px; color: #555;">RIF: J-503971118</p>
+                                <p style="margin: 1px 0; font-size: 10px; color: #555;">fybinversiones.ccs@gmail.com | +584120161036</p>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <h2 style="color: #385723; font-family: Arial, sans-serif; font-size: 16px; margin: 0; font-weight: bold;">COTIZACIÓN</h2>
+                            <p style="font-size: 12px; font-weight: bold; color: #333; margin: 2px 0;">Nro: ${nro}</p>
+                            <p style="font-size: 10px; color: #666; margin: 0;">Fecha: ${fechaActual}</p>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: #f4f6f4; padding: 10px 12px; border-radius: 4px; margin-bottom: 12px; font-size: 11px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                        <div>
+                            <p style="margin: 2px 0;"><strong>Cliente:</strong> ${cliente}</p>
+                            <p style="margin: 2px 0;"><strong>RIF o C.I:</strong> ${rif}</p>
+                            <p style="margin: 2px 0;"><strong>Dirección:</strong> ${direccion}</p>
+                            <p style="margin: 2px 0;"><strong>Teléfono:</strong> ${telefono}</p>
+                        </div>
+                        <div>
+                            <p style="margin: 2px 0;"><strong>Vehículo:</strong> ${vehiculo}</p>
+                            <p style="margin: 2px 0;"><strong>Año:</strong> ${anio}</p>
+                            <p style="margin: 2px 0;"><strong>Disponibilidad:</strong> <span style="color: #385723; font-weight: bold;">ENTREGA INMEDIATA</span></p>
+                        </div>
+                    </div>
+
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 11px;">
+                        <thead>
+                            <tr style="background-color: #385723 !important; color: white !important; text-align: left; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                                <th style="padding: 6px 10px; width: 45px; text-align: center;">CANT</th>
+                                <th style="padding: 6px 10px;">DESCRIPCIÓN</th>
+                                <th style="padding: 6px 10px; width: 80px; text-align: right;">PRECIO U.</th>
+                                <th style="padding: 6px 10px; width: 80px; text-align: right;">DESC.</th>
+                                <th style="padding: 6px 10px; width: 85px; text-align: right;">TOTAL</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsHTML}
+                        </tbody>
+                    </table>
+
+                    <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+                        <div style="width: 220px; font-size: 11px;">
+                            <div style="display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #eee;">
+                                <span>SUB TOTAL:</span>
+                                <strong>$${subtotal}</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #eee; color: #d9534f; -webkit-print-color-adjust: exact;">
+                                <span>DESCUENTO:</span>
+                                <strong>-$${descuento}</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #eee;">
+                                <span>16% IVA:</span>
+                                <strong>$${iva}</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 5px 0; font-size: 12px; font-weight: bold; color: #385723; border-bottom: 2px solid #385723; -webkit-print-color-adjust: exact;">
+                                <span>TOTAL:</span>
+                                <span>$${total}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="border-top: 1px solid #ddd; padding-top: 8px; font-size: 9px; color: #555; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div>
+                            <p style="margin: 0 0 2px 0; font-weight: bold; color: #333;">MÉTODO DE PAGOS:</p>
+                            <ul style="margin: 0; padding-left: 12px;">
+                                <li>Transferencias (Banesco y BNC). Internacionales (BOA).</li>
+                                <li>Zelle, Pago móvil y Efectivo.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <p style="margin: 0 0 2px 0; font-weight: bold; color: #333;">TÉRMINOS:</p>
+                            <p style="margin: 0;">Representado en USD. Válida por 7 días. https://www.fybparts.com</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        window.actualizarPreview = function() {
+            const box = document.getElementById('pdf-preview-box');
+            if (box) {
+                // Scaled wrapper para que el diseño grande quepa visualmente en la caja de la página web
+                box.innerHTML = `<div style="transform: scale(0.68); transform-origin: top left; width: 147%; pointer-events: none;">${construirHTMLCotizacion()}</div>`;
+            }
+        };
+
+        window.guardarYGenerarCotizacion = async function() {
+            const cliente = document.getElementById('cot-cliente').value;
+            const rif = document.getElementById('cot-rif').value;
+            const direccion = document.getElementById('cot-direccion').value;
+            const telefono = document.getElementById('cot-telefono').value;
+            const vehiculo = document.getElementById('cot-vehiculo').value;
+            const anio = document.getElementById('cot-anio').value;
+
+            const rows = document.querySelectorAll('.cotizacion-item-row');
+            const items = [];
+            
+            rows.forEach(row => {
+                items.push({
+                    cantidad: row.querySelector('.item-cant').value,
+                    descripcion: row.querySelector('.item-desc').value,
+                    precioUnitario: row.querySelector('.item-precio').value,
+                    descuento: row.querySelector('.item-descval').value
+                });
+            });
+
+            if(items.length === 0) {
+                alert("Agrega al menos un ítem a la cotización.");
+                return;
+            }
+
+            const subtotal = document.getElementById('cot-subtotal').innerText;
+            const descuento = document.getElementById('cot-total-desc').innerText;
+            const iva = document.getElementById('cot-iva').innerText;
+            const total = document.getElementById('cot-total-general').innerText;
+            
+            const nroCotizacion = document.getElementById('cot-nro').value.trim() || Math.floor(1000 + Math.random() * 9000).toString();
+            const fechaActual = new Date().toLocaleDateString("es-VE");
+
+            const objetoCotizacion = {
+                nro: nroCotizacion,
+                fecha: fechaActual,
+                cliente, rif, direccion, telefono, vehiculo, anio,
+                items, subtotal, descuento, iva, total
+            };
+
+            // Creamos ventana limpia
+            const ventanaPDF = window.open('', '_blank');
+            if(!ventanaPDF) {
+                alert("⚠️ Atención: Tu navegador bloqueó la ventana de impresión. Por favor permite las ventanas emergentes (pop-ups) para generar la cotización.");
+                return;
+            }
+
+            try {
+                // 1. Guardamos en Firebase la cotización
+                await addDoc(collection(db, "cotizaciones"), objetoCotizacion);
+
+                // --- AUTOGUARDADO DE CLIENTE ---
+                let clienteExiste = false;
+                const rifLimpio = rif.trim().toUpperCase();
+                for (const key in window.clientesDBLocal) {
+                    if (window.clientesDBLocal[key].rif.trim().toUpperCase() === rifLimpio) {
+                        clienteExiste = true;
+                        break;
+                    }
+                }
+
+                if (!clienteExiste && rifLimpio !== '') {
+                    await addDoc(collection(db, "clientes"), {
+                        nombre: cliente.trim(),
+                        rif: rif.trim(),
+                        direccion: direccion.trim(),
+                        telefono: telefono.trim()
+                    });
+                    window.cargarBaseClientes();
+                }
+                // --------------------------------------
+
+                // Construimos la ventana de forma segura dividiendo las etiquetas "script" y "body"
+                const docHTML = construirHTMLCotizacion(objetoCotizacion);
+                const finalStyle = '<style>body{background:white;margin:0;padding:20px;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}@media print{@page{margin:0.5cm;}body{padding:0;}.no-print{display:none!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}}</style>';
+                
+                const htmlParte1 = '<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n<title>Cotización Oficial</title>\n' + finalStyle + '\n</head>\n<body>\n';
+                const htmlParte2 = '\n<div style="text-align:center;margin:40px 0;" class="no-print"><button onclick="window.print()" style="background:#1d6fa5;color:white;border:none;padding:15px 30px;font-size:18px;font-weight:bold;border-radius:6px;cursor:pointer;">🖨️ Imprimir o Guardar PDF</button></div>\n</b' + 'ody>\n</h' + 'tml>';
+
+                ventanaPDF.document.open();
+                ventanaPDF.document.write(htmlParte1 + docHTML + htmlParte2);
+                ventanaPDF.document.close();
+
+                setTimeout(() => {
+                    ventanaPDF.focus();
+                    ventanaPDF.print();
+                }, 800);
+
+                document.getElementById('cot-nro').value = Math.floor(1000 + Math.random() * 9000);
+                window.actualizarPreview();
+                window.cargarHistorialCotizaciones();
+            } catch (error) {
+                console.error(error);
+                ventanaPDF.close();
+                alert("Hubo un error al guardar la cotización en la base de datos.");
+            }
+        };
+
+        window.abrirVentanaCotizacionExistente = function(cot) {
+            const ventanaPDF = window.open('', '_blank');
+            if(!ventanaPDF) {
+                alert("⚠️ Por favor permite las ventanas emergentes (pop-ups) para ver el documento.");
+                return;
+            }
+            
+            const docHTML = construirHTMLCotizacion(cot);
+            const finalStyle = '<style>body{background:white;margin:0;padding:20px;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}@media print{@page{margin:0.5cm;}body{padding:0;}.no-print{display:none!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}}</style>';
+            
+            const htmlParte1 = '<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n<title>Cotización Oficial</title>\n' + finalStyle + '\n</head>\n<body>\n';
+            const htmlParte2 = '\n<div style="text-align:center;margin:40px 0;" class="no-print"><button onclick="window.print()" style="background:#1d6fa5;color:white;border:none;padding:15px 30px;font-size:18px;font-weight:bold;border-radius:6px;cursor:pointer;">🖨️ Imprimir o Guardar PDF</button></div>\n</b' + 'ody>\n</h' + 'tml>';
+
+            ventanaPDF.document.open();
+            ventanaPDF.document.write(htmlParte1 + docHTML + htmlParte2);
+            ventanaPDF.document.close();
+
+            setTimeout(() => {
+                ventanaPDF.focus();
+                ventanaPDF.print();
+            }, 800);
+        };
+
+        window.cargarHistorialCotizaciones = async function() {
+            const tbody = document.getElementById('cotizaciones-table-body');
+            if(!tbody) return;
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center;">Cargando historial...</td></tr>`;
+
+            try {
+                const snap = await getDocs(collection(db, "cotizaciones"));
+                tbody.innerHTML = '';
+
+                if(snap.empty) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center;">No hay cotizaciones guardadas.</td></tr>`;
+                    return;
+                }
+
+                snap.forEach(docSnap => {
+                    const cot = docSnap.data();
+                    const docId = docSnap.id;
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>#${cot.nro}</strong></td>
+                        <td>${cot.fecha}</td>
+                        <td><strong>${cot.cliente}</strong><br><span style="font-size:11px; color:#666;">RIF: ${cot.rif}</span></td>
+                        <td>${cot.vehiculo} (${cot.anio})</td>
+                        <td><strong>$${cot.total}</strong></td>
+                        <td style="text-align: center;"></td>
+                    `;
+
+                    const btnImprimir = document.createElement('button');
+                    btnImprimir.type = 'button';
+                    btnImprimir.style = 'background:#1d6fa5; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; margin-right: 5px;';
+                    btnImprimir.innerHTML = '<i class="fas fa-print"></i> Imprimir';
+                    btnImprimir.addEventListener('click', () => window.abrirVentanaCotizacionExistente(cot));
+
+                    const btnEliminar = document.createElement('button');
+                    btnEliminar.type = 'button';
+                    btnEliminar.style = 'background:#d9534f; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;';
+                    btnEliminar.innerHTML = '<i class="fas fa-trash"></i>';
+                    btnEliminar.addEventListener('click', async () => {
+                        if(!confirm("¿Eliminar esta cotización del historial?")) return;
+                        try {
+                            await deleteDoc(doc(db, "cotizaciones", docId));
+                            window.cargarHistorialCotizaciones();
+                        } catch (e) { alert("Error al eliminar."); }
+                    });
+
+                    const tdAcciones = tr.querySelector('td:last-child');
+                    tdAcciones.appendChild(btnImprimir);
+                    tdAcciones.appendChild(btnEliminar);
+
+                    tbody.appendChild(tr);
+                });
+            } catch (error) { console.error(error); }
+        };
+
+        // ==========================================
+        // INICIALIZACIÓN AL CARGAR LA PÁGINA
+        // ==========================================
+        window.addEventListener('DOMContentLoaded', () => {
+            // Generar primer número aleatorio para la cotización
+            document.getElementById('cot-nro').value = Math.floor(1000 + Math.random() * 9000);
+            
+            window.cargarPedidos();
+            window.cargarCatalogoAdmin();
+            window.cargarBaseClientes();
+            window.calcularTotalCotizacion();
+        });
+    </script>
+</body>
+</html>

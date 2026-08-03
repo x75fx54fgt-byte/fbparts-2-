@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tienda Online | F&B Parts</title>
+    <link rel="icon" type="image/png" href="img/favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="styles.css">
+    
+    <style>
+        .shop-main-layout { display: grid; grid-template-columns: 280px 1fr 320px; gap: 25px; padding: 20px 0 40px 0; align-items: start; }
+        
+        /* Panel Lateral Fijo: Solo las categorías tienen scroll interno */
+        .sidebar-filter { background: white; border: 1px solid #eee; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,.05); position: sticky; top: 100px; }
+        .sidebar-filter h3 { font-family: 'Oswald', sans-serif; color: var(--green); border-bottom: 2px solid var(--green); padding-bottom: 10px; margin-top: 0; margin-bottom: 15px; font-size: 20px; }
+        
+        /* Contenedor de categorías con scroll interno y altura fija */
+        .filter-list { display: flex; flex-direction: column; gap: 8px; max-height: 350px; overflow-y: auto; padding-right: 5px; }
+        .filter-list::-webkit-scrollbar { width: 5px; }
+        .filter-list::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+
+        .filter-item-btn { background: #f8f8f8; color: #444; border: 1px solid #ddd; padding: 8px 12px; border-radius: 6px; font-family: 'Oswald', sans-serif; font-size: 14px; text-align: left; cursor: pointer; transition: all .2s; width: 100%; flex-shrink: 0; }
+        .filter-item-btn:hover { border-color: var(--green); color: var(--green); background: #f0f5f2; }
+        .filter-item-btn.active { background: var(--green); color: white; border-color: var(--green); }
+
+        /* Barra de búsqueda de la tienda */
+        .store-search-bar { display: flex; gap: 10px; margin-bottom: 20px; background: white; padding: 12px; border: 1px solid #eee; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.02); }
+        .store-search-bar input { flex: 1; padding: 10px 15px; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; outline: none; }
+        .store-search-bar input:focus { border-color: var(--green); }
+
+        /* Cuadrícula de productos y ajuste de imágenes */
+        .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+        .product-card { background: white; border: 1px solid #eee; padding: 15px; text-align: center; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.03); transition: transform .28s var(--ease), box-shadow .28s var(--ease); display: flex; flex-direction: column; justify-content: space-between; }
+        .product-card:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0,0,0,.08); }
+        
+        .product-img-wrapper { width: 100%; height: 180px; background: #fff; border-radius: 6px; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #f0f0f0; }
+        .product-img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+        .product-card h4 { font-family: 'Oswald', sans-serif; color: var(--green); font-size: 16px; margin: 0 0 8px 0; line-height: 1.3; }
+        .product-price { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 15px; }
+        .add-btn { background: var(--green); color: white; border: none; padding: 10px 15px; width: 100%; font-family: 'Oswald', sans-serif; font-size: 16px; cursor: pointer; border-radius: 4px; }
+        .add-btn:hover { background: var(--green-dark); }
+        
+        /* Panel del Carrito */
+        .cart-panel { background: white; border: 1px solid #eee; padding: 20px; position: sticky; top: 100px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,.05); }
+        .cart-panel h3 { font-family: 'Oswald', sans-serif; color: var(--green); border-bottom: 2px solid var(--green); padding-bottom: 10px; margin-top: 0; font-size: 20px; }
+        .cart-items { min-height: 100px; margin-bottom: 20px; font-size: 14px; }
+        .cart-item { display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .cart-total { font-size: 18px; font-weight: bold; text-align: right; margin-bottom: 20px; }
+        .checkout-btn { background: #25d366; color: white; text-decoration: none; display: block; text-align: center; padding: 12px; font-family: 'Oswald', sans-serif; font-size: 18px; border-radius: 4px; cursor: pointer; border: none; width: 100%;}
+        .checkout-btn:hover { background: #1da851; color: white; }
+        
+        @media (max-width: 1100px) { 
+            .shop-main-layout { grid-template-columns: 1fr; } 
+            .sidebar-filter, .cart-panel { position: static; margin-top: 20px; } 
+        }
+    </style>
+</head>
+<body>
+
+    <div class="topbar">
+        <h2>DELIVERY GRATIS EN CARACAS</h2>
+        <span>(CIERTAS CONDICIONES APLICAN)</span>
+    </div>
+
+    <header>
+        <div class="container header-wrap">
+            <a class="logo" href="index.html">
+                <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="LOGO F&B PARTS">
+            </a>
+
+            <nav>
+                <a href="index.html#inicio">Inicio</a>
+                <a href="tienda.html" style="color: #000; font-weight: bold;">Tienda</a>
+                <a href="index.html#mercadolibre">Mercado Libre</a>
+                <a href="index.html#contacto">Contacto</a>
+                <a href="login.html" id="nav-cuenta-btn" style="color: var(--green); font-weight: bold;"><i class="fas fa-user"></i> Mi Cuenta</a>
+            </nav>
+
+            <div class="header-right">
+                <a class="call-btn" href="index.html">
+                    <i class="fas fa-arrow-left"></i> VOLVER 
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <section class="block" style="background-color: #f8f8f8;">
+        <div class="container">
+            <h2 class="section-title" style="text-align: left; margin-bottom: 0;">CATÁLOGO DE REPUESTOS</h2>
+            <p style="margin-top: 5px; color: #666;">Selecciona los productos y finaliza tu pedido por WhatsApp.</p>
+            
+            <div class="shop-main-layout">
+                
+                <div class="sidebar-filter">
+                    <h3><i class="fas fa-filter"></i> Categorías</h3>
+                    
+                    <div class="filter-list" id="filter-list-container">
+                        <button class="filter-item-btn active" id="btn-cat-todos" onclick="filtrarProductos('todos', this)">Todos los repuestos</button>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="store-search-bar">
+                        <input type="text" id="store-search-input" placeholder="🔍 ¿Qué repuesto estás buscando? (Ej: Yaris, Bomba, Correa...)" onkeyup="aplicarFiltrosGlobales()">
+                    </div>
+
+                    <div class="products-grid" id="products-grid-container">
+                        <p style="color: #666;">Cargando repuestos...</p>
+                    </div>
+                </div>
+
+                <div class="cart-panel">
+                    <h3><i class="fas fa-shopping-cart"></i> TU PEDIDO</h3>
+                    
+                    <div class="cart-items" id="cart-items-list">
+                        <p style="color: #999; text-align: center; margin-top: 40px;">El carrito está vacío</p>
+                    </div>
+
+                    <div class="cart-total">
+                        Total: $<span id="cart-total-amount">0.00</span>
+                    </div>
+
+                    <button class="checkout-btn" id="whatsapp-checkout" onclick="sendOrder(event)">
+                        <i class="fab fa-whatsapp"></i> HACER PEDIDO
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
+            authDomain: "fb-parts-app.firebaseapp.com",
+            projectId: "fb-parts-app",
+            storageBucket: "fb-parts-app.firebasestorage.app",
+            messagingSenderId: "21714159445",
+            appId: "1:21714159445:web:8f4946cd1c98d9b95dd1dc"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let usuarioActual = null;
+        let categoriaSeleccionadaActual = 'todos';
+        
+        onAuthStateChanged(auth, (user) => {
+            const navBtn = document.getElementById('nav-cuenta-btn');
+            if (user) {
+                usuarioActual = user;
+                navBtn.href = "mi-cuenta.html";
+                navBtn.innerHTML = `<i class="fas fa-user-check"></i> Mi Cuenta`;
+            } else {
+                usuarioActual = null;
+                navBtn.href = "login.html";
+                navBtn.innerHTML = `<i class="fas fa-user"></i> Iniciar Sesión`;
+            }
+        });
+
+        async function cargarTiendaDinamica() {
+            const filterContainer = document.getElementById('filter-list-container');
+            const productsGrid = document.getElementById('products-grid-container');
+
+            try {
+                const catSnap = await getDocs(collection(db, "categorias"));
+                filterContainer.innerHTML = `<button class="filter-item-btn active" id="btn-cat-todos" onclick="filtrarPorCategoria('todos', this)">Todos los repuestos</button>`;
+                
+                catSnap.forEach(docSnap => {
+                    const cat = docSnap.data();
+                    filterContainer.innerHTML += `
+                        <button class="filter-item-btn" id="btn-cat-${cat.id}" onclick="filtrarPorCategoria('${cat.id}', this)">${cat.nombre}</button>
+                    `;
+                });
+            } catch (error) {
+                console.error("Error cargando categorías:", error);
+            }
+
+            try {
+                const prodSnap = await getDocs(collection(db, "productos"));
+                productsGrid.innerHTML = '';
+
+                if (prodSnap.empty) {
+                    productsGrid.innerHTML = `<p style="color: #666; grid-column: 1/-1; text-align: center;">No hay repuestos disponibles.</p>`;
+                    return;
+                }
+
+                let totalActivos = 0;
+
+                prodSnap.forEach(docSnap => {
+                    const prod = docSnap.data();
+                    const estado = prod.estado || 'activo';
+                    if (estado === 'inactivo') return;
+
+                    totalActivos++;
+                    const precio = Number(prod.precio || 0).toFixed(2);
+                    const categoria = prod.categoria || 'otros';
+                    const imagen = prod.imagen || 'img/logo.png';
+                    const nombre = prod.nombre || 'Repuesto sin nombre';
+                    const safeName = nombre.replace(/'/g, "\\'");
+
+                    productsGrid.innerHTML += `
+                        <div class="product-card" data-category="${categoria}">
+                            <div>
+                                <div class="product-img-wrapper">
+                                    <img src="${imagen}" alt="${nombre}" class="product-img" onerror="this.src='img/logo.png'">
+                                </div>
+                                <h4 class="prod-title">${nombre}</h4>
+                            </div>
+                            <div>
+                                <div class="product-price">$${precio}</div>
+                                <button class="add-btn" onclick="addToCart('${safeName}', ${prod.precio})">
+                                    <i class="fas fa-cart-plus"></i> AGREGAR
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                if (totalActivos === 0) {
+                    productsGrid.innerHTML = `<p style="color: #666; grid-column: 1/-1; text-align: center;">No hay repuestos activos.</p>`;
+                }
+
+                verificarFiltroURL();
+
+            } catch (error) {
+                console.error("Error cargando productos:", error);
+            }
+        }
+
+        // ==========================================
+        // FILTRADO DUAL: CATEGORÍA + BUSCADOR
+        // ==========================================
+        window.filtrarPorCategoria = function(categoria, btnElement) {
+            categoriaSeleccionadaActual = categoria;
+            
+            const botones = document.querySelectorAll('.filter-item-btn');
+            botones.forEach(btn => btn.classList.remove('active'));
+            if (btnElement) {
+                btnElement.classList.add('active');
+            }
+
+            aplicarFiltrosGlobales();
+        };
+
+        window.aplicarFiltrosGlobales = function() {
+            const textoBusqueda = document.getElementById('store-search-input').value.toLowerCase();
+            const productos = document.querySelectorAll('.product-card');
+
+            productos.forEach(producto => {
+                const categoriaProducto = producto.getAttribute('data-category');
+                const nombreProducto = producto.querySelector('.prod-title').textContent.toLowerCase();
+
+                const coincideCategoria = (categoriaSeleccionadaActual === 'todos' || categoriaProducto === categoriaSeleccionadaActual);
+                const coincideTexto = nombreProducto.includes(textoBusqueda);
+
+                if (coincideCategoria && coincideTexto) {
+                    producto.style.display = 'flex';
+                } else {
+                    producto.style.display = 'none';
+                }
+            });
+        };
+
+        function verificarFiltroURL() {
+            const params = new URLSearchParams(window.location.search);
+            const categoriaURL = params.get('cat');
+            
+            if (categoriaURL) {
+                const btn = document.getElementById('btn-cat-' + categoriaURL);
+                if (btn) {
+                    filtrarPorCategoria(categoriaURL, btn);
+                }
+            }
+        }
+
+        // ==========================================
+        // CARRITO Y WHATSAPP
+        // ==========================================
+        window.carrito = [];
+
+        window.addToCart = function(nombreProducto, precioProducto) {
+            let productoExistente = window.carrito.find(item => item.nombre === nombreProducto);
+            if (productoExistente) {
+                productoExistente.cantidad += 1;
+            } else {
+                window.carrito.push({ nombre: nombreProducto, precio: precioProducto, cantidad: 1 });
+            }
+            updateCartUI();
+        };
+
+        function updateCartUI() {
+            const listContainer = document.getElementById('cart-items-list');
+            const totalContainer = document.getElementById('cart-total-amount');
+            listContainer.innerHTML = '';
+            let total = 0;
+
+            if (window.carrito.length === 0) {
+                listContainer.innerHTML = '<p style="color: #999; text-align: center; margin-top: 40px;">El carrito está vacío</p>';
+            } else {
+                window.carrito.forEach((item) => {
+                    const subtotal = item.precio * item.cantidad;
+                    total += subtotal;
+                    listContainer.innerHTML += `
+                        <div class="cart-item">
+                            <span>${item.cantidad}x ${item.nombre}</span>
+                            <span>$${subtotal.toFixed(2)}</span>
+                        </div>
+                    `;
+                });
+            }
+            totalContainer.innerText = total.toFixed(2);
+        }
+
+        window.sendOrder = async function(event) {
+            event.preventDefault();
+            
+            if (window.carrito.length === 0) {
+                alert("Por favor, agrega productos al carrito antes de hacer el pedido.");
+                return;
+            }
+
+            let total = 0;
+            window.carrito.forEach(item => total += (item.precio * item.cantidad));
+
+            const nuevoPedido = {
+                email: usuarioActual ? usuarioActual.email.toLowerCase().trim() : "invitado@correo.com",
+                cliente: usuarioActual ? usuarioActual.email : "Invitado (Sin Login)",
+                fecha: new Date().toLocaleString("es-VE"),
+                productos: window.carrito,
+                total: total,
+                envio: "Delivery / Tienda Online",
+                tracking: "Procesando pedido web",
+                estado: "Pendiente"
+            };
+
+            try {
+                await addDoc(collection(db, "pedidos"), nuevoPedido);
+                
+                let mensaje = "Hola F&B Parts, quiero realizar el siguiente pedido:%0A%0A";
+                window.carrito.forEach(item => {
+                    mensaje += `- ${item.cantidad}x ${item.nombre} ($${(item.precio * item.cantidad).toFixed(2)})%0A`;
+                });
+                mensaje += `%0A*Total Estimado: $${total.toFixed(2)}*`;
+                
+                const numeroWhatsApp = "584120161036";
+                window.open(`https://wa.me/${numeroWhatsApp}?text=${mensaje}`, '_blank');
+
+                window.carrito = [];
+                updateCartUI();
+
+            } catch (error) {
+                console.error("Error guardando el pedido: ", error);
+                alert("Hubo un problema al procesar tu pedido. Intenta de nuevo.");
+            }
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            cargarTiendaDinamica();
+        });
+    </script>
+</body>
+</html>

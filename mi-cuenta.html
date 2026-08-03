@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mi Cuenta y Envíos | F&B Parts</title>
+    <link rel="icon" type="image/png" href="img/favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="styles.css">
+
+    <style>
+        .portal-container { max-width: 1150px; margin: 40px auto; padding: 0 20px; }
+        .portal-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 30px; align-items: start; }
+        
+        .profile-card { background: white; border: 1px solid #eee; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,.03); text-align: center; position: sticky; top: 100px; }
+        .profile-avatar { width: 80px; height: 80px; background: #e8f4fd; color: #1d6fa5; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; margin: 0 auto 15px auto; }
+        
+        .profile-card h3 { font-family: 'Oswald', sans-serif; color: var(--green); font-size: 24px; margin-bottom: 2px; }
+        .profile-card .user-email { color: #666; font-size: 13px; word-break: break-all; margin-bottom: 20px; }
+        
+        .profile-details { text-align: left; border-top: 1px solid #eee; padding-top: 20px; font-size: 14px; color: #444; }
+        .profile-details p { margin-bottom: 12px; display: flex; align-items: flex-start; gap: 10px; }
+        .profile-details i { color: var(--green); margin-top: 3px; font-size: 16px; width: 16px; text-align: center; }
+        
+        /* Estilos nuevos para el formulario de edición */
+        .edit-btn { background: none; border: none; color: #1d6fa5; font-size: 14px; font-weight: bold; cursor: pointer; text-decoration: underline; margin-top: 15px; width: 100%; text-align: center; }
+        .edit-btn:hover { color: var(--green); }
+        .edit-form { display: none; text-align: left; margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px; }
+        .edit-form input, .edit-form textarea { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+        .edit-form textarea { height: 60px; resize: vertical; }
+        .save-btn { background: var(--green); color: white; border: none; padding: 10px; width: 100%; border-radius: 4px; font-family: 'Oswald', sans-serif; font-size: 15px; cursor: pointer; margin-bottom: 5px; }
+        .save-btn:hover { background: var(--green-dark); }
+        .cancel-btn { background: #f8f8f8; color: #777; border: 1px solid #ddd; padding: 8px; width: 100%; border-radius: 4px; font-family: 'Oswald', sans-serif; font-size: 14px; cursor: pointer; }
+        
+        .orders-section h3 { font-family: 'Oswald', sans-serif; color: var(--green); font-size: 26px; margin-bottom: 20px; border-bottom: 2px solid var(--green); padding-bottom: 10px; }
+        .order-card { background: white; border: 1px solid #eee; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,.03); }
+        .order-card-header { display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; font-size: 14px; color: #666; }
+        .order-item-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #f0f0f0; font-size: 15px; }
+        .order-shipping-box { background: #f8f9fa; padding: 12px; border-radius: 6px; border-left: 4px solid var(--green); font-size: 14px; margin-top: 12px; }
+        .order-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 10px; border-top: 1px solid #eee; font-size: 18px; font-weight: bold; }
+        
+        .btn-logout { background: #d9534f; color: white; border: none; padding: 10px; width: 100%; border-radius: 4px; font-family: 'Oswald', sans-serif; cursor: pointer; font-size: 16px; margin-top: 25px; transition: background .2s; }
+        .btn-logout:hover { background: #c9302c; }
+
+        @media (max-width: 850px) { 
+            .portal-grid { grid-template-columns: 1fr; }
+            .profile-card { position: static; }
+        }
+    </style>
+</head>
+<body style="background-color: #f8f8f8;">
+
+    <div class="topbar">
+        <h2>PORTAL DE CLIENTES F&B PARTS</h2>
+        <span>TUS DATOS Y SEGUIMIENTO DE ENVIOS</span>
+    </div>
+
+    <header>
+        <div class="container header-wrap">
+            <a class="logo" href="index.html">
+                <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="LOGO F&B PARTS">
+            </a>
+
+            <nav>
+                <a href="index.html">Inicio</a>
+                <a href="tienda.html">Tienda</a>
+                <a href="mi-cuenta.html" style="color: #000; font-weight: bold;">Mi Cuenta</a>
+            </nav>
+
+            <div class="header-right">
+                <a class="call-btn" href="tienda.html">
+                    <i class="fas fa-shopping-cart"></i> COMPRAR 
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="portal-container">
+        <div class="portal-grid">
+            <!-- Columna Izquierda: Perfil Completo del Cliente -->
+            <div class="profile-card">
+                <div class="profile-avatar">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <h3 id="user-fullname">Cargando perfil...</h3>
+                <p class="user-email" id="user-email-text">...</p>
+                
+                <!-- Vista de Datos -->
+                <div class="profile-details" id="user-details-container">
+                    <p style="text-align: center; color: #777;">Sincronizando tus datos...</p>
+                </div>
+                
+                <button class="edit-btn" id="btnEditProfile" style="display: none;">
+                    <i class="fas fa-edit"></i> Actualizar mis datos
+                </button>
+
+                <!-- Formulario Oculto para Editar / Completar Datos -->
+                <form class="edit-form" id="edit-profile-form">
+                    <input type="text" id="edit-nombre" placeholder="Nombre" required>
+                    <input type="text" id="edit-apellido" placeholder="Apellido" required>
+                    <input type="text" id="edit-cedula" placeholder="Cédula / RIF" required>
+                    <input type="tel" id="edit-telefono" placeholder="Teléfono" required>
+                    <textarea id="edit-ubicacion" placeholder="Dirección exacta de envío" required></textarea>
+                    
+                    <button type="submit" class="save-btn" id="btnSaveData"><i class="fas fa-save"></i> Guardar Datos</button>
+                    <button type="button" class="cancel-btn" id="btnCancelEdit">Cancelar</button>
+                </form>
+
+                <button class="btn-logout" id="btnLogout">
+                    <i class="fas fa-sign-out-alt"></i> CERRAR SESIÓN
+                </button>
+            </div>
+
+            <!-- Columna Derecha: Historial de Pedidos -->
+            <div class="orders-section">
+                <h3><i class="fas fa-clipboard-list"></i> Mi Historial de Compras</h3>
+                <div id="client-orders-container">
+                    <div style="text-align: center; color: #777; padding: 40px; background: white; border-radius: 8px; border: 1px solid #eee;">
+                        Buscando tus compras registradas...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lógica Principal -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        // Importamos setDoc para poder sobreescribir/actualizar los datos
+        import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
+            authDomain: "fb-parts-app.firebaseapp.com",
+            projectId: "fb-parts-app",
+            storageBucket: "fb-parts-app.firebasestorage.app",
+            messagingSenderId: "21714159445",
+            appId: "1:21714159445:web:8f4946cd1c98d9b95dd1dc"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Variables Globales
+        let currentUserUid = null;
+        let currentUserEmail = null;
+        let totalPedidosCliente = 0;
+
+        const userNameText = document.getElementById('user-fullname');
+        const userEmailText = document.getElementById('user-email-text');
+        const userDetailsContainer = document.getElementById('user-details-container');
+        const ordersContainer = document.getElementById('client-orders-container');
+        
+        const btnEditProfile = document.getElementById('btnEditProfile');
+        const editProfileForm = document.getElementById('edit-profile-form');
+        const btnCancelEdit = document.getElementById('btnCancelEdit');
+
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                window.location.href = "login.html";
+            } else {
+                currentUserUid = user.uid;
+                currentUserEmail = user.email;
+                userEmailText.innerText = user.email;
+                
+                await cargarPedidosCliente(user.email); // Cargamos pedidos primero para tener el contador
+                await cargarPerfilCliente(user.uid);
+            }
+        });
+
+        document.getElementById('btnLogout').addEventListener('click', () => {
+            signOut(auth).then(() => {
+                window.location.href = "login.html";
+            });
+        });
+
+        // 1. Cargar Datos Personales
+        async function cargarPerfilCliente(uid) {
+            try {
+                const userDoc = await getDoc(doc(db, "usuarios", uid));
+                
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    userNameText.innerText = `${userData.nombre} ${userData.apellido}`;
+                    
+                    userDetailsContainer.innerHTML = `
+                        <p><i class="fas fa-id-card"></i> <strong>Cédula/RIF:</strong> ${userData.cedula}</p>
+                        <p><i class="fas fa-phone-alt"></i> <strong>Teléfono:</strong> ${userData.telefono}</p>
+                        <p><i class="fas fa-map-marker-alt"></i> <strong>Dirección:</strong> ${userData.ubicacion}</p>
+                        <p><i class="fas fa-box"></i> <strong>Total de Pedidos: ${totalPedidosCliente}</strong></p>
+                    `;
+                    
+                    // Pre-llenar el formulario por si quiere editar
+                    document.getElementById('edit-nombre').value = userData.nombre || '';
+                    document.getElementById('edit-apellido').value = userData.apellido || '';
+                    document.getElementById('edit-cedula').value = userData.cedula || '';
+                    document.getElementById('edit-telefono').value = userData.telefono || '';
+                    document.getElementById('edit-ubicacion').value = userData.ubicacion || '';
+                    
+                    btnEditProfile.style.display = "block";
+                    btnEditProfile.innerHTML = "<i class='fas fa-edit'></i> Actualizar mis datos";
+                } else {
+                    // El documento no existe (Ej: Cuentas antiguas)
+                    userNameText.innerText = "Cliente Registrado";
+                    userDetailsContainer.innerHTML = `
+                        <p style="color: #d9534f; text-align:center;"><i class="fas fa-exclamation-triangle"></i> Faltan datos en tu perfil para los envíos.</p>
+                        <p><i class="fas fa-box"></i> <strong>Total de Pedidos: ${totalPedidosCliente}</strong></p>
+                    `;
+                    
+                    btnEditProfile.style.display = "block";
+                    btnEditProfile.innerHTML = "<i class='fas fa-plus-circle'></i> Completar mi perfil";
+                    
+                    // Si no tiene datos, abrimos el formulario de una vez
+                    userDetailsContainer.style.display = 'none';
+                    editProfileForm.style.display = 'block';
+                    btnEditProfile.style.display = 'none';
+                }
+            } catch (error) {
+                console.error("Error al cargar perfil:", error);
+                userNameText.innerText = "Cliente";
+                userDetailsContainer.innerHTML = `<p style="color:red;">Error al cargar datos.</p>`;
+            }
+        }
+
+        // 2. Controlar la visibilidad del formulario de edición
+        btnEditProfile.addEventListener('click', () => {
+            userDetailsContainer.style.display = 'none';
+            editProfileForm.style.display = 'block';
+            btnEditProfile.style.display = 'none';
+        });
+
+        btnCancelEdit.addEventListener('click', () => {
+            userDetailsContainer.style.display = 'block';
+            editProfileForm.style.display = 'none';
+            btnEditProfile.style.display = 'block';
+        });
+
+        // 3. Guardar / Actualizar los datos en Firestore
+        editProfileForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btnSave = document.getElementById('btnSaveData');
+            btnSave.innerText = "Guardando...";
+
+            const datosActualizados = {
+                uid: currentUserUid,
+                email: currentUserEmail,
+                nombre: document.getElementById('edit-nombre').value.trim(),
+                apellido: document.getElementById('edit-apellido').value.trim(),
+                cedula: document.getElementById('edit-cedula').value.trim(),
+                telefono: document.getElementById('edit-telefono').value.trim(),
+                ubicacion: document.getElementById('edit-ubicacion').value.trim()
+            };
+
+            try {
+                // setDoc con { merge: true } crea el documento si no existe, o lo actualiza si ya existe
+                await setDoc(doc(db, "usuarios", currentUserUid), datosActualizados, { merge: true });
+                
+                btnSave.innerHTML = "<i class='fas fa-check'></i> ¡Datos Guardados!";
+                
+                setTimeout(() => {
+                    // Restauramos la vista y recargamos los datos visualmente
+                    editProfileForm.style.display = 'none';
+                    userDetailsContainer.style.display = 'block';
+                    btnEditProfile.style.display = 'block';
+                    btnSave.innerHTML = "<i class='fas fa-save'></i> Guardar Datos";
+                    cargarPerfilCliente(currentUserUid);
+                }, 1000);
+
+            } catch (error) {
+                console.error("Error guardando datos: ", error);
+                btnSave.innerText = "Error al guardar";
+            }
+        });
+
+        // 4. Cargar Historial de Compras
+        async function cargarPedidosCliente(userEmail) {
+            try {
+                const querySnapshot = await getDocs(collection(db, "pedidos"));
+                let misPedidos = [];
+
+                querySnapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    if (data.email && data.email.toLowerCase().trim() === userEmail.toLowerCase().trim()) {
+                        misPedidos.push(data);
+                    }
+                });
+
+                totalPedidosCliente = misPedidos.length;
+
+                if (misPedidos.length === 0) {
+                    ordersContainer.innerHTML = `
+                        <div style="text-align: center; color: #777; padding: 40px; background: white; border-radius: 8px; border: 1px solid #eee;">
+                            <i class="fas fa-box-open" style="font-size: 40px; color: #ccc; margin-bottom: 10px;"></i>
+                            <p>No tienes pedidos registrados todavía.</p>
+                            <a href="tienda.html" style="color: var(--green); font-weight: bold; text-decoration: underline; margin-top: 10px; display: inline-block;">Ir al Catálogo de Repuestos</a>
+                        </div>`;
+                    return;
+                }
+
+                ordersContainer.innerHTML = '';
+
+                misPedidos.forEach((pedido) => {
+                    let productosHTML = '';
+                    if (pedido.productos && Array.isArray(pedido.productos)) {
+                        pedido.productos.forEach(p => {
+                            productosHTML += `
+                                <div class="order-item-row">
+                                    <span>${p.cantidad}x ${p.nombre}</span>
+                                    <span>$${(p.precio * p.cantidad).toFixed(2)}</span>
+                                </div>`;
+                        });
+                    }
+
+                    let envioMetodo = pedido.envio || "Delivery / Tienda Online";
+                    let trackingInfo = pedido.tracking || "En preparación";
+
+                    ordersContainer.innerHTML += `
+                        <div class="order-card">
+                            <div class="order-card-header">
+                                <span><strong>Fecha:</strong> ${pedido.fecha || 'N/D'}</span>
+                                <span style="background: #e8f4fd; color: #1d6fa5; padding: 3px 8px; border-radius: 4px; font-weight: bold;">${pedido.estado || 'Procesando'}</span>
+                            </div>
+                            
+                            <div style="margin-bottom: 15px;">
+                                ${productosHTML}
+                            </div>
+
+                            <div class="order-shipping-box">
+                                <div><i class="fas fa-truck" style="color: var(--green);"></i> <strong>Método de Envío:</strong> ${envioMetodo}</div>
+                                <div style="margin-top: 4px; color: #333;"><i class="fas fa-info-circle"></i> <strong>Estatus / Nro. de Guía:</strong> ${trackingInfo}</div>
+                            </div>
+
+                            <div class="order-footer">
+                                <span style="font-size: 15px; color: #555;">Total del Pedido:</span>
+                                <span style="color: var(--green);">$${Number(pedido.total || 0).toFixed(2)}</span>
+                            </div>
+                        </div>`;
+                });
+
+            } catch (error) {
+                console.error("Error al cargar pedidos del cliente: ", error);
+                ordersContainer.innerHTML = `<p style="text-align: center; color: red;">Error al sincronizar tus pedidos.</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
