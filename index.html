@@ -4,9 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
-    <!-- ========================================== -->
-    <!-- MEJORAS DE SEO (Para posicionar en Google) -->
-    <!-- ========================================== -->
+    <!-- MEJORAS DE SEO -->
     <title>F&B Parts | Repuestos de Carrocería Automotriz en Caracas</title>
     <meta name="description" content="Especialistas en venta de repuestos, partes de carrocería, iluminación y accesorios automotrices multimarca. Disponibilidad en la Gran Caracas y envíos a toda Venezuela.">
     <meta name="keywords" content="repuestos de carrocería, F&B Parts, repuestos Caracas, faros, parachoques, bombas de gasolina, frenos, Dongfeng, Toyota, Mercedes, envíos Tealca">
@@ -16,66 +14,34 @@
     <meta property="og:description" content="Venta de repuestos, partes de carrocería y accesorios automotrices en Caracas. ¡Contáctanos y cotiza tu repuesto!" />
     <meta property="og:image" content="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" />
     <meta property="og:type" content="website" />
-    <!-- ========================================== -->
 
     <link rel="icon" type="image/png" href="img/favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
-    <!-- Conectamos con tu diseño CSS -->
     <link rel="stylesheet" href="styles.css">
 
     <style>
-        /* Reglas de Alineación Simétrica para la sección Contactos */
-        .contact-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            align-items: stretch; /* Hace que ambos cuadros tengan la misma altura */
+        .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: stretch; }
+        .contact-box { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; flex-direction: column; box-sizing: border-box; }
+        .contact-box h3 { color: #5b8743; font-family: 'Oswald', sans-serif; font-size: 24px; margin-top: 0; margin-bottom: 20px; text-transform: uppercase; }
+        .contact-box p { color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 15px; }
+        .map-wrap { flex-grow: 1; display: flex; flex-direction: column; border: 1px solid #eee; border-radius: 8px; overflow: hidden; min-height: 350px; }
+        .map-wrap iframe { flex-grow: 1; height: 100% !important; border: 0; }
+        @media (max-width: 900px) { .contact-grid { grid-template-columns: 1fr; } }
+        
+        /* Simetría 4x4 en la cuadrícula de destacados */
+        .products-grid-home { 
+            display: grid; 
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 20px; 
+            width: 100%; 
+            margin-top: 20px; 
         }
-        .contact-box {
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            display: flex;
-            flex-direction: column;
-            box-sizing: border-box;
+        @media (max-width: 1100px) { 
+            .products-grid-home { grid-template-columns: repeat(2, 1fr); } 
         }
-        .contact-box h3 {
-            color: #5b8743;
-            font-family: 'Oswald', sans-serif;
-            font-size: 24px;
-            margin-top: 0;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-        }
-        .contact-box p {
-            color: #333;
-            font-size: 16px;
-            line-height: 1.6;
-            margin-bottom: 15px;
-        }
-        .map-wrap {
-            flex-grow: 1; /* Obliga al mapa a rellenar todo el espacio sobrante hacia abajo */
-            display: flex;
-            flex-direction: column;
-            border: 1px solid #eee;
-            border-radius: 8px;
-            overflow: hidden;
-            min-height: 350px; /* Altura mínima garantizada */
-        }
-        .map-wrap iframe {
-            flex-grow: 1;
-            height: 100% !important;
-            border: 0;
-        }
-
-        /* Responsividad para móviles */
-        @media (max-width: 900px) {
-            .contact-grid {
-                grid-template-columns: 1fr;
-            }
+        @media (max-width: 600px) { 
+            .products-grid-home { grid-template-columns: repeat(2, 1fr); gap: 10px; } 
         }
     </style>
 </head>
@@ -98,7 +64,6 @@
                 <a href="#nosotros">Quienes somos</a>
                 <a href="#mercadolibre">Mercado Libre</a>
                 <a href="#contacto">Contacto</a>
-                <!-- Enlace dinámico para el Portal del Cliente -->
                 <a href="login.html" id="nav-cuenta-btn" style="color: var(--green); font-weight: bold;"><i class="fas fa-user"></i> Mi Cuenta</a>
             </nav>
 
@@ -123,7 +88,6 @@
         <div class="hero-carousel" id="heroCarousel">
             <div class="hero-track">
                 
-                <!-- OPTIMIZACIÓN SEO: H1 y H2 agregados a la portada principal -->
                 <div class="hero-slide active" style="background-image: linear-gradient(rgba(0,0,0,.32), rgba(0,0,0,.32)), url('img/fotoportada.png');" role="img" aria-label="Almacén de repuestos automotrices originales en Caracas">
                     <div class="hero-overlay">
                         <h1 style="margin: 0 0 10px 0; color: var(--title); font-size: 24px; font-weight: 700; letter-spacing: .08em; line-height: 1.1; font-family: 'Oswald', sans-serif;">
@@ -173,9 +137,29 @@
         </div>
     </section>
 
+    <!-- SECCIÓN DE REPUESTOS DESTACADOS -->
+    <section id="destacados" class="block" style="background-color: #f8f8f8; padding-top: 50px;">
+        <div class="container">
+            <h2 class="section-title" style="text-align: center; margin-bottom: 5px;">REPUESTOS DESTACADOS</h2>
+            <p style="text-align: center; color: #666; margin-bottom: 25px; font-size: 14px;">Las piezas más solicitadas para tu vehículo.</p>
+            
+            <div class="products-grid-home" id="destacados-grid">
+                <div style="text-align:center; padding: 40px; color:#666; grid-column: 1/-1;">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 24px;"></i><br>Cargando inventario...
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 35px;">
+                <a href="tienda.html" style="background: #385723; color: white; padding: 12px 25px; text-decoration: none; font-family: 'Oswald', sans-serif; letter-spacing: 1px; border-radius: 4px; display: inline-block; transition: 0.2s;">
+                    VER TODO EL INVENTARIO <i class="fas fa-arrow-right" style="margin-left: 5px;"></i>
+                </a>
+            </div>
+        </div>
+    </section>
+
     <section id="categorias" class="block categories">
         <div class="container">
-            <h2 class="section-title" style="text-align: center;">Repuestos</h2>
+            <h2 class="section-title" style="text-align: center;">CATEGORÍAS DE REPUESTOS</h2>
             <div class="category-grid">
                 <a class="category-card" href="tienda.html?cat=frenos">
                     <div class="category-img-wrap"><img src="img/freno.jpg" alt="Venta de repuestos para sistema de frenos automotrices" loading="lazy"></div>
@@ -254,56 +238,18 @@
         </div>
     </section>
 
+    <!-- SECCIÓN DE MERCADO LIBRE (Sin carrusel, solo botón general de acceso) -->
     <section id="mercadolibre" class="block categories">
         <div class="container">
-            <h2 class="section-title" style="text-align: center;">CATALOGO MERCADO LIBRE</h2>
+            <h2 class="section-title" style="text-align: center;">CATÁLOGO MERCADO LIBRE</h2>
 
-            <div class="about-box" style="max-width: 1000px; margin-bottom: 25px; text-align: center;">
-                <p>Explora todas nuestras publicaciones activas de Mercado Libre desde el siguiente enlace. Aquí encontrarás repuestos disponibles, precios y detalles actualizados.</p>
-                <p>
-                    <a href="https://listado.mercadolibre.com.ve/_CustId_1156015281_NoIndex_True" target="_blank" style="display:inline-block; background:#5e8877; color:white; padding:12px 18px; text-decoration:none; font-family:'Oswald', sans-serif; letter-spacing:.05em; border-radius: 4px;">
-                        VER CATÁLOGO COMPLETO
+            <div class="about-box" style="max-width: 800px; margin: 0 auto; text-align: center;">
+                <p>Explora todas nuestras publicaciones activas y repuestos disponibles directamente en nuestra tienda oficial de Mercado Libre.</p>
+                <p style="margin-top: 20px;">
+                    <a href="https://listado.mercadolibre.com.ve/_CustId_1156015281_NoIndex_True" target="_blank" style="display:inline-block; background:#ffe600; color:#333; padding:14px 25px; text-decoration:none; font-family:'Oswald', sans-serif; font-size: 16px; font-weight: bold; letter-spacing:.05em; border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.08);">
+                        <i class="fas fa-handshake" style="margin-right: 8px;"></i> IR A NUESTRA TIENDA DE MERCADO LIBRE
                     </a>
                 </p>
-            </div>
-
-            <div class="ml-carousel" id="mlCarousel">
-                <button class="ml-arrow ml-prev" type="button" aria-label="Anterior"><i class="fas fa-chevron-left"></i></button>
-
-                <div class="ml-track">
-                    <div class="ml-slide active">
-                        <div class="ml-card">
-                            <div class="ml-image-wrap"><img src="img/ALARMA1.png" alt="Comprar Alarma de carro con cierre centralizado" loading="lazy"></div>
-                            <h4>Alarma de carro</h4>
-                            <p>Cierre centralizado, código variable, cromo.</p>
-                            <a href="https://articulo.mercadolibre.com.ve/MLV-776776931-alarma-de-carro-cierre-centralizado-codigo-variable-cromo-_JM" target="_blank">VER EN MERCADO LIBRE</a>
-                        </div>
-                    </div>
-                    <div class="ml-slide">
-                        <div class="ml-card">
-                            <div class="ml-image-wrap"><img src="img/RINTOYOTA.JPG" alt="Comprar Rin Toyota Yaris original 15 pulgadas" loading="lazy"></div>
-                            <h4>Rin Toyota Yaris</h4>
-                            <p>2017 - 2023, 15 pulgadas.</p>
-                            <a href="https://articulo.mercadolibre.com.ve/MLV-776144781-rin-toyota-yaris-2017-2023-15-_JM" target="_blank">VER EN MERCADO LIBRE</a>
-                        </div>
-                    </div>
-                    <div class="ml-slide">
-                        <div class="ml-card">
-                            <div class="ml-image-wrap"><img src="img/PARRILAMERCEDES.png" alt="Comprar Parrilla frontal para Mercedes-Benz" loading="lazy"></div>
-                            <h4>Parrilla frontal Mercedes</h4>
-                            <p>C180, C200, C280, 2007 - 2011.</p>
-                            <a href="https://articulo.mercadolibre.com.ve/MLV-776157903-parilla-frontal-mercedes-benz-c180-c200-c280-2007-2011-_JM" target="_blank">VER EN MERCADO LIBRE</a>
-                        </div>
-                    </div>
-                </div>
-
-                <button class="ml-arrow ml-next" type="button" aria-label="Siguiente"><i class="fas fa-chevron-right"></i></button>
-
-                <div class="ml-dots">
-                    <span class="active"></span>
-                    <span></span>
-                    <span></span>
-                </div>
             </div>
         </div>
     </section>
@@ -332,7 +278,6 @@
                         Sábados: 9:00 am – 1:00 pm
                     </p>
                     
-                    <!-- Empuja el correo hacia el fondo si el texto es corto -->
                     <p style="margin-top: auto; padding-top: 15px;">
                         <a href="mailto:fybinversiones.ccs@gmail.com" style="color: #5b8743; text-decoration: none; font-size: 18px;">fybinversiones.ccs@gmail.com</a>
                     </p>
@@ -371,10 +316,11 @@
         </script>
     </footer>
 
-    <!-- Script inteligente para detectar sesión de cliente -->
+    <!-- Script inteligente para detectar sesión de cliente y Cargar Destacados -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, getDocs, query, where, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
@@ -387,6 +333,7 @@
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
+        const db = getFirestore(app);
 
         onAuthStateChanged(auth, (user) => {
             const navBtn = document.getElementById('nav-cuenta-btn');
@@ -398,118 +345,50 @@
                 navBtn.innerHTML = `<i class="fas fa-user"></i> Iniciar Sesión`;
             }
         });
-    </script>
 
-    <!-- Scripts de Carrusel -->
-    <script>
-        (function () {
-            const track = document.querySelector('#mlCarousel .ml-track');
-            const slides = document.querySelectorAll('#mlCarousel .ml-slide');
-            const dots = document.querySelectorAll('#mlCarousel .ml-dots span');
-            const prevBtn = document.querySelector('#mlCarousel .ml-prev');
-            const nextBtn = document.querySelector('#mlCarousel .ml-next');
-
-            if (track && slides.length > 0) {
-                let index = 0;
-                let timer = null;
-
-                function updateCarousel() {
-                    track.style.transform = `translateX(-${index * 100}%)`;
-                    dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
+        // CARGAR EXACTAMENTE 8 REPUESTOS DESTACADOS
+        async function cargarDestacados() {
+            const grid = document.getElementById('destacados-grid');
+            if(!grid) return;
+            try {
+                const q = query(collection(db, "productos"), where("estado", "==", "activo"), limit(8));
+                const snap = await getDocs(q);
+                
+                if(snap.empty) {
+                    grid.innerHTML = '<p style="text-align:center; color:#666; grid-column: 1/-1;">Inventario en actualización...</p>';
+                    return;
                 }
+                
+                grid.innerHTML = '';
+                
+                snap.forEach(docSnap => {
+                    const prod = docSnap.data();
+                    const slug = prod.nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '-').replace(/(^-|-$)/g, '');
+                    const productUrl = `producto.html?id=${docSnap.id}&pieza=${slug}`;
 
-                function nextSlide() {
-                    index = (index + 1) % slides.length;
-                    updateCarousel();
-                }
-
-                function prevSlide() {
-                    index = (index - 1 + slides.length) % slides.length;
-                    updateCarousel();
-                }
-
-                function startAutoplay() {
-                    stopAutoplay();
-                    timer = setInterval(nextSlide, 3500);
-                }
-
-                function stopAutoplay() {
-                    if (timer) clearInterval(timer);
-                }
-
-                nextBtn.addEventListener('click', () => { nextSlide(); startAutoplay(); });
-                prevBtn.addEventListener('click', () => { prevSlide(); startAutoplay(); });
-
-                dots.forEach((dot, i) => {
-                    dot.addEventListener('click', () => {
-                        index = i;
-                        updateCarousel();
-                        startAutoplay();
-                    });
+                    grid.innerHTML += `
+                    <div style="background: white; border: 1px solid #eee; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,.05); display: flex; flex-direction: column; transition: transform 0.2s;">
+                        <a href="${productUrl}" style="text-decoration: none; color: inherit; display: contents;">
+                            <div style="width: 100%; height: 180px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                                <img src="${prod.imagen}" alt="Repuesto ${prod.nombre} en Caracas" loading="lazy" style="width: 100%; height: 100%; object-fit: contain;">
+                            </div>
+                            <div style="padding: 12px; display: flex; flex-direction: column; flex: 1;">
+                                <h4 style="font-size: 13px; color: #333; margin: 0 0 8px 0; font-weight: bold; flex: 1; line-height: 1.3;">${prod.nombre}</h4>
+                        </a>
+                                <div style="font-size: 18px; color: #385723; font-weight: bold; font-family: 'Oswald', sans-serif; margin-bottom: 10px;">$${Number(prod.precio).toFixed(2)}</div>
+                                <div style="margin-top: auto;">
+                                    <button type="button" onclick="window.location.href='${productUrl}'" style="background: #385723; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; font-size: 13px; transition: 0.2s;"><i class="fas fa-eye"></i> Ver Detalles</button>
+                                </div>
+                            </div>
+                    </div>`;
                 });
-
-                updateCarousel();
-                startAutoplay();
+            } catch(e) {
+                console.error("Error cargando destacados:", e);
+                grid.innerHTML = '<p style="text-align:center; color:red; grid-column: 1/-1;">Error de conexión.</p>';
             }
+        }
 
-            const heroCarousel = document.querySelector('#heroCarousel');
-            if (heroCarousel) {
-                const heroSlides = heroCarousel.querySelectorAll('.hero-slide');
-                const heroDots = heroCarousel.querySelectorAll('.hero-dots span');
-                const heroPrev = heroCarousel.querySelector('.arrow.left');
-                const heroNext = heroCarousel.querySelector('.arrow.right');
-
-                let heroIndex = 0;
-                let heroTimer = null;
-
-                function updateHero() {
-                    heroSlides.forEach((slide, i) => slide.classList.toggle('active', i === heroIndex));
-                    heroDots.forEach((dot, i) => dot.classList.toggle('active', i === heroIndex));
-                }
-
-                function heroNextSlide() {
-                    heroIndex = (heroIndex + 1) % heroSlides.length;
-                    updateHero();
-                }
-
-                function heroPrevSlide() {
-                    heroIndex = (heroIndex - 1 + heroSlides.length) % heroSlides.length;
-                    updateHero();
-                }
-
-                function startHeroAutoplay() {
-                    stopHeroAutoplay();
-                    heroTimer = setInterval(heroNextSlide, 4500);
-                }
-
-                function stopHeroAutoplay() {
-                    if (heroTimer) clearInterval(heroTimer);
-                }
-
-                heroNext.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    heroNextSlide();
-                    startHeroAutoplay();
-                });
-
-                heroPrev.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    heroPrevSlide();
-                    startHeroAutoplay();
-                });
-
-                heroDots.forEach((dot, i) => {
-                    dot.addEventListener('click', () => {
-                        heroIndex = i;
-                        updateHero();
-                        startHeroAutoplay();
-                    });
-                });
-
-                updateHero();
-                startHeroAutoplay();
-            }
-        })();
+        window.addEventListener('DOMContentLoaded', cargarDestacados);
     </script>
 </body>
 </html>
