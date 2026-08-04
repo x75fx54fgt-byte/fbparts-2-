@@ -45,11 +45,11 @@
         .img-magnifier-container img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
         .product-details { display: flex; flex-direction: column; }
-        .product-condition { font-size: 12px; color: #666; margin-bottom: 10px; }
+        .product-condition { font-size: 13px; color: #666; margin-bottom: 10px; }
         .product-name { font-family: 'Oswald', sans-serif; font-size: 28px; color: #333; margin: 0 0 15px 0; line-height: 1.2; }
         .product-price { font-family: 'Oswald', sans-serif; font-size: 36px; color: #385723; margin: 0 0 20px 0; }
         
-        .product-info-list { margin-bottom: 25px; padding: 0; list-style: none; color: #555; font-size: 15px; }
+        .product-info-list { margin-bottom: 15px; padding: 0; list-style: none; color: #555; font-size: 15px; }
         .product-info-list li { margin-bottom: 8px; display: flex; gap: 10px; align-items: center; }
         .product-info-list i { color: #385723; width: 20px; text-align: center; }
 
@@ -65,7 +65,6 @@
 </head>
 <body>
 
-    <!-- Tu header estándar aquí -->
     <header style="background: white; border-bottom: 1px solid #eee;">
         <div class="container header-wrap" style="padding: 15px 20px; max-width: 1350px;">
             <a class="logo" href="index.html">
@@ -110,7 +109,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Extraer el ID de la URL (ej: producto.html?id=123)
         const urlParams = new URLSearchParams(window.location.search);
         const productId = urlParams.get('id');
 
@@ -122,7 +120,6 @@
             else window.carrito.push({ id, nombre, precio, cantidad: 1 });
             localStorage.setItem('carritoFB', JSON.stringify(window.carrito));
             
-            // Alerta visual y redirección al carrito
             alert("¡Repuesto agregado al carrito con éxito!");
             window.location.href = "tienda.html";
         };
@@ -141,7 +138,6 @@
                     const prod = docSnap.data();
                     const safeName = prod.nombre.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                     
-                    // OPTIMIZACIÓN SEO: Cambiar título y meta descripción dinámicamente
                     document.title = `${prod.nombre} | F&B Parts Caracas`;
                     document.getElementById('meta-description').content = `Compra ${prod.nombre} al mejor precio en Caracas. Repuestos originales para tu vehículo. Delivery disponible.`;
 
@@ -152,12 +148,30 @@
                         botonML = `<a href="https://articulo.mercadolibre.com.ve/${idML}" target="_blank" class="btn-ml-large"><i class="fas fa-handshake"></i> Comprar en Mercado Libre</a>`;
                     }
 
+                    // LÓGICA DEL NÚMERO DE PARTE
+                    let textoCondicion = "Original / OEM";
+                    if (prod.numero_parte && prod.numero_parte.trim() !== "") {
+                        textoCondicion = `<span style="color: #385723; font-weight: bold;">Nro. Parte: ${prod.numero_parte}</span>`;
+                    }
+
+                    // LÓGICA DE LA DESCRIPCIÓN DETALLADA
+                    let bloqueDescripcion = "";
+                    if (prod.descripcion && prod.descripcion.trim() !== "") {
+                        let descFormateada = prod.descripcion.replace(/\n/g, '<br>');
+                        bloqueDescripcion = `
+                            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
+                                <h4 style="margin: 0 0 10px 0; font-family: 'Oswald', sans-serif; color: #333;">Descripción del Repuesto</h4>
+                                <p style="font-size: 14px; color: #555; line-height: 1.6; margin: 0;">${descFormateada}</p>
+                            </div>
+                        `;
+                    }
+
                     document.getElementById('product-content').innerHTML = `
                         <div class="img-magnifier-container">
                             <img src="${prod.imagen}" alt="${prod.nombre} en Caracas">
                         </div>
                         <div class="product-details">
-                            <div class="product-condition">Nuevo | Original / OEM</div>
+                            <div class="product-condition">Nuevo | ${textoCondicion}</div>
                             <h1 class="product-name">${prod.nombre}</h1>
                             <div class="product-price">$${Number(prod.precio).toFixed(2)}</div>
                             
@@ -167,7 +181,9 @@
                                 <li><i class="fas fa-shield-alt"></i> Garantía por defecto de fábrica</li>
                             </ul>
 
-                            <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid #eee;">
+                            ${bloqueDescripcion}
+
+                            <div style="margin-top: auto; padding-top: 20px;">
                                 <button type="button" class="btn-add-cart-large" onclick="agregarAlCarritoDesdeProducto('${docSnap.id}', '${safeName}', ${prod.precio})">
                                     <i class="fas fa-cart-plus"></i> Añadir al carrito
                                 </button>
