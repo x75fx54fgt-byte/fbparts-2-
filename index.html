@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" />
     <meta property="og:type" content="website" />
 
-    <!-- 🚀 SCHEMA FAQ (Preguntas Frecuentes para fragmentos enriquecidos en Google) -->
+    <!-- SCHEMA FAQ -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -42,7 +42,7 @@
           "name": "¿Qué métodos de pago aceptan?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Aceptamos múltiples métodos de pago: Zelle, Pago Móvil en bolívares, efectivo en divisas y transferencias bancarias (Banesco)."
+            "text": "Aceptamos múltiples métodos de pago: Pago Móvil, efectivo en divisas, transferencias bancarias (Banesco, BNC, BVC, Bancamiga) y Binance."
           }
         },
         {
@@ -71,55 +71,82 @@
         .map-wrap iframe { flex-grow: 1; height: 100% !important; border: 0; }
         @media (max-width: 900px) { .contact-grid { grid-template-columns: 1fr; } }
         
-        /* Simetría 4x4 en la cuadrícula de destacados */
-        .products-grid-home { 
-            display: grid; 
-            grid-template-columns: repeat(4, 1fr); 
-            gap: 20px; 
-            width: 100%; 
-            margin-top: 20px; 
-        }
-        @media (max-width: 1100px) { 
-            .products-grid-home { grid-template-columns: repeat(2, 1fr); } 
-        }
-        @media (max-width: 600px) { 
-            .products-grid-home { grid-template-columns: repeat(2, 1fr); gap: 10px; } 
-        }
+        .products-grid-home { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; width: 100%; margin-top: 20px; }
+        @media (max-width: 1100px) { .products-grid-home { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 600px) { .products-grid-home { grid-template-columns: repeat(2, 1fr); gap: 10px; } }
 
-        /* Estilos modernos para las Tarjetas de Reseñas */
-        .testimonials-grid { 
-            display: grid; 
-            grid-template-columns: repeat(3, 1fr); 
-            gap: 25px; 
-            margin-top: 30px; 
-        }
-        .testimonial-card { 
-            background: white; 
-            padding: 25px; 
-            border-radius: 8px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
-            border-top: 4px solid #385723; 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: space-between; 
-            box-sizing: border-box;
-            transition: transform 0.2s;
-        }
-        .testimonial-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
-        }
+        .testimonials-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; margin-top: 30px; }
+        .testimonial-card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-top: 4px solid #385723; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; transition: transform 0.2s; }
+        .testimonial-card:hover { transform: translateY(-4px); box-shadow: 0 8px 25px rgba(0,0,0,0.08); }
         .testimonial-stars { color: #f39c12; margin-bottom: 12px; font-size: 14px; }
         .testimonial-text { color: #444; font-size: 14px; line-height: 1.6; font-style: italic; margin-bottom: 15px; flex: 1; }
         .testimonial-author { font-weight: bold; color: #333; font-size: 15px; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px; border-top: 1px solid #eee; padding-top: 10px; }
         @media (max-width: 900px) { .testimonials-grid { grid-template-columns: 1fr; gap: 15px; } }
 
-        /* Estilos para la sección FAQ */
         .faq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px; }
         .faq-item { background: white; padding: 20px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
         .faq-item h4 { font-family: 'Oswald', sans-serif; color: #385723; font-size: 18px; margin-top: 0; margin-bottom: 10px; }
         .faq-item p { color: #555; font-size: 14px; line-height: 1.5; margin: 0; }
         @media (max-width: 900px) { .faq-grid { grid-template-columns: 1fr; } }
+
+        /* ========================================== */
+        /* REGLAS DE CORRECCIÓN PARA EL HEADER MÓVIL */
+        /* ========================================== */
+        @media (max-width: 900px) {
+            header { position: relative; }
+            header .header-wrap {
+                display: flex !important;
+                flex-direction: row !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                padding: 10px 20px !important;
+            }
+            /* Ocultamos elementos innecesarios en móvil para limpiar el diseño */
+            header .header-right {
+                display: none !important; 
+            }
+            header .logo img {
+                height: 45px !important; 
+                width: auto;
+            }
+            /* Diseño del botón de menú hamburguesa */
+            .mobile-menu {
+                display: block !important;
+                background: #5b8743 !important;
+                color: white !important;
+                border: none;
+                padding: 10px 14px;
+                border-radius: 6px;
+                font-size: 22px;
+                cursor: pointer;
+            }
+            /* Menú desplegable oculto por defecto */
+            header nav {
+                display: none; 
+                flex-direction: column;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                width: 100%;
+                background: white;
+                box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+                border-top: 1px solid #eee;
+                z-index: 9999;
+            }
+            /* Clase que activa el despliegue con JS */
+            header nav.menu-activo {
+                display: flex !important;
+            }
+            header nav a {
+                padding: 15px 20px !important;
+                border-bottom: 1px solid #f0f0f0;
+                width: 100%;
+                text-align: left;
+                box-sizing: border-box;
+                color: #333;
+                font-weight: bold;
+            }
+        }
     </style>
 </head>
 <body>
@@ -132,16 +159,17 @@
     <header>
         <div class="container header-wrap">
             <a class="logo" href="#inicio">
-                <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logotipo Oficial F&B PARTS">
+                <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logotipo Oficial F&B PARTS" decoding="async">
             </a>
 
-            <nav>
-                <a href="#inicio">Inicio</a>
-                <a href="tienda.html">Repuestos</a>
-                <a href="#nosotros">Quienes somos</a>
-                <a href="#mercadolibre">Mercado Libre</a>
-                <a href="#contacto">Contacto</a>
-                <a href="login.html" id="nav-cuenta-btn" style="color: var(--green); font-weight: bold;"><i class="fas fa-user"></i> Mi Cuenta</a>
+            <!-- Menú de Navegación -->
+            <nav id="nav-principal">
+                <a href="#inicio" onclick="toggleMenuMobile()">Inicio</a>
+                <a href="tienda.html" onclick="toggleMenuMobile()">Repuestos</a>
+                <a href="#nosotros" onclick="toggleMenuMobile()">Quienes somos</a>
+                <a href="#mercadolibre" onclick="toggleMenuMobile()">Mercado Libre</a>
+                <a href="#contacto" onclick="toggleMenuMobile()">Contacto</a>
+                <a href="login.html" id="nav-cuenta-btn" style="color: var(--green);"><i class="fas fa-user"></i> Mi Cuenta</a>
             </nav>
 
             <div class="header-right">
@@ -155,7 +183,8 @@
                 </div>
             </div>
 
-            <button class="mobile-menu" aria-label="Menú">
+            <!-- Botón de Menú con evento onclick -->
+            <button class="mobile-menu" aria-label="Menú" onclick="toggleMenuMobile()">
                 <i class="fas fa-bars"></i>
             </button>
         </div>
@@ -164,7 +193,6 @@
     <section id="inicio" class="hero">
         <div class="hero-carousel" id="heroCarousel">
             <div class="hero-track">
-                
                 <div class="hero-slide active" style="background-image: linear-gradient(rgba(0,0,0,.32), rgba(0,0,0,.32)), url('img/fotoportada.png');" role="img" aria-label="Almacén de repuestos automotrices originales en Caracas">
                     <div class="hero-overlay">
                         <h1 style="margin: 0 0 10px 0; color: var(--title); font-size: 24px; font-weight: 700; letter-spacing: .08em; line-height: 1.1; font-family: 'Oswald', sans-serif;">
@@ -214,7 +242,6 @@
         </div>
     </section>
 
-    <!-- SECCIÓN DE REPUESTOS DESTACADOS -->
     <section id="destacados" class="block" style="background-color: #f8f8f8; padding-top: 50px;">
         <div class="container">
             <h2 class="section-title" style="text-align: center; margin-bottom: 5px;">REPUESTOS DESTACADOS</h2>
@@ -295,7 +322,6 @@
         </div>
     </section>
 
-    <!-- SECCIÓN DE RESEÑAS -->
     <section class="block" style="background-color: #fdfdfd; padding: 40px 0;">
         <div class="container">
             <h2 class="section-title" style="text-align: center; margin-bottom: 5px;">RESEÑAS DE CLIENTES</h2>
@@ -329,7 +355,6 @@
         </div>
     </section>
 
-    <!-- 🚀 NUEVA SECCIÓN VISIBLE DE PREGUNTAS FRECUENTES (FAQ) -->
     <section class="block" style="background-color: #f4f6f3; padding: 40px 0;">
         <div class="container">
             <h2 class="section-title" style="text-align: center; margin-bottom: 5px;">PREGUNTAS FRECUENTES</h2>
@@ -346,7 +371,7 @@
                 </div>
                 <div class="faq-item">
                     <h4>¿Qué métodos de pago aceptan?</h4>
-                    <p>Aceptamos múltiples métodos de pago: Pago Móvil en bolívares, efectivo en divisas, transferencias bancarias (Banesco, Banco Nacional de Credito, Banco Venezolano de Credito, Bancamiga) y Binance.</p>
+                    <p>Aceptamos múltiples métodos de pago: Pago Móvil, efectivo en divisas, transferencias bancarias (Banesco, BNC, BVC, Bancamiga) y Binance.</p>
                 </div>
                 <div class="faq-item">
                     <h4>¿Los repuestos y autopartes son originales?</h4>
@@ -356,7 +381,6 @@
         </div>
     </section>
 
-    <!-- SECCIÓN DE MERCADO LIBRE -->
     <section id="mercadolibre" class="block categories">
         <div class="container">
             <h2 class="section-title" style="text-align: center;">CATÁLOGO MERCADO LIBRE</h2>
@@ -372,7 +396,6 @@
         </div>
     </section>
 
-    <!-- SECCIÓN DE CONTACTO SIMÉTRICA -->
     <section id="contacto" class="block categories">
         <div class="container">
             <h2 class="section-title" style="text-align: center;">CONTACTOS</h2>
@@ -417,12 +440,6 @@
 
     <!-- FOOTER GLOBAL -->
     <footer style="background-color: #000; color: #fff; text-align: center; padding: 25px 0; position: relative; margin-top: 50px;">
-        <a href="https://wa.me/584120161036?text=Hola%20quiero%20informaci%C3%B3n%20sobre%20repuestos" 
-           target="_blank" 
-           style="position: absolute; left: 5%; top: -30px; background-color: #25D366; color: white; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 32px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: transform 0.2s; z-index: 50;" 
-           aria-label="Escribir por WhatsApp">
-            <i class="fab fa-whatsapp"></i>
-        </a>
         <p class="oswald" style="margin: 0; font-size: 16px; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 5px;">
             &copy;<span id="year-footer">2026</span> por F&B PARTS. 
             <a href="admin-login.html" style="color: #c9b065; text-decoration: none; font-size: 14px; margin-left: 8px;" title="Acceso Interno"><i class="fas fa-lock"></i></a>
@@ -431,6 +448,60 @@
             document.getElementById('year-footer').textContent = new Date().getFullYear();
         </script>
     </footer>
+
+    <!-- WIDGET FLOTANTE DE WHATSAPP TIPO CHATBOT -->
+    <div id="wa-chat-widget" style="position: fixed; bottom: 25px; right: 25px; z-index: 99999; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+        <div id="wa-chat-box" style="display: none; position: absolute; bottom: 75px; right: 0; width: 320px; background: white; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); overflow: hidden; border: 1px solid #eee;">
+            <div style="background: #385723; color: white; padding: 15px; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="position: relative;">
+                        <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" style="width: 35px; height: 35px; border-radius: 50%; background: white; object-fit: contain; padding: 2px;" alt="F&B Parts">
+                        <span style="position: absolute; bottom: 0; right: 0; width: 10px; height: 10px; background: #25D366; border: 2px solid white; border-radius: 50%;"></span>
+                    </div>
+                    <div>
+                        <h4 style="margin: 0; font-size: 15px; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px; color: #fff;">F&B Parts Soporte</h4>
+                        <span style="font-size: 11px; opacity: 0.9;">En línea para ayudarte</span>
+                    </div>
+                </div>
+                <button onclick="toggleWaChat()" style="background: none; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0;" aria-label="Cerrar chat"><i class="fas fa-times"></i></button>
+            </div>
+            <div style="padding: 15px; background: #f9f9f9; font-size: 13px; color: #333; line-height: 1.4;">
+                <div style="background: white; padding: 12px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 3px solid #385723;">
+                    <p style="margin: 0 0 5px 0; font-weight: bold; color: #385723;">¡Hola! 👋</p>
+                    <p style="margin: 0;">¿Buscas algún repuesto o autoparte original para tu vehículo en Caracas? Escríbenos y te cotizamos al instante.</p>
+                </div>
+            </div>
+            <div style="padding: 15px; background: white; border-top: 1px solid #eee; text-align: center;">
+                <a href="https://wa.me/584120161036?text=Hola%20F%26B%20Parts,%20estoy%20en%20su%20web%20y%20necesito%20informaci%C3%B3n%20sobre%20un%20repuesto." target="_blank" style="background: #25D366; color: white; text-decoration: none; display: block; padding: 12px; border-radius: 6px; font-weight: bold; font-family: 'Oswald', sans-serif; font-size: 15px; transition: background 0.2s; box-shadow: 0 4px 10px rgba(37, 211, 102, 0.3);">
+                    <i class="fab fa-whatsapp" style="margin-right: 5px; font-size: 18px;"></i> INICIAR CHAT EN WHATSAPP
+                </a>
+            </div>
+        </div>
+        <button onclick="toggleWaChat()" style="background: #25D366; color: white; border: none; width: 60px; height: 60px; border-radius: 50%; cursor: pointer; font-size: 28px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; transition: transform 0.2s;" aria-label="Abrir Chat de WhatsApp">
+            <i class="fab fa-whatsapp" id="wa-icon-toggle"></i>
+        </button>
+    </div>
+
+    <!-- Script para Abrir/Cerrar Menú Móvil y Chat WhatsApp -->
+    <script>
+        function toggleMenuMobile() {
+            const nav = document.getElementById('nav-principal');
+            nav.classList.toggle('menu-activo');
+        }
+
+        function toggleWaChat() {
+            const box = document.getElementById('wa-chat-box');
+            const icon = document.getElementById('wa-icon-toggle');
+            if (box.style.display === 'none' || box.style.display === '') {
+                box.style.display = 'block';
+                icon.className = 'fas fa-times';
+            } else {
+                box.style.display = 'none';
+                icon.className = 'fab fa-whatsapp';
+            }
+        }
+    </script>
+    <!-- ========================================== -->
 
     <!-- Script de Firebase, Destacados y Carrusel -->
     <script type="module">
@@ -485,7 +556,7 @@
                     <div style="background: white; border: 1px solid #eee; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,.05); display: flex; flex-direction: column; transition: transform 0.2s;">
                         <a href="${productUrl}" style="text-decoration: none; color: inherit; display: contents;">
                             <div style="width: 100%; height: 180px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                                <img src="${prod.imagen}" alt="Repuesto ${prod.nombre} en Caracas" loading="lazy" style="width: 100%; height: 100%; object-fit: contain;">
+                                <img src="${prod.imagen}" alt="Repuesto ${prod.nombre} en Caracas" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: contain;">
                             </div>
                             <div style="padding: 12px; display: flex; flex-direction: column; flex: 1;">
                                 <h4 style="font-size: 13px; color: #333; margin: 0 0 8px 0; font-weight: bold; flex: 1; line-height: 1.3;">${prod.nombre}</h4>
@@ -506,7 +577,6 @@
         window.addEventListener('DOMContentLoaded', cargarDestacados);
     </script>
 
-    <!-- Script del Carrusel Principal -->
     <script>
         (function () {
             const heroCarousel = document.querySelector('#heroCarousel');
