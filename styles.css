@@ -709,56 +709,85 @@ footer{
 }
 
 /* ================================================= */
-/* 📱 ADAPTABILIDAD MÓVIL Y TABLET (ADMIN Y PANELES)  */
+/* 📱 CORRECCIÓN DEFINITIVA DE DISEÑO MÓVIL         */
 /* ================================================= */
 
 @media (max-width: 900px) {
-    /* Apilar formularios y tablas de administración en una sola columna vertical */
-    .admin-grid,
-    div[style*="grid-template-columns: 1fr 2fr"],
-    div[style*="grid-template-columns: 1fr 1fr"] {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 20px !important;
+    /* 1. Evitar que la página se desborde o se mueva hacia los lados */
+    html, body {
+        overflow-x: hidden !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
 
-    /* Márgenes seguros para contenedores de paneles y login */
+    /* 2. Asegurar que las cajas y contenedores respeten los límites del teléfono */
+    .container, 
     .admin-container, 
     .login-container, 
-    .register-container {
-        padding: 0 12px !important;
-        margin: 20px auto !important;
+    .register-container,
+    .benefits-inner {
         width: 100% !important;
+        max-width: 100% !important;
+        padding-left: 15px !important;
+        padding-right: 15px !important;
         box-sizing: border-box !important;
     }
 
-    /* Encabezados y barras flexibles en pantallas pequeñas */
+    /* 3. Ordenar perfectamente la cabecera en móviles (Evita el problema de los cuadrados rojos) */
     .header-wrap {
-        flex-wrap: wrap !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
         justify-content: center !important;
-        text-align: center !important;
+        padding: 15px 10px !important;
+        gap: 12px !important;
+    }
+
+    .logo {
+        margin: 0 auto !important;
+        text-align: center;
     }
 
     .header-right {
+        display: flex !important;
+        flex-direction: column !important;
         align-items: center !important;
-        width: 100%;
+        width: 100% !important;
+        gap: 10px !important;
     }
 
-    /* Desplazamiento horizontal fluido en tablas */
+    /* 4. Estilizar y hacer visible el botón de menú hamburguesa */
+    .mobile-menu {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 48px !important;
+        height: 48px !important;
+        background: var(--green) !important;
+        color: #fff !important;
+        border: none !important;
+        border-radius: 6px !important;
+        font-size: 22px !important;
+        cursor: pointer !important;
+        margin: 5px auto !important;
+    }
+
+    /* 5. Asegurar que las grillas se apilen verticalmente */
+    .admin-grid,
+    .contact-grid,
+    .category-grid,
+    div[style*="grid-template-columns"] {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 15px !important;
+    }
+
+    /* 6. Tablas con desplazamiento suave horizontal */
     .data-table {
         display: block;
         overflow-x: auto;
         white-space: nowrap;
-    }
-
-    /* Inputs de tamaño óptimo para evitar zoom forzado en iPhone/Android */
-    input, select, textarea, button {
-        font-size: 16px !important;
-    }
-
-    /* Ajustar tarjeta de perfil en la barra superior del panel */
-    #admin-perfil-header {
-        width: 100% !important;
-        justify-content: center !important;
+        width: 100%;
     }
 }
