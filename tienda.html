@@ -10,7 +10,7 @@
     <meta name="keywords" content="parrilla para carro Caracas, repuestos automotrices Venezuela, F&B Parts, repuestos Toyota Ford Dongfeng, autopartes Caracas">
     <meta name="author" content="Inversiones FB Parts, C.A.">
     
-    <!-- 🚀 MEJORA 2: ETIQUETA CANONICAL DINÁMICA (Evita contenido duplicado en filtros) -->
+    <!-- ETIQUETA CANONICAL DINÁMICA -->
     <link id="canonical-link" rel="canonical" href="https://www.fybparts.com/tienda.html">
 
     <!-- OPEN GRAPH -->
@@ -141,7 +141,7 @@
     <header style="background: white; border-bottom: 1px solid #eee;">
         <div class="container header-wrap" style="padding: 15px 20px; max-width: 1350px;">
             <a class="logo" href="index.html">
-                <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logotipo F&B PARTS" style="height: 60px;">
+                <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logotipo Oficial F&B PARTS - Autopartes Originales en Caracas" decoding="async">
             </a>
             <nav>
                 <a href="index.html">Inicio</a>
@@ -241,10 +241,13 @@
             <div class="form-group">
                 <label>Método de Pago Preferido</label>
                 <select id="metodo-pago">
-                    <option value="Zelle">Zelle</option>
-                    <option value="Pago Móvil">Pago Móvil (Bs)</option>
-                    <option value="Efectivo Divisas">Efectivo (Divisas)</option>
-                    <option value="Transferencia Banesco">Transferencia (Banesco)</option>
+                    <option value="Pago Móvil">Pago Móvil en bolívares</option>
+                    <option value="Efectivo Divisas">Efectivo en divisas</option>
+                    <option value="Transferencia Banesco">Transferencia - Banesco</option>
+                    <option value="Transferencia Banco Nacional de Credito">Transferencia - Banco Nacional de Crédito</option>
+                    <option value="Transferencia Banco Venezolano de Credito">Transferencia - Banco Venezolano de Crédito</option>
+                    <option value="Transferencia Bancamiga">Transferencia - Bancamiga</option>
+                    <option value="Binance">Binance</option>
                 </select>
             </div>
 
@@ -318,13 +321,11 @@
             const snap = await getDocs(q);
             snap.forEach(docSnap => todosLosProductos.push({ id: docSnap.id, ...docSnap.data() }));
             
-            // 🚀 MEJORA 2: VERIFICAR SI HAY UN FILTRO DE CATEGORÍA ACTIVO EN LA URL AL CARGAR
             const params = new URLSearchParams(window.location.search);
             const catUrl = params.get('cat');
             if (catUrl && catUrl !== 'todos') {
                 const filtrados = todosLosProductos.filter(p => p.categoria === catUrl);
                 renderizarProductos(filtrados);
-                // Marcamos el botón activo en el sidebar si existe
                 const btnSidebar = document.querySelector(`.sidebar button[data-cat="${catUrl}"]`);
                 if (btnSidebar) {
                     document.querySelectorAll('.sidebar .cat-list button').forEach(b => b.classList.remove('active'));
@@ -348,7 +349,6 @@
                 const nombreCat = mapaCategorias[prod.categoria] || 'General';
                 const safeName = prod.nombre.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                 
-                // URL Amigable (Slug)
                 const slug = prod.nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '-').replace(/(^-|-$)/g, '');
                 const urlProducto = `producto.html?id=${prod.id}&pieza=${slug}`;
 
@@ -359,10 +359,13 @@
                     botonML = `<a href="https://articulo.mercadolibre.com.ve/${idML}" target="_blank" class="btn-ml"><i class="fas fa-handshake"></i> Ver en Mercado Libre</a>`;
                 }
 
+                // 🚀 IMAGEN OPTIMIZADA: Alt enriquecido, Lazy Loading y Decoding Async para SEO de Imágenes y Core Web Vitals
                 grid.innerHTML += `
                     <div class="prod-card">
                         <a href="${urlProducto}" style="text-decoration: none; color: inherit; display: contents;">
-                            <div class="prod-img-wrap"><img src="${prod.imagen}" alt="Repuesto ${prod.nombre} en Caracas" loading="lazy" onerror="this.src='https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png'"></div>
+                            <div class="prod-img-wrap">
+                                <img src="${prod.imagen}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png'">
+                            </div>
                             <div class="prod-info">
                                 <div class="prod-cat">${nombreCat}</div>
                                 <h4 class="prod-title">${prod.nombre}</h4>
@@ -377,9 +380,6 @@
             });
         }
 
-        // ==========================================
-        // FUNCIONES DE INTERACCIÓN MÓVIL Y FILTROS CON CANONICAL DINÁMICO
-        // ==========================================
         window.toggleFiltrosMovil = function() {
             const dropdown = document.getElementById('menu-categorias-movil');
             const icono = document.getElementById('icono-chevron-filtro');
@@ -420,7 +420,6 @@
             renderizarProductos(f);
         };
 
-        // Actualiza el canonical y la barra de direcciones sin recargar la página
         function actualizarCanonicalYUrl(categoriaId) {
             const canonicalEl = document.getElementById('canonical-link');
             if (categoriaId === 'todos') {
@@ -432,7 +431,6 @@
             }
         }
 
-        // Carrito y Checkout
         window.agregarAlCarrito = function(id, nombre, precio) {
             const item = window.carrito.find(i => i.id === id);
             if(item) item.cantidad++;
@@ -520,7 +518,7 @@
             const btnGps = document.getElementById('btn-gps');
 
             if (!navigator.geolocation) {
-                alert("Tu navegador no soporta la geolocalización. Por favor escribe tu dirección o pega tu link de Google Maps manualmente.");
+                alert("Tu navegador no soporta la geolocalización.");
                 return;
             }
 
@@ -547,7 +545,7 @@
                 },
                 (error) => {
                     console.error("Error GPS: ", error);
-                    alert("No pudimos acceder a tu ubicación. Es posible que los permisos estén denegados en tu navegador. Puedes escribir tu dirección manualmente.");
+                    alert("No pudimos acceder a tu ubicación.");
                     btnGps.innerHTML = '<i class="fas fa-map-marker-alt"></i> GPS';
                     btnGps.disabled = false;
                 },
@@ -567,7 +565,7 @@
             }
 
             if(metodoEnvio !== "Retiro en persona (Sede Principal)" && direccion === "") {
-                alert("Por favor, indícanos tu dirección (puedes usar el botón GPS) para coordinar el envío.");
+                alert("Por favor, indícanos tu dirección.");
                 return;
             }
 
@@ -591,7 +589,7 @@
                 const subtotal = item.precio * item.cantidad;
                 totalGeneral += subtotal;
                 mensajeWA += `✅ ${item.cantidad}x ${item.nombre} ($${subtotal.toFixed(2)})\n`;
-                productosParaBaseDeDatos.push({ nombre: item.nombre, cantidad: item.cantidad, precio: item.precio });
+                productosForBaseDeDatos = productosParaBaseDeDatos.push({ nombre: item.nombre, cantidad: item.cantidad, precio: item.precio });
             });
 
             mensajeWA += `\n*TOTAL DEL PEDIDO: $${totalGeneral.toFixed(2)}*\n\nPor favor, confirmarme la viabilidad del envío y los datos para el pago.`;
@@ -625,7 +623,6 @@
             btn.disabled = false;
         };
 
-        // Iniciar
         window.addEventListener('DOMContentLoaded', async () => {
             actualizarUICarrito(); 
             await cargarCategorias();
