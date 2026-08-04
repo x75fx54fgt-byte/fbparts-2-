@@ -15,6 +15,48 @@
     <meta property="og:image" content="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" />
     <meta property="og:type" content="website" />
 
+    <!-- 🚀 SCHEMA FAQ (Preguntas Frecuentes para fragmentos enriquecidos en Google) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "¿Ofrecen delivery de repuestos en Caracas?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Sí, contamos con servicio de delivery rápido en la Gran Caracas. (Ciertas condiciones aplican según la zona)."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Hacen envíos a toda Venezuela?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Sí, realizamos envíos nacionales seguros a través de empresas de encomienda confiables como Tealca, MRW y Zoom."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Qué métodos de pago aceptan?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Aceptamos múltiples métodos de pago: Zelle, Pago Móvil en bolívares, efectivo en divisas y transferencias bancarias (Banesco)."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Los repuestos y autopartes son originales?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Sí, somos especialistas en la comercialización y optimización de repuestos y autopartes originales y de alta calidad para marcas como Toyota, Ford, Dongfeng, Mazda y Honda."
+          }
+        }
+      ]
+    }
+    </script>
+
     <link rel="icon" type="image/png" href="img/favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -67,31 +109,17 @@
             transform: translateY(-4px);
             box-shadow: 0 8px 25px rgba(0,0,0,0.08);
         }
-        .testimonial-stars { 
-            color: #f39c12; 
-            margin-bottom: 12px; 
-            font-size: 14px; 
-        }
-        .testimonial-text { 
-            color: #444; 
-            font-size: 14px; 
-            line-height: 1.6; 
-            font-style: italic; 
-            margin-bottom: 15px; 
-            flex: 1; 
-        }
-        .testimonial-author { 
-            font-weight: bold; 
-            color: #333; 
-            font-size: 15px; 
-            font-family: 'Oswald', sans-serif; 
-            letter-spacing: 0.5px; 
-            border-top: 1px solid #eee;
-            padding-top: 10px;
-        }
-        @media (max-width: 900px) { 
-            .testimonials-grid { grid-template-columns: 1fr; gap: 15px; } 
-        }
+        .testimonial-stars { color: #f39c12; margin-bottom: 12px; font-size: 14px; }
+        .testimonial-text { color: #444; font-size: 14px; line-height: 1.6; font-style: italic; margin-bottom: 15px; flex: 1; }
+        .testimonial-author { font-weight: bold; color: #333; font-size: 15px; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px; border-top: 1px solid #eee; padding-top: 10px; }
+        @media (max-width: 900px) { .testimonials-grid { grid-template-columns: 1fr; gap: 15px; } }
+
+        /* Estilos para la sección FAQ */
+        .faq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px; }
+        .faq-item { background: white; padding: 20px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+        .faq-item h4 { font-family: 'Oswald', sans-serif; color: #385723; font-size: 18px; margin-top: 0; margin-bottom: 10px; }
+        .faq-item p { color: #555; font-size: 14px; line-height: 1.5; margin: 0; }
+        @media (max-width: 900px) { .faq-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
@@ -267,41 +295,32 @@
         </div>
     </section>
 
-    <!-- SECCIÓN DE RESEÑAS MODERNA Y PROFESIONAL -->
+    <!-- SECCIÓN DE RESEÑAS -->
     <section class="block" style="background-color: #fdfdfd; padding: 40px 0;">
         <div class="container">
             <h2 class="section-title" style="text-align: center; margin-bottom: 5px;">RESEÑAS DE CLIENTES</h2>
             <p style="text-align: center; color: #666; margin-bottom: 25px; font-size: 14px;">Lo que opinan quienes confían en nuestros repuestos.</p>
             
             <div class="testimonials-grid">
-                <!-- Reseña 1 -->
                 <div class="testimonial-card">
                     <div>
-                        <div class="testimonial-stars">
-                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-                        </div>
+                        <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
                         <p class="testimonial-text">“Servicio muy rápido, excelentes precios, atención profesional y amplia gama de repuestos originales.”</p>
                     </div>
                     <div class="testimonial-author">Lux Motors, Caracas VE</div>
                 </div>
 
-                <!-- Reseña 2 -->
                 <div class="testimonial-card">
                     <div>
-                        <div class="testimonial-stars">
-                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-                        </div>
+                        <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
                         <p class="testimonial-text">“Excelente atención, buenos precios, personal calificado para dar la mejor asesoría y muy puntuales con las entregas.”</p>
                     </div>
                     <div class="testimonial-author">Maria Romero, Caracas VE</div>
                 </div>
 
-                <!-- Reseña 3 -->
                 <div class="testimonial-card">
                     <div>
-                        <div class="testimonial-stars">
-                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-                        </div>
+                        <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
                         <p class="testimonial-text">“Buena atención, personas responsables y puntuales. Me vendieron exactamente el repuesto que solicité sin demoras.”</p>
                     </div>
                     <div class="testimonial-author">Luisa Ruiz, Caracas VE</div>
@@ -310,7 +329,34 @@
         </div>
     </section>
 
-    <!-- SECCIÓN DE MERCADO LIBRE (Sin carrusel, solo botón general de acceso) -->
+    <!-- 🚀 NUEVA SECCIÓN VISIBLE DE PREGUNTAS FRECUENTES (FAQ) -->
+    <section class="block" style="background-color: #f4f6f3; padding: 40px 0;">
+        <div class="container">
+            <h2 class="section-title" style="text-align: center; margin-bottom: 5px;">PREGUNTAS FRECUENTES</h2>
+            <p style="text-align: center; color: #666; margin-bottom: 25px; font-size: 14px;">Todo lo que necesitas saber sobre nuestras compras y envíos.</p>
+            
+            <div class="faq-grid">
+                <div class="faq-item">
+                    <h4>¿Ofrecen delivery de repuestos en Caracas?</h4>
+                    <p>Sí, contamos con servicio de delivery rápido en la Gran Caracas. (Ciertas condiciones aplican según la zona).</p>
+                </div>
+                <div class="faq-item">
+                    <h4>¿Hacen envíos a toda Venezuela?</h4>
+                    <p>Sí, realizamos envíos nacionales seguros a través de empresas de encomienda confiables como Tealca, MRW y Zoom.</p>
+                </div>
+                <div class="faq-item">
+                    <h4>¿Qué métodos de pago aceptan?</h4>
+                    <p>Aceptamos múltiples métodos de pago: Pago Móvil en bolívares, efectivo en divisas, transferencias bancarias (Banesco, Banco Nacional de Credito, Banco Venezolano de Credito, Bancamiga) y Binance.</p>
+                </div>
+                <div class="faq-item">
+                    <h4>¿Los repuestos y autopartes son originales?</h4>
+                    <p>Sí, somos especialistas en la comercialización y optimización de repuestos y autopartes originales y de alta calidad para marcas como Toyota, Ford, Dongfeng, Mazda y Honda.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECCIÓN DE MERCADO LIBRE -->
     <section id="mercadolibre" class="block categories">
         <div class="container">
             <h2 class="section-title" style="text-align: center;">CATÁLOGO MERCADO LIBRE</h2>
@@ -332,7 +378,6 @@
             <h2 class="section-title" style="text-align: center;">CONTACTOS</h2>
 
             <div class="contact-grid">
-                <!-- Caja de Texto (Izquierda) -->
                 <div class="contact-box">
                     <h3>CONTACTOS</h3>
                     <p style="margin-bottom: 25px;">
@@ -355,7 +400,6 @@
                     </p>
                 </div>
 
-                <!-- Caja del Mapa (Derecha) -->
                 <div class="contact-box">
                     <h3>UBICACIÓN</h3>
                     <div class="map-wrap">
@@ -388,7 +432,7 @@
         </script>
     </footer>
 
-    <!-- Script inteligente para detectar sesión de cliente, Cargar Destacados y Carrusel Principal -->
+    <!-- Script de Firebase, Destacados y Carrusel -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -418,7 +462,6 @@
             }
         });
 
-        // CARGAR EXACTAMENTE 8 REPUESTOS DESTACADOS
         async function cargarDestacados() {
             const grid = document.getElementById('destacados-grid');
             if(!grid) return;
@@ -463,7 +506,7 @@
         window.addEventListener('DOMContentLoaded', cargarDestacados);
     </script>
 
-    <!-- Script del Carrusel Principal de la Portada -->
+    <!-- Script del Carrusel Principal -->
     <script>
         (function () {
             const heroCarousel = document.querySelector('#heroCarousel');
