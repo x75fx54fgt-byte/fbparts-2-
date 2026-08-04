@@ -31,7 +31,7 @@
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 13px; color: #444; }
         .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; outline: none; transition: border-color .3s; }
-        .form-group input:focus, .form-group select:focus { border-color: #385723; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #385723; }
 
         .table-toolbar { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px; border: 1px solid #eee; border-radius: 8px 8px 0 0; border-bottom: none; flex-wrap: wrap; gap: 15px; }
         .table-toolbar h3 { margin: 0; color: #385723; font-family: 'Oswald', sans-serif; font-size: 20px; }
@@ -98,7 +98,6 @@
                         <a href="admin.html" style="color: #000; font-weight:bold;">Administración</a>
                     </nav>
 
-                    <!-- PERFIL DEL VENDEDOR / ADMINISTRADOR (Clickeable para editar) -->
                     <div id="admin-perfil-header" onclick="abrirModalPerfil()" style="display: flex; align-items: center; gap: 10px; background: #e2f0d9; padding: 6px 14px; border-radius: 6px; border: 1px solid #c3e6cb; cursor: pointer; transition: all 0.2s;" title="Haz clic para editar tu foto y nombre">
                         <img id="admin-avatar" src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png" alt="Avatar" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid #385723; background: #fff;">
                         <div style="text-align: left; line-height: 1.1;">
@@ -191,6 +190,9 @@
                 <div class="admin-header">
                     <h2>Catálogo y Categorías</h2>
                     <div>
+                        <button class="refresh-btn" style="background: #17a2b8; margin-right: 5px;" onclick="generarSitemapXML(this)">
+                            <i class="fas fa-sitemap"></i> Generar Sitemap SEO
+                        </button>
                         <button class="refresh-btn" style="background: #f0ad4e; margin-right: 5px;" onclick="abrirModalCategorias()">
                             <i class="fas fa-folder-minus"></i> Administrar Categorías
                         </button>
@@ -238,6 +240,14 @@
                                     <select id="prod-categoria" required>
                                         <option value="">Cargando...</option>
                                     </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Número de Parte / OEM (Opcional)</label>
+                                    <input type="text" id="prod-numero-parte" placeholder="Ej: 87940-0K010">
+                                </div>
+                                <div class="form-group">
+                                    <label>Descripción Detallada (Opcional)</label>
+                                    <textarea id="prod-descripcion" rows="3" placeholder="Especifica compatibilidad, material, detalles..."></textarea>
                                 </div>
                                 <div class="form-group">
                                     <label>Imagen (Enlace URL o ruta)</label>
@@ -557,6 +567,16 @@
             </div>
             
             <div class="form-group">
+                <label>Número de Parte / OEM</label>
+                <input type="text" id="edit-numero-parte">
+            </div>
+
+            <div class="form-group">
+                <label>Descripción Detallada</label>
+                <textarea id="edit-descripcion" rows="3"></textarea>
+            </div>
+
+            <div class="form-group">
                 <label>URL de la Imagen</label>
                 <textarea id="edit-imagen" style="height: 50px;"></textarea>
             </div>
@@ -638,9 +658,8 @@
 
         let mapaCategorias = {};
         window.clientesDBLocal = {}; 
-        window.currentAdminDocId = null; // ID del documento actual en Firestore
+        window.currentAdminDocId = null; 
 
-        // Verificación de sesión y carga en vivo de los datos del administrador
         onAuthStateChanged(auth, async (user) => {
             if (!user) {
                 window.location.href = "admin-login.html";
@@ -669,9 +688,6 @@
             }
         });
 
-        // ==========================================
-        // FUNCIONES DE PERFIL DE ADMINISTRADOR
-        // ==========================================
         window.abrirModalPerfil = async function() {
             if (!window.currentAdminDocId) {
                 alert("Cargando datos del perfil, intenta de nuevo en un segundo.");
@@ -679,7 +695,6 @@
             }
 
             try {
-                // Rellenamos el modal con los valores actuales visibles
                 const nombreActual = document.getElementById('admin-nombre-txt').textContent;
                 const cargoActual = document.getElementById('admin-cargo-txt').textContent;
                 const fotoActual = document.getElementById('admin-avatar').src;
@@ -714,7 +729,6 @@
                     Foto: nuevaFoto
                 });
 
-                // Actualizamos la interfaz al instante
                 document.getElementById('admin-nombre-txt').textContent = nuevoNombre;
                 if (nuevaFoto !== "") {
                     document.getElementById('admin-avatar').src = nuevaFoto;
@@ -730,30 +744,17 @@
             btn.disabled = false;
         };
 
-        // ==========================================
-        // EXPOSICIÓN GLOBAL DE FUNCIONES (WINDOW)
-        // ==========================================
         window.mostrarPestana = function(id, btnElement) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById('tab-' + id).classList.add('active');
             btnElement.classList.add('active');
 
-            if(id === 'clientes') {
-                window.cargarBaseClientes();
-            }
-            if(id === 'cotizaciones') {
-                window.cargarBaseClientes();
-                actualizarPreview();
-            }
-            if(id === 'historial-cotizaciones') {
-                cargarHistorialCotizaciones();
-            }
+            if(id === 'clientes') { window.cargarBaseClientes(); }
+            if(id === 'cotizaciones') { window.cargarBaseClientes(); actualizarPreview(); }
+            if(id === 'historial-cotizaciones') { cargarHistorialCotizaciones(); }
         };
 
-        // ==========================================
-        // ADMINISTRAR CATEGORÍAS
-        // ==========================================
         window.abrirModalCategorias = async function() {
             document.getElementById('modal-categorias').style.display = 'flex';
             await renderizarListaCategorias();
@@ -801,9 +802,36 @@
             }
         };
 
-        // ==========================================
-        // 1. BASE DE DATOS DE CLIENTES
-        // ==========================================
+        // EVENT LISTENER PARA EL FORMULARIO MANUAL DE PRODUCTOS
+        document.getElementById('product-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.innerHTML = "Guardando..."; btn.disabled = true;
+
+            const nuevoProducto = {
+                nombre: document.getElementById('prod-nombre').value.trim(),
+                precio: Number(document.getElementById('prod-precio').value),
+                stock: Number(document.getElementById('prod-stock').value),
+                categoria: document.getElementById('prod-categoria').value,
+                imagen: document.getElementById('prod-imagen').value.trim(),
+                numero_parte: document.getElementById('prod-numero-parte').value.trim(),
+                descripcion: document.getElementById('prod-descripcion').value.trim(),
+                estado: "activo",
+                ml_id: ""
+            };
+
+            try {
+                await addDoc(collection(db, "productos"), nuevoProducto);
+                alert("¡Repuesto guardado con éxito!");
+                e.target.reset();
+                window.cargarCatalogoAdmin();
+            } catch (error) {
+                console.error(error);
+                alert("Error al guardar el repuesto.");
+            }
+            btn.innerHTML = "Guardar Repuesto"; btn.disabled = false;
+        });
+
         document.getElementById('form-cliente-db')?.addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = e.target.querySelector('button[type="submit"]');
@@ -870,9 +898,7 @@
                         `;
                     }
                 });
-            } catch (error) { 
-                console.error(error); 
-            }
+            } catch (error) { console.error(error); }
         };
 
         window.seleccionarClienteCotizacion = function() {
@@ -900,9 +926,6 @@
             }
         };
 
-        // ==========================================
-        // 2. GESTIÓN DE PEDIDOS Y CATÁLOGO
-        // ==========================================
         window.cargarPedidos = async function() {
             const tableBody = document.getElementById('orders-table-body');
             tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center;">Actualizando pedidos...</td></tr>`;
@@ -1051,6 +1074,9 @@
                     const stock = prod.stock !== undefined ? prod.stock : 1;
                     const estado = prod.estado || 'activo';
                     
+                    const safeNumParte = (prod.numero_parte || '').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, '\\n');
+                    const safeDesc = (prod.descripcion || '').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, '\\n');
+                    
                     const badgeEstado = estado === 'activo' 
                         ? `<span class="badge-status-activo">Activo</span>` 
                         : `<span class="badge-status-inactivo">Inactivo</span>`;
@@ -1063,7 +1089,7 @@
                                 <td><span style="background:#eee;padding:3px 8px;border-radius:10px;font-size:11px;">${prod.categoria}</span></td>
                                 <td><strong>$${Number(prod.precio).toFixed(2)}</strong><br><span style="font-size:12px;color:#666;">Stock: ${stock}</span></td>
                                 <td style="text-align: center;">
-                                    <button type="button" onclick="abrirEdicion('${docId}', '${safeName}', ${prod.precio}, ${stock}, '${prod.categoria}', '${estado}', '${safeImg}')" style="background:#1d6fa5; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="Administrar Repuesto">
+                                    <button type="button" onclick="abrirEdicion('${docId}', '${safeName}', ${prod.precio}, ${stock}, '${prod.categoria}', '${estado}', '${safeImg}', '${safeNumParte}', '${safeDesc}')" style="background:#1d6fa5; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="Administrar Repuesto">
                                         <i class="fas fa-edit"></i>
                                     </button>
                                 </td>
@@ -1119,7 +1145,7 @@
             }
         };
 
-        window.abrirEdicion = function(id, nombre, precio, stock, categoria, estado, imagen) {
+        window.abrirEdicion = function(id, nombre, precio, stock, categoria, estado, imagen, numero_parte, descripcion) {
             document.getElementById('edit-id').value = id;
             document.getElementById('edit-nombre').value = nombre;
             document.getElementById('edit-precio').value = precio;
@@ -1127,6 +1153,10 @@
             document.getElementById('edit-categoria').value = categoria;
             document.getElementById('edit-estado').value = estado || 'activo';
             document.getElementById('edit-imagen').value = imagen;
+            
+            document.getElementById('edit-numero-parte').value = (numero_parte && numero_parte !== 'undefined') ? numero_parte : '';
+            document.getElementById('edit-descripcion').value = (descripcion && descripcion !== 'undefined') ? descripcion.replace(/\\n/g, '\n') : '';
+            
             document.getElementById('modal-edicion').style.display = 'flex';
         };
 
@@ -1141,12 +1171,14 @@
             btn.disabled = true;
 
             const datosActualizados = {
-                nombre: document.getElementById('edit-nombre').value,
+                nombre: document.getElementById('edit-nombre').value.trim(),
                 precio: Number(document.getElementById('edit-precio').value),
                 stock: Number(document.getElementById('edit-stock').value),
                 categoria: document.getElementById('edit-categoria').value,
                 estado: document.getElementById('edit-estado').value,
-                imagen: document.getElementById('edit-imagen').value
+                imagen: document.getElementById('edit-imagen').value.trim(),
+                numero_parte: document.getElementById('edit-numero-parte').value.trim(),
+                descripcion: document.getElementById('edit-descripcion').value.trim()
             };
 
             try {
@@ -1198,6 +1230,8 @@
                         const ml_id = columnas[mlvIndex].trim();
                         const nombre = columnas[mlvIndex + 2] ? columnas[mlvIndex + 2].trim() : "";
                         
+                        const numero_parte = columnas[mlvIndex + 3] ? columnas[mlvIndex + 3].trim() : "";
+                        
                         let stockRaw = columnas[mlvIndex + 4] ? columnas[mlvIndex + 4].trim() : "1";
                         const stock = parseInt(stockRaw) || 1;
 
@@ -1218,7 +1252,7 @@
                         
                         if(nombre && precio > 0 && nombre.toLowerCase() !== "título") {
                             await addDoc(collection(db, "productos"), {
-                                nombre, precio, stock, categoria: catId, estado: "activo", imagen, ml_id
+                                nombre, precio, stock, categoria: catId, estado: "activo", imagen, ml_id, numero_parte
                             });
                             importados++;
                         }
@@ -1236,9 +1270,6 @@
             btn.disabled = false;
         };
 
-        // ==========================================
-        // 3. COTIZACIONES Y VISTA PREVIA SEGURA
-        // ==========================================
         window.agregarFilaCotizacionVacia = function() {
             const container = document.getElementById('cotizacion-items-container');
             const row = document.createElement('div');
@@ -1636,10 +1667,70 @@
                 });
             } catch (error) { console.error(error); }
         };
+        
+        // ==========================================
+        // 🚀 GENERADOR DE SITEMAP SEO PARA GOOGLE
+        // ==========================================
+        window.generarSitemapXML = async function(btnElement) {
+            const originalText = btnElement.innerHTML;
+            btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
+            btnElement.disabled = true;
 
-        // ==========================================
-        // INICIALIZACIÓN AL CARGAR LA PÁGINA
-        // ==========================================
+            try {
+                // 1. Iniciamos el código XML
+                let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+                xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+
+                const baseUrl = 'https://www.fybparts.com/';
+                const fechaHoy = new Date().toISOString().split('T')[0];
+
+                // 2. Agregamos las páginas principales (Inicio y Tienda)
+                const paginasEstaticas = ['index.html', 'tienda.html'];
+                paginasEstaticas.forEach(pag => {
+                    xml += '  <url>\n';
+                    xml += `    <loc>${baseUrl}${pag}</loc>\n`;
+                    xml += `    <lastmod>${fechaHoy}</lastmod>\n`;
+                    xml += '    <changefreq>weekly</changefreq>\n';
+                    xml += '    <priority>1.0</priority>\n';
+                    xml += '  </url>\n';
+                });
+
+                // 3. Extraemos TODOS los repuestos de la base de datos
+                const prodSnap = await getDocs(collection(db, "productos"));
+                prodSnap.forEach(docSnap => {
+                    // Solo agregamos productos activos
+                    if (docSnap.data().estado !== 'inactivo') {
+                        xml += '  <url>\n';
+                        xml += `    <loc>${baseUrl}producto.html?id=${docSnap.id}</loc>\n`;
+                        xml += `    <lastmod>${fechaHoy}</lastmod>\n`;
+                        xml += '    <changefreq>weekly</changefreq>\n';
+                        xml += '    <priority>0.8</priority>\n';
+                        xml += '  </url>\n';
+                    }
+                });
+
+                xml += '</urlset>';
+
+                // 4. Creamos el archivo descargable
+                const blob = new Blob([xml], { type: 'application/xml' });
+                const enlaceDescarga = document.createElement('a');
+                enlaceDescarga.href = URL.createObjectURL(blob);
+                enlaceDescarga.download = 'sitemap.xml';
+                
+                document.body.appendChild(enlaceDescarga);
+                enlaceDescarga.click();
+                document.body.removeChild(enlaceDescarga);
+
+                alert("✅ ¡Sitemap generado y descargado con éxito!\n\nSube este archivo 'sitemap.xml' a la raíz de tu dominio.");
+            } catch (error) {
+                console.error("Error generando Sitemap: ", error);
+                alert("Ocurrió un error al generar el mapa del sitio.");
+            }
+
+            btnElement.innerHTML = originalText;
+            btnElement.disabled = false;
+        };
+
         window.addEventListener('DOMContentLoaded', () => {
             document.getElementById('cot-nro').value = Math.floor(1000 + Math.random() * 9000);
             
