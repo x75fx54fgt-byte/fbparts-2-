@@ -707,3 +707,58 @@ footer{
     .category-img-wrap{ width: 100px; }
     .about-box, .contact-box{ padding: 22px; }
 }
+
+/* ================================================= */
+/* 📱 ADAPTABILIDAD MÓVIL Y TABLET (ADMIN Y PANELES)  */
+/* ================================================= */
+
+@media (max-width: 900px) {
+    /* Apilar formularios y tablas de administración en una sola columna vertical */
+    .admin-grid,
+    div[style*="grid-template-columns: 1fr 2fr"],
+    div[style*="grid-template-columns: 1fr 1fr"] {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 20px !important;
+    }
+
+    /* Márgenes seguros para contenedores de paneles y login */
+    .admin-container, 
+    .login-container, 
+    .register-container {
+        padding: 0 12px !important;
+        margin: 20px auto !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Encabezados y barras flexibles en pantallas pequeñas */
+    .header-wrap {
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        text-align: center !important;
+    }
+
+    .header-right {
+        align-items: center !important;
+        width: 100%;
+    }
+
+    /* Desplazamiento horizontal fluido en tablas */
+    .data-table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    /* Inputs de tamaño óptimo para evitar zoom forzado en iPhone/Android */
+    input, select, textarea, button {
+        font-size: 16px !important;
+    }
+
+    /* Ajustar tarjeta de perfil en la barra superior del panel */
+    #admin-perfil-header {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+}
