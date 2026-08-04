@@ -98,13 +98,14 @@
                         <a href="admin.html" style="color: #000; font-weight:bold;">Administración</a>
                     </nav>
 
-                    <!-- PERFIL DEL VENDEDOR / ADMINISTRADOR -->
-                    <div id="admin-perfil-header" style="display: flex; align-items: center; gap: 10px; background: #e2f0d9; padding: 5px 12px; border-radius: 6px; border: 1px solid #c3e6cb;">
-                        <img id="admin-avatar" src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png" alt="Avatar" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid #385723; background: #fff;">
+                    <!-- PERFIL DEL VENDEDOR / ADMINISTRADOR (Clickeable para editar) -->
+                    <div id="admin-perfil-header" onclick="abrirModalPerfil()" style="display: flex; align-items: center; gap: 10px; background: #e2f0d9; padding: 6px 14px; border-radius: 6px; border: 1px solid #c3e6cb; cursor: pointer; transition: all 0.2s;" title="Haz clic para editar tu foto y nombre">
+                        <img id="admin-avatar" src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png" alt="Avatar" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid #385723; background: #fff;">
                         <div style="text-align: left; line-height: 1.1;">
                             <span id="admin-nombre-txt" style="display: block; color: #385723; font-weight: bold; font-size: 13px; font-family: 'Oswald', sans-serif;">Cargando...</span>
                             <span id="admin-cargo-txt" style="display: block; color: #555; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Administrador</span>
                         </div>
+                        <i class="fas fa-pen-to-square" style="color: #385723; font-size: 12px; margin-left: 4px;" title="Editar perfil"></i>
                     </div>
                 </div>
             </div>
@@ -190,7 +191,6 @@
                 <div class="admin-header">
                     <h2>Catálogo y Categorías</h2>
                     <div>
-                        <!-- BOTÓN NUEVO: ADMINISTRAR CATEGORÍAS -->
                         <button class="refresh-btn" style="background: #f0ad4e; margin-right: 5px;" onclick="abrirModalCategorias()">
                             <i class="fas fa-folder-minus"></i> Administrar Categorías
                         </button>
@@ -491,6 +491,35 @@
         </div>
     </div>
 
+    <!-- MODAL PARA EDITAR EL PERFIL DEL VENDEDOR -->
+    <div id="modal-admin-perfil" class="modal-overlay">
+        <div class="modal-content">
+            <h3><i class="fas fa-user-cog"></i> Editar Mi Perfil</h3>
+            <input type="hidden" id="edit-admin-docid">
+            
+            <div class="form-group">
+                <label>Nombre del Vendedor</label>
+                <input type="text" id="edit-admin-nombre" placeholder="Tu Nombre">
+            </div>
+            
+            <div class="form-group">
+                <label>Cargo (Fijo)</label>
+                <input type="text" id="edit-admin-cargo" disabled style="background: #f1f1f1; color: #666; cursor: not-allowed;" title="El cargo no se puede modificar">
+            </div>
+
+            <div class="form-group">
+                <label>URL de la Foto de Perfil</label>
+                <input type="text" id="edit-admin-foto" placeholder="https://ejemplo.com/tu-foto.jpg">
+                <small style="color: #666; font-size: 11px;">Pega un enlace directo de imagen (puedes subirla a Imgur, Cloudinary, etc.)</small>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="cerrarModalPerfil()">Cancelar</button>
+                <button type="button" class="btn-save" onclick="guardarPerfilAdmin()" id="btn-save-admin-perfil">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL DE EDICIÓN DE PRODUCTOS -->
     <div id="modal-edicion" class="modal-overlay">
         <div class="modal-content">
@@ -609,6 +638,7 @@
 
         let mapaCategorias = {};
         window.clientesDBLocal = {}; 
+        window.currentAdminDocId = null; // ID del documento actual en Firestore
 
         // Verificación de sesión y carga en vivo de los datos del administrador
         onAuthStateChanged(auth, async (user) => {
@@ -620,12 +650,15 @@
                     const querySnapshot = await getDocs(q);
 
                     if (!querySnapshot.empty) {
-                        const adminData = querySnapshot.docs[0].data();
-                        document.getElementById('admin-nombre-txt').textContent = adminData.nombre || user.email;
-                        document.getElementById('admin-cargo-txt').textContent = adminData.cargo || "Administrador";
+                        const adminDoc = querySnapshot.docs[0];
+                        window.currentAdminDocId = adminDoc.id;
+                        const adminData = adminDoc.data();
+
+                        document.getElementById('admin-nombre-txt').textContent = adminData.Nombre || user.email;
+                        document.getElementById('admin-cargo-txt').textContent = adminData.Cargo || "Administrador";
                         
-                        if (adminData.foto) {
-                            document.getElementById('admin-avatar').src = adminData.foto;
+                        if (adminData.Foto && adminData.Foto.trim() !== "") {
+                            document.getElementById('admin-avatar').src = adminData.Foto;
                         }
                     } else {
                         document.getElementById('admin-nombre-txt').textContent = user.email;
@@ -635,6 +668,67 @@
                 }
             }
         });
+
+        // ==========================================
+        // FUNCIONES DE PERFIL DE ADMINISTRADOR
+        // ==========================================
+        window.abrirModalPerfil = async function() {
+            if (!window.currentAdminDocId) {
+                alert("Cargando datos del perfil, intenta de nuevo en un segundo.");
+                return;
+            }
+
+            try {
+                // Rellenamos el modal con los valores actuales visibles
+                const nombreActual = document.getElementById('admin-nombre-txt').textContent;
+                const cargoActual = document.getElementById('admin-cargo-txt').textContent;
+                const fotoActual = document.getElementById('admin-avatar').src;
+
+                document.getElementById('edit-admin-nombre').value = nombreActual;
+                document.getElementById('edit-admin-cargo').value = cargoActual;
+                document.getElementById('edit-admin-foto').value = fotoActual.includes('mv2.png') ? '' : fotoActual;
+
+                document.getElementById('modal-admin-perfil').style.display = 'flex';
+            } catch (e) {
+                console.error(e);
+            }
+        };
+
+        window.cerrarModalPerfil = function() {
+            document.getElementById('modal-admin-perfil').style.display = 'none';
+        };
+
+        window.guardarPerfilAdmin = async function() {
+            const btn = document.getElementById('btn-save-admin-perfil');
+            const nuevoNombre = document.getElementById('edit-admin-nombre').value.trim();
+            const nuevaFoto = document.getElementById('edit-admin-foto').value.trim();
+
+            if (!window.currentAdminDocId) return;
+
+            btn.innerHTML = "Guardando...";
+            btn.disabled = true;
+
+            try {
+                await updateDoc(doc(db, "administradores", window.currentAdminDocId), {
+                    Nombre: nuevoNombre,
+                    Foto: nuevaFoto
+                });
+
+                // Actualizamos la interfaz al instante
+                document.getElementById('admin-nombre-txt').textContent = nuevoNombre;
+                if (nuevaFoto !== "") {
+                    document.getElementById('admin-avatar').src = nuevaFoto;
+                }
+
+                alert("¡Perfil actualizado con éxito!");
+                window.cerrarModalPerfil();
+            } catch (error) {
+                console.error(error);
+                alert("Error al actualizar el perfil.");
+            }
+            btn.innerHTML = "Guardar Cambios";
+            btn.disabled = false;
+        };
 
         // ==========================================
         // EXPOSICIÓN GLOBAL DE FUNCIONES (WINDOW)
