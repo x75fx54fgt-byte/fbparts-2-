@@ -373,6 +373,10 @@
                 const nombreCat = mapaCategorias[prod.categoria] || 'General';
                 const safeName = prod.nombre.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                 
+                // 🚀 MEJORA SEO: GENERADOR DE URL AMIGABLE (SLUG)
+                const slug = prod.nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '-').replace(/(^-|-$)/g, '');
+                const urlProducto = `producto.html?id=${prod.id}&pieza=${slug}`;
+
                 let botonML = "";
                 if(prod.ml_id && prod.ml_id.trim() !== "") {
                     let idML = prod.ml_id.trim();
@@ -380,12 +384,9 @@
                     botonML = `<a href="https://articulo.mercadolibre.com.ve/${idML}" target="_blank" class="btn-ml"><i class="fas fa-handshake"></i> Ver en Mercado Libre</a>`;
                 }
 
-                // ==========================================
-                // 🚀 OPTIMIZACIÓN: LAZY LOADING APLICADO AQUÍ
-                // ==========================================
                 grid.innerHTML += `
                     <div class="prod-card">
-                        <a href="producto.html?id=${prod.id}" style="text-decoration: none; color: inherit; display: contents;">
+                        <a href="${urlProducto}" style="text-decoration: none; color: inherit; display: contents;">
                             <div class="prod-img-wrap"><img src="${prod.imagen}" alt="Repuesto ${prod.nombre} en Caracas" loading="lazy" onerror="this.src='https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png'"></div>
                             <div class="prod-info">
                                 <div class="prod-cat">${nombreCat}</div>
