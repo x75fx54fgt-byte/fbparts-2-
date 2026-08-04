@@ -86,16 +86,27 @@
         </div>
 
         <header>
-            <div class="container header-wrap">
+            <div class="container header-wrap" style="display: flex; justify-content: space-between; align-items: center;">
                 <a class="logo" href="index.html">
                     <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="LOGO F&B PARTS">
                 </a>
 
-                <nav>
-                    <a href="index.html">Sitio Web</a>
-                    <a href="tienda.html">Tienda</a>
-                    <a href="admin.html" style="color: #000; font-weight:bold;">Administración</a>
-                </nav>
+                <div style="display: flex; align-items: center; gap: 20px;">
+                    <nav>
+                        <a href="index.html">Sitio Web</a>
+                        <a href="tienda.html">Tienda</a>
+                        <a href="admin.html" style="color: #000; font-weight:bold;">Administración</a>
+                    </nav>
+
+                    <!-- PERFIL DEL VENDEDOR / ADMINISTRADOR -->
+                    <div id="admin-perfil-header" style="display: flex; align-items: center; gap: 10px; background: #e2f0d9; padding: 5px 12px; border-radius: 6px; border: 1px solid #c3e6cb;">
+                        <img id="admin-avatar" src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png" alt="Avatar" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid #385723; background: #fff;">
+                        <div style="text-align: left; line-height: 1.1;">
+                            <span id="admin-nombre-txt" style="display: block; color: #385723; font-weight: bold; font-size: 13px; font-family: 'Oswald', sans-serif;">Cargando...</span>
+                            <span id="admin-cargo-txt" style="display: block; color: #555; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Administrador</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </header>
 
@@ -581,7 +592,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, getDocs, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, addDoc, doc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
@@ -597,10 +608,32 @@
         const db = getFirestore(app);
 
         let mapaCategorias = {};
-        window.clientesDBLocal = {}; // Para guardar la lista de clientes localmente
+        window.clientesDBLocal = {}; 
 
-        onAuthStateChanged(auth, (user) => {
-            if (!user) window.location.href = "admin-login.html";
+        // Verificación de sesión y carga en vivo de los datos del administrador
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                window.location.href = "admin-login.html";
+            } else {
+                try {
+                    const q = query(collection(db, "administradores"), where("email", "==", user.email));
+                    const querySnapshot = await getDocs(q);
+
+                    if (!querySnapshot.empty) {
+                        const adminData = querySnapshot.docs[0].data();
+                        document.getElementById('admin-nombre-txt').textContent = adminData.nombre || user.email;
+                        document.getElementById('admin-cargo-txt').textContent = adminData.cargo || "Administrador";
+                        
+                        if (adminData.foto) {
+                            document.getElementById('admin-avatar').src = adminData.foto;
+                        }
+                    } else {
+                        document.getElementById('admin-nombre-txt').textContent = user.email;
+                    }
+                } catch (error) {
+                    console.error("Error al cargar perfil de admin:", error);
+                }
+            }
         });
 
         // ==========================================
@@ -625,7 +658,7 @@
         };
 
         // ==========================================
-        // NUEVA FUNCIÓN: ADMINISTRAR CATEGORÍAS
+        // ADMINISTRAR CATEGORÍAS
         // ==========================================
         window.abrirModalCategorias = async function() {
             document.getElementById('modal-categorias').style.display = 'flex';
@@ -666,8 +699,8 @@
             if(!confirm("¿Estás seguro de eliminar esta categoría?\n\nNota: Los repuestos que usaban esta categoría NO se borrarán, pero la categoría desaparecerá de los filtros y opciones.")) return;
             try {
                 await deleteDoc(doc(db, "categorias", docId));
-                await renderizarListaCategorias(); // Recargar el modal
-                window.cargarCatalogoAdmin(); // Recargar los dropdowns del panel de fondo
+                await renderizarListaCategorias(); 
+                window.cargarCatalogoAdmin(); 
             } catch (error) {
                 console.error(error);
                 alert("No se pudo eliminar la categoría.");
@@ -1335,7 +1368,6 @@
         window.actualizarPreview = function() {
             const box = document.getElementById('pdf-preview-box');
             if (box) {
-                // Scaled wrapper para que el diseño grande quepa visualmente en la caja de la página web
                 box.innerHTML = `<div style="transform: scale(0.68); transform-origin: top left; width: 147%; pointer-events: none;">${construirHTMLCotizacion()}</div>`;
             }
         };
@@ -1380,7 +1412,6 @@
                 items, subtotal, descuento, iva, total
             };
 
-            // Creamos ventana limpia
             const ventanaPDF = window.open('', '_blank');
             if(!ventanaPDF) {
                 alert("⚠️ Atención: Tu navegador bloqueó la ventana de impresión. Por favor permite las ventanas emergentes (pop-ups) para generar la cotización.");
@@ -1388,10 +1419,8 @@
             }
 
             try {
-                // 1. Guardamos en Firebase la cotización
                 await addDoc(collection(db, "cotizaciones"), objetoCotizacion);
 
-                // --- AUTOGUARDADO DE CLIENTE ---
                 let clienteExiste = false;
                 const rifLimpio = rif.trim().toUpperCase();
                 for (const key in window.clientesDBLocal) {
@@ -1410,9 +1439,7 @@
                     });
                     window.cargarBaseClientes();
                 }
-                // --------------------------------------
 
-                // Construimos la ventana de forma segura dividiendo las etiquetas "script" y "body"
                 const docHTML = construirHTMLCotizacion(objetoCotizacion);
                 const finalStyle = '<style>body{background:white;margin:0;padding:20px;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}@media print{@page{margin:0.5cm;}body{padding:0;}.no-print{display:none!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}}</style>';
                 
@@ -1520,7 +1547,6 @@
         // INICIALIZACIÓN AL CARGAR LA PÁGINA
         // ==========================================
         window.addEventListener('DOMContentLoaded', () => {
-            // Generar primer número aleatorio para la cotización
             document.getElementById('cot-nro').value = Math.floor(1000 + Math.random() * 9000);
             
             window.cargarPedidos();

@@ -14,16 +14,19 @@
     <link rel="stylesheet" href="styles.css">
 
     <style>
-        body { background-color: #2c3e50; }
-        .login-container { max-width: 400px; margin: 80px auto; padding: 0 20px; }
-        .login-card { background: white; border: none; padding: 40px 30px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center; }
+        body { background-color: #385723; display: flex; flex-direction: column; min-height: 100vh; justify-content: center; margin: 0; }
         
-        .admin-logo { height: 70px; margin-bottom: 15px; }
-        .login-card h3 { font-family: 'Oswald', sans-serif; color: #333; font-size: 24px; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 1px; }
+        .login-container { max-width: 400px; margin: auto; padding: 0 20px; width: 100%; box-sizing: border-box; }
+        .login-card { background: white; border: none; padding: 40px 30px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; }
+        
+        .logo-container { display: flex; justify-content: center; align-items: center; width: 100%; margin-bottom: 15px; }
+        .admin-logo { height: 65px; display: block; margin: 0 auto; }
+        
+        .login-card h3 { font-family: 'Oswald', sans-serif; color: #385723; font-size: 24px; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid #385723; padding-bottom: 10px; }
         
         .form-group { margin-bottom: 20px; text-align: left; position: relative; }
         .form-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 13px; color: #555; }
-        .form-group input { width: 100%; padding: 12px; padding-left: 40px; border: 1px solid #ccc; border-radius: 4px; font-size: 15px; outline: none; }
+        .form-group input { width: 100%; padding: 12px; padding-left: 40px; border: 1px solid #ccc; border-radius: 4px; font-size: 15px; outline: none; box-sizing: border-box; }
         .form-group input:focus { border-color: #385723; }
         
         .input-icon { position: absolute; left: 15px; top: 38px; color: #999; }
@@ -32,15 +35,17 @@
         .btn-action:hover { background: #2c441b; }
         .btn-action:disabled { background: #999; cursor: not-allowed; }
         
-        .back-link { display: block; margin-top: 20px; color: #777; font-size: 13px; text-decoration: none; }
-        .back-link:hover { color: #333; text-decoration: underline; }
+        .back-link { display: block; margin-top: 20px; color: #666; font-size: 13px; text-decoration: none; font-weight: bold; }
+        .back-link:hover { color: #385723; text-decoration: underline; }
     </style>
 </head>
 <body>
 
     <div class="login-container">
         <div class="login-card">
-            <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="F&B Parts Admin" class="admin-logo">
+            <div class="logo-container">
+                <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="F&B Parts Admin" class="admin-logo">
+            </div>
             <h3>Control Interno</h3>
             
             <form id="admin-login-form">
@@ -58,7 +63,7 @@
 
                 <!-- WIDGET DE GOOGLE RECAPTCHA V2 -->
                 <div style="display: flex; justify-content: center; margin-bottom: 15px;">
-                    <div class="g-recaptcha" data-sitekey="6LcDRXQtAAAAAJxLJqhh1Wlw8wDdaS9cx5giKO-1"></div>
+                    <div class="g-recaptcha" data-sitekey="6LeWTHQtAAAAAKDkgQNi7lPWC9Otct-PC4pOj392"></div>
                 </div>
 
                 <button type="submit" class="btn-action" id="btnLoginAdmin">
@@ -74,7 +79,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
@@ -87,6 +93,7 @@
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
+        const db = getFirestore(app);
 
         const adminLoginForm = document.getElementById('admin-login-form');
         const errorMessage = document.getElementById('error-message');
@@ -95,6 +102,7 @@
         adminLoginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            // Validar Captcha
             const recaptchaResponse = grecaptcha.getResponse();
             if (recaptchaResponse.length === 0) {
                 errorMessage.innerText = "⚠️ Demuestra que no eres un robot marcando la casilla.";
@@ -102,20 +110,39 @@
                 return;
             }
 
-            const email = document.getElementById('email').value;
+            const email = document.getElementById('email').value.trim().toLowerCase();
             const password = document.getElementById('password').value;
 
-            errorMessage.innerText = "Verificando credenciales...";
+            errorMessage.innerText = "Verificando privilegios de acceso...";
             errorMessage.style.color = "green";
             btnLoginAdmin.disabled = true;
 
             try {
-                await signInWithEmailAndPassword(auth, email, password);
+                // 1. Intentar iniciar sesión en Firebase Auth
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                // 2. FILTRO DE SEGURIDAD: Verificar si el correo existe en la colección 'administradores'
+                const q = query(collection(db, "administradores"), where("email", "==", email));
+                const querySnapshot = await getDocs(q);
+
+                if (querySnapshot.empty) {
+                    // Si el usuario es un cliente común y corriente, lo sacamos por seguridad
+                    await signOut(auth);
+                    errorMessage.style.color = "red";
+                    errorMessage.innerText = "⛔ Acceso denegado: Esta cuenta no tiene permisos administrativos.";
+                    btnLoginAdmin.disabled = false;
+                    grecaptcha.reset();
+                    return;
+                }
+
+                // Si pasa la prueba, es el administrador real y entra al panel
                 window.location.href = "admin.html";
+
             } catch (error) {
                 console.error(error);
                 errorMessage.style.color = "red";
-                errorMessage.innerText = "Acceso denegado. Credenciales incorrectas.";
+                errorMessage.innerText = "Credenciales incorrectas o error de conexión.";
                 btnLoginAdmin.disabled = false;
                 grecaptcha.reset();
             }
