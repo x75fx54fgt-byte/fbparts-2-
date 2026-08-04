@@ -4,10 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
-    <!-- Título y descripción base (Se actualizan dinámicamente con JavaScript al cargar el producto) -->
+    <!-- SEO Básico y Canónico -->
     <title id="seo-title">Detalle del Repuesto | F&B Parts</title>
     <meta id="seo-desc" name="description" content="Encuentra repuestos originales y autopartes de alta calidad en Caracas, Venezuela.">
-    <link rel="canonical" href="https://www.fybparts.com/producto.html">
+    <link id="seo-canonical" rel="canonical" href="https://www.fybparts.com/producto.html">
+
+    <!-- Open Graph (Dinámico para Redes Sociales y Buscadores) -->
+    <meta property="og:title" content="Catálogo de Repuestos | F&B Parts" id="og-title">
+    <meta property="og:description" content="Encuentra repuestos originales y accesorios para tu vehículo en Caracas." id="og-desc">
+    <meta property="og:image" content="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png" id="og-image">
+    <meta property="og:type" content="product">
+    <meta property="og:url" content="https://www.fybparts.com/producto.html" id="og-url">
 
     <link rel="icon" type="image/png" href="img/favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -62,7 +69,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
@@ -110,13 +117,23 @@
                 const prod = docSnap.data();
                 
                 // ==========================================
-                // 🚀 PUNTO 1: ACTUALIZACIÓN DINÁMICA DE SEO (Title & Meta)
+                // 🚀 ACTUALIZACIÓN DINÁMICA DE SEO Y OPEN GRAPH
                 // ==========================================
-                document.title = `${prod.nombre} | F&B Parts Caracas`;
-                document.getElementById('seo-desc').content = `Compra ${prod.nombre} original en Caracas. Precio: $${Number(prod.precio).toFixed(2)}. Número de parte: ${prod.numero_parte || 'N/A'}. Envíos a toda Venezuela.`;
+                const tituloSEO = `${prod.nombre} | F&B Parts Caracas`;
+                const descripcionSEO = `Compra ${prod.nombre} original en Caracas. Precio: $${Number(prod.precio).toFixed(2)}. Envíos a toda Venezuela.`;
+
+                // Título y Meta Descripción de la pestaña
+                document.title = tituloSEO;
+                document.getElementById('seo-desc').content = descripcionSEO;
+
+                // Etiquetas Open Graph (Redes Sociales y Buscadores)
+                document.getElementById('og-title').content = tituloSEO;
+                document.getElementById('og-desc').content = descripcionSEO;
+                document.getElementById('og-image').content = prod.imagen;
+                document.getElementById('og-url').content = window.location.href;
 
                 // ==========================================
-                // 🚀 PUNTO 2: INYECCIÓN DE SCHEMA MARKUP (Product Structured Data)
+                // 🚀 INYECCIÓN DE SCHEMA MARKUP (Product Structured Data)
                 // ==========================================
                 const schemaData = {
                     "@context": "https://schema.org/",
@@ -191,7 +208,6 @@
             }
         }
 
-        // Función global para el carrito en esta página
         window.agregarAlCarrito = function(id, nombre, precio) {
             let carrito = JSON.parse(localStorage.getItem('carritoFB')) || [];
             const item = carrito.find(i => i.id === id);
