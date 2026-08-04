@@ -9,16 +9,18 @@
     <meta name="description" content="Venta de repuestos automotrices, parrillas, parachoques y autopartes originales en Caracas, Venezuela. Encuentra piezas para Toyota, Ford, Dongfeng, Mazda y más. ¡Delivery gratis!">
     <meta name="keywords" content="parrilla para carro Caracas, repuestos automotrices Venezuela, F&B Parts, repuestos Toyota Ford Dongfeng, autopartes Caracas">
     <meta name="author" content="Inversiones FB Parts, C.A.">
-    <link rel="canonical" href="https://www.fybparts.com/tienda.html">
+    
+    <!-- 🚀 MEJORA 2: ETIQUETA CANONICAL DINÁMICA (Evita contenido duplicado en filtros) -->
+    <link id="canonical-link" rel="canonical" href="https://www.fybparts.com/tienda.html">
 
-    <!-- OPEN GRAPH (Para vista previa profesional en WhatsApp y Redes Sociales) -->
+    <!-- OPEN GRAPH -->
     <meta property="og:title" content="Catálogo de Repuestos y Parrillas Automotrices | F&B Parts">
     <meta property="og:description" content="Encuentra repuestos originales y accesorios para tu vehículo en Caracas con envíos seguros y atención especializada.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://www.fybparts.com/tienda.html">
     <meta property="og:image" content="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png">
 
-    <!-- DATOS ESTRUCTURADOS DE GOOGLE (Schema.org para Negocio Local y Tienda) -->
+    <!-- SCHEMA DE TIENDA LOCAL -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -45,12 +47,7 @@
       "openingHoursSpecification": {
         "@type": "OpeningHoursSpecification",
         "dayOfWeek": [
-          "Monday",
-          "Tuesday",
-          "Wednesday",
-          "Thursday",
-          "Friday",
-          "Saturday"
+          "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
         ],
         "opens": "08:00",
         "closes": "18:00"
@@ -68,55 +65,30 @@
 
     <style>
         body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f8f8f8; display: flex; flex-direction: column; min-height: 100vh; margin: 0; overflow-x: hidden; }
-        
         .tienda-container { max-width: 1350px; margin: 40px auto; padding: 0 20px; display: grid; grid-template-columns: 240px 1fr 300px; gap: 25px; flex: 1; align-items: start; width: 100%; box-sizing: border-box; }
-        
-        /* Controles móviles ocultos por defecto en PC */
         .mobile-search-filter-wrapper { display: none; }
-
-        @media (max-width: 1100px) { 
-            .tienda-container { grid-template-columns: 240px 1fr; }
-            .cart-sidebar { grid-column: 1 / -1; }
-        }
-
-        @media (max-width: 900px) { 
-            .tienda-container { display: flex; flex-direction: column; padding: 0 10px; margin: 15px auto; }
-            .sidebar { display: none !important; } 
-            .store-header { display: none !important; } 
-            .mobile-search-filter-wrapper { display: block; width: 100%; margin-bottom: 15px; }
-        }
-
-        /* Sidebar Categorías (Escritorio) */
+        @media (max-width: 1100px) { .tienda-container { grid-template-columns: 240px 1fr; } .cart-sidebar { grid-column: 1 / -1; } }
+        @media (max-width: 900px) { .tienda-container { display: flex; flex-direction: column; padding: 0 10px; margin: 15px auto; } .sidebar { display: none !important; } .store-header { display: none !important; } .mobile-search-filter-wrapper { display: block; width: 100%; margin-bottom: 15px; } }
         .sidebar { background: white; padding: 20px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,.05); position: sticky; top: 20px; }
         .sidebar h3 { color: #385723; font-family: 'Oswald', sans-serif; font-size: 20px; margin-top: 0; margin-bottom: 15px; text-transform: uppercase; border-bottom: 2px solid #eee; padding-bottom: 10px; }
         .cat-list { list-style: none; padding: 0; margin: 0; }
         .cat-list button { background: none; border: none; padding: 8px 12px; width: 100%; text-align: left; font-size: 15px; color: #555; cursor: pointer; border-radius: 4px; transition: all 0.2s; }
         .cat-list button:hover, .cat-list button.active { background: #e2f0d9; color: #385723; font-weight: bold; }
-
-        /* Estilo MercadoLibre para Móvil */
         .ml-search-bar { background: #ffe600; padding: 12px 15px; display: flex; justify-content: center; align-items: center; width: 100%; box-sizing: border-box; }
         .ml-search-inner { position: relative; width: 100%; max-width: 600px; }
         .ml-search-inner input { width: 100%; padding: 10px 15px 10px 40px; border: none; border-radius: 20px; font-size: 15px; outline: none; box-shadow: 0 2px 5px rgba(0,0,0,0.1); background: #fff; }
         .ml-search-inner i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #666; }
-
         .ml-filter-btn { display: flex; justify-content: space-between; align-items: center; background: #fff; border-bottom: 1px solid #ddd; padding: 12px 18px; font-family: 'Oswald', sans-serif; font-size: 16px; color: #385723; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
         .ml-dropdown-categorias { display: none; background: #fff; border-bottom: 1px solid #eee; padding: 10px 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .ml-dropdown-categorias.active { display: block; }
-
-        /* Buscador Escritorio */
         .store-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
         .store-header h1 { font-family: 'Oswald', sans-serif; color: #385723; margin: 0; font-size: 28px; text-transform: uppercase; }
         .search-bar { flex: 1; max-width: 400px; position: relative; }
         .search-bar input { width: 100%; padding: 12px 15px 12px 40px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; outline: none; }
         .search-bar input:focus { border-color: #385723; }
         .search-bar i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #999; }
-
-        /* Productos */
         .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; width: 100%; }
-        @media (max-width: 900px) {
-            .products-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
-        }
-
+        @media (max-width: 900px) { .products-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; } }
         .prod-card { background: white; border: 1px solid #eee; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,.05); transition: transform 0.2s; display: flex; flex-direction: column; }
         .prod-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,.1); }
         .prod-img-wrap { width: 100%; height: 180px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; }
@@ -125,14 +97,10 @@
         .prod-cat { font-size: 10px; color: #888; text-transform: uppercase; margin-bottom: 4px; }
         .prod-title { font-size: 13px; color: #333; margin: 0 0 8px 0; font-weight: bold; flex: 1; line-height: 1.3; }
         .prod-price { font-size: 18px; color: #385723; font-weight: bold; font-family: 'Oswald', sans-serif; margin-bottom: 10px; }
-        
         .btn-add-cart { background: #385723; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 6px; transition: 0.2s; font-size: 13px; }
         .btn-add-cart:hover { background: #2c441b; }
         .btn-ml { background: #ffe600; color: #333; padding: 8px; border-radius: 4px; text-align: center; text-decoration: none; font-weight: bold; display: block; width: 100%; transition: 0.2s; box-sizing: border-box; font-size: 12px; }
-        
         #loading-msg { text-align: center; padding: 50px; color: #666; grid-column: 1 / -1; font-size: 18px; }
-
-        /* Carrito */
         .cart-sidebar { background: white; padding: 20px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,.05); position: sticky; top: 20px; display: flex; flex-direction: column; max-height: 85vh; width: 100%; box-sizing: border-box; }
         .cart-sidebar h3 { color: #5b8743; font-family: 'Oswald', sans-serif; font-size: 20px; margin-top: 0; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
         .cart-items-container { flex: 1; overflow-y: auto; margin-bottom: 10px; padding-right: 5px; }
@@ -143,28 +111,21 @@
         .cart-item-controls { display: flex; align-items: center; gap: 8px; }
         .btn-qty { background: #eee; border: none; width: 24px; height: 24px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .btn-remove { background: #ff4d4d; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; }
-        
         .cart-total-box { border-top: 2px solid #385723; padding-top: 10px; margin-bottom: 15px; text-align: right; }
         .cart-total-amount { font-size: 24px; color: #385723; font-weight: bold; font-family: 'Oswald', sans-serif; }
-        
         .btn-checkout { background: #25D366; color: white; border: none; padding: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; width: 100%; transition: 0.2s; font-family: 'Oswald', sans-serif; }
         .btn-checkout:hover { background: #1ebd5a; }
-        
-        /* Modal */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 100; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
         .modal-content { background: white; padding: 30px; border-radius: 8px; width: 100%; max-width: 450px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
         .modal-content h3 { font-family: 'Oswald', sans-serif; color: #385723; margin-top: 0; font-size: 24px; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
-        
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; font-weight: bold; font-size: 14px; margin-bottom: 5px; color: #333; }
         .form-group select, .form-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; box-sizing: border-box; outline: none; }
         .form-group select:focus, .form-group input:focus { border-color: #385723; }
-        
         .input-gps-group { display: flex; gap: 8px; }
         .input-gps-group input { flex: 1; }
         .btn-gps { background: #e2f0d9; color: #385723; border: 1px solid #385723; padding: 0 15px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
         .btn-gps:hover { background: #c5e1a5; }
-
         .btn-confirm-order { background: #385723; color: white; padding: 12px; border: none; border-radius: 4px; width: 100%; font-weight: bold; cursor: pointer; font-size: 15px; margin-top: 10px; transition: background 0.2s; }
         .btn-confirm-order:hover { background: #2c441b; }
         .btn-cancel { background: #e0e0e0; color: #333; padding: 10px; border: none; border-radius: 4px; width: 100%; font-weight: bold; cursor: pointer; font-size: 14px; margin-top: 10px; transition: background 0.2s; }
@@ -190,7 +151,7 @@
         </div>
     </header>
 
-    <!-- SECCIÓN MÓVIL ESTILO MERCADOLIBRE (Buscador centrado + Filtros desplegables) -->
+    <!-- SECCIÓN MÓVIL ESTILO MERCADOLIBRE -->
     <div class="mobile-search-filter-wrapper">
         <div class="ml-search-bar">
             <div class="ml-search-inner">
@@ -210,7 +171,6 @@
     </div>
 
     <div class="tienda-container">
-        
         <!-- Sidebar de Categorías (Escritorio) -->
         <aside class="sidebar">
             <h3><i class="fas fa-filter"></i> Categorías</h3>
@@ -357,7 +317,22 @@
             const q = query(collection(db, "productos"), where("estado", "==", "activo"));
             const snap = await getDocs(q);
             snap.forEach(docSnap => todosLosProductos.push({ id: docSnap.id, ...docSnap.data() }));
-            renderizarProductos(todosLosProductos);
+            
+            // 🚀 MEJORA 2: VERIFICAR SI HAY UN FILTRO DE CATEGORÍA ACTIVO EN LA URL AL CARGAR
+            const params = new URLSearchParams(window.location.search);
+            const catUrl = params.get('cat');
+            if (catUrl && catUrl !== 'todos') {
+                const filtrados = todosLosProductos.filter(p => p.categoria === catUrl);
+                renderizarProductos(filtrados);
+                // Marcamos el botón activo en el sidebar si existe
+                const btnSidebar = document.querySelector(`.sidebar button[data-cat="${catUrl}"]`);
+                if (btnSidebar) {
+                    document.querySelectorAll('.sidebar .cat-list button').forEach(b => b.classList.remove('active'));
+                    btnSidebar.classList.add('active');
+                }
+            } else {
+                renderizarProductos(todosLosProductos);
+            }
         }
 
         function renderizarProductos(productosArray) {
@@ -373,7 +348,7 @@
                 const nombreCat = mapaCategorias[prod.categoria] || 'General';
                 const safeName = prod.nombre.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                 
-                // 🚀 MEJORA SEO: GENERADOR DE URL AMIGABLE (SLUG)
+                // URL Amigable (Slug)
                 const slug = prod.nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '-').replace(/(^-|-$)/g, '');
                 const urlProducto = `producto.html?id=${prod.id}&pieza=${slug}`;
 
@@ -403,7 +378,7 @@
         }
 
         // ==========================================
-        // FUNCIONES DE INTERACCIÓN MÓVIL Y FILTROS
+        // FUNCIONES DE INTERACCIÓN MÓVIL Y FILTROS CON CANONICAL DINÁMICO
         // ==========================================
         window.toggleFiltrosMovil = function() {
             const dropdown = document.getElementById('menu-categorias-movil');
@@ -431,6 +406,7 @@
             document.getElementById('texto-filtro-activo').innerHTML = `<i class="fas fa-filter"></i> ${nombreCat}`;
             toggleFiltrosMovil(); 
 
+            actualizarCanonicalYUrl(categoriaId);
             const f = categoriaId === 'todos' ? todosLosProductos : todosLosProductos.filter(p => p.categoria === categoriaId);
             renderizarProductos(f);
         };
@@ -438,9 +414,23 @@
         window.filtrarPorCategoria = function(categoriaId, btnElement) {
             document.querySelectorAll('.sidebar .cat-list button').forEach(btn => btn.classList.remove('active'));
             if(btnElement) btnElement.classList.add('active');
+            
+            actualizarCanonicalYUrl(categoriaId);
             const f = categoriaId === 'todos' ? todosLosProductos : todosLosProductos.filter(p => p.categoria === categoriaId);
             renderizarProductos(f);
         };
+
+        // Actualiza el canonical y la barra de direcciones sin recargar la página
+        function actualizarCanonicalYUrl(categoriaId) {
+            const canonicalEl = document.getElementById('canonical-link');
+            if (categoriaId === 'todos') {
+                history.pushState({}, '', 'tienda.html');
+                canonicalEl.href = 'https://www.fybparts.com/tienda.html';
+            } else {
+                history.pushState({}, '', `tienda.html?cat=${categoriaId}`);
+                canonicalEl.href = `https://www.fybparts.com/tienda.html?cat=${categoriaId}`;
+            }
+        }
 
         // Carrito y Checkout
         window.agregarAlCarrito = function(id, nombre, precio) {
