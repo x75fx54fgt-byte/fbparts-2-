@@ -141,6 +141,51 @@
                     document.title = `${prod.nombre} | F&B Parts Caracas`;
                     document.getElementById('meta-description').content = `Compra ${prod.nombre} al mejor precio en Caracas. Repuestos originales para tu vehículo. Delivery disponible.`;
 
+                    // ==========================================
+                    // 🚀 NUEVO: OPTIMIZACIÓN SEO AVANZADA (SCHEMA.ORG)
+                    // ==========================================
+                    
+                    // 1. Etiqueta Canonical (Evita contenido duplicado en Google)
+                    let linkCanonical = document.createElement('link');
+                    linkCanonical.rel = 'canonical';
+                    linkCanonical.href = window.location.href.split('#')[0];
+                    document.head.appendChild(linkCanonical);
+
+                    // 2. Datos Estructurados de Producto (Hace que Google muestre precio y foto en el buscador)
+                    const schemaData = {
+                        "@context": "https://schema.org/",
+                        "@type": "Product",
+                        "name": prod.nombre,
+                        "image": prod.imagen,
+                        "description": (prod.descripcion || prod.nombre).replace(/\n/g, ' '),
+                        "sku": prod.numero_parte || productId,
+                        "brand": {
+                            "@type": "Brand",
+                            "name": "Original / OEM"
+                        },
+                        "offers": {
+                            "@type": "Offer",
+                            "url": window.location.href,
+                            "priceCurrency": "USD",
+                            "price": prod.precio,
+                            "availability": "https://schema.org/InStock",
+                            "itemCondition": "https://schema.org/NewCondition",
+                            "seller": {
+                                "@type": "Organization",
+                                "name": "F&B Parts"
+                            }
+                        }
+                    };
+
+                    const scriptSchema = document.createElement('script');
+                    scriptSchema.type = 'application/ld+json';
+                    scriptSchema.text = JSON.stringify(schemaData);
+                    document.head.appendChild(scriptSchema);
+                    
+                    // ==========================================
+                    // FIN DE OPTIMIZACIÓN SEO
+                    // ==========================================
+
                     let botonML = "";
                     if(prod.ml_id && prod.ml_id.trim() !== "") {
                         let idML = prod.ml_id.trim();
