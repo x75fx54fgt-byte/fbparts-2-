@@ -80,7 +80,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, query, where, getDocs, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
@@ -118,16 +118,15 @@
             btnLoginAdmin.disabled = true;
 
             try {
-                // 1. Intentar iniciar sesión en Firebase Auth
+                // 1. Iniciar sesión en Firebase Auth
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
 
-                // 2. FILTRO DE SEGURIDAD: Verificar si el correo existe en la colección 'administradores'
+                // 2. FILTRO DE SEGURIDAD: Verificar si el correo está en la colección 'administradores'
                 const q = query(collection(db, "administradores"), where("email", "==", email));
                 const querySnapshot = await getDocs(q);
 
                 if (querySnapshot.empty) {
-                    // Si el usuario es un cliente común y corriente, lo sacamos por seguridad
                     await signOut(auth);
                     errorMessage.style.color = "red";
                     errorMessage.innerText = "⛔ Acceso denegado: Esta cuenta no tiene permisos administrativos.";
@@ -136,7 +135,30 @@
                     return;
                 }
 
-                // Si pasa la prueba, es el administrador real y entra al panel
+                // 3. SINCRONIZACIÓN AUTOMÁTICA CON LA TIENDA:
+                // Copiamos/Actualizamos los datos del admin en la colección 'usuarios' para que la tienda los reconozca
+                const adminData = querySnapshot.docs[0].data();
+                const userRef = doc(db, "usuarios", user.uid);
+                const userSnap = await getDoc(userRef);
+
+                if (!userSnap.exists()) {
+                    await setDoc(userRef, {
+                        uid: user.uid,
+                        nombre: adminData.Nombre || "Administrador",
+                        apellido: "",
+                        cedula: "Personal Autorizado",
+                        telefono: "Principal",
+                        email: user.email,
+                        ubicacion: "F&B Parts - Central",
+                        fechaRegistro: new Date().toLocaleString("es-VE")
+                    });
+                } else {
+                    await updateDoc(userRef, {
+                        nombre: adminData.Nombre || "Administrador"
+                    });
+                }
+
+                // Si todo es correcto, entra al panel de administración
                 window.location.href = "admin.html";
 
             } catch (error) {
