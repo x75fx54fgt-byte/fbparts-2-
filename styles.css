@@ -10,11 +10,20 @@
     --ease: cubic-bezier(.2,.8,.2,1);
 }
 
+/* Evitar desbordamientos horizontales en dispositivos móviles */
+html, body {
+    overflow-x: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box;
+}
+
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 
 body {
-    margin: 0;
     font-family: 'Roboto', sans-serif;
     background: #fff;
     color: var(--text);
@@ -640,17 +649,6 @@ footer{
     margin-top: 0;
 }
 
-.mobile-menu{
-    display: none;
-    transition: transform .28s var(--ease), background-color .28s var(--ease), color .28s var(--ease);
-}
-
-.mobile-menu:hover{
-    background: var(--green);
-    color: #fff;
-    transform: scale(1.04);
-}
-
 .whatsapp-float{
     position: fixed;
     width: 62px;
@@ -675,19 +673,53 @@ footer{
     box-shadow: 0 10px 24px rgba(0,0,0,.28);
 }
 
+/* ================================================= */
+/* 📱 MEDIA QUERIES / ADAPTABILIDAD MÓVIL PERFECTA   */
+/* ================================================= */
+
+.mobile-menu {
+    display: none;
+}
+
 @media (max-width: 1100px){
     nav{ display: none; }
-    .mobile-menu{ display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid #ddd; background: #fff; color: var(--green); font-size: 20px; }
+    
+    .mobile-menu{ 
+        display: inline-flex !important; 
+        align-items: center !important; 
+        justify-content: center !important; 
+        width: 48px !important; 
+        height: 48px !important; 
+        border: none !important; 
+        background: var(--green) !important; 
+        color: #fff !important; 
+        font-size: 22px !important; 
+        border-radius: 6px !important;
+        cursor: pointer !important;
+        margin: 8px auto !important;
+    }
+
     .benefits-inner{ grid-template-columns: repeat(2, 1fr); }
     .benefit{ font-size: 26px; }
     .category-grid{ grid-template-columns: repeat(2, 1fr); }
     .contact-grid{ grid-template-columns: 1fr; }
-    .header-right{ align-items: flex-start; }
+    
+    .header-wrap{
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+    }
+
+    .header-right{ 
+        align-items: center !important; 
+        width: 100% !important;
+    }
 }
 
 @media (max-width: 700px){
     section.block{ padding: var(--section-pad-mobile) 0; }
-    .topbar h2{ font-size: 22px; }
+    .topbar h2{ font-size: 20px; }
     .topbar span{ position: static; display: block; margin-top: 4px; }
     .hero{ min-height: 60vh; }
     .hero-carousel{ height: 60vh; min-height: 60vh; }
@@ -706,88 +738,33 @@ footer{
     .whatsapp-float{ width: 56px; height: 56px; bottom: 16px; right: 16px; font-size: 30px; }
     .category-img-wrap{ width: 100px; }
     .about-box, .contact-box{ padding: 22px; }
-}
-
-/* ================================================= */
-/* 📱 CORRECCIÓN DEFINITIVA DE DISEÑO MÓVIL         */
-/* ================================================= */
-
-@media (max-width: 900px) {
-    /* 1. Evitar que la página se desborde o se mueva hacia los lados */
-    html, body {
-        overflow-x: hidden !important;
-        width: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-
-    /* 2. Asegurar que las cajas y contenedores respeten los límites del teléfono */
-    .container, 
-    .admin-container, 
-    .login-container, 
-    .register-container,
-    .benefits-inner {
-        width: 100% !important;
-        max-width: 100% !important;
-        padding-left: 15px !important;
-        padding-right: 15px !important;
-        box-sizing: border-box !important;
-    }
-
-    /* 3. Ordenar perfectamente la cabecera en móviles (Evita el problema de los cuadrados rojos) */
-    .header-wrap {
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        padding: 15px 10px !important;
-        gap: 12px !important;
-    }
-
-    .logo {
-        margin: 0 auto !important;
-        text-align: center;
-    }
-
-    .header-right {
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        width: 100% !important;
-        gap: 10px !important;
-    }
-
-    /* 4. Estilizar y hacer visible el botón de menú hamburguesa */
-    .mobile-menu {
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        width: 48px !important;
-        height: 48px !important;
-        background: var(--green) !important;
-        color: #fff !important;
-        border: none !important;
-        border-radius: 6px !important;
-        font-size: 22px !important;
-        cursor: pointer !important;
-        margin: 5px auto !important;
-    }
-
-    /* 5. Asegurar que las grillas se apilen verticalmente */
+    
+    /* Corrección de tablas y grillas en pantallas chicas */
     .admin-grid,
-    .contact-grid,
-    .category-grid,
     div[style*="grid-template-columns"] {
         display: flex !important;
         flex-direction: column !important;
         gap: 15px !important;
     }
 
-    /* 6. Tablas con desplazamiento suave horizontal */
     .data-table {
         display: block;
         overflow-x: auto;
         white-space: nowrap;
         width: 100%;
+    }
+}
+
+/* ================================================= */
+/* 📱 ESTILOS ADICIONALES PARA LA TIENDA MÓVIL (ML)  */
+/* ================================================= */
+@media (max-width: 900px) {
+    .prod-img-wrap {
+        height: 160px !important;
+        background: #fff !important;
+    }
+    .prod-img-wrap img {
+        object-fit: contain !important; /* Imágenes acopladas sin recortarse */
+        padding: 8px;
     }
 }
