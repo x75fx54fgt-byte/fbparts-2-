@@ -43,6 +43,55 @@
         @media (max-width: 600px) { 
             .products-grid-home { grid-template-columns: repeat(2, 1fr); gap: 10px; } 
         }
+
+        /* Estilos modernos para las Tarjetas de Reseñas */
+        .testimonials-grid { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 25px; 
+            margin-top: 30px; 
+        }
+        .testimonial-card { 
+            background: white; 
+            padding: 25px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+            border-top: 4px solid #385723; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-between; 
+            box-sizing: border-box;
+            transition: transform 0.2s;
+        }
+        .testimonial-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+        }
+        .testimonial-stars { 
+            color: #f39c12; 
+            margin-bottom: 12px; 
+            font-size: 14px; 
+        }
+        .testimonial-text { 
+            color: #444; 
+            font-size: 14px; 
+            line-height: 1.6; 
+            font-style: italic; 
+            margin-bottom: 15px; 
+            flex: 1; 
+        }
+        .testimonial-author { 
+            font-weight: bold; 
+            color: #333; 
+            font-size: 15px; 
+            font-family: 'Oswald', sans-serif; 
+            letter-spacing: 0.5px; 
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+        @media (max-width: 900px) { 
+            .testimonials-grid { grid-template-columns: 1fr; gap: 15px; } 
+        }
     </style>
 </head>
 <body>
@@ -218,21 +267,44 @@
         </div>
     </section>
 
-    <section class="block">
+    <!-- SECCIÓN DE RESEÑAS MODERNA Y PROFESIONAL -->
+    <section class="block" style="background-color: #fdfdfd; padding: 40px 0;">
         <div class="container">
-            <h2 class="section-title" style="text-align: center;">RESEÑAS DE CLIENTES</h2>
-            <div class="testimonials-list">
-                <div class="testimonial-wrap">
-                    <h3>Lux Motors, Caracas VE</h3>
-                    <p>“Servicio muy rapido, excelente precios, atención profesional y amplia gama de repuestos.”</p>
+            <h2 class="section-title" style="text-align: center; margin-bottom: 5px;">RESEÑAS DE CLIENTES</h2>
+            <p style="text-align: center; color: #666; margin-bottom: 25px; font-size: 14px;">Lo que opinan quienes confían en nuestros repuestos.</p>
+            
+            <div class="testimonials-grid">
+                <!-- Reseña 1 -->
+                <div class="testimonial-card">
+                    <div>
+                        <div class="testimonial-stars">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                        </div>
+                        <p class="testimonial-text">“Servicio muy rápido, excelentes precios, atención profesional y amplia gama de repuestos originales.”</p>
+                    </div>
+                    <div class="testimonial-author">Lux Motors, Caracas VE</div>
                 </div>
-                <div class="testimonial-wrap">
-                    <h3>Maria Romero, Caracas VE</h3>
-                    <p>“Excelente atención, buenos precios, personal calificado para dar la mejor atención y puntuales con las entregas.”</p>
+
+                <!-- Reseña 2 -->
+                <div class="testimonial-card">
+                    <div>
+                        <div class="testimonial-stars">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                        </div>
+                        <p class="testimonial-text">“Excelente atención, buenos precios, personal calificado para dar la mejor asesoría y muy puntuales con las entregas.”</p>
+                    </div>
+                    <div class="testimonial-author">Maria Romero, Caracas VE</div>
                 </div>
-                <div class="testimonial-wrap">
-                    <h3>Luisa Ruiz, Caracas VE</h3>
-                    <p>“Buena atencion personas responsables y puntuales, vendieron lo que solicite.”</p>
+
+                <!-- Reseña 3 -->
+                <div class="testimonial-card">
+                    <div>
+                        <div class="testimonial-stars">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                        </div>
+                        <p class="testimonial-text">“Buena atención, personas responsables y puntuales. Me vendieron exactamente el repuesto que solicité sin demoras.”</p>
+                    </div>
+                    <div class="testimonial-author">Luisa Ruiz, Caracas VE</div>
                 </div>
             </div>
         </div>
@@ -316,7 +388,7 @@
         </script>
     </footer>
 
-    <!-- Script inteligente para detectar sesión de cliente y Cargar Destacados -->
+    <!-- Script inteligente para detectar sesión de cliente, Cargar Destacados y Carrusel Principal -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -389,6 +461,73 @@
         }
 
         window.addEventListener('DOMContentLoaded', cargarDestacados);
+    </script>
+
+    <!-- Script del Carrusel Principal de la Portada -->
+    <script>
+        (function () {
+            const heroCarousel = document.querySelector('#heroCarousel');
+            if (heroCarousel) {
+                const heroSlides = heroCarousel.querySelectorAll('.hero-slide');
+                const heroDots = heroCarousel.querySelectorAll('.hero-dots span');
+                const heroPrev = heroCarousel.querySelector('.arrow.left');
+                const heroNext = heroCarousel.querySelector('.arrow.right');
+
+                let heroIndex = 0;
+                let heroTimer = null;
+
+                function updateHero() {
+                    heroSlides.forEach((slide, i) => slide.classList.toggle('active', i === heroIndex));
+                    heroDots.forEach((dot, i) => dot.classList.toggle('active', i === heroIndex));
+                }
+
+                function heroNextSlide() {
+                    heroIndex = (heroIndex + 1) % heroSlides.length;
+                    updateHero();
+                }
+
+                function heroPrevSlide() {
+                    heroIndex = (heroIndex - 1 + heroSlides.length) % heroSlides.length;
+                    updateHero();
+                }
+
+                function startHeroAutoplay() {
+                    stopHeroAutoplay();
+                    heroTimer = setInterval(heroNextSlide, 4500);
+                }
+
+                function stopHeroAutoplay() {
+                    if (heroTimer) clearInterval(heroTimer);
+                }
+
+                if (heroNext) {
+                    heroNext.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        heroNextSlide();
+                        startHeroAutoplay();
+                    });
+                }
+
+                if (heroPrev) {
+                    heroPrev.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        heroPrevSlide();
+                        startHeroAutoplay();
+                    });
+                }
+
+                heroDots.forEach((dot, i) => {
+                    dot.addEventListener('click', () => {
+                        heroIndex = i;
+                        updateHero();
+                        startHeroAutoplay();
+                    });
+                });
+
+                updateHero();
+                startHeroAutoplay();
+            }
+        })();
     </script>
 </body>
 </html>
