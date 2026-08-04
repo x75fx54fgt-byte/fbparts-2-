@@ -4,66 +4,35 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
-    <!-- Etiquetas SEO dinámicas (Se actualizarán por JS) -->
-    <title>Cargando repuesto... | F&B Parts</title>
-    <meta id="meta-description" name="description" content="Detalles del repuesto automotriz en F&B Parts.">
-    
+    <!-- Título y descripción base (Se actualizan dinámicamente con JavaScript al cargar el producto) -->
+    <title id="seo-title">Detalle del Repuesto | F&B Parts</title>
+    <meta id="seo-desc" name="description" content="Encuentra repuestos originales y autopartes de alta calidad en Caracas, Venezuela.">
+    <link rel="canonical" href="https://www.fybparts.com/producto.html">
+
     <link rel="icon" type="image/png" href="img/favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 
     <style>
-        body { background-color: #f8f8f8; display: flex; flex-direction: column; min-height: 100vh; margin: 0; }
-        
-        .product-page-container {
-            max-width: 1000px;
-            margin: 40px auto;
-            padding: 0 20px;
-            width: 100%;
-            box-sizing: border-box;
-            flex: 1;
-        }
-
-        .product-wrapper {
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,.05);
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            padding: 30px;
-            border: 1px solid #eee;
-        }
-
-        @media (max-width: 768px) {
-            .product-wrapper { grid-template-columns: 1fr; padding: 20px; }
-            .product-page-container { margin: 20px auto; }
-        }
-
-        .img-magnifier-container { position: relative; width: 100%; background: #f9f9f9; border-radius: 8px; display: flex; align-items: center; justify-content: center; padding: 20px; aspect-ratio: 1/1; }
-        .img-magnifier-container img { max-width: 100%; max-height: 100%; object-fit: contain; }
-
-        .product-details { display: flex; flex-direction: column; }
-        .product-condition { font-size: 13px; color: #666; margin-bottom: 10px; }
-        .product-name { font-family: 'Oswald', sans-serif; font-size: 28px; color: #333; margin: 0 0 15px 0; line-height: 1.2; }
-        .product-price { font-family: 'Oswald', sans-serif; font-size: 36px; color: #385723; margin: 0 0 20px 0; }
-        
-        .product-info-list { margin-bottom: 15px; padding: 0; list-style: none; color: #555; font-size: 15px; }
-        .product-info-list li { margin-bottom: 8px; display: flex; gap: 10px; align-items: center; }
-        .product-info-list i { color: #385723; width: 20px; text-align: center; }
-
-        .btn-add-cart-large { background: #385723; color: white; border: none; padding: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; margin-bottom: 12px; transition: 0.2s; font-family: 'Oswald', sans-serif; letter-spacing: 1px; }
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f8f8f8; display: flex; flex-direction: column; min-height: 100vh; margin: 0; }
+        .product-container { max-width: 1100px; margin: 40px auto; padding: 0 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; flex: 1; align-items: start; width: 100%; box-sizing: border-box; background: white; padding: 40px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,.05); }
+        .product-img-box { width: 100%; height: 400px; background: #fff; display: flex; align-items: center; justify-content: center; border: 1px solid #eee; border-radius: 6px; overflow: hidden; }
+        .product-img-box img { width: 100%; height: 100%; object-fit: contain; }
+        .product-details h1 { font-family: 'Oswald', sans-serif; color: #385723; font-size: 28px; margin-top: 0; margin-bottom: 15px; }
+        .product-price { font-size: 26px; color: #385723; font-weight: bold; font-family: 'Oswald', sans-serif; margin-bottom: 20px; }
+        .product-meta { font-size: 14px; color: #555; margin-bottom: 15px; line-height: 1.6; border-top: 1px solid #eee; border-bottom: 1px solid #eee; padding: 15px 0; }
+        .btn-add-cart-large { background: #385723; color: white; border: none; padding: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; width: 100%; transition: background 0.2s; font-family: 'Oswald', sans-serif; text-transform: uppercase; margin-top: 20px; }
         .btn-add-cart-large:hover { background: #2c441b; }
-        
-        .btn-ml-large { background: #ffe600; color: #333; padding: 15px; border-radius: 6px; text-align: center; text-decoration: none; font-weight: bold; display: block; width: 100%; transition: 0.2s; box-sizing: border-box; font-size: 16px; font-family: 'Oswald', sans-serif; letter-spacing: 1px; }
-        .btn-ml-large:hover { background: #ffd000; }
-
-        .back-link { display: inline-flex; align-items: center; gap: 8px; color: #385723; text-decoration: none; font-weight: bold; margin-bottom: 20px; font-size: 15px; }
-        .back-link:hover { text-decoration: underline; }
+        .btn-ml-large { background: #ffe600; color: #333; padding: 12px; border-radius: 6px; text-align: center; text-decoration: none; font-weight: bold; display: block; width: 100%; transition: 0.2s; box-sizing: border-box; font-size: 15px; font-family: 'Oswald', sans-serif; margin-top: 10px; }
+        @media (max-width: 768px) { .product-container { grid-template-columns: 1fr; padding: 20px; } .product-img-box { height: 280px; } }
     </style>
 </head>
 <body>
+
+    <div class="topbar">
+        <p style="margin:0; font-weight: bold; font-size: 14px; letter-spacing: 1px;">DELIVERY GRATIS EN CARACAS</p><span>(CIERTAS CONDICIONES APLICAN)</span>
+    </div>
 
     <header style="background: white; border-bottom: 1px solid #eee;">
         <div class="container header-wrap" style="padding: 15px 20px; max-width: 1350px;">
@@ -73,29 +42,27 @@
             <nav>
                 <a href="index.html">Inicio</a>
                 <a href="tienda.html" style="color: #385723; font-weight: bold;">Tienda</a>
-                <a href="tienda.html" style="color: var(--green); font-weight: bold;"><i class="fas fa-shopping-cart"></i> Ver Carrito</a>
+                <a href="login.html" id="nav-cuenta-btn" style="color: var(--green); font-weight: bold;"><i class="fas fa-user"></i> Mi Cuenta</a>
             </nav>
         </div>
     </header>
 
-    <div class="product-page-container">
-        <a href="tienda.html" class="back-link"><i class="fas fa-arrow-left"></i> Volver al catálogo</a>
-        
-        <div id="product-content" class="product-wrapper">
-            <div style="grid-column: 1/-1; text-align:center; padding: 50px; color:#666;">
-                <i class="fas fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 10px;"></i><br>
-                Cargando información del repuesto...
-            </div>
+    <div class="product-container" id="product-details-container">
+        <div style="text-align: center; grid-column: 1/-1; padding: 50px; color: #666;">
+            <i class="fas fa-spinner fa-spin" style="font-size: 30px;"></i><br>Cargando información del repuesto...
         </div>
     </div>
 
+    <!-- FOOTER -->
     <footer style="background-color: #000; color: #fff; text-align: center; padding: 25px 0; margin-top: auto;">
         <p class="oswald" style="margin: 0; font-size: 16px; letter-spacing: 1px;">&copy;<span id="year-footer">2026</span> por F&B PARTS.</p>
+        <script> document.getElementById('year-footer').textContent = new Date().getFullYear(); </script>
     </footer>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
@@ -107,26 +74,27 @@
         };
 
         const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
         const db = getFirestore(app);
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const productId = urlParams.get('id');
+        onAuthStateChanged(auth, (user) => {
+            const navBtn = document.getElementById('nav-cuenta-btn');
+            if (user) {
+                navBtn.href = "mi-cuenta.html";
+                navBtn.innerHTML = `<i class="fas fa-user-check"></i> Mi Cuenta`;
+            } else {
+                navBtn.href = "login.html";
+                navBtn.innerHTML = `<i class="fas fa-user"></i> Iniciar Sesión`;
+            }
+        });
 
-        window.carrito = JSON.parse(localStorage.getItem('carritoFB')) || [];
+        async function cargarDetalleProducto() {
+            const params = new URLSearchParams(window.location.search);
+            const productId = params.get('id');
+            const container = document.getElementById('product-details-container');
 
-        window.agregarAlCarritoDesdeProducto = function(id, nombre, precio) {
-            const item = window.carrito.find(i => i.id === id);
-            if(item) item.cantidad++;
-            else window.carrito.push({ id, nombre, precio, cantidad: 1 });
-            localStorage.setItem('carritoFB', JSON.stringify(window.carrito));
-            
-            alert("¡Repuesto agregado al carrito con éxito!");
-            window.location.href = "tienda.html";
-        };
-
-        async function cargarProducto() {
             if (!productId) {
-                document.getElementById('product-content').innerHTML = `<h2 style="grid-column:1/-1; text-align:center; color:red;">Error: No se especificó ningún repuesto.</h2>`;
+                container.innerHTML = '<div style="text-align:center; grid-column: 1/-1; padding: 40px;">Repuesto no especificado. <a href="tienda.html" style="color:#385723; font-weight:bold;">Volver a la tienda</a></div>';
                 return;
             }
 
@@ -134,118 +102,106 @@
                 const docRef = doc(db, "productos", productId);
                 const docSnap = await getDoc(docRef);
 
-                if (docSnap.exists()) {
-                    const prod = docSnap.data();
-                    const safeName = prod.nombre.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                    
-                    document.title = `${prod.nombre} | F&B Parts Caracas`;
-                    document.getElementById('meta-description').content = `Compra ${prod.nombre} al mejor precio en Caracas. Repuestos originales para tu vehículo. Delivery disponible.`;
-
-                    // ==========================================
-                    // 🚀 NUEVO: OPTIMIZACIÓN SEO AVANZADA (SCHEMA.ORG)
-                    // ==========================================
-                    
-                    // 1. Etiqueta Canonical (Evita contenido duplicado en Google)
-                    let linkCanonical = document.createElement('link');
-                    linkCanonical.rel = 'canonical';
-                    linkCanonical.href = window.location.href.split('#')[0];
-                    document.head.appendChild(linkCanonical);
-
-                    // 2. Datos Estructurados de Producto (Hace que Google muestre precio y foto en el buscador)
-                    const schemaData = {
-                        "@context": "https://schema.org/",
-                        "@type": "Product",
-                        "name": prod.nombre,
-                        "image": prod.imagen,
-                        "description": (prod.descripcion || prod.nombre).replace(/\n/g, ' '),
-                        "sku": prod.numero_parte || productId,
-                        "brand": {
-                            "@type": "Brand",
-                            "name": "Original / OEM"
-                        },
-                        "offers": {
-                            "@type": "Offer",
-                            "url": window.location.href,
-                            "priceCurrency": "USD",
-                            "price": prod.precio,
-                            "availability": "https://schema.org/InStock",
-                            "itemCondition": "https://schema.org/NewCondition",
-                            "seller": {
-                                "@type": "Organization",
-                                "name": "F&B Parts"
-                            }
-                        }
-                    };
-
-                    const scriptSchema = document.createElement('script');
-                    scriptSchema.type = 'application/ld+json';
-                    scriptSchema.text = JSON.stringify(schemaData);
-                    document.head.appendChild(scriptSchema);
-                    
-                    // ==========================================
-                    // FIN DE OPTIMIZACIÓN SEO
-                    // ==========================================
-
-                    let botonML = "";
-                    if(prod.ml_id && prod.ml_id.trim() !== "") {
-                        let idML = prod.ml_id.trim();
-                        if (idML.startsWith("MLV") && !idML.startsWith("MLV-")) idML = idML.replace("MLV", "MLV-");
-                        botonML = `<a href="https://articulo.mercadolibre.com.ve/${idML}" target="_blank" class="btn-ml-large"><i class="fas fa-handshake"></i> Comprar en Mercado Libre</a>`;
-                    }
-
-                    // LÓGICA DEL NÚMERO DE PARTE
-                    let textoCondicion = "Original / OEM";
-                    if (prod.numero_parte && prod.numero_parte.trim() !== "") {
-                        textoCondicion = `<span style="color: #385723; font-weight: bold;">Nro. Parte: ${prod.numero_parte}</span>`;
-                    }
-
-                    // LÓGICA DE LA DESCRIPCIÓN DETALLADA
-                    let bloqueDescripcion = "";
-                    if (prod.descripcion && prod.descripcion.trim() !== "") {
-                        let descFormateada = prod.descripcion.replace(/\n/g, '<br>');
-                        bloqueDescripcion = `
-                            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
-                                <h4 style="margin: 0 0 10px 0; font-family: 'Oswald', sans-serif; color: #333;">Descripción del Repuesto</h4>
-                                <p style="font-size: 14px; color: #555; line-height: 1.6; margin: 0;">${descFormateada}</p>
-                            </div>
-                        `;
-                    }
-
-                    document.getElementById('product-content').innerHTML = `
-                        <div class="img-magnifier-container">
-                            <img src="${prod.imagen}" alt="${prod.nombre} en Caracas">
-                        </div>
-                        <div class="product-details">
-                            <div class="product-condition">Nuevo | ${textoCondicion}</div>
-                            <h1 class="product-name">${prod.nombre}</h1>
-                            <div class="product-price">$${Number(prod.precio).toFixed(2)}</div>
-                            
-                            <ul class="product-info-list">
-                                <li><i class="fas fa-truck"></i> Delivery disponible en Caracas</li>
-                                <li><i class="fas fa-box"></i> Envíos nacionales por MRW, Zoom y Tealca</li>
-                                <li><i class="fas fa-shield-alt"></i> Garantía por defecto de fábrica</li>
-                            </ul>
-
-                            ${bloqueDescripcion}
-
-                            <div style="margin-top: auto; padding-top: 20px;">
-                                <button type="button" class="btn-add-cart-large" onclick="agregarAlCarritoDesdeProducto('${docSnap.id}', '${safeName}', ${prod.precio})">
-                                    <i class="fas fa-cart-plus"></i> Añadir al carrito
-                                </button>
-                                ${botonML}
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    document.getElementById('product-content').innerHTML = `<h2 style="grid-column:1/-1; text-align:center; color:red;">Repuesto no encontrado.</h2>`;
+                if (!docSnap.exists()) {
+                    container.innerHTML = '<div style="text-align:center; grid-column: 1/-1; padding: 40px;">El repuesto solicitado no existe o fue retirado. <a href="tienda.html" style="color:#385723; font-weight:bold;">Ir a la tienda</a></div>';
+                    return;
                 }
+
+                const prod = docSnap.data();
+                
+                // ==========================================
+                // 🚀 PUNTO 1: ACTUALIZACIÓN DINÁMICA DE SEO (Title & Meta)
+                // ==========================================
+                document.title = `${prod.nombre} | F&B Parts Caracas`;
+                document.getElementById('seo-desc').content = `Compra ${prod.nombre} original en Caracas. Precio: $${Number(prod.precio).toFixed(2)}. Número de parte: ${prod.numero_parte || 'N/A'}. Envíos a toda Venezuela.`;
+
+                // ==========================================
+                // 🚀 PUNTO 2: INYECCIÓN DE SCHEMA MARKUP (Product Structured Data)
+                // ==========================================
+                const schemaData = {
+                    "@context": "https://schema.org/",
+                    "@type": "Product",
+                    "name": prod.nombre,
+                    "image": prod.imagen,
+                    "description": prod.descripcion || `Repuesto automotriz ${prod.nombre} disponible en F&B Parts Caracas.`,
+                    "sku": prod.numero_parte || productId,
+                    "mpn": prod.numero_parte || "",
+                    "brand": {
+                        "@type": "Brand",
+                        "name": "F&B Parts"
+                    },
+                    "offers": {
+                        "@type": "Offer",
+                        "url": window.location.href,
+                        "priceCurrency": "USD",
+                        "price": Number(prod.precio).toFixed(2),
+                        "availability": (prod.stock > 0) ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+                        "seller": {
+                            "@type": "Organization",
+                            "name": "Inversiones FB Parts, C.A."
+                        }
+                    }
+                };
+
+                const scriptTag = document.createElement('script');
+                scriptTag.type = "application/ld+json";
+                scriptTag.text = JSON.stringify(schemaData);
+                document.head.appendChild(scriptTag);
+
+                // Renderizado visual en pantalla
+                let botonML = "";
+                if(prod.ml_id && prod.ml_id.trim() !== "") {
+                    let idML = prod.ml_id.trim();
+                    if (idML.startsWith("MLV") && !idML.startsWith("MLV-")) idML = idML.replace("MLV", "MLV-");
+                    botonML = `<a href="https://articulo.mercadolibre.com.ve/${idML}" target="_blank" class="btn-ml-large"><i class="fas fa-handshake"></i> Ver esta pieza en Mercado Libre</a>`;
+                }
+
+                const safeName = prod.nombre.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                const stockTxt = prod.stock > 0 ? `<span style="color: #27ae60; font-weight: bold;">En Stock (${prod.stock} disponibles)</span>` : `<span style="color: #c0392b; font-weight: bold;">Agotado</span>`;
+                const numParteTxt = prod.numero_parte ? `<p style="margin: 5px 0;"><strong>Número de Parte / OEM:</strong> ${prod.numero_parte}</p>` : '';
+                const descTxt = prod.descripcion ? `<p style="margin: 10px 0; color: #666; font-size: 14px; line-height: 1.5;">${prod.descripcion}</p>` : '<p style="margin: 10px 0; color: #888; font-size: 13px;">Sin descripción detallada para este repuesto. Contáctanos para mayor información de compatibilidad.</p>';
+
+                container.innerHTML = `
+                    <div class="product-img-box">
+                        <img src="${prod.imagen}" alt="Repuesto ${prod.nombre} original en Caracas" onerror="this.src='https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png'">
+                    </div>
+                    <div class="product-details">
+                        <span style="font-size: 12px; color: #888; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">F&B Parts • Autopartes Originales</span>
+                        <h1>${prod.nombre}</h1>
+                        <div class="product-price">$${Number(prod.precio).toFixed(2)}</div>
+                        
+                        <div class="product-meta">
+                            <p style="margin: 5px 0;"><strong>Disponibilidad:</strong> ${stockTxt}</p>
+                            ${numParteTxt}
+                            ${descTxt}
+                        </div>
+
+                        <div>
+                            <button type="button" class="btn-add-cart-large" onclick="agregarAlCarrito('${productId}', '${safeName}', ${prod.precio})">
+                                <i class="fas fa-cart-plus"></i> Añadir al Pedido
+                            </button>
+                            ${botonML}
+                        </div>
+                    </div>
+                `;
+
             } catch (error) {
-                console.error("Error cargando el producto:", error);
-                document.getElementById('product-content').innerHTML = `<h2 style="grid-column:1/-1; text-align:center; color:red;">Error de conexión. Intente más tarde.</h2>`;
+                console.error("Error al cargar producto:", error);
+                container.innerHTML = '<div style="text-align:center; grid-column: 1/-1; color: red; padding: 40px;">Error al cargar los datos del repuesto.</div>';
             }
         }
 
-        window.addEventListener('DOMContentLoaded', cargarProducto);
+        // Función global para el carrito en esta página
+        window.agregarAlCarrito = function(id, nombre, precio) {
+            let carrito = JSON.parse(localStorage.getItem('carritoFB')) || [];
+            const item = carrito.find(i => i.id === id);
+            if(item) item.cantidad++;
+            else carrito.push({ id, nombre, precio, cantidad: 1 });
+            localStorage.setItem('carritoFB', JSON.stringify(carrito));
+            alert("¡Repuesto añadido a tu pedido!");
+        };
+
+        window.addEventListener('DOMContentLoaded', cargarDetalleProducto);
     </script>
 </body>
 </html>
