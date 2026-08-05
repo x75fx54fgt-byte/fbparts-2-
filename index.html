@@ -21,10 +21,38 @@
       "@context": "https://schema.org",
       "@type": "FAQPage",
       "mainEntity": [
-        { "@type": "Question", "name": "¿Ofrecen delivery de repuestos en Caracas?", "acceptedAnswer": { "@type": "Answer", "text": "Sí, contamos con servicio de delivery rápido en la Gran Caracas. (Ciertas condiciones aplican según la zona)." } },
-        { "@type": "Question", "name": "¿Hacen envíos a toda Venezuela?", "acceptedAnswer": { "@type": "Answer", "text": "Sí, realizamos envíos nacionales seguros a través de empresas de encomienda confiables como Tealca, MRW y Zoom." } },
-        { "@type": "Question", "name": "¿Qué métodos de pago aceptan?", "acceptedAnswer": { "@type": "Answer", "text": "Aceptamos múltiples métodos de pago: Pago Móvil, efectivo en divisas, transferencias bancarias (Banesco, BNC, BVC, Bancamiga) y Binance." } },
-        { "@type": "Question", "name": "¿Los repuestos y autopartes son originales?", "acceptedAnswer": { "@type": "Answer", "text": "Sí, somos especialistas en la comercialización y optimización de repuestos y autopartes originales y de alta calidad para marcas como Toyota, Ford, Dongfeng, Mazda y Honda." } }
+        {
+          "@type": "Question",
+          "name": "¿Ofrecen delivery de repuestos en Caracas?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Sí, contamos con servicio de delivery rápido en la Gran Caracas. (Ciertas condiciones aplican según la zona)."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Hacen envíos a toda Venezuela?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Sí, realizamos envíos nacionales seguros a través de empresas de encomienda confiables como Tealca, MRW y Zoom."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Qué métodos de pago aceptan?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Aceptamos múltiples métodos de pago: Pago Móvil, efectivo en divisas, transferencias bancarias (Banesco, BNC, BVC, Bancamiga) y Binance."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Los repuestos y autopartes son originales?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Sí, somos especialistas en la comercialización y optimización de repuestos y autopartes originales y de alta calidad para marcas como Toyota, Ford, Dongfeng, Mazda y Honda."
+          }
+        }
       ]
     }
     </script>
@@ -39,10 +67,8 @@
         .contact-box { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; flex-direction: column; box-sizing: border-box; }
         .contact-box h3 { color: #5b8743; font-family: 'Oswald', sans-serif; font-size: 24px; margin-top: 0; margin-bottom: 20px; text-transform: uppercase; }
         .contact-box p { color: #333; font-size: 16px; line-height: 1.6; margin-bottom: 15px; }
-        
-        /* 🚀 MAPA CORREGIDO */
-        .map-wrap { flex-grow: 1; display: block; border: 1px solid #eee; border-radius: 8px; overflow: hidden; min-height: 350px; width: 100%; box-sizing: border-box; }
-        .map-wrap iframe { width: 100% !important; height: 100% !important; min-height: 350px; border: 0; display: block; }
+        .map-wrap { flex-grow: 1; display: flex; flex-direction: column; border: 1px solid #eee; border-radius: 8px; overflow: hidden; min-height: 350px; }
+        .map-wrap iframe { flex-grow: 1; height: 100% !important; border: 0; }
         @media (max-width: 900px) { .contact-grid { grid-template-columns: 1fr; } }
         
         .products-grid-home { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; width: 100%; margin-top: 20px; }
@@ -62,58 +88,6 @@
         .faq-item h4 { font-family: 'Oswald', sans-serif; color: #385723; font-size: 18px; margin-top: 0; margin-bottom: 10px; }
         .faq-item p { color: #555; font-size: 14px; line-height: 1.5; margin: 0; }
         @media (max-width: 900px) { .faq-grid { grid-template-columns: 1fr; } }
-
-        /* ========================================== */
-        /* 🚀 REGLAS DE CORRECCIÓN PARA EL HEADER MÓVIL */
-        /* ========================================== */
-        @media (max-width: 900px) {
-            header { position: relative; }
-            header .header-wrap {
-                display: flex !important;
-                flex-direction: row !important;
-                flex-wrap: nowrap !important;
-                justify-content: space-between !important;
-                align-items: center !important;
-                padding: 10px 20px !important;
-            }
-            header .header-right { display: none !important; }
-            header .logo { flex: 0 0 auto; display: flex; align-items: center; }
-            header .logo img { height: 45px !important; width: auto; }
-            
-            .mobile-menu {
-                display: block !important;
-                background: #385723 !important;
-                color: white !important;
-                border: none;
-                padding: 10px 14px;
-                border-radius: 6px;
-                font-size: 22px;
-                cursor: pointer;
-                margin-left: auto;
-            }
-            header nav {
-                display: none; 
-                flex-direction: column;
-                position: absolute;
-                top: 100%;
-                left: 0;
-                width: 100%;
-                background: white;
-                box-shadow: 0 10px 15px rgba(0,0,0,0.1);
-                border-top: 1px solid #eee;
-                z-index: 9999;
-            }
-            header nav.menu-activo { display: flex !important; }
-            header nav a {
-                padding: 15px 20px !important;
-                border-bottom: 1px solid #f0f0f0;
-                width: 100%;
-                text-align: left;
-                box-sizing: border-box;
-                color: #385723 !important; 
-                font-weight: bold;
-            }
-        }
     </style>
 </head>
 <body>
@@ -123,19 +97,18 @@
         <span>(CIERTAS CONDICIONES APLICAN)</span>
     </div>
 
-    <!-- 🚀 HEADER MÓVIL CORREGIDO -->
-    <header style="background: white; border-bottom: 1px solid #eee;">
-        <div class="container header-wrap" style="padding: 15px 20px; max-width: 1350px; display: flex; justify-content: space-between; align-items: center;">
-            <a class="logo" href="index.html">
-                <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logotipo Oficial F&B PARTS" decoding="async" style="height: 60px;">
+    <header>
+        <div class="container header-wrap">
+            <a class="logo" href="#inicio">
+                <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logotipo Oficial F&B PARTS" decoding="async">
             </a>
-            
-            <nav id="nav-principal">
-                <a href="#inicio" onclick="toggleMenuMobile()">Inicio</a>
-                <a href="tienda.html" onclick="toggleMenuMobile()">Repuestos</a>
-                <a href="#nosotros" onclick="toggleMenuMobile()">Quienes somos</a>
-                <a href="#mercadolibre" onclick="toggleMenuMobile()">Mercado Libre</a>
-                <a href="#contacto" onclick="toggleMenuMobile()">Contacto</a>
+
+            <nav>
+                <a href="#inicio">Inicio</a>
+                <a href="tienda.html">Repuestos</a>
+                <a href="#nosotros">Quienes somos</a>
+                <a href="#mercadolibre">Mercado Libre</a>
+                <a href="#contacto">Contacto</a>
                 <a href="login.html" id="nav-cuenta-btn" style="color: var(--green); font-weight: bold;"><i class="fas fa-user"></i> Mi Cuenta</a>
             </nav>
 
@@ -150,7 +123,7 @@
                 </div>
             </div>
 
-            <button class="mobile-menu" aria-label="Menú" onclick="toggleMenuMobile()" style="display: none;">
+            <button class="mobile-menu" aria-label="Menú">
                 <i class="fas fa-bars"></i>
             </button>
         </div>
@@ -170,14 +143,16 @@
                         <a class="cta" href="tienda.html">VER CATÁLOGO COMPLETO</a>
                     </div>
                 </div>
-                <div class="hero-slide" style="background-image: linear-gradient(rgba(0,0,0,.32), rgba(0,0,0,.32)), url('img/fotoportada2.png');" role="img">
+
+                <div class="hero-slide" style="background-image: linear-gradient(rgba(0,0,0,.32), rgba(0,0,0,.32)), url('img/fotoportada2.png');" role="img" aria-label="Servicio de delivery rápido de repuestos de carros">
                     <div class="hero-overlay">
                         <h3>ENVÍO RÁPIDO Y SEGURO</h3>
                         <div class="sub">ATENCIÓN Y DESPACHO EFICIENTE A TODA VENEZUELA</div>
                         <a class="cta" href="#contacto">CONTÁCTANOS</a>
                     </div>
                 </div>
-                <div class="hero-slide" style="background-image: linear-gradient(rgba(0,0,0,.32), rgba(0,0,0,.32)), url('img/fotoportada3.png');" role="img">
+
+                <div class="hero-slide" style="background-image: linear-gradient(rgba(0,0,0,.32), rgba(0,0,0,.32)), url('img/fotoportada3.png');" role="img" aria-label="Variedad de partes de motor y frenos">
                     <div class="hero-overlay">
                         <h3>VARIEDAD DE REPUESTOS</h3>
                         <div class="sub">MOTOR, FRENOS, CARROCERÍA Y MÁS</div>
@@ -185,10 +160,14 @@
                     </div>
                 </div>
             </div>
+
             <a class="arrow left" href="#" aria-label="Anterior"><i class="fas fa-chevron-left"></i></a>
             <a class="arrow right" href="#" aria-label="Siguiente"><i class="fas fa-chevron-right"></i></a>
+
             <div class="dots hero-dots">
-                <span class="active"></span><span></span><span></span>
+                <span class="active"></span>
+                <span></span>
+                <span></span>
             </div>
         </div>
     </section>
@@ -206,11 +185,13 @@
         <div class="container">
             <h2 class="section-title" style="text-align: center; margin-bottom: 5px;">REPUESTOS DESTACADOS</h2>
             <p style="text-align: center; color: #666; margin-bottom: 25px; font-size: 14px;">Las piezas más solicitadas para tu vehículo.</p>
+            
             <div class="products-grid-home" id="destacados-grid">
                 <div style="text-align:center; padding: 40px; color:#666; grid-column: 1/-1;">
                     <i class="fas fa-spinner fa-spin" style="font-size: 24px;"></i><br>Cargando inventario...
                 </div>
             </div>
+            
             <div style="text-align: center; margin-top: 35px;">
                 <a href="tienda.html" style="background: #385723; color: white; padding: 12px 25px; text-decoration: none; font-family: 'Oswald', sans-serif; letter-spacing: 1px; border-radius: 4px; display: inline-block; transition: 0.2s;">
                     VER TODO EL INVENTARIO <i class="fas fa-arrow-right" style="margin-left: 5px;"></i>
@@ -224,31 +205,40 @@
             <h2 class="section-title" style="text-align: center;">CATEGORÍAS DE REPUESTOS</h2>
             <div class="category-grid">
                 <a class="category-card" href="tienda.html?cat=frenos">
-                    <div class="category-img-wrap"><img src="img/freno.jpg" alt="Frenos" loading="lazy"></div><span>SISTEMA DE FRENO</span>
+                    <div class="category-img-wrap"><img src="img/freno.jpg" alt="Venta de repuestos para sistema de frenos automotrices" loading="lazy"></div>
+                    <span>SISTEMA DE FRENO</span>
                 </a>
                 <a class="category-card" href="tienda.html?cat=bombas">
-                    <div class="category-img-wrap"><img src="img/bomba-gasolina.jpg" alt="Bombas" loading="lazy"></div><span>BOMBAS DE GASOLINA</span>
+                    <div class="category-img-wrap"><img src="img/bomba-gasolina.jpg" alt="Bombas de gasolina para vehículos en Caracas" loading="lazy"></div>
+                    <span>BOMBAS DE GASOLINA</span>
                 </a>
                 <a class="category-card" href="tienda.html?cat=filtros">
-                    <div class="category-img-wrap"><img src="img/filtro-aire.jpg" alt="Filtros" loading="lazy"></div><span>FILTROS DE AIRES</span>
+                    <div class="category-img-wrap"><img src="img/filtro-aire.jpg" alt="Filtros de aire para todo tipo de carros" loading="lazy"></div>
+                    <span>FILTROS DE AIRES</span>
                 </a>
                 <a class="category-card" href="tienda.html?cat=faros">
-                    <div class="category-img-wrap"><img src="img/faros.jpg" alt="Faros" loading="lazy"></div><span>FAROS Y MICAS</span>
+                    <div class="category-img-wrap"><img src="img/faros.jpg" alt="Faros, micas e iluminación automotriz" loading="lazy"></div>
+                    <span>FAROS Y MICAS</span>
                 </a>
                 <a class="category-card" href="tienda.html?cat=bombas">
-                    <div class="category-img-wrap"><img src="img/bomba-agua.jpg" alt="Bomba Agua" loading="lazy"></div><span>BOMBAS DE AGUA</span>
+                    <div class="category-img-wrap"><img src="img/bomba-agua.jpg" alt="Bombas de agua y sistema de enfriamiento" loading="lazy"></div>
+                    <span>BOMBAS DE AGUA</span>
                 </a>
                 <a class="category-card" href="tienda.html?cat=todos">
-                    <div class="category-img-wrap"><img src="img/bomba-aceite.jpg" alt="Bomba Aceite" loading="lazy"></div><span>BOMBAS DE ACEITE</span>
+                    <div class="category-img-wrap"><img src="img/bomba-aceite.jpg" alt="Bombas de aceite para motor" loading="lazy"></div>
+                    <span>BOMBAS DE ACEITE</span>
                 </a>
                 <a class="category-card" href="tienda.html?cat=todos">
-                    <div class="category-img-wrap"><img src="img/multiple-admision.jpg" alt="Admision" loading="lazy"></div><span>MULTIPLE ADMISION</span>
+                    <div class="category-img-wrap"><img src="img/multiple-admision.jpg" alt="Múltiple de admisión de motor" loading="lazy"></div>
+                    <span>MULTIPLE ADMISION</span>
                 </a>
                 <a class="category-card" href="tienda.html?cat=todos">
-                    <div class="category-img-wrap"><img src="img/carroceria.jpg" alt="Carroceria" loading="lazy"></div><span>CARROCERIA</span>
+                    <div class="category-img-wrap"><img src="img/carroceria.jpg" alt="Repuestos de carrocería, parachoques y latonería" loading="lazy"></div>
+                    <span>CARROCERIA</span>
                 </a>
                 <a class="category-card" href="tienda.html?cat=todos">
-                    <div class="category-img-wrap"><img src="img/otras-categorias.jpg" alt="Otras" loading="lazy"></div><span>OTRAS CATEGORIAS</span>
+                    <div class="category-img-wrap"><img src="img/otras-categorias.jpg" alt="Catálogo completo de repuestos de automóviles" loading="lazy"></div>
+                    <span>OTRAS CATEGORIAS</span>
                 </a>
             </div>
         </div>
@@ -258,10 +248,15 @@
         <div class="container">
             <h2 class="section-title" style="text-align: center;">QUIENES SOMOS</h2>
             <div class="about-box">
-                <p>Bienvenido a nuestra tienda de repuestos. En FB PARTS nos enorgullece ofrecer una amplia variedad de repuestos para todo tipo de vehículos.</p>
-                <p><strong>Repuestos de motor:</strong> Filtros, aceite, bujías y correas.</p>
-                <p><strong>Repuestos de carrocería:</strong> Paneles, guardabarros y parachoques multimarca.</p>
-                <p><strong>Repuestos de frenos:</strong> Pastillas, discos y líquidos de frenos.</p>
+                <p>Bienvenido a nuestra tienda de repuestos. En FB PARTS nos enorgullece ofrecer una amplia variedad de repuestos para todo tipo de vehículos. Ya sea que necesites repuestos para tu automóvil o camión, estamos aquí para ayudarte.</p>
+                <p><strong>Nuestros productos:</strong></p>
+                <p><strong>Repuestos de motor:</strong> Tenemos una gran selección de repuestos de calidad para motores. Desde filtros de aire y aceite hasta bujías y correas, contamos con todo lo que necesitas para mantener tu motor funcionando sin problemas.</p>
+                <p><strong>Repuestos de carrocería:</strong> Si necesitas reparar daños en la carrocería de tu vehículo, tenemos paneles, guardabarros, parachoques y más. Nuestros repuestos de carrocería están diseñados para adaptarse perfectamente a diferentes modelos y marcas de automóviles.</p>
+                <p><strong>Repuestos de suspensión:</strong> Si sientes que tu vehículo no está ofreciendo una experiencia de conducción suave, es posible que necesites repuestos de suspensión. Ofrecemos una amplia gama de amortiguadores, resortes y otras piezas de suspensión para mejorar la comodidad y el rendimiento de tu vehículo.</p>
+                <p><strong>Repuestos de frenos:</strong> La seguridad es nuestra máxima prioridad. Por eso ofrecemos una variedad de repuestos de frenos de alta calidad, como pastillas, discos y líquidos de frenos. Mantén tus frenos en perfecto estado con nuestros repuestos confiables.</p>
+                <p><strong>Accesorios y herramientas:</strong> Además de repuestos, también ofrecemos una variedad de accesorios y herramientas para tu vehículo. Desde aceites y lubricantes hasta herramientas de mano, tenemos todo lo que necesitas para el mantenimiento de tu vehículo.</p>
+                <p><strong>¡Llámanos hoy mismo!</strong></p>
+                <p>Nuestro amable y conocedor equipo estará encantado de ayudarte a encontrar el repuesto exacto que necesitas.</p>
             </div>
         </div>
     </section>
@@ -269,16 +264,73 @@
     <section class="block" style="background-color: #fdfdfd; padding: 40px 0;">
         <div class="container">
             <h2 class="section-title" style="text-align: center; margin-bottom: 5px;">RESEÑAS DE CLIENTES</h2>
+            <p style="text-align: center; color: #666; margin-bottom: 25px; font-size: 14px;">Lo que opinan quienes confían en nuestros repuestos.</p>
+            
             <div class="testimonials-grid">
                 <div class="testimonial-card">
-                    <div><div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div><p class="testimonial-text">“Servicio muy rápido, excelentes precios y repuestos originales.”</p></div><div class="testimonial-author">Lux Motors, Caracas VE</div>
+                    <div>
+                        <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+                        <p class="testimonial-text">“Servicio muy rápido, excelentes precios, atención profesional y amplia gama de repuestos originales.”</p>
+                    </div>
+                    <div class="testimonial-author">Lux Motors, Caracas VE</div>
                 </div>
+
                 <div class="testimonial-card">
-                    <div><div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div><p class="testimonial-text">“Excelente atención, buenos precios y puntuales con las entregas.”</p></div><div class="testimonial-author">Maria Romero, Caracas VE</div>
+                    <div>
+                        <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+                        <p class="testimonial-text">“Excelente atención, buenos precios, personal calificado para dar la mejor asesoría y muy puntuales con las entregas.”</p>
+                    </div>
+                    <div class="testimonial-author">Maria Romero, Caracas VE</div>
                 </div>
+
                 <div class="testimonial-card">
-                    <div><div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div><p class="testimonial-text">“Me vendieron exactamente el repuesto que solicité sin demoras.”</p></div><div class="testimonial-author">Luisa Ruiz, Caracas VE</div>
+                    <div>
+                        <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+                        <p class="testimonial-text">“Buena atención, personas responsables y puntuales. Me vendieron exactamente el repuesto que solicité sin demoras.”</p>
+                    </div>
+                    <div class="testimonial-author">Luisa Ruiz, Caracas VE</div>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="block" style="background-color: #f4f6f3; padding: 40px 0;">
+        <div class="container">
+            <h2 class="section-title" style="text-align: center; margin-bottom: 5px;">PREGUNTAS FRECUENTES</h2>
+            <p style="text-align: center; color: #666; margin-bottom: 25px; font-size: 14px;">Todo lo que necesitas saber sobre nuestras compras y envíos.</p>
+            
+            <div class="faq-grid">
+                <div class="faq-item">
+                    <h4>¿Ofrecen delivery de repuestos en Caracas?</h4>
+                    <p>Sí, contamos con servicio de delivery rápido en la Gran Caracas. (Ciertas condiciones aplican según la zona).</p>
+                </div>
+                <div class="faq-item">
+                    <h4>¿Hacen envíos a toda Venezuela?</h4>
+                    <p>Sí, realizamos envíos nacionales seguros a través de empresas de encomienda confiables como Tealca, MRW y Zoom.</p>
+                </div>
+                <div class="faq-item">
+                    <h4>¿Qué métodos de pago aceptan?</h4>
+                    <p>Aceptamos múltiples métodos de pago: Pago Móvil, efectivo en divisas, transferencias bancarias (Banesco, BNC, BVC, Bancamiga) y Binance.</p>
+                </div>
+                <div class="faq-item">
+                    <h4>¿Los repuestos y autopartes son originales?</h4>
+                    <p>Sí, somos especialistas en la comercialización y optimización de repuestos y autopartes originales y de alta calidad para marcas como Toyota, Ford, Dongfeng, Mazda y Honda.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="mercadolibre" class="block categories">
+        <div class="container">
+            <h2 class="section-title" style="text-align: center;">CATÁLOGO MERCADO LIBRE</h2>
+
+            <div class="about-box" style="max-width: 800px; margin: 0 auto; text-align: center;">
+                <p>Explora todas nuestras publicaciones activas y repuestos disponibles directamente en nuestra tienda oficial de Mercado Libre.</p>
+                <p style="margin-top: 20px;">
+                    <a href="https://listado.mercadolibre.com.ve/_CustId_1156015281_NoIndex_True" target="_blank" style="display:inline-block; background:#ffe600; color:#333; padding:14px 25px; text-decoration:none; font-family:'Oswald', sans-serif; font-size: 16px; font-weight: bold; letter-spacing:.05em; border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.08);">
+                        <i class="fas fa-handshake" style="margin-right: 8px;"></i> IR A NUESTRA TIENDA DE MERCADO LIBRE
+                    </a>
+                </p>
             </div>
         </div>
     </section>
@@ -286,33 +338,59 @@
     <section id="contacto" class="block categories">
         <div class="container">
             <h2 class="section-title" style="text-align: center;">CONTACTOS</h2>
+
             <div class="contact-grid">
                 <div class="contact-box">
                     <h3>CONTACTOS</h3>
-                    <p style="margin-bottom: 25px;"><strong style="font-size: 18px;">Sede Principal</strong><br>Gran Caracas, Distrito Capital, Venezuela<br><span style="font-size: 13px; color: #777;">(Operamos con envíos y entregas personales acordadas)</span></p>
+                    <p style="margin-bottom: 25px;">
+                        <strong style="font-size: 18px;">Sede Principal</strong><br>
+                        Gran Caracas, Distrito Capital, Venezuela<br>
+                        <span style="font-size: 13px; color: #777;">(Operamos con envíos y entregas personales acordadas)</span>
+                    </p>
                     <p style="font-size: 18px; margin: 15px 0;">0212 - 551 - 3003</p>
                     <p style="font-size: 18px; margin: 15px 0;">0412 - 016 - 1036</p>
                     <p style="font-size: 18px; margin: 15px 0;">0424 - 200 - 4842</p>
-                    <p style="margin-top: 25px;"><strong style="font-size: 18px;">Horarios de Atención</strong><br>Lunes - viernes: 9:00 am – 4:00 pm<br>Sábados: 9:00 am – 1:00 pm</p>
-                    <p style="margin-top: auto; padding-top: 15px;"><a href="mailto:fybinversiones.ccs@gmail.com" style="color: #5b8743; text-decoration: none; font-size: 18px;">fybinversiones.ccs@gmail.com</a></p>
+                    
+                    <p style="margin-top: 25px;">
+                        <strong style="font-size: 18px;">Horarios de Atención</strong><br>
+                        Lunes - viernes: 9:00 am – 4:00 pm<br>
+                        Sábados: 9:00 am – 1:00 pm
+                    </p>
+                    
+                    <p style="margin-top: auto; padding-top: 15px;">
+                        <a href="mailto:fybinversiones.ccs@gmail.com" style="color: #5b8743; text-decoration: none; font-size: 18px;">fybinversiones.ccs@gmail.com</a>
+                    </p>
                 </div>
-                <!-- 🚀 MAPA CORREGIDO AL 100% -->
+
                 <div class="contact-box">
                     <h3>UBICACIÓN</h3>
                     <div class="map-wrap">
-                        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d125531.06646580665!2d-66.99346618174488!3d10.468698801869894!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c2a58adcd824807%3A0x93dd2eae0a998483!2sCaracas%2C%20Distrito%20Capital!5e0!3m2!1ses-419!2sve!4v1700000000000!5m2!1ses-419!2sve" width="100%" height="100%" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                        <iframe
+                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d125531.06646580665!2d-66.99346618174488!3d10.468698801869894!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c2a58adcd824807%3A0x93dd2eae0a998483!2sCaracas%2C%20Distrito%20Capital!5e0!3m2!1ses-419!2sve!4v1700000000000!5m2!1ses-419!2sve"
+                            allowfullscreen=""
+                            loading="lazy"
+                            referrerpolicy="no-referrer-when-downgrade">
+                        </iframe>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <footer style="background-color: #000; color: #fff; text-align: center; padding: 25px 0; margin-top: 50px;">
-        <p class="oswald" style="margin: 0; font-size: 16px; letter-spacing: 1px;">&copy;<span id="year-footer">2026</span> por F&B PARTS.</p>
-        <script> document.getElementById('year-footer').textContent = new Date().getFullYear(); </script>
+    <!-- FOOTER GLOBAL -->
+    <footer style="background-color: #000; color: #fff; text-align: center; padding: 25px 0; position: relative; margin-top: 50px;">
+        <p class="oswald" style="margin: 0; font-size: 16px; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 5px;">
+            &copy;<span id="year-footer">2026</span> por F&B PARTS. 
+            <a href="admin-login.html" style="color: #c9b065; text-decoration: none; font-size: 14px; margin-left: 8px;" title="Acceso Interno"><i class="fas fa-lock"></i></a>
+        </p>
+        <script>
+            document.getElementById('year-footer').textContent = new Date().getFullYear();
+        </script>
     </footer>
 
-    <!-- WIDGET FLOTANTE DE WHATSAPP -->
+    <!-- ========================================== -->
+    <!-- WIDGET FLOTANTE DE WHATSAPP TIPO CHATBOT   -->
+    <!-- ========================================== -->
     <div id="wa-chat-widget" style="position: fixed; bottom: 25px; right: 25px; z-index: 99999; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
         <div id="wa-chat-box" style="display: none; position: absolute; bottom: 75px; right: 0; width: 320px; background: white; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); overflow: hidden; border: 1px solid #eee;">
             <div style="background: #385723; color: white; padding: 15px; display: flex; align-items: center; justify-content: space-between;">
@@ -344,13 +422,7 @@
             <i class="fab fa-whatsapp" id="wa-icon-toggle"></i>
         </button>
     </div>
-
-    <!-- Script de Menú y Chat -->
     <script>
-        function toggleMenuMobile() {
-            const nav = document.getElementById('nav-principal');
-            nav.classList.toggle('menu-activo');
-        }
         function toggleWaChat() {
             const box = document.getElementById('wa-chat-box');
             const icon = document.getElementById('wa-icon-toggle');
@@ -362,6 +434,148 @@
                 icon.className = 'fab fa-whatsapp';
             }
         }
+    </script>
+    <!-- ========================================== -->
+
+    <!-- Script de Firebase, Destacados y Carrusel -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, getDocs, query, where, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
+            authDomain: "fb-parts-app.firebaseapp.com",
+            projectId: "fb-parts-app",
+            storageBucket: "fb-parts-app.firebasestorage.app",
+            messagingSenderId: "21714159445",
+            appId: "1:21714159445:web:8f4946cd1c98d9b95dd1dc"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        onAuthStateChanged(auth, (user) => {
+            const navBtn = document.getElementById('nav-cuenta-btn');
+            if (user) {
+                navBtn.href = "mi-cuenta.html";
+                navBtn.innerHTML = `<i class="fas fa-user-check"></i> Mi Cuenta`;
+            } else {
+                navBtn.href = "login.html";
+                navBtn.innerHTML = `<i class="fas fa-user"></i> Iniciar Sesión`;
+            }
+        });
+
+        async function cargarDestacados() {
+            const grid = document.getElementById('destacados-grid');
+            if(!grid) return;
+            try {
+                const q = query(collection(db, "productos"), where("estado", "==", "activo"), limit(8));
+                const snap = await getDocs(q);
+                
+                if(snap.empty) {
+                    grid.innerHTML = '<p style="text-align:center; color:#666; grid-column: 1/-1;">Inventario en actualización...</p>';
+                    return;
+                }
+                
+                grid.innerHTML = '';
+                
+                snap.forEach(docSnap => {
+                    const prod = docSnap.data();
+                    const slug = prod.nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '-').replace(/(^-|-$)/g, '');
+                    const productUrl = `producto.html?id=${docSnap.id}&pieza=${slug}`;
+
+                    grid.innerHTML += `
+                    <div style="background: white; border: 1px solid #eee; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,.05); display: flex; flex-direction: column; transition: transform 0.2s;">
+                        <a href="${productUrl}" style="text-decoration: none; color: inherit; display: contents;">
+                            <div style="width: 100%; height: 180px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                                <img src="${prod.imagen}" alt="Repuesto ${prod.nombre} en Caracas" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: contain;">
+                            </div>
+                            <div style="padding: 12px; display: flex; flex-direction: column; flex: 1;">
+                                <h4 style="font-size: 13px; color: #333; margin: 0 0 8px 0; font-weight: bold; flex: 1; line-height: 1.3;">${prod.nombre}</h4>
+                        </a>
+                                <div style="font-size: 18px; color: #385723; font-weight: bold; font-family: 'Oswald', sans-serif; margin-bottom: 10px;">$${Number(prod.precio).toFixed(2)}</div>
+                                <div style="margin-top: auto;">
+                                    <button type="button" onclick="window.location.href='${productUrl}'" style="background: #385723; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; font-size: 13px; transition: 0.2s;"><i class="fas fa-eye"></i> Ver Detalles</button>
+                                </div>
+                            </div>
+                    </div>`;
+                });
+            } catch(e) {
+                console.error("Error cargando destacados:", e);
+                grid.innerHTML = '<p style="text-align:center; color:red; grid-column: 1/-1;">Error de conexión.</p>';
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', cargarDestacados);
+    </script>
+
+    <!-- Script del Carrusel Principal -->
+    <script>
+        (function () {
+            const heroCarousel = document.querySelector('#heroCarousel');
+            if (heroCarousel) {
+                const heroSlides = heroCarousel.querySelectorAll('.hero-slide');
+                const heroDots = heroCarousel.querySelectorAll('.hero-dots span');
+                const heroPrev = heroCarousel.querySelector('.arrow.left');
+                const heroNext = heroCarousel.querySelector('.arrow.right');
+
+                let heroIndex = 0;
+                let heroTimer = null;
+
+                function updateHero() {
+                    heroSlides.forEach((slide, i) => slide.classList.toggle('active', i === heroIndex));
+                    heroDots.forEach((dot, i) => dot.classList.toggle('active', i === heroIndex));
+                }
+
+                function heroNextSlide() {
+                    heroIndex = (heroIndex + 1) % heroSlides.length;
+                    updateHero();
+                }
+
+                function heroPrevSlide() {
+                    heroIndex = (heroIndex - 1 + heroSlides.length) % heroSlides.length;
+                    updateHero();
+                }
+
+                function startHeroAutoplay() {
+                    stopHeroAutoplay();
+                    heroTimer = setInterval(heroNextSlide, 4500);
+                }
+
+                function stopHeroAutoplay() {
+                    if (heroTimer) clearInterval(heroTimer);
+                }
+
+                if (heroNext) {
+                    heroNext.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        heroNextSlide();
+                        startHeroAutoplay();
+                    });
+                }
+
+                if (heroPrev) {
+                    heroPrev.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        heroPrevSlide();
+                        startHeroAutoplay();
+                    });
+                }
+
+                heroDots.forEach((dot, i) => {
+                    dot.addEventListener('click', () => {
+                        heroIndex = i;
+                        updateHero();
+                        startHeroAutoplay();
+                    });
+                });
+
+                updateHero();
+                startHeroAutoplay();
+            }
+        })();
     </script>
 </body>
 </html>
