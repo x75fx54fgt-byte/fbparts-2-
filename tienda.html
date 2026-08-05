@@ -58,28 +58,31 @@
         body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f8f8f8; display: flex; flex-direction: column; min-height: 100vh; margin: 0; overflow-x: hidden; }
         .tienda-container { max-width: 1350px; margin: 40px auto; padding: 0 20px; display: grid; grid-template-columns: 240px 1fr 300px; gap: 25px; flex: 1; align-items: start; width: 100%; box-sizing: border-box; }
         .mobile-search-filter-wrapper { display: none; }
-        @media (max-width: 1100px) { .tienda-container { grid-template-columns: 240px 1fr; } .cart-sidebar { grid-column: 1 / -1; } }
-        @media (max-width: 900px) { .tienda-container { display: flex; flex-direction: column; padding: 0 10px; margin: 15px auto; } .sidebar { display: none !important; } .store-header { display: none !important; } .mobile-search-filter-wrapper { display: block; width: 100%; margin-bottom: 15px; } }
+        
         .sidebar { background: white; padding: 20px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,.05); position: sticky; top: 20px; }
         .sidebar h3 { color: #385723; font-family: 'Oswald', sans-serif; font-size: 20px; margin-top: 0; margin-bottom: 15px; text-transform: uppercase; border-bottom: 2px solid #eee; padding-bottom: 10px; }
         .cat-list { list-style: none; padding: 0; margin: 0; }
         .cat-list button { background: none; border: none; padding: 8px 12px; width: 100%; text-align: left; font-size: 15px; color: #555; cursor: pointer; border-radius: 4px; transition: all 0.2s; }
         .cat-list button:hover, .cat-list button.active { background: #e2f0d9; color: #385723; font-weight: bold; }
-        .ml-search-bar { background: #ffe600; padding: 12px 15px; display: flex; justify-content: center; align-items: center; width: 100%; box-sizing: border-box; }
+        
+        /* 🚀 BUSCADOR MÓVIL VERDE MARCA */
+        .ml-search-bar { background: #385723; padding: 12px 15px; display: flex; justify-content: center; align-items: center; width: 100%; box-sizing: border-box; }
         .ml-search-inner { position: relative; width: 100%; max-width: 600px; }
         .ml-search-inner input { width: 100%; padding: 10px 15px 10px 40px; border: none; border-radius: 20px; font-size: 15px; outline: none; box-shadow: 0 2px 5px rgba(0,0,0,0.1); background: #fff; }
-        .ml-search-inner i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #666; }
+        .ml-search-inner i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #385723; }
+        
         .ml-filter-btn { display: flex; justify-content: space-between; align-items: center; background: #fff; border-bottom: 1px solid #ddd; padding: 12px 18px; font-family: 'Oswald', sans-serif; font-size: 16px; color: #385723; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
         .ml-dropdown-categorias { display: none; background: #fff; border-bottom: 1px solid #eee; padding: 10px 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .ml-dropdown-categorias.active { display: block; }
+        
         .store-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
         .store-header h1 { font-family: 'Oswald', sans-serif; color: #385723; margin: 0; font-size: 28px; text-transform: uppercase; }
         .search-bar { flex: 1; max-width: 400px; position: relative; }
         .search-bar input { width: 100%; padding: 12px 15px 12px 40px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; outline: none; }
         .search-bar input:focus { border-color: #385723; }
         .search-bar i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #999; }
+        
         .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; width: 100%; }
-        @media (max-width: 900px) { .products-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; } }
         .prod-card { background: white; border: 1px solid #eee; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,.05); transition: transform 0.2s; display: flex; flex-direction: column; }
         .prod-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,.1); }
         .prod-img-wrap { width: 100%; height: 180px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; }
@@ -92,6 +95,7 @@
         .btn-add-cart:hover { background: #2c441b; }
         .btn-ml { background: #ffe600; color: #333; padding: 8px; border-radius: 4px; text-align: center; text-decoration: none; font-weight: bold; display: block; width: 100%; transition: 0.2s; box-sizing: border-box; font-size: 12px; }
         #loading-msg { text-align: center; padding: 50px; color: #666; grid-column: 1 / -1; font-size: 18px; }
+        
         .cart-sidebar { background: white; padding: 20px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,.05); position: sticky; top: 20px; display: flex; flex-direction: column; max-height: 85vh; width: 100%; box-sizing: border-box; }
         .cart-sidebar h3 { color: #5b8743; font-family: 'Oswald', sans-serif; font-size: 20px; margin-top: 0; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
         .cart-items-container { flex: 1; overflow-y: auto; margin-bottom: 10px; padding-right: 5px; }
@@ -106,7 +110,8 @@
         .cart-total-amount { font-size: 24px; color: #385723; font-weight: bold; font-family: 'Oswald', sans-serif; }
         .btn-checkout { background: #25D366; color: white; border: none; padding: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; width: 100%; transition: 0.2s; font-family: 'Oswald', sans-serif; }
         .btn-checkout:hover { background: #1ebd5a; }
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 100; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 100001; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
         .modal-content { background: white; padding: 30px; border-radius: 8px; width: 100%; max-width: 450px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
         .modal-content h3 { font-family: 'Oswald', sans-serif; color: #385723; margin-top: 0; font-size: 24px; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
         .form-group { margin-bottom: 15px; }
@@ -121,6 +126,42 @@
         .btn-confirm-order:hover { background: #2c441b; }
         .btn-cancel { background: #e0e0e0; color: #333; padding: 10px; border: none; border-radius: 4px; width: 100%; font-weight: bold; cursor: pointer; font-size: 14px; margin-top: 10px; transition: background 0.2s; }
         .btn-cancel:hover { background: #ccc; }
+
+        /* ========================================== */
+        /* 🚀 REGLAS HEADER Y CARRITO MÓVIL (CORREGIDO) */
+        /* ========================================== */
+        @media (max-width: 1100px) { .tienda-container { grid-template-columns: 240px 1fr; } .cart-sidebar { grid-column: 1 / -1; } }
+        @media (max-width: 900px) { 
+            .tienda-container { display: flex; flex-direction: column; padding: 0 10px; margin: 15px auto; } 
+            .sidebar, .store-header { display: none !important; } 
+            .mobile-search-filter-wrapper { display: block; width: 100%; margin-bottom: 15px; } 
+            .products-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+            
+            header { position: relative; width: 100%; }
+            header .header-wrap { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: space-between !important; align-items: center !important; padding: 10px 15px !important; width: 100% !important; box-sizing: border-box !important; }
+            header .header-right { display: none !important; }
+            header .logo { flex: 0 0 auto; display: flex; align-items: center; }
+            header .logo img { height: 45px !important; width: auto; max-width: 200px; }
+            
+            .mobile-menu { display: flex !important; align-items: center; justify-content: center; background: #385723 !important; color: white !important; border: none; padding: 10px 14px; border-radius: 6px; font-size: 22px; cursor: pointer; margin-left: auto !important; }
+            header nav { display: none; flex-direction: column; position: absolute; top: 100%; left: 0; width: 100%; background: white; box-shadow: 0 10px 15px rgba(0,0,0,0.1); border-top: 1px solid #eee; z-index: 9999; }
+            header nav.menu-activo { display: flex !important; }
+            header nav a { padding: 15px 20px !important; border-bottom: 1px solid #f0f0f0; width: 100%; text-align: left; box-sizing: border-box; color: #385723 !important; font-weight: bold; }
+            header nav a i { color: #385723 !important; }
+
+            /* 🚀 CARRO FLOTANTE MÓVIL (Lado Izquierdo) */
+            #btn-carrito-flotante { display: flex !important; position: fixed; bottom: 25px; left: 25px; z-index: 99998; background: #385723; color: white; border: none; width: 60px; height: 60px; border-radius: 50%; cursor: pointer; font-size: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); align-items: center; justify-content: center; transition: transform 0.2s; }
+            #cart-badge { position: absolute; top: -5px; right: -5px; background: #ff4d4d; color: white; font-size: 12px; font-weight: bold; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; }
+            
+            /* Panel Completo del Carrito Móvil */
+            .cart-sidebar { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; max-height: 100vh; background: white; z-index: 100000; border-radius: 0; padding: 20px; box-sizing: border-box; flex-direction: column; }
+            .cart-sidebar.active { display: flex !important; }
+            .close-cart-btn { display: block !important; }
+        }
+        @media (min-width: 901px) {
+            #btn-carrito-flotante { display: none !important; }
+            .close-cart-btn { display: none !important; }
+        }
     </style>
 </head>
 <body>
@@ -129,16 +170,25 @@
         <p style="margin:0; font-weight: bold; font-size: 14px; letter-spacing: 1px;">DELIVERY GRATIS EN CARACAS</p><span>(CIERTAS CONDICIONES APLICAN)</span>
     </div>
 
+    <!-- 🚀 HEADER ESTANDARIZADO MÓVIL -->
     <header style="background: white; border-bottom: 1px solid #eee;">
-        <div class="container header-wrap" style="padding: 15px 20px; max-width: 1350px;">
+        <div class="container header-wrap" style="padding: 15px 20px; max-width: 1350px; display: flex; justify-content: space-between; align-items: center;">
             <a class="logo" href="index.html">
-                <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logotipo Oficial F&B PARTS - Autopartes Originales en Caracas" decoding="async">
+                <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logotipo F&B PARTS" decoding="async" style="height: 60px;">
             </a>
-            <nav>
-                <a href="index.html">Inicio</a>
-                <a href="tienda.html" style="color: #385723; font-weight: bold; border-bottom: 2px solid #385723; padding-bottom: 5px;">Tienda</a>
+            
+            <nav id="nav-principal">
+                <a href="index.html" onclick="toggleMenuMobile()">Inicio</a>
+                <a href="tienda.html" onclick="toggleMenuMobile()" style="color: #385723; font-weight: bold; border-bottom: 2px solid #385723; padding-bottom: 5px;">Tienda</a>
+                <a href="index.html#nosotros" onclick="toggleMenuMobile()">Quienes somos</a>
+                <a href="index.html#mercadolibre" onclick="toggleMenuMobile()">Mercado Libre</a>
+                <a href="index.html#contacto" onclick="toggleMenuMobile()">Contacto</a>
                 <a href="login.html" id="nav-cuenta-btn" style="color: var(--green); font-weight: bold;"><i class="fas fa-user"></i> Mi Cuenta</a>
             </nav>
+
+            <button class="mobile-menu" aria-label="Menú" onclick="toggleMenuMobile()" style="display: none;">
+                <i class="fas fa-bars"></i>
+            </button>
         </div>
     </header>
 
@@ -182,7 +232,11 @@
         </main>
 
         <aside class="cart-sidebar" id="tu-pedido">
-            <h3><i class="fas fa-shopping-cart"></i> TU PEDIDO</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">
+                <h3 style="margin: 0; border: none; padding: 0; color: #5b8743;"><i class="fas fa-shopping-cart"></i> TU PEDIDO</h3>
+                <button class="close-cart-btn" onclick="toggleCartMobile()" style="background: none; border: none; font-size: 24px; color: #333; cursor: pointer; display: none;"><i class="fas fa-times"></i></button>
+            </div>
+
             <div class="cart-items-container" id="cart-items"></div>
             
             <div class="cart-total-box">
@@ -196,6 +250,12 @@
         </aside>
     </div>
 
+    <!-- 🚀 BOTÓN CARRITO FLOTANTE (Solo visible en Móvil) -->
+    <button id="btn-carrito-flotante" onclick="toggleCartMobile()">
+        <i class="fas fa-shopping-cart"></i>
+        <span id="cart-badge" style="display: none;">0</span>
+    </button>
+
     <div class="modal-overlay" id="modal-pago">
         <div class="modal-content">
             <h3>Confirmar Pedido</h3>
@@ -205,7 +265,6 @@
                 <label>Nombre del Cliente (Para la orden)</label>
                 <input type="text" id="nombre-checkout" placeholder="Ej: Juan Pérez" required>
             </div>
-
             <div class="form-group">
                 <label>Método de Envío o Retiro</label>
                 <select id="metodo-envio" onchange="verificarCamposEnvio()">
@@ -214,7 +273,6 @@
                     <option value="Encomienda Nacional (MRW, Tealca, Zoom)">Envío Nacional (MRW, Tealca, Zoom)</option>
                 </select>
             </div>
-
             <div class="form-group" id="grupo-direccion" style="display: none;">
                 <label>Dirección exacta de entrega (Escribe o usa el GPS)</label>
                 <div class="input-gps-group">
@@ -225,11 +283,10 @@
                 </div>
                 <small style="color: #666; font-size: 11px; display: block; margin-top: 5px;">Presiona "GPS" para adjuntar tu enlace exacto de Google Maps automáticamente.</small>
             </div>
-
             <div class="form-group">
                 <label>Método de Pago Preferido</label>
                 <select id="metodo-pago">
-                    <option value="Pago Móvil">Pago Móvil</option>
+                    <option value="Pago Móvil">Pago Móvil en bolívares</option>
                     <option value="Efectivo Divisas">Efectivo en divisas</option>
                     <option value="Transferencia Banesco">Transferencia - Banesco</option>
                     <option value="Transferencia Banco Nacional de Credito">Transferencia - Banco Nacional de Crédito</option>
@@ -238,7 +295,6 @@
                     <option value="Binance">Binance</option>
                 </select>
             </div>
-
             <button class="btn-confirm-order" id="btn-enviar-final" onclick="finalizarPedidoBaseDatos()">
                 <i class="fab fa-whatsapp"></i> Confirmar y Enviar WhatsApp
             </button>
@@ -246,15 +302,12 @@
         </div>
     </div>
 
-    <!-- FOOTER -->
     <footer style="background-color: #000; color: #fff; text-align: center; padding: 25px 0; margin-top: auto;">
         <p class="oswald" style="margin: 0; font-size: 16px; letter-spacing: 1px;">&copy;<span id="year-footer">2026</span> por F&B PARTS.</p>
         <script> document.getElementById('year-footer').textContent = new Date().getFullYear(); </script>
     </footer>
 
-    <!-- ========================================== -->
-    <!-- WIDGET FLOTANTE DE WHATSAPP TIPO CHATBOT   -->
-    <!-- ========================================== -->
+    <!-- WIDGET FLOTANTE DE WHATSAPP TIPO CHATBOT -->
     <div id="wa-chat-widget" style="position: fixed; bottom: 25px; right: 25px; z-index: 99999; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
         <div id="wa-chat-box" style="display: none; position: absolute; bottom: 75px; right: 0; width: 320px; background: white; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); overflow: hidden; border: 1px solid #eee;">
             <div style="background: #385723; color: white; padding: 15px; display: flex; align-items: center; justify-content: space-between;">
@@ -286,7 +339,14 @@
             <i class="fab fa-whatsapp" id="wa-icon-toggle"></i>
         </button>
     </div>
+
+    <!-- SCRIPT DE INTERACCIÓN MÓVIL Y CARRITO -->
     <script>
+        function toggleMenuMobile() {
+            const nav = document.getElementById('nav-principal');
+            nav.classList.toggle('menu-activo');
+        }
+
         function toggleWaChat() {
             const box = document.getElementById('wa-chat-box');
             const icon = document.getElementById('wa-icon-toggle');
@@ -298,8 +358,13 @@
                 icon.className = 'fab fa-whatsapp';
             }
         }
+
+        // 🚀 ABRIR/CERRAR PANEL DEL CARRITO MÓVIL
+        function toggleCartMobile() {
+            const cart = document.getElementById('tu-pedido');
+            cart.classList.toggle('active');
+        }
     </script>
-    <!-- ========================================== -->
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -472,6 +537,7 @@
             if(item) item.cantidad++;
             else window.carrito.push({ id, nombre, precio, cantidad: 1 });
             actualizarUICarrito();
+            alert("¡Repuesto añadido a tu pedido!");
         };
 
         window.cambiarCantidad = function(id, delta) {
@@ -493,31 +559,40 @@
             const container = document.getElementById('cart-items');
             const totalDisplay = document.getElementById('cart-total-amount');
             container.innerHTML = '';
+            
             let total = 0;
+            let cantidadArticulos = 0; // 🚀 NÚMERO PARA EL BADGE DEL CARRO MÓVIL
 
             if(window.carrito.length === 0) {
                 container.innerHTML = '<div style="text-align:center; color:#999; padding:20px;">Vacío</div>';
                 totalDisplay.innerText = '$0.00';
-                return;
+            } else {
+                window.carrito.forEach(item => {
+                    total += item.precio * item.cantidad;
+                    cantidadArticulos += item.cantidad;
+                    container.innerHTML += `
+                        <div class="cart-item">
+                            <div class="cart-item-info">
+                                <div class="cart-item-title">${item.nombre}</div>
+                                <div class="cart-item-price">${item.cantidad} x $${item.precio.toFixed(2)}</div>
+                            </div>
+                            <div class="cart-item-controls">
+                                <button class="btn-qty" onclick="cambiarCantidad('${item.id}', -1)">-</button>
+                                <span>${item.cantidad}</span>
+                                <button class="btn-qty" onclick="cambiarCantidad('${item.id}', 1)">+</button>
+                                <button class="btn-remove" onclick="eliminarDelCarrito('${item.id}')"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>`;
+                });
+                totalDisplay.innerText = `$${total.toFixed(2)}`;
             }
 
-            window.carrito.forEach(item => {
-                total += item.precio * item.cantidad;
-                container.innerHTML += `
-                    <div class="cart-item">
-                        <div class="cart-item-info">
-                            <div class="cart-item-title">${item.nombre}</div>
-                            <div class="cart-item-price">${item.cantidad} x $${item.precio.toFixed(2)}</div>
-                        </div>
-                        <div class="cart-item-controls">
-                            <button class="btn-qty" onclick="cambiarCantidad('${item.id}', -1)">-</button>
-                            <span>${item.cantidad}</span>
-                            <button class="btn-qty" onclick="cambiarCantidad('${item.id}', 1)">+</button>
-                            <button class="btn-remove" onclick="eliminarDelCarrito('${item.id}')"><i class="fas fa-trash"></i></button>
-                        </div>
-                    </div>`;
-            });
-            totalDisplay.innerText = `$${total.toFixed(2)}`;
+            // 🚀 ACTUALIZAR NÚMERO DEL BOTÓN FLOTANTE MÓVIL
+            const badge = document.getElementById('cart-badge');
+            if(badge) {
+                badge.innerText = cantidadArticulos;
+                badge.style.display = cantidadArticulos > 0 ? 'flex' : 'none';
+            }
         }
 
         window.iniciarCheckout = function() {
@@ -530,6 +605,11 @@
                 window.location.href = "login.html"; 
                 return;
             }
+
+            // 🚀 Cerrar el panel del carrito móvil antes de abrir el modal de pago
+            const cart = document.getElementById('tu-pedido');
+            if(cart) cart.classList.remove('active');
+
             document.getElementById('modal-pago').style.display = 'flex';
         };
 
