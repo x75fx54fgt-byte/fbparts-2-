@@ -37,7 +37,65 @@
         .related-section { max-width: 1100px; margin: 0 auto 50px auto; padding: 0 20px; width: 100%; box-sizing: border-box; }
         .related-section h3 { font-family: 'Oswald', sans-serif; color: #385723; font-size: 22px; text-transform: uppercase; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
         .related-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+        
         @media (max-width: 900px) { .product-container { grid-template-columns: 1fr; padding: 20px; } .product-img-box { height: 280px; } .related-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } }
+
+        /* ========================================== */
+        /* 🚀 REGLAS DE CORRECCIÓN PARA EL HEADER MÓVIL */
+        /* ========================================== */
+        @media (max-width: 900px) {
+            header { position: relative; width: 100%; }
+            header .header-wrap {
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: nowrap !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                padding: 10px 15px !important;
+                width: 100% !important; 
+                box-sizing: border-box !important;
+            }
+            header .header-right { display: none !important; }
+            header .logo { flex: 0 0 auto; display: flex; align-items: center; }
+            header .logo img { height: 45px !important; width: auto; max-width: 200px; }
+            
+            .mobile-menu {
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+                background: #385723 !important;
+                color: white !important;
+                border: none;
+                padding: 10px 14px;
+                border-radius: 6px;
+                font-size: 22px;
+                cursor: pointer;
+                margin-left: auto !important;
+            }
+            header nav {
+                display: none; 
+                flex-direction: column;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                width: 100%;
+                background: white;
+                box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+                border-top: 1px solid #eee;
+                z-index: 9999;
+            }
+            header nav.menu-activo { display: flex !important; }
+            header nav a {
+                padding: 15px 20px !important;
+                border-bottom: 1px solid #f0f0f0;
+                width: 100%;
+                text-align: left;
+                box-sizing: border-box;
+                color: #385723 !important; 
+                font-weight: bold;
+            }
+            header nav a i { color: #385723 !important; }
+        }
     </style>
 </head>
 <body>
@@ -46,16 +104,25 @@
         <p style="margin:0; font-weight: bold; font-size: 14px; letter-spacing: 1px;">DELIVERY GRATIS EN CARACAS</p><span>(CIERTAS CONDICIONES APLICAN)</span>
     </div>
 
+    <!-- 🚀 HEADER MÓVIL CORREGIDO -->
     <header style="background: white; border-bottom: 1px solid #eee;">
-        <div class="container header-wrap" style="padding: 15px 20px; max-width: 1350px;">
+        <div class="container header-wrap" style="padding: 15px 20px; max-width: 1350px; display: flex; justify-content: space-between; align-items: center;">
             <a class="logo" href="index.html">
                 <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logotipo F&B PARTS" decoding="async" style="height: 60px;">
             </a>
-            <nav>
-                <a href="index.html">Inicio</a>
-                <a href="tienda.html" style="color: #385723; font-weight: bold;">Tienda</a>
+            
+            <nav id="nav-principal">
+                <a href="index.html" onclick="toggleMenuMobile()">Inicio</a>
+                <a href="tienda.html" onclick="toggleMenuMobile()" style="color: #385723; font-weight: bold;">Tienda</a>
+                <a href="index.html#nosotros" onclick="toggleMenuMobile()">Quienes somos</a>
+                <a href="index.html#mercadolibre" onclick="toggleMenuMobile()">Mercado Libre</a>
+                <a href="index.html#contacto" onclick="toggleMenuMobile()">Contacto</a>
                 <a href="login.html" id="nav-cuenta-btn" style="color: var(--green); font-weight: bold;"><i class="fas fa-user"></i> Mi Cuenta</a>
             </nav>
+
+            <button class="mobile-menu" aria-label="Menú" onclick="toggleMenuMobile()" style="display: none;">
+                <i class="fas fa-bars"></i>
+            </button>
         </div>
     </header>
 
@@ -81,9 +148,7 @@
         <script> document.getElementById('year-footer').textContent = new Date().getFullYear(); </script>
     </footer>
 
-    <!-- ========================================== -->
-    <!-- WIDGET FLOTANTE DE WHATSAPP TIPO CHATBOT   -->
-    <!-- ========================================== -->
+    <!-- WIDGET FLOTANTE DE WHATSAPP TIPO CHATBOT -->
     <div id="wa-chat-widget" style="position: fixed; bottom: 25px; right: 25px; z-index: 99999; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
         <div id="wa-chat-box" style="display: none; position: absolute; bottom: 75px; right: 0; width: 320px; background: white; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); overflow: hidden; border: 1px solid #eee;">
             <div style="background: #385723; color: white; padding: 15px; display: flex; align-items: center; justify-content: space-between;">
@@ -115,7 +180,14 @@
             <i class="fab fa-whatsapp" id="wa-icon-toggle"></i>
         </button>
     </div>
+
+    <!-- Script para Abrir/Cerrar Menú Móvil y Chat WhatsApp -->
     <script>
+        function toggleMenuMobile() {
+            const nav = document.getElementById('nav-principal');
+            nav.classList.toggle('menu-activo');
+        }
+
         function toggleWaChat() {
             const box = document.getElementById('wa-chat-box');
             const icon = document.getElementById('wa-icon-toggle');
