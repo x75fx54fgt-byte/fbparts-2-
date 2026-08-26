@@ -230,9 +230,10 @@
                             </button>
                         </div>
 
+                        <!-- CORRECCIÓN AQUÍ: onsubmit agregado -->
                         <div class="card-form">
                             <h3><i class="fas fa-box-open"></i> Cargar Repuesto Individual</h3>
-                            <form id="product-form">
+                            <form id="product-form" onsubmit="guardarNuevoRepuesto(event)">
                                 <div class="form-group">
                                     <label>Nombre, Marca, Modelo y Año</label>
                                     <input type="text" id="prod-nombre" placeholder="Ej: Bomba de Agua Yaris 2008" required>
@@ -307,27 +308,43 @@
                 </div>
 
                 <div class="admin-grid">
-                    <div class="card-form">
-                        <h3><i class="fas fa-user-plus"></i> Registrar Nuevo Cliente</h3>
-                        <form id="form-cliente-db">
-                            <div class="form-group">
-                                <label>Nombre / Aseguradora</label>
-                                <input type="text" id="db-cliente-nombre" placeholder="Ej: C.A. SEGUROS CATATUMBO" required>
-                            </div>
-                            <div class="form-group">
-                                <label>RIF o C.I.</label>
-                                <input type="text" id="db-cliente-rif" placeholder="Ej: J-07001736-8" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Dirección / Ciudad</label>
-                                <input type="text" id="db-cliente-dir" placeholder="Ej: MARACAIBO, VENEZUELA" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Teléfono</label>
-                                <input type="text" id="db-cliente-tel" placeholder="Ej: 0261-700-5555" required>
-                            </div>
-                            <button type="submit" class="btn-action">Guardar en Base de Datos</button>
-                        </form>
+                    <div>
+                        <!-- NUEVO: Carga Masiva de Clientes -->
+                        <div class="card-form" style="background: #e2f0d9; border-color: #c3e6cb;">
+                            <h3 style="color: #155724; border-color: #c3e6cb;"><i class="fas fa-users"></i> Carga Masiva de Clientes</h3>
+                            <p style="font-size: 12px; color: #155724; margin-top: 0; margin-bottom: 10px;">
+                                Copia desde Excel y pega aquí para subir clientes de golpe. Se ignorarán los RIFs repetidos.<br>
+                                <strong>Orden columnas:</strong> Nombre | RIF | Dirección | Teléfono
+                            </p>
+                            <textarea id="excel-paste-clientes" placeholder="Pega aquí las filas y columnas de tu Excel..." style="width: 100%; height: 90px; padding: 10px; border: 1px solid #c3e6cb; border-radius: 4px; font-size: 12px; font-family: monospace; outline: none; margin-bottom: 10px; resize: vertical;"></textarea>
+                            
+                            <button type="button" id="btn-excel-upload-clientes" onclick="procesarPegadoMasivoClientes()" style="background: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; width: 100%;">
+                                Subir Clientes
+                            </button>
+                        </div>
+
+                        <div class="card-form">
+                            <h3><i class="fas fa-user-plus"></i> Registrar Nuevo Cliente</h3>
+                            <form id="form-cliente-db" onsubmit="guardarNuevoClienteDB(event)">
+                                <div class="form-group">
+                                    <label>Nombre / Aseguradora</label>
+                                    <input type="text" id="db-cliente-nombre" placeholder="Ej: C.A. SEGUROS CATATUMBO" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>RIF o C.I.</label>
+                                    <input type="text" id="db-cliente-rif" placeholder="Ej: J-07001736-8" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Dirección / Ciudad</label>
+                                    <input type="text" id="db-cliente-dir" placeholder="Ej: MARACAIBO, VENEZUELA" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Teléfono</label>
+                                    <input type="text" id="db-cliente-tel" placeholder="Ej: 0261-700-5555" required>
+                                </div>
+                                <button type="submit" class="btn-action">Guardar en Base de Datos</button>
+                            </form>
+                        </div>
                     </div>
 
                     <div style="overflow-x: auto;">
@@ -392,9 +409,16 @@
                             </div>
                         </div>
 
-                        <div class="form-group">
-                            <label>Dirección</label>
-                            <input type="text" id="fac-direccion" placeholder="Dirección corta" oninput="actualizarPreviewFactura()">
+                        <!-- 🚀 NUEVO: Campo Editable Disponibilidad para Facturas -->
+                        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>Dirección</label>
+                                <input type="text" id="fac-direccion" placeholder="Dirección corta" oninput="actualizarPreviewFactura()">
+                            </div>
+                            <div class="form-group">
+                                <label>Condición / Entrega</label>
+                                <input type="text" id="fac-disponibilidad" value="ENTREGA INMEDIATA" oninput="actualizarPreviewFactura()">
+                            </div>
                         </div>
 
                         <h3 style="margin-top: 25px;"><i class="fas fa-list"></i> Ítems a Facturar (Reventa o Catálogo)</h3>
@@ -540,9 +564,16 @@
                             </div>
                         </div>
 
-                        <div class="form-group">
-                            <label>Año del Vehículo</label>
-                            <input type="text" id="cot-anio" value="2026" oninput="actualizarPreview()">
+                        <!-- 🚀 NUEVO: Campo Editable Disponibilidad para Cotizaciones -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>Año del Vehículo</label>
+                                <input type="text" id="cot-anio" value="2026" oninput="actualizarPreview()">
+                            </div>
+                            <div class="form-group">
+                                <label>Disponibilidad / Condición</label>
+                                <input type="text" id="cot-disponibilidad" value="ENTREGA INMEDIATA" oninput="actualizarPreview()">
+                            </div>
                         </div>
 
                         <h3 style="margin-top: 25px;"><i class="fas fa-list"></i> Ítems Cotizados</h3>
@@ -557,14 +588,7 @@
                         </div>
 
                         <div id="cotizacion-items-container">
-                            <div class="cotizacion-item-row">
-                                <input type="number" class="item-cant" value="1" min="1" placeholder="Cant" oninput="calcularTotalCotizacion()">
-                                <input type="text" class="item-desc" value="STOP LH (ORIGINAL)" placeholder="Descripción" oninput="actualizarPreview()">
-                                <input type="number" step="0.01" class="item-precio" value="145.89" placeholder="Precio" oninput="calcularTotalCotizacion()">
-                                <input type="number" step="0.01" class="item-descval" value="45.90" placeholder="Desc." oninput="calcularTotalCotizacion()">
-                                <input type="text" class="item-total-line" value="$99.99" readonly style="background: #f1f1f1; text-align: right; font-weight: bold;">
-                                <button type="button" onclick="this.parentElement.remove(); calcularTotalCotizacion();" style="background:#d9534f; color:white; border:none; border-radius:4px; cursor:pointer;"><i class="fas fa-times"></i></button>
-                            </div>
+                            <!-- Items cotizacion -->
                         </div>
 
                         <button type="button" onclick="agregarFilaCotizacionVacia()" style="background: #1d6fa5; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold; margin-bottom: 20px;">
@@ -572,10 +596,10 @@
                         </button>
 
                         <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #ddd; text-align: right; margin-bottom: 20px; font-size: 13px;">
-                            <div>Sub-Total: $<span id="cot-subtotal">145.89</span></div>
-                            <div style="color: #d9534f;">Descuento: -$<span id="cot-total-desc">45.90</span></div>
-                            <div>16% IVA: $<span id="cot-iva">16.00</span></div>
-                            <div style="font-size: 16px; font-weight: bold; color: var(--green); margin-top: 5px;">TOTAL: $<span id="cot-total-general">115.99</span></div>
+                            <div>Sub-Total: $<span id="cot-subtotal">0.00</span></div>
+                            <div style="color: #d9534f;">Descuento: -$<span id="cot-total-desc">0.00</span></div>
+                            <div>16% IVA: $<span id="cot-iva">0.00</span></div>
+                            <div style="font-size: 16px; font-weight: bold; color: var(--green); margin-top: 5px;">TOTAL: $<span id="cot-total-general">0.00</span></div>
                         </div>
 
                         <button type="button" class="btn-action" onclick="guardarYGenerarCotizacion()" style="font-size: 16px; padding: 15px; background: #1d6fa5;">
@@ -590,7 +614,7 @@
                                 <i class="fas fa-eye"></i> Vista Previa en Tiempo Real
                             </h3>
                             <div id="pdf-preview-box" style="border: 1px solid #ddd; background: white; padding: 15px; font-family: Arial, sans-serif; color: #333; font-size: 10px; overflow: hidden; min-height: 650px;">
-                                <!-- Aquí se inyecta la vista previa -->
+                                <!-- Vista previa -->
                             </div>
                         </div>
                     </div>
@@ -908,7 +932,7 @@
         };
 
         // ==========================================
-        // CATÁLOGO Y CLIENTES
+        // CATÁLOGO Y STOCK
         // ==========================================
         window.abrirModalCategorias = async function() {
             document.getElementById('modal-categorias').style.display = 'flex';
@@ -942,52 +966,30 @@
             } catch (error) { console.error(error); }
         };
 
-        window.cargarBaseClientes = async function() {
-            const tbody = document.getElementById('clients-table-body');
-            const selectCotizacion = document.getElementById('cot-selector-clientes');
-            const selectFactura = document.getElementById('fac-selector-clientes'); 
-            
-            if(tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">Cargando base de datos...</td></tr>`;
-            if(selectCotizacion) selectCotizacion.innerHTML = '<option value="">Selecciona un cliente o aseguradora...</option>';
-            if(selectFactura) selectFactura.innerHTML = '<option value="">Selecciona un cliente o mostrador...</option>';
-            window.clientesDBLocal = {};
+        window.guardarNuevoRepuesto = async function(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.innerHTML = "Guardando..."; btn.disabled = true;
+
+            const nuevoProducto = {
+                nombre: document.getElementById('prod-nombre').value.trim(),
+                precio: Number(document.getElementById('prod-precio').value),
+                stock: Number(document.getElementById('prod-stock').value),
+                categoria: document.getElementById('prod-categoria').value,
+                imagen: document.getElementById('prod-imagen').value.trim(),
+                numero_parte: document.getElementById('prod-numero-parte').value.trim(),
+                descripcion: document.getElementById('prod-descripcion').value.trim(),
+                estado: "activo",
+                ml_id: ""
+            };
 
             try {
-                const snap = await getDocs(collection(db, "clientes"));
-                if(tbody) tbody.innerHTML = '';
-                
-                if(snap.empty && tbody) {
-                     tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">No hay clientes registrados.</td></tr>`;
-                     return;
-                }
-                
-                snap.forEach((docSnap) => {
-                    const cli = docSnap.data();
-                    const docId = docSnap.id;
-                    window.clientesDBLocal[docId] = cli;
-
-                    if(selectCotizacion) selectCotizacion.innerHTML += `<option value="${docId}">${cli.nombre} - ${cli.rif}</option>`;
-                    if(selectFactura) selectFactura.innerHTML += `<option value="${docId}">${cli.nombre} - ${cli.rif}</option>`;
-
-                    if(tbody) {
-                        tbody.innerHTML += `
-                            <tr>
-                                <td><strong>${cli.nombre}</strong></td>
-                                <td>${cli.rif}</td>
-                                <td>${cli.direccion}</td>
-                                <td>${cli.telefono}</td>
-                                <td style="text-align: center;">
-                                    <button type="button" onclick="eliminarClienteDB('${docId}')" style="background:#d9534f; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;"><i class="fas fa-trash"></i></button>
-                                </td>
-                            </tr>`;
-                    }
-                });
-            } catch (error) { console.error(error); }
-        };
-
-        window.eliminarClienteDB = async function(docId) {
-            if(!confirm("¿Eliminar este cliente de la base de datos?")) return;
-            try { await deleteDoc(doc(db, "clientes", docId)); window.cargarBaseClientes(); } catch (error) { console.error(error); }
+                await addDoc(collection(db, "productos"), nuevoProducto);
+                alert("¡Repuesto guardado con éxito!");
+                e.target.reset();
+                window.cargarCatalogoAdmin();
+            } catch (error) { console.error(error); alert("Error al guardar el repuesto."); }
+            btn.innerHTML = "Guardar Repuesto"; btn.disabled = false;
         };
 
         window.cargarCatalogoAdmin = async function() {
@@ -1058,6 +1060,236 @@
                 const nom = fila.querySelector('.prod-nombre-col')?.textContent.toLowerCase() || '';
                 fila.style.display = ((filtroCat === 'todos' || cat === filtroCat) && nom.includes(texto)) ? '' : 'none';
             });
+        };
+
+        // ==========================================
+        // BASE DE CLIENTES Y CARGA MASIVA
+        // ==========================================
+        
+        window.procesarPegadoMasivoClientes = async function() {
+            const texto = document.getElementById('excel-paste-clientes').value.trim();
+            const btn = document.getElementById('btn-excel-upload-clientes');
+            
+            if(!texto) { alert("Pega el contenido de tu Excel."); return; }
+
+            btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Procesando...";
+            btn.disabled = true;
+            
+            const lineas = texto.split('\n');
+            let importados = 0;
+            let ignorados = 0;
+            
+            try {
+                for(let linea of lineas) {
+                    const columnas = linea.split('\t'); 
+                    if(columnas.length >= 2) {
+                        const nombre = columnas[0] ? columnas[0].trim() : "";
+                        const rif = columnas[1] ? columnas[1].trim() : "";
+                        const direccion = columnas[2] ? columnas[2].trim() : "NO APLICA";
+                        const telefono = columnas[3] ? columnas[3].trim() : "NO APLICA";
+                        
+                        if(nombre && rif && nombre.toLowerCase() !== "nombre" && nombre.toLowerCase() !== "cliente") {
+                            let existe = false;
+                            for (const key in window.clientesDBLocal) {
+                                if (window.clientesDBLocal[key].rif && window.clientesDBLocal[key].rif.trim().toUpperCase() === rif.toUpperCase()) {
+                                    existe = true; break;
+                                }
+                            }
+
+                            if(!existe) {
+                                await addDoc(collection(db, "clientes"), {
+                                    nombre, rif, direccion, telefono
+                                });
+                                importados++;
+                                window.clientesDBLocal["temp_" + importados] = { rif: rif }; 
+                            } else {
+                                ignorados++;
+                            }
+                        }
+                    }
+                }
+                
+                alert(`¡Carga Completada!\n\n✅ Clientes nuevos subidos: ${importados}\n⚠️ Ignorados (ya existían): ${ignorados}`);
+                document.getElementById('excel-paste-clientes').value = "";
+                window.cargarBaseClientes();
+            } catch(e) {
+                console.error(e);
+                alert("Ocurrió un error al procesar el Excel de clientes.");
+            }
+            btn.innerHTML = "Subir Clientes";
+            btn.disabled = false;
+        };
+
+        window.guardarNuevoClienteDB = async function(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.innerHTML = "Guardando..."; btn.disabled = true;
+
+            const nuevoCliente = {
+                nombre: document.getElementById('db-cliente-nombre').value.trim(),
+                rif: document.getElementById('db-cliente-rif').value.trim(),
+                direccion: document.getElementById('db-cliente-dir').value.trim(),
+                telefono: document.getElementById('db-cliente-tel').value.trim()
+            };
+
+            try {
+                await addDoc(collection(db, "clientes"), nuevoCliente);
+                alert("¡Cliente registrado en la base de datos con éxito!");
+                document.getElementById('form-cliente-db').reset();
+                window.cargarBaseClientes();
+            } catch (error) { console.error(error); alert("Error al registrar el cliente."); }
+            btn.innerHTML = "Guardar en Base de Datos"; btn.disabled = false;
+        };
+
+        window.cargarBaseClientes = async function() {
+            const tbody = document.getElementById('clients-table-body');
+            const selectCotizacion = document.getElementById('cot-selector-clientes');
+            const selectFactura = document.getElementById('fac-selector-clientes'); 
+            
+            if(tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">Cargando base de datos...</td></tr>`;
+            if(selectCotizacion) selectCotizacion.innerHTML = '<option value="">Selecciona un cliente o aseguradora...</option>';
+            if(selectFactura) selectFactura.innerHTML = '<option value="">Selecciona un cliente o mostrador...</option>';
+            window.clientesDBLocal = {};
+
+            try {
+                const snap = await getDocs(collection(db, "clientes"));
+                if(tbody) tbody.innerHTML = '';
+                
+                if(snap.empty && tbody) {
+                     tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">No hay clientes registrados.</td></tr>`;
+                     return;
+                }
+                
+                snap.forEach((docSnap) => {
+                    const cli = docSnap.data();
+                    const docId = docSnap.id;
+                    window.clientesDBLocal[docId] = cli;
+
+                    if(selectCotizacion) selectCotizacion.innerHTML += `<option value="${docId}">${cli.nombre} - ${cli.rif}</option>`;
+                    if(selectFactura) selectFactura.innerHTML += `<option value="${docId}">${cli.nombre} - ${cli.rif}</option>`;
+
+                    if(tbody) {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td><strong>${cli.nombre}</strong></td>
+                                <td>${cli.rif}</td>
+                                <td>${cli.direccion}</td>
+                                <td>${cli.telefono}</td>
+                                <td style="text-align: center;">
+                                    <button type="button" onclick="eliminarClienteDB('${docId}')" style="background:#d9534f; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>`;
+                    }
+                });
+            } catch (error) { console.error(error); }
+        };
+
+        window.eliminarClienteDB = async function(docId) {
+            if(!confirm("¿Eliminar este cliente de la base de datos?")) return;
+            try { await deleteDoc(doc(db, "clientes", docId)); window.cargarBaseClientes(); } catch (error) { console.error(error); }
+        };
+
+        window.abrirEdicion = function(id, nombre, precio, stock, categoria, estado, imagen, numero_parte, descripcion) {
+            document.getElementById('edit-id').value = id;
+            document.getElementById('edit-nombre').value = nombre;
+            document.getElementById('edit-precio').value = precio;
+            document.getElementById('edit-stock').value = stock;
+            document.getElementById('edit-categoria').value = categoria;
+            document.getElementById('edit-estado').value = estado || 'activo';
+            document.getElementById('edit-imagen').value = imagen;
+            
+            document.getElementById('edit-numero-parte').value = (numero_parte && numero_parte !== 'undefined') ? numero_parte : '';
+            document.getElementById('edit-descripcion').value = (descripcion && descripcion !== 'undefined') ? descripcion.replace(/\\n/g, '\n') : '';
+            
+            document.getElementById('modal-edicion').style.display = 'flex';
+        };
+
+        window.cerrarModalEdicion = function() {
+            document.getElementById('modal-edicion').style.display = 'none';
+        };
+
+        window.guardarCambiosProducto = async function() {
+            const docId = document.getElementById('edit-id').value;
+            const btn = document.getElementById('btn-save-edit');
+            btn.innerHTML = "Guardando...";
+            btn.disabled = true;
+
+            const datosActualizados = {
+                nombre: document.getElementById('edit-nombre').value.trim(),
+                precio: Number(document.getElementById('edit-precio').value),
+                stock: Number(document.getElementById('edit-stock').value),
+                categoria: document.getElementById('edit-categoria').value,
+                estado: document.getElementById('edit-estado').value,
+                imagen: document.getElementById('edit-imagen').value.trim(),
+                numero_parte: document.getElementById('edit-numero-parte').value.trim(),
+                descripcion: document.getElementById('edit-descripcion').value.trim()
+            };
+
+            try {
+                await updateDoc(doc(db, "productos", docId), datosActualizados);
+                window.cerrarModalEdicion();
+                window.cargarCatalogoAdmin();
+            } catch (error) { console.error(error); alert("Ocurrió un error al guardar los cambios."); }
+            btn.innerHTML = "Guardar";
+            btn.disabled = false;
+        };
+
+        window.eliminarProducto = async function() {
+            const docId = document.getElementById('edit-id').value;
+            if(!confirm("¿Estás seguro de eliminar permanentemente este repuesto?")) return;
+
+            try {
+                await deleteDoc(doc(db, "productos", docId));
+                window.cerrarModalEdicion();
+                window.cargarCatalogoAdmin();
+                alert("Repuesto eliminado con éxito.");
+            } catch (error) { console.error(error); alert("No se pudo eliminar el repuesto."); }
+        };
+
+        window.procesarPegadoMasivo = async function() {
+            const texto = document.getElementById('excel-paste').value.trim();
+            const btn = document.getElementById('btn-excel-upload');
+            if(!texto) { alert("Pega el contenido de tu Excel."); return; }
+
+            btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Procesando..."; btn.disabled = true;
+            const lineas = texto.split('\n');
+            let importados = 0; let nuevasCatCount = 0;
+            
+            try {
+                for(let linea of lineas) {
+                    const columnas = linea.split('\t'); 
+                    const mlvIndex = columnas.findIndex(col => col.trim().startsWith('MLV'));
+
+                    if(mlvIndex !== -1) {
+                        const ml_id = columnas[mlvIndex].trim();
+                        const nombre = columnas[mlvIndex + 2] ? columnas[mlvIndex + 2].trim() : "";
+                        const numero_parte = columnas[mlvIndex + 3] ? columnas[mlvIndex + 3].trim() : "";
+                        let stockRaw = columnas[mlvIndex + 4] ? columnas[mlvIndex + 4].trim() : "1";
+                        const stock = parseInt(stockRaw) || 1;
+                        let precioRaw = columnas[mlvIndex + 5] ? columnas[mlvIndex + 5].replace(/US\$|Bs\./g, '').trim() : "0";
+                        const precio = parseFloat(precioRaw.replace(',', '.')) || 0;
+                        const categoriaExcel = columnas[mlvIndex + 12] ? columnas[mlvIndex + 12].trim() : "Otros";
+                        let catId = categoriaExcel.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '-');
+                        if (catId === "") catId = "otros";
+
+                        if (!mapaCategorias[catId]) {
+                            await addDoc(collection(db, "categorias"), { nombre: categoriaExcel, id: catId });
+                            mapaCategorias[catId] = categoriaExcel; nuevasCatCount++;
+                        }
+                        const imagen = "https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png"; 
+                        if(nombre && precio > 0 && nombre.toLowerCase() !== "título") {
+                            await addDoc(collection(db, "productos"), {
+                                nombre, precio, stock, categoria: catId, estado: "activo", imagen, ml_id, numero_parte
+                            });
+                            importados++;
+                        }
+                    }
+                }
+                alert(`¡Carga Completada!\n\n✅ Repuestos subidos: ${importados}\n📁 Categorías creadas: ${nuevasCatCount}`);
+                document.getElementById('excel-paste').value = "";
+                window.cargarCatalogoAdmin();
+            } catch(e) { console.error(e); alert("Ocurrió un error al procesar el Excel."); }
+            btn.innerHTML = "Subir y Crear Categorías"; btn.disabled = false;
         };
 
         // ==========================================
@@ -1207,6 +1439,45 @@
             } catch (error) { console.error(error); }
         };
 
+        window.abrirEdicionPedido = function(id, cliente, email, envio, tracking, estado) {
+            document.getElementById('edit-pedido-id').value = id;
+            document.getElementById('edit-pedido-cliente').value = cliente;
+            document.getElementById('edit-pedido-email').value = email;
+            document.getElementById('edit-pedido-envio').value = envio;
+            document.getElementById('edit-pedido-tracking').value = tracking;
+            document.getElementById('edit-pedido-estado').value = estado;
+            document.getElementById('modal-pedido').style.display = 'flex';
+        };
+
+        window.cerrarModalPedido = function() { document.getElementById('modal-pedido').style.display = 'none'; };
+
+        window.guardarCambiosPedido = async function() {
+            const docId = document.getElementById('edit-pedido-id').value;
+            const btn = document.getElementById('btn-save-pedido');
+            btn.innerHTML = "Guardando..."; btn.disabled = true;
+            const datosPedido = {
+                cliente: document.getElementById('edit-pedido-cliente').value,
+                email: document.getElementById('edit-pedido-email').value,
+                envio: document.getElementById('edit-pedido-envio').value,
+                tracking: document.getElementById('edit-pedido-tracking').value,
+                estado: document.getElementById('edit-pedido-estado').value
+            };
+            try {
+                await updateDoc(doc(db, "pedidos", docId), datosPedido);
+                window.cerrarModalPedido(); window.cargarPedidos();
+            } catch (error) { console.error(error); alert("Error al actualizar la información del envío."); }
+            btn.innerHTML = "Guardar"; btn.disabled = false;
+        };
+
+        window.eliminarPedido = async function() {
+            const docId = document.getElementById('edit-pedido-id').value;
+            if(!confirm("¿Estás seguro de eliminar este registro de pedido permanentemente?")) return;
+            try {
+                await deleteDoc(doc(db, "pedidos", docId));
+                window.cerrarModalPedido(); window.cargarPedidos(); alert("Pedido eliminado con éxito.");
+            } catch (error) { console.error(error); alert("No se pudo eliminar el pedido."); }
+        };
+
         // ==========================================
         // 🚀 LÓGICA DE FACTURACIÓN (POS) Y MULTIMONEDA
         // ==========================================
@@ -1305,13 +1576,14 @@
 
         function construirHTMLFactura(datos = null) {
             let cliente, rif, direccion, telefono, itemsHTML = '', subtotal, descuento, iva, total, nro;
-            let moneda, simbolo;
+            let moneda, simbolo, disponibilidad;
             const fechaActual = new Date().toLocaleDateString("es-VE");
 
             if (datos) {
                 cliente = datos.cliente; rif = datos.rif; direccion = datos.direccion; telefono = datos.telefono;
                 subtotal = datos.subtotal; descuento = datos.descuento; iva = datos.iva; total = datos.total;
                 nro = datos.nro; moneda = datos.moneda || 'USD'; simbolo = datos.simbolo || '$';
+                disponibilidad = datos.disponibilidad || 'ENTREGA INMEDIATA';
 
                 datos.items.forEach(item => {
                     const totalLinea = (parseFloat(item.cantidad) * parseFloat(item.precioUnitario)) - parseFloat(item.descuento);
@@ -1335,6 +1607,7 @@
                 iva = document.getElementById('fac-iva')?.innerText || '0.00';
                 total = document.getElementById('fac-total-general')?.innerText || '0.00';
                 nro = document.getElementById('fac-nro')?.value || '0000';
+                disponibilidad = document.getElementById('fac-disponibilidad')?.value || 'ENTREGA INMEDIATA';
                 
                 const monedaData = document.getElementById('fac-moneda').value.split('|');
                 moneda = monedaData[0]; simbolo = monedaData[1];
@@ -1376,11 +1649,16 @@
                         </div>
                     </div>
 
-                    <div style="background: #f4f6f4; padding: 10px 12px; border-radius: 4px; margin-bottom: 12px; font-size: 11px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
-                        <p style="margin: 2px 0;"><strong>Cliente:</strong> ${cliente}</p>
-                        <p style="margin: 2px 0;"><strong>RIF o C.I:</strong> ${rif}</p>
-                        <p style="margin: 2px 0;"><strong>Dirección:</strong> ${direccion}</p>
-                        <p style="margin: 2px 0;"><strong>Teléfono:</strong> ${telefono}</p>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: #f4f6f4; padding: 10px 12px; border-radius: 4px; margin-bottom: 12px; font-size: 11px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                        <div>
+                            <p style="margin: 2px 0;"><strong>Cliente:</strong> ${cliente}</p>
+                            <p style="margin: 2px 0;"><strong>RIF o C.I:</strong> ${rif}</p>
+                        </div>
+                        <div>
+                            <p style="margin: 2px 0;"><strong>Dirección:</strong> ${direccion}</p>
+                            <p style="margin: 2px 0;"><strong>Teléfono:</strong> ${telefono}</p>
+                            <p style="margin: 2px 0;"><strong>Condición:</strong> <span style="color: #385723; font-weight: bold;">${disponibilidad}</span></p>
+                        </div>
                     </div>
 
                     <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 11px;">
@@ -1436,6 +1714,7 @@
             const rif = document.getElementById('fac-rif').value;
             const direccion = document.getElementById('fac-direccion').value;
             const telefono = document.getElementById('fac-telefono').value;
+            const disponibilidad = document.getElementById('fac-disponibilidad').value;
 
             const rows = document.querySelectorAll('.facturacion-item-row');
             const items = [];
@@ -1465,7 +1744,7 @@
 
             const objetoFactura = {
                 nro: nroFactura, fecha: fechaActual, cliente, rif, direccion, telefono,
-                items, subtotal, descuento, iva, total, moneda, simbolo, tasa
+                items, subtotal, descuento, iva, total, moneda, simbolo, tasa, disponibilidad
             };
 
             const ventanaPDF = window.open('', '_blank');
@@ -1473,6 +1752,21 @@
 
             try {
                 await addDoc(collection(db, "facturas"), objetoFactura);
+
+                let clienteExiste = false;
+                const rifLimpio = (rif || '').trim().toUpperCase();
+                for (const key in window.clientesDBLocal) {
+                    if (window.clientesDBLocal[key].rif && window.clientesDBLocal[key].rif.trim().toUpperCase() === rifLimpio) {
+                        clienteExiste = true; break;
+                    }
+                }
+
+                if (!clienteExiste && rifLimpio !== '') {
+                    await addDoc(collection(db, "clientes"), {
+                        nombre: (cliente || '').trim(), rif: (rif || '').trim(), direccion: (direccion || '').trim(), telefono: (telefono || '').trim()
+                    });
+                    window.cargarBaseClientes();
+                }
 
                 const docHTML = construirHTMLFactura(objetoFactura);
                 const finalStyle = '<style>body{background:white;margin:0;padding:20px;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}@media print{@page{margin:0.5cm;}body{padding:0;}.no-print{display:none!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}}</style>';
@@ -1485,7 +1779,6 @@
 
                 setTimeout(() => { ventanaPDF.focus(); ventanaPDF.print(); }, 800);
 
-                document.getElementById('fac-nro').value = Math.floor(1000 + Math.random() * 9000);
                 window.actualizarPreviewFactura();
                 window.cargarHistorialFacturas();
                 window.abrirModoCajeroParaFactura(objetoFactura);
@@ -1516,10 +1809,23 @@
             try {
                 const snap = await getDocs(collection(db, "facturas"));
                 tbody.innerHTML = '';
-                if(snap.empty) { tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">No hay facturas guardadas.</td></tr>`; return; }
+                
+                let maxNro = 0;
+
+                if(snap.empty) { 
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">No hay facturas guardadas.</td></tr>`;
+                    document.getElementById('fac-nro').value = "1000";
+                    window.actualizarPreviewFactura();
+                    return; 
+                }
 
                 snap.forEach(docSnap => {
                     const fac = docSnap.data();
+                    const docId = docSnap.id;
+                    
+                    const currNro = parseInt(fac.nro);
+                    if (!isNaN(currNro) && currNro > maxNro) maxNro = currNro;
+
                     const tr = document.createElement('tr');
                     const simbolo = fac.simbolo || '$';
                     tr.innerHTML = `
@@ -1552,6 +1858,11 @@
                     tdAcciones.appendChild(btnCajero); tdAcciones.appendChild(btnImprimir); tdAcciones.appendChild(btnEliminar);
                     tbody.appendChild(tr);
                 });
+                
+                const nextNro = maxNro > 0 ? maxNro + 1 : 1000;
+                document.getElementById('fac-nro').value = String(nextNro).padStart(4, '0');
+                window.actualizarPreviewFactura();
+                
             } catch (error) { console.error(error); }
         };
 
@@ -1628,13 +1939,14 @@
         };
 
         function construirHTMLCotizacion(datos = null) {
-            let cliente, rif, direccion, telefono, vehiculo, anio, itemsHTML = '', subtotal, descuento, iva, total, nro;
+            let cliente, rif, direccion, telefono, vehiculo, anio, itemsHTML = '', subtotal, descuento, iva, total, nro, disponibilidad;
             const fechaActual = new Date().toLocaleDateString("es-VE");
 
             if (datos) {
                 cliente = datos.cliente; rif = datos.rif; direccion = datos.direccion; telefono = datos.telefono;
                 vehiculo = datos.vehiculo; anio = datos.anio; subtotal = datos.subtotal; descuento = datos.descuento;
-                iva = datos.iva; total = datos.total; nro = datos.nro;
+                iva = datos.iva; total = datos.total; nro = datos.nro; 
+                disponibilidad = datos.disponibilidad || 'ENTREGA INMEDIATA';
 
                 datos.items.forEach(item => {
                     const totalLinea = (parseFloat(item.cantidad) * parseFloat(item.precioUnitario)) - parseFloat(item.descuento);
@@ -1660,6 +1972,7 @@
                 iva = document.getElementById('cot-iva')?.innerText || '0.00';
                 total = document.getElementById('cot-total-general')?.innerText || '0.00';
                 nro = document.getElementById('cot-nro')?.value || '0000';
+                disponibilidad = document.getElementById('cot-disponibilidad')?.value || 'ENTREGA INMEDIATA';
 
                 const rows = document.querySelectorAll('.cotizacion-item-row');
                 rows.forEach(row => {
@@ -1709,7 +2022,7 @@
                         <div>
                             <p style="margin: 2px 0;"><strong>Vehículo:</strong> ${vehiculo}</p>
                             <p style="margin: 2px 0;"><strong>Año:</strong> ${anio}</p>
-                            <p style="margin: 2px 0;"><strong>Disponibilidad:</strong> <span style="color: #385723; font-weight: bold;">ENTREGA INMEDIATA</span></p>
+                            <p style="margin: 2px 0;"><strong>Disponibilidad:</strong> <span style="color: #385723; font-weight: bold;">${disponibilidad}</span></p>
                         </div>
                     </div>
 
@@ -1780,6 +2093,7 @@
             const telefono = document.getElementById('cot-telefono').value;
             const vehiculo = document.getElementById('cot-vehiculo').value;
             const anio = document.getElementById('cot-anio').value;
+            const disponibilidad = document.getElementById('cot-disponibilidad').value;
 
             const rows = document.querySelectorAll('.cotizacion-item-row');
             const items = [];
@@ -1805,7 +2119,7 @@
 
             const objetoCotizacion = {
                 nro: nroCotizacion, fecha: fechaActual, cliente, rif, direccion, telefono, vehiculo, anio,
-                items, subtotal, descuento, iva, total
+                items, subtotal, descuento, iva, total, disponibilidad
             };
 
             const ventanaPDF = window.open('', '_blank');
@@ -1815,16 +2129,16 @@
                 await addDoc(collection(db, "cotizaciones"), objetoCotizacion);
 
                 let clienteExiste = false;
-                const rifLimpio = rif.trim().toUpperCase();
+                const rifLimpio = (rif || '').trim().toUpperCase();
                 for (const key in window.clientesDBLocal) {
-                    if (window.clientesDBLocal[key].rif.trim().toUpperCase() === rifLimpio) {
+                    if (window.clientesDBLocal[key].rif && window.clientesDBLocal[key].rif.trim().toUpperCase() === rifLimpio) {
                         clienteExiste = true; break;
                     }
                 }
 
                 if (!clienteExiste && rifLimpio !== '') {
                     await addDoc(collection(db, "clientes"), {
-                        nombre: cliente.trim(), rif: rif.trim(), direccion: direccion.trim(), telefono: telefono.trim()
+                        nombre: (cliente || '').trim(), rif: (rif || '').trim(), direccion: (direccion || '').trim(), telefono: (telefono || '').trim()
                     });
                     window.cargarBaseClientes();
                 }
@@ -1839,8 +2153,6 @@
                 ventanaPDF.document.close();
                 setTimeout(() => { ventanaPDF.focus(); ventanaPDF.print(); }, 800);
 
-                document.getElementById('cot-nro').value = Math.floor(1000 + Math.random() * 9000);
-                window.actualizarPreview();
                 window.cargarHistorialCotizaciones();
             } catch (error) { console.error(error); ventanaPDF.close(); alert("Hubo un error al guardar la cotización."); }
         };
@@ -1868,15 +2180,23 @@
             try {
                 const snap = await getDocs(collection(db, "cotizaciones"));
                 tbody.innerHTML = '';
+                
+                let maxNro = 0;
 
                 if(snap.empty) {
                     tbody.innerHTML = `<tr><td colspan="6" style="text-align: center;">No hay cotizaciones guardadas.</td></tr>`;
+                    document.getElementById('cot-nro').value = "1000";
+                    window.actualizarPreview();
                     return;
                 }
 
                 snap.forEach(docSnap => {
                     const cot = docSnap.data();
                     const docId = docSnap.id;
+                    
+                    const currNro = parseInt(cot.nro);
+                    if (!isNaN(currNro) && currNro > maxNro) maxNro = currNro;
+                    
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td><strong>#${cot.nro}</strong></td>
@@ -1904,6 +2224,11 @@
                     tdAcciones.appendChild(btnImprimir); tdAcciones.appendChild(btnEliminar);
                     tbody.appendChild(tr);
                 });
+                
+                const nextNro = maxNro > 0 ? maxNro + 1 : 1000;
+                document.getElementById('cot-nro').value = String(nextNro).padStart(4, '0');
+                window.actualizarPreview();
+                
             } catch (error) { console.error(error); }
         };
 
@@ -1948,19 +2273,16 @@
         };
 
         window.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('cot-nro').value = Math.floor(1000 + Math.random() * 9000);
-            document.getElementById('fac-nro').value = Math.floor(1000 + Math.random() * 9000);
-            
             // 🚀 Inicializamos TODO al cargar la página para que ninguna tabla se quede "Cargando..."
             window.cargarPedidos();
             window.cargarCatalogoAdmin();
             window.cargarBaseClientes();
             
             window.calcularTotalCotizacion();
-            window.cargarHistorialCotizaciones();
+            window.cargarHistorialCotizaciones(); // Esto auto-calcula y asigna el próximo Nro.
             
             window.calcularTotalFactura();
-            window.cargarHistorialFacturas();
+            window.cargarHistorialFacturas(); // Esto auto-calcula y asigna el próximo Nro.
         });
     </script>
 </body>
