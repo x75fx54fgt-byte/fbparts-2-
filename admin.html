@@ -52,8 +52,8 @@
         .btn-action:hover { background: #2c441b; }
         .refresh-btn { background: #385723; color: white; border: none; padding: 8px 15px; font-family: 'Oswald', sans-serif; font-size: 14px; cursor: pointer; border-radius: 4px; display: inline-flex; align-items: center; gap: 8px; margin-left: 5px; }
 
-        .cotizacion-item-row { display: grid; grid-template-columns: 60px 1fr 110px 90px 90px 40px; gap: 6px; margin-bottom: 10px; align-items: center; }
-        @media (max-width: 900px) { .cotizacion-item-row { grid-template-columns: 1fr; } }
+        .cotizacion-item-row, .facturacion-item-row { display: grid; grid-template-columns: 60px 1fr 110px 90px 90px 40px; gap: 6px; margin-bottom: 10px; align-items: center; }
+        @media (max-width: 900px) { .cotizacion-item-row, .facturacion-item-row { grid-template-columns: 1fr; } }
 
         /* Estilos de Modales */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
@@ -64,6 +64,14 @@
         .btn-save { background: #385723; color: white; border: none; padding: 10px; font-family: 'Oswald', sans-serif; font-size: 15px; cursor: pointer; border-radius: 4px; flex: 1; }
         .btn-delete { background: #d9534f; color: white; border: none; padding: 10px 15px; font-family: 'Oswald', sans-serif; font-size: 15px; cursor: pointer; border-radius: 4px; }
         .btn-delete:hover { background: #c9302c; }
+
+        /* NUEVOS ESTILOS PARA MODO CAJERO */
+        .btn-copy { background: #e2f0d9; color: #385723; border: 1px solid #385723; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; transition: all 0.2s; }
+        .btn-copy:hover { background: #c5e1a5; }
+        .btn-copy.copied { background: #385723; color: white; }
+        .cajero-item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .cajero-item-details { flex: 1; padding-right: 10px; }
+        .cajero-item-actions { display: flex; gap: 8px; }
 
         /* REGLAS MÁGICAS DE IMPRESIÓN */
         @media screen {
@@ -78,7 +86,7 @@
 </head>
 <body style="background-color: #f8f8f8;">
 
-    <!-- ENVOLTORIO PRINCIPAL DEL PANEL (Se oculta al imprimir) -->
+    <!-- ENVOLTORIO PRINCIPAL DEL PANEL -->
     <div id="app-wrapper">
         <div class="topbar">
             <h2>PANEL DE CONTROL INTERNO</h2>
@@ -116,6 +124,10 @@
                 <button class="tab-btn active" onclick="mostrarPestana('pedidos', this)"><i class="fas fa-box"></i> Gestión de Pedidos</button>
                 <button class="tab-btn" onclick="mostrarPestana('catalogo', this)"><i class="fas fa-tags"></i> Catálogo y Stock</button>
                 <button class="tab-btn" onclick="mostrarPestana('clientes', this)"><i class="fas fa-address-book"></i> Base de Clientes</button>
+                
+                <button class="tab-btn" onclick="mostrarPestana('facturacion', this)"><i class="fas fa-cash-register"></i> Facturación / POS</button>
+                <button class="tab-btn" onclick="mostrarPestana('historial-facturas', this)"><i class="fas fa-receipt"></i> Base de Facturas</button>
+                
                 <button class="tab-btn" onclick="mostrarPestana('cotizaciones', this)"><i class="fas fa-file-invoice-dollar"></i> Crear Cotización</button>
                 <button class="tab-btn" onclick="mostrarPestana('historial-cotizaciones', this)"><i class="fas fa-folder-open"></i> Base de Cotizaciones</button>
             </div>
@@ -337,7 +349,134 @@
                 </div>
             </div>
 
-            <!-- PESTAÑA 4: CREAR COTIZACIÓN -->
+            <!-- 🚀 PESTAÑA NUEVA: FACTURACIÓN / PUNTO DE VENTA -->
+            <div id="tab-facturacion" class="tab-content">
+                <div class="admin-header">
+                    <h2>Punto de Venta y Facturación</h2>
+                    <span style="font-size: 13px; color: #666;">Creación rápida para Modo Cajero</span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: start;">
+                    
+                    <!-- Columna Izquierda: Formulario de Factura -->
+                    <div class="card-form" style="margin-bottom: 0;">
+                        <div style="background: #e2f0d9; border: 1px solid #c3e6cb; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+                            <label style="display: block; font-weight: bold; color: #155724; font-size: 13px; margin-bottom: 8px;">
+                                <i class="fas fa-address-book"></i> Autocompletar Cliente Frecuente:
+                            </label>
+                            <select id="fac-selector-clientes" onchange="seleccionarClienteFactura()" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; outline: none; font-size: 14px; background: white;">
+                                <option value="">Selecciona un cliente o mostrador...</option>
+                            </select>
+                        </div>
+
+                        <h3><i class="fas fa-receipt"></i> Datos de la Factura</h3>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>Nro. Factura / Control</label>
+                                <input type="text" id="fac-nro" style="font-weight: bold; color: var(--green);" required oninput="actualizarPreviewFactura()">
+                            </div>
+                            <div class="form-group">
+                                <label>Nombre del Cliente</label>
+                                <input type="text" id="fac-cliente" placeholder="Cliente Mostrador" required oninput="actualizarPreviewFactura()">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>RIF o C.I.</label>
+                                <input type="text" id="fac-rif" placeholder="V-00000000" required oninput="actualizarPreviewFactura()">
+                            </div>
+                            <div class="form-group">
+                                <label>Teléfono</label>
+                                <input type="text" id="fac-telefono" placeholder="Opcional" oninput="actualizarPreviewFactura()">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Dirección</label>
+                            <input type="text" id="fac-direccion" placeholder="Dirección corta" oninput="actualizarPreviewFactura()">
+                        </div>
+
+                        <h3 style="margin-top: 25px;"><i class="fas fa-list"></i> Ítems a Facturar (Reventa o Catálogo)</h3>
+                        
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                            <select id="select-inventario-fac" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+                                <option value="">Selecciona repuesto de tu inventario...</option>
+                            </select>
+                            <button type="button" onclick="agregarItemDesdeInventarioFactura()" style="background: var(--green); color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px;">
+                                <i class="fas fa-plus"></i> Añadir
+                            </button>
+                        </div>
+
+                        <div id="facturacion-items-container">
+                            <div class="facturacion-item-row">
+                                <input type="number" class="fac-item-cant" value="1" min="1" placeholder="Cant" oninput="calcularTotalFactura()">
+                                <input type="text" class="fac-item-desc" placeholder="Escribe el repuesto de reventa..." oninput="actualizarPreviewFactura()">
+                                <input type="number" step="0.01" class="fac-item-precio" value="0.00" placeholder="Precio" oninput="calcularTotalFactura()">
+                                <input type="number" step="0.01" class="fac-item-descval" value="0.00" placeholder="Desc." oninput="calcularTotalFactura()">
+                                <input type="text" class="fac-item-total-line" value="$0.00" readonly style="background: #f1f1f1; text-align: right; font-weight: bold;">
+                                <button type="button" onclick="this.parentElement.remove(); calcularTotalFactura();" style="background:#d9534f; color:white; border:none; border-radius:4px; cursor:pointer;"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+
+                        <button type="button" onclick="agregarFilaFacturaVacia()" style="background: #1d6fa5; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold; margin-bottom: 20px;">
+                            <i class="fas fa-keyboard"></i> Fila Manual (Reventa)
+                        </button>
+
+                        <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #ddd; text-align: right; margin-bottom: 20px; font-size: 13px;">
+                            <div>Sub-Total: $<span id="fac-subtotal">0.00</span></div>
+                            <div style="color: #d9534f;">Descuento: -$<span id="fac-total-desc">0.00</span></div>
+                            <div>16% IVA: $<span id="fac-iva">0.00</span></div>
+                            <div style="font-size: 16px; font-weight: bold; color: var(--green); margin-top: 5px;">TOTAL: $<span id="fac-total-general">0.00</span></div>
+                        </div>
+
+                        <button type="button" class="btn-action" onclick="guardarYGenerarFactura()" style="font-size: 16px; padding: 15px; background: #28a745;">
+                            <i class="fas fa-cash-register"></i> Facturar y Abrir Modo Cajero
+                        </button>
+                    </div>
+
+                    <!-- Columna Derecha: Vista Previa Factura -->
+                    <div>
+                        <div style="background: white; border: 1px solid #ccc; border-radius: 8px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,.05); position: sticky; top: 20px;">
+                            <h3 style="font-family: 'Oswald', sans-serif; color: var(--green); font-size: 18px; margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 8px;">
+                                <i class="fas fa-eye"></i> Vista Previa (Nota de Entrega)
+                            </h3>
+                            <div id="pdf-preview-box-fac" style="border: 1px solid #ddd; background: white; padding: 15px; font-family: Arial, sans-serif; color: #333; font-size: 10px; overflow: hidden; min-height: 650px;">
+                                <!-- Vista previa inyectada -->
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- 🚀 PESTAÑA NUEVA: BASE DE FACTURAS -->
+            <div id="tab-historial-facturas" class="tab-content">
+                <div class="admin-header">
+                    <h2>Historial y Base de Datos de Facturas</h2>
+                    <button class="refresh-btn" onclick="cargarHistorialFacturas()"><i class="fas fa-sync-alt"></i> Actualizar</button>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nro. Factura</th>
+                                <th>Fecha</th>
+                                <th>Cliente</th>
+                                <th>Total ($)</th>
+                                <th style="text-align: center;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="facturas-table-body">
+                            <tr><td colspan="5" style="text-align: center;">Cargando facturas guardadas...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- PESTAÑA: CREAR COTIZACIÓN -->
             <div id="tab-cotizaciones" class="tab-content">
                 <div class="admin-header">
                     <h2>Generador Oficial de Cotizaciones</h2>
@@ -484,6 +623,39 @@
 
     <!-- CONTENEDOR EXCLUSIVO PARA IMPRESIÓN -->
     <div id="print-container" class="print-only"></div>
+
+    <!-- 🚀 MODAL MODO CAJERO (COPIADO RÁPIDO PARA HKPOS) -->
+    <div id="modal-cajero" class="modal-overlay">
+        <div class="modal-content" style="max-width: 600px;">
+            <h3 style="color: #28a745;"><i class="fas fa-cash-register"></i> Modo Cajero (Tablet HKPOS)</h3>
+            <p style="font-size: 13px; color: #666; margin-top: -10px; margin-bottom: 15px;">Haz clic en los botones para copiar la información al portapapeles y pégala en la tablet.</p>
+            
+            <div style="background: #f9f9f9; padding: 15px; border-radius: 6px; border: 1px solid #eee; margin-bottom: 20px;">
+                <h4 style="margin: 0 0 5px 0; color: #333; font-size: 14px;">Cliente: <strong id="cajero-cliente-nombre" style="color: #385723;"></strong></h4>
+                
+                <!-- Detalles adicionales del cliente para que veas toda la info -->
+                <p id="cajero-cliente-detalles" style="margin: 0 0 10px 0; font-size: 12px; color: #555; display: flex; align-items: center; flex-wrap: wrap;"></p>
+                
+                <div id="cajero-items-lista" style="max-height: 300px; overflow-y: auto;">
+                    <!-- Inyectado dinámicamente con precios + 16% IVA -->
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; background: #e2f0d9; padding: 15px; border-radius: 6px; border: 1px solid #c3e6cb;">
+                <div>
+                    <span style="display: block; font-size: 12px; color: #155724; text-transform: uppercase;">Monto Total (Con IVA)</span>
+                    <strong style="font-size: 24px; color: #155724; font-family: 'Oswald', sans-serif;">$<span id="cajero-total-monto">0.00</span></strong>
+                </div>
+                <button type="button" class="btn-copy" style="padding: 10px 20px; font-size: 14px; display: flex; align-items: center; gap: 8px;" onclick="copiarAlPortapapeles(document.getElementById('cajero-total-monto').innerText, this)">
+                    <i class="fas fa-copy"></i> Copiar Total
+                </button>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="cerrarModoCajero()">Cerrar Cajero</button>
+            </div>
+        </div>
+    </div>
 
     <!-- MODAL PARA ADMINISTRAR CATEGORÍAS -->
     <div id="modal-categorias" class="modal-overlay">
@@ -658,6 +830,7 @@
 
         let mapaCategorias = {};
         window.clientesDBLocal = {}; 
+        window.pedidosDBLocal = {}; 
         window.currentAdminDocId = null; 
 
         onAuthStateChanged(auth, async (user) => {
@@ -753,6 +926,8 @@
             if(id === 'clientes') { window.cargarBaseClientes(); }
             if(id === 'cotizaciones') { window.cargarBaseClientes(); actualizarPreview(); }
             if(id === 'historial-cotizaciones') { cargarHistorialCotizaciones(); }
+            if(id === 'facturacion') { window.cargarBaseClientes(); actualizarPreviewFactura(); }
+            if(id === 'historial-facturas') { cargarHistorialFacturas(); }
         };
 
         window.abrirModalCategorias = async function() {
@@ -802,7 +977,6 @@
             }
         };
 
-        // EVENT LISTENER PARA EL FORMULARIO MANUAL DE PRODUCTOS
         document.getElementById('product-form')?.addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = e.target.querySelector('button[type="submit"]');
@@ -859,9 +1033,11 @@
         window.cargarBaseClientes = async function() {
             const tbody = document.getElementById('clients-table-body');
             const selectCotizacion = document.getElementById('cot-selector-clientes');
+            const selectFactura = document.getElementById('fac-selector-clientes'); 
             
             if(tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">Cargando base de datos...</td></tr>`;
-            if(selectCotizacion) selectCotizacion.innerHTML = '<option value="">Selecciona un cliente o aseguradora guardada para rellenar datos...</option>';
+            if(selectCotizacion) selectCotizacion.innerHTML = '<option value="">Selecciona un cliente o aseguradora guardada...</option>';
+            if(selectFactura) selectFactura.innerHTML = '<option value="">Selecciona un cliente frecuente o mostrador...</option>';
             window.clientesDBLocal = {};
 
             try {
@@ -878,9 +1054,8 @@
                     const docId = docSnap.id;
                     window.clientesDBLocal[docId] = cli;
 
-                    if(selectCotizacion) {
-                        selectCotizacion.innerHTML += `<option value="${docId}">${cli.nombre} - ${cli.rif}</option>`;
-                    }
+                    if(selectCotizacion) selectCotizacion.innerHTML += `<option value="${docId}">${cli.nombre} - ${cli.rif}</option>`;
+                    if(selectFactura) selectFactura.innerHTML += `<option value="${docId}">${cli.nombre} - ${cli.rif}</option>`;
 
                     if(tbody) {
                         tbody.innerHTML += `
@@ -929,6 +1104,8 @@
         window.cargarPedidos = async function() {
             const tableBody = document.getElementById('orders-table-body');
             tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center;">Actualizando pedidos...</td></tr>`;
+            window.pedidosDBLocal = {}; 
+
             try {
                 const querySnapshot = await getDocs(collection(db, "pedidos"));
                 tableBody.innerHTML = '';
@@ -940,6 +1117,9 @@
                 querySnapshot.forEach((docSnap) => {
                     const pedido = docSnap.data();
                     const docId = docSnap.id;
+                    
+                    window.pedidosDBLocal[docId] = pedido; 
+
                     let prods = pedido.productos.map(p => `<li>${p.cantidad}x ${p.nombre}</li>`).join('');
                     
                     const safeCliente = (pedido.cliente || '').replace(/'/g, "\\'");
@@ -960,6 +1140,10 @@
                                 <span style="font-size:11px;background:#e2f0d9;padding:2px 6px;border-radius:4px;">Estado: ${pedido.estado || 'Pendiente'}</span>
                             </td>
                             <td style="text-align: center;">
+                                <button type="button" onclick="abrirModoCajero('${docId}')" style="background:#f0ad4e; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; margin-right: 5px;" title="Modo Cajero (Copiar a HKPOS)">
+                                    <i class="fas fa-cash-register"></i>
+                                </button>
+                                
                                 <button type="button" onclick="abrirEdicionPedido('${docId}', '${safeCliente}', '${safeEmail}', '${safeEnvio}', '${safeTracking}', '${safeEstado}')" style="background:#1d6fa5; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="Editar Envío">
                                     <i class="fas fa-edit"></i>
                                 </button>
@@ -972,6 +1156,136 @@
                 tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: red;">Error al cargar pedidos.</td></tr>`;
             }
         };
+
+        // ==========================================
+        // 🚀 MODO CAJERO: LÓGICA DE COPIADO CON IVA Y RIF
+        // ==========================================
+        
+        window.abrirModoCajero = function(docId) {
+            const pedido = window.pedidosDBLocal[docId];
+            if (!pedido) { alert("No se encontraron los detalles del pedido."); return; }
+
+            document.getElementById('cajero-cliente-nombre').textContent = pedido.cliente || 'Cliente Web';
+            
+            const emailStr = pedido.email ? `<span style="margin-left: 8px;">Correo: ${pedido.email}</span>` : '';
+            let rifHtml = '';
+            if (pedido.rif) {
+                const lastDash = pedido.rif.lastIndexOf('-');
+                let rifLimpio = pedido.rif;
+                if (lastDash > 0) {
+                    rifLimpio = pedido.rif.substring(0, lastDash) + pedido.rif.substring(lastDash + 1);
+                }
+                rifHtml = `<span>RIF/C.I: ${pedido.rif}</span> <button type="button" class="btn-copy" style="padding: 2px 6px; font-size: 10px; margin-left: 6px; vertical-align: middle;" onclick="copiarAlPortapapeles('${rifLimpio}', this)"><i class="fas fa-copy"></i> Copiar RIF</button> |`;
+            }
+            document.getElementById('cajero-cliente-detalles').innerHTML = `<div style="display: flex; align-items: center; flex-wrap: wrap;">${rifHtml}${emailStr}</div>`;
+
+            document.getElementById('cajero-total-monto').textContent = Number(pedido.total || 0).toFixed(2);
+
+            const listaItems = document.getElementById('cajero-items-lista');
+            listaItems.innerHTML = '';
+
+            if (pedido.productos && pedido.productos.length > 0) {
+                pedido.productos.forEach(prod => {
+                    const safeName = (prod.nombre || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    const precioConIva = (Number(prod.precio || 0) * 1.16).toFixed(2);
+                    
+                    listaItems.innerHTML += `
+                        <div class="cajero-item-row">
+                            <div class="cajero-item-details">
+                                <strong style="font-size: 13px; color: #333;">${prod.cantidad}x ${prod.nombre}</strong><br>
+                                <span style="font-size: 12px; color: #666;">$${precioConIva} c/u (IVA incl.)</span>
+                            </div>
+                            <div class="cajero-item-actions">
+                                <button type="button" class="btn-copy" onclick="copiarAlPortapapeles('${safeName}', this)">
+                                    <i class="fas fa-copy"></i> Nombre
+                                </button>
+                                <button type="button" class="btn-copy" onclick="copiarAlPortapapeles('${precioConIva}', this)">
+                                    <i class="fas fa-copy"></i> Precio
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                listaItems.innerHTML = '<p style="font-size: 12px; color: #999; margin: 0;">No hay productos detallados en este pedido.</p>';
+            }
+
+            document.getElementById('modal-cajero').style.display = 'flex';
+        };
+
+        window.abrirModoCajeroParaFactura = function(factura) {
+            document.getElementById('cajero-cliente-nombre').textContent = factura.cliente || 'Cliente Mostrador';
+            
+            // LÓGICA DE COPIADO RÁPIDO DEL RIF (ELIMINA EL ÚLTIMO GUION)
+            let rifHtml = '';
+            if (factura.rif) {
+                const lastDash = factura.rif.lastIndexOf('-');
+                let rifLimpio = factura.rif;
+                if (lastDash > 0) {
+                    rifLimpio = factura.rif.substring(0, lastDash) + factura.rif.substring(lastDash + 1);
+                }
+                rifHtml = `<span>RIF/C.I: ${factura.rif}</span> <button type="button" class="btn-copy" style="padding: 2px 8px; font-size: 11px; margin-left: 6px; display: inline-flex; align-items: center; gap: 4px;" onclick="copiarAlPortapapeles('${rifLimpio}', this)"><i class="fas fa-copy"></i> Copiar RIF</button>`;
+            }
+
+            const dirStr = factura.direccion ? `<span style="margin-left: 8px;">| Dir: ${factura.direccion}</span>` : '';
+            const telStr = factura.telefono ? `<span style="margin-left: 8px;">| Tel: ${factura.telefono}</span>` : '';
+            
+            document.getElementById('cajero-cliente-detalles').innerHTML = `<div style="display: flex; align-items: center; flex-wrap: wrap;">${rifHtml}${dirStr}${telStr}</div>`;
+
+            document.getElementById('cajero-total-monto').textContent = Number(factura.total || 0).toFixed(2);
+
+            const listaItems = document.getElementById('cajero-items-lista');
+            listaItems.innerHTML = '';
+
+            if (factura.items && factura.items.length > 0) {
+                factura.items.forEach(prod => {
+                    const safeName = (prod.descripcion || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    const precioConIva = (Number(prod.precioUnitario || 0) * 1.16).toFixed(2);
+                    
+                    listaItems.innerHTML += `
+                        <div class="cajero-item-row">
+                            <div class="cajero-item-details">
+                                <strong style="font-size: 13px; color: #333;">${prod.cantidad}x ${prod.descripcion}</strong><br>
+                                <span style="font-size: 12px; color: #666;">$${precioConIva} c/u (IVA incl.)</span>
+                            </div>
+                            <div class="cajero-item-actions">
+                                <button type="button" class="btn-copy" onclick="copiarAlPortapapeles('${safeName}', this)">
+                                    <i class="fas fa-copy"></i> Nombre
+                                </button>
+                                <button type="button" class="btn-copy" onclick="copiarAlPortapapeles('${precioConIva}', this)">
+                                    <i class="fas fa-copy"></i> Precio
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                listaItems.innerHTML = '<p style="font-size: 12px; color: #999; margin: 0;">No hay ítems detallados.</p>';
+            }
+
+            document.getElementById('modal-cajero').style.display = 'flex';
+        };
+
+        window.cerrarModoCajero = function() {
+            document.getElementById('modal-cajero').style.display = 'none';
+        };
+
+        window.copiarAlPortapapeles = function(texto, btnElement) {
+            navigator.clipboard.writeText(texto).then(() => {
+                const originalHTML = btnElement.innerHTML;
+                btnElement.innerHTML = '<i class="fas fa-check"></i> ¡Copiado!';
+                btnElement.classList.add('copied');
+                setTimeout(() => {
+                    btnElement.innerHTML = originalHTML;
+                    btnElement.classList.remove('copied');
+                }, 1500);
+            }).catch(err => {
+                console.error('Error al copiar: ', err);
+                alert("No se pudo copiar. Verifica los permisos de tu navegador.");
+            });
+        };
+
+        // ==========================================
 
         window.abrirEdicionPedido = function(id, cliente, email, envio, tracking, estado) {
             document.getElementById('edit-pedido-id').value = id;
@@ -1034,12 +1348,14 @@
             const selectFiltroAdmin = document.getElementById('admin-category-filter');
             const selectProdManual = document.getElementById('product-select');
             const selectInventarioCot = document.getElementById('select-inventario-cot');
+            const selectInventarioFac = document.getElementById('select-inventario-fac'); 
             
             if(selectCat) selectCat.innerHTML = '<option value="">Selecciona una categoría...</option>';
             if(selectEditCat) selectEditCat.innerHTML = '';
             if(selectFiltroAdmin) selectFiltroAdmin.innerHTML = '<option value="todos">Todas las Categorías</option>';
             if(selectProdManual) selectProdManual.innerHTML = '<option value="">Selecciona un repuesto...</option>';
             if(selectInventarioCot) selectInventarioCot.innerHTML = '<option value="">Selecciona un repuesto de tu inventario para agregar...</option>';
+            if(selectInventarioFac) selectInventarioFac.innerHTML = '<option value="">Selecciona repuesto de tu inventario...</option>';
             mapaCategorias = {};
 
             try {
@@ -1097,7 +1413,10 @@
                         `;
                     }
                     if(selectProdManual) selectProdManual.innerHTML += `<option value="${prod.nombre}" data-price="${prod.precio}">${prod.nombre} - $${prod.precio}</option>`;
-                    if(selectInventarioCot) selectInventarioCot.innerHTML += `<option value="${docSnap.id}" data-nombre="${(prod.nombre || '').replace(/"/g, '&quot;')}" data-precio="${prod.precio}">${prod.nombre} - $${prod.precio}</option>`;
+                    
+                    const optionHtmlCots = `<option value="${docSnap.id}" data-nombre="${(prod.nombre || '').replace(/"/g, '&quot;')}" data-precio="${prod.precio}">${prod.nombre} - $${prod.precio}</option>`;
+                    if(selectInventarioCot) selectInventarioCot.innerHTML += optionHtmlCots;
+                    if(selectInventarioFac) selectInventarioFac.innerHTML += optionHtmlCots;
                 });
             } catch (error) { console.error(error); }
 
@@ -1270,6 +1589,9 @@
             btn.disabled = false;
         };
 
+        // ==========================================
+        // 🚀 LÓGICA DE COTIZACIONES
+        // ==========================================
         window.agregarFilaCotizacionVacia = function() {
             const container = document.getElementById('cotizacion-items-container');
             const row = document.createElement('div');
@@ -1667,7 +1989,390 @@
                 });
             } catch (error) { console.error(error); }
         };
+
+        // ==========================================
+        // 🚀 LÓGICA DE FACTURACIÓN (POS) Y MODO CAJERO
+        // ==========================================
         
+        window.seleccionarClienteFactura = function() {
+            const select = document.getElementById('fac-selector-clientes');
+            const clienteId = select.value;
+            
+            if(clienteId && window.clientesDBLocal[clienteId]) {
+                const cli = window.clientesDBLocal[clienteId];
+                document.getElementById('fac-cliente').value = cli.nombre;
+                document.getElementById('fac-rif').value = cli.rif;
+                document.getElementById('fac-direccion').value = cli.direccion;
+                document.getElementById('fac-telefono').value = cli.telefono;
+                window.actualizarPreviewFactura();
+            }
+        };
+
+        window.agregarFilaFacturaVacia = function() {
+            const container = document.getElementById('facturacion-items-container');
+            const row = document.createElement('div');
+            row.className = 'facturacion-item-row';
+            row.innerHTML = `
+                <input type="number" class="fac-item-cant" value="1" min="1" placeholder="Cant" oninput="calcularTotalFactura()">
+                <input type="text" class="fac-item-desc" placeholder="Escribe el repuesto de reventa..." oninput="actualizarPreviewFactura()">
+                <input type="number" step="0.01" class="fac-item-precio" value="0.00" placeholder="Precio" oninput="calcularTotalFactura()">
+                <input type="number" step="0.01" class="fac-item-descval" value="0.00" placeholder="Desc." oninput="calcularTotalFactura()">
+                <input type="text" class="fac-item-total-line" value="$0.00" readonly style="background: #f1f1f1; text-align: right; font-weight: bold;">
+                <button type="button" onclick="this.parentElement.remove(); calcularTotalFactura();" style="background:#d9534f; color:white; border:none; border-radius:4px; cursor:pointer;"><i class="fas fa-times"></i></button>
+            `;
+            container.appendChild(row);
+            window.calcularTotalFactura();
+        };
+
+        window.agregarItemDesdeInventarioFactura = function() {
+            const select = document.getElementById('select-inventario-fac');
+            const selectedIndex = select.selectedIndex;
+            if (selectedIndex <= 0) {
+                alert("Selecciona un repuesto del inventario primero.");
+                return;
+            }
+
+            const opt = select.options[selectedIndex];
+            const nombre = opt.getAttribute('data-nombre');
+            const precio = parseFloat(opt.getAttribute('data-precio')) || 0;
+
+            const container = document.getElementById('facturacion-items-container');
+            const row = document.createElement('div');
+            row.className = 'facturacion-item-row';
+            row.innerHTML = `
+                <input type="number" class="fac-item-cant" value="1" min="1" placeholder="Cant" oninput="calcularTotalFactura()">
+                <input type="text" class="fac-item-desc" value="${nombre}" placeholder="Descripción" oninput="actualizarPreviewFactura()">
+                <input type="number" step="0.01" class="fac-item-precio" value="${precio.toFixed(2)}" placeholder="Precio" oninput="calcularTotalFactura()">
+                <input type="number" step="0.01" class="fac-item-descval" value="0.00" placeholder="Desc." oninput="calcularTotalFactura()">
+                <input type="text" class="fac-item-total-line" value="$${precio.toFixed(2)}" readonly style="background: #f1f1f1; text-align: right; font-weight: bold;">
+                <button type="button" onclick="this.parentElement.remove(); calcularTotalFactura();" style="background:#d9534f; color:white; border:none; border-radius:4px; cursor:pointer;"><i class="fas fa-times"></i></button>
+            `;
+            container.appendChild(row);
+            select.selectedIndex = 0;
+            window.calcularTotalFactura();
+        };
+
+        window.calcularTotalFactura = function() {
+            const rows = document.querySelectorAll('.facturacion-item-row');
+            let subtotal = 0;
+            let totalDescuento = 0;
+
+            rows.forEach(row => {
+                const cant = parseFloat(row.querySelector('.fac-item-cant').value) || 0;
+                const precio = parseFloat(row.querySelector('.fac-item-precio').value) || 0;
+                const desc = parseFloat(row.querySelector('.fac-item-descval').value) || 0;
+
+                const totalLinea = (cant * precio) - desc;
+                row.querySelector('.fac-item-total-line').value = `$${totalLinea.toFixed(2)}`;
+
+                subtotal += (cant * precio);
+                totalDescuento += desc;
+            });
+
+            const baseImponible = subtotal - totalDescuento;
+            const iva = baseImponible * 0.16;
+            const totalGeneral = baseImponible + iva;
+
+            if(document.getElementById('fac-subtotal')) document.getElementById('fac-subtotal').innerText = subtotal.toFixed(2);
+            if(document.getElementById('fac-total-desc')) document.getElementById('fac-total-desc').innerText = totalDescuento.toFixed(2);
+            if(document.getElementById('fac-iva')) document.getElementById('fac-iva').innerText = iva.toFixed(2);
+            if(document.getElementById('fac-total-general')) document.getElementById('fac-total-general').innerText = totalGeneral.toFixed(2);
+
+            window.actualizarPreviewFactura();
+        };
+
+        function construirHTMLFactura(datos = null) {
+            let cliente, rif, direccion, telefono, itemsHTML = '', subtotal, descuento, iva, total, nro;
+            const fechaActual = new Date().toLocaleDateString("es-VE");
+
+            if (datos) {
+                cliente = datos.cliente;
+                rif = datos.rif;
+                direccion = datos.direccion;
+                telefono = datos.telefono;
+                subtotal = datos.subtotal;
+                descuento = datos.descuento;
+                iva = datos.iva;
+                total = datos.total;
+                nro = datos.nro;
+
+                datos.items.forEach(item => {
+                    const totalLinea = (parseFloat(item.cantidad) * parseFloat(item.precioUnitario)) - parseFloat(item.descuento);
+                    itemsHTML += `
+                        <tr style="border-bottom: 1px solid #eee; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                            <td style="padding: 6px 10px; text-align: center;">${item.cantidad}</td>
+                            <td style="padding: 6px 10px;">${item.descripcion}</td>
+                            <td style="padding: 6px 10px; text-align: right;">$${Number(item.precioUnitario).toFixed(2)}</td>
+                            <td style="padding: 6px 10px; text-align: right; color: #d9534f;">-$${Number(item.descuento).toFixed(2)}</td>
+                            <td style="padding: 6px 10px; text-align: right; font-weight: bold;">$${totalLinea.toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                cliente = document.getElementById('fac-cliente')?.value || 'Cliente Mostrador';
+                rif = document.getElementById('fac-rif')?.value || '';
+                direccion = document.getElementById('fac-direccion')?.value || '';
+                telefono = document.getElementById('fac-telefono')?.value || '';
+                subtotal = document.getElementById('fac-subtotal')?.innerText || '0.00';
+                descuento = document.getElementById('fac-total-desc')?.innerText || '0.00';
+                iva = document.getElementById('fac-iva')?.innerText || '0.00';
+                total = document.getElementById('fac-total-general')?.innerText || '0.00';
+                nro = document.getElementById('fac-nro')?.value || '0000';
+
+                const rows = document.querySelectorAll('.facturacion-item-row');
+                rows.forEach(row => {
+                    const cant = row.querySelector('.fac-item-cant')?.value || 1;
+                    const desc = row.querySelector('.fac-item-desc')?.value || '';
+                    const precio = parseFloat(row.querySelector('.fac-item-precio')?.value) || 0;
+                    const descval = parseFloat(row.querySelector('.fac-item-descval')?.value) || 0;
+                    const totalLinea = (parseFloat(cant) * precio) - descval;
+
+                    itemsHTML += `
+                        <tr style="border-bottom: 1px solid #eee; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                            <td style="padding: 6px 10px; text-align: center;">${cant}</td>
+                            <td style="padding: 6px 10px;">${desc}</td>
+                            <td style="padding: 6px 10px; text-align: right;">$${precio.toFixed(2)}</td>
+                            <td style="padding: 6px 10px; text-align: right; color: #d9534f;">-$${descval.toFixed(2)}</td>
+                            <td style="padding: 6px 10px; text-align: right; font-weight: bold;">$${totalLinea.toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            return `
+                <div style="max-width: 800px; margin: 0 auto; background: white; padding: 25px; font-family: Arial, sans-serif; color: #333; box-sizing: border-box; width: 100%;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #385723; padding-bottom: 10px; margin-bottom: 12px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logo" style="width: 100px; height: auto; display: block;">
+                            <div>
+                                <p style="margin: 0; font-size: 11px; font-weight: bold; color: #333;">F&B PARTS</p>
+                                <p style="margin: 1px 0; font-size: 10px; color: #555;">RIF: J-503971118</p>
+                                <p style="margin: 1px 0; font-size: 10px; color: #555;">fybinversiones.ccs@gmail.com | +584120161036</p>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <h2 style="color: #385723; font-family: Arial, sans-serif; font-size: 16px; margin: 0; font-weight: bold;">NOTA DE ENTREGA</h2>
+                            <p style="font-size: 12px; font-weight: bold; color: #333; margin: 2px 0;">Ctrl/Nro: ${nro}</p>
+                            <p style="font-size: 10px; color: #666; margin: 0;">Fecha: ${fechaActual}</p>
+                        </div>
+                    </div>
+
+                    <div style="background: #f4f6f4; padding: 10px 12px; border-radius: 4px; margin-bottom: 12px; font-size: 11px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                        <p style="margin: 2px 0;"><strong>Cliente:</strong> ${cliente}</p>
+                        <p style="margin: 2px 0;"><strong>RIF o C.I:</strong> ${rif}</p>
+                        <p style="margin: 2px 0;"><strong>Dirección:</strong> ${direccion}</p>
+                        <p style="margin: 2px 0;"><strong>Teléfono:</strong> ${telefono}</p>
+                    </div>
+
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 11px;">
+                        <thead>
+                            <tr style="background-color: #385723 !important; color: white !important; text-align: left; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                                <th style="padding: 6px 10px; width: 45px; text-align: center;">CANT</th>
+                                <th style="padding: 6px 10px;">DESCRIPCIÓN</th>
+                                <th style="padding: 6px 10px; width: 80px; text-align: right;">PRECIO U.</th>
+                                <th style="padding: 6px 10px; width: 80px; text-align: right;">DESC.</th>
+                                <th style="padding: 6px 10px; width: 85px; text-align: right;">TOTAL</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsHTML}
+                        </tbody>
+                    </table>
+
+                    <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+                        <div style="width: 220px; font-size: 11px;">
+                            <div style="display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #eee;">
+                                <span>SUB TOTAL:</span>
+                                <strong>$${subtotal}</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #eee; color: #d9534f; -webkit-print-color-adjust: exact;">
+                                <span>DESCUENTO:</span>
+                                <strong>-$${descuento}</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #eee;">
+                                <span>16% IVA:</span>
+                                <strong>$${iva}</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 5px 0; font-size: 12px; font-weight: bold; color: #385723; border-bottom: 2px solid #385723; -webkit-print-color-adjust: exact;">
+                                <span>TOTAL A PAGAR:</span>
+                                <span>$${total}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="border-top: 1px solid #ddd; padding-top: 8px; font-size: 9px; color: #555;">
+                        <p style="margin: 0 0 2px 0; font-weight: bold; color: #333;">Documento de uso interno y control de entrega. El documento fiscal se emite por caja.</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        window.actualizarPreviewFactura = function() {
+            const box = document.getElementById('pdf-preview-box-fac');
+            if (box) {
+                box.innerHTML = `<div style="transform: scale(0.68); transform-origin: top left; width: 147%; pointer-events: none;">${construirHTMLFactura()}</div>`;
+            }
+        };
+
+        window.guardarYGenerarFactura = async function() {
+            const cliente = document.getElementById('fac-cliente').value;
+            const rif = document.getElementById('fac-rif').value;
+            const direccion = document.getElementById('fac-direccion').value;
+            const telefono = document.getElementById('fac-telefono').value;
+
+            const rows = document.querySelectorAll('.facturacion-item-row');
+            const items = [];
+            
+            rows.forEach(row => {
+                items.push({
+                    cantidad: row.querySelector('.fac-item-cant').value,
+                    descripcion: row.querySelector('.fac-item-desc').value,
+                    precioUnitario: row.querySelector('.fac-item-precio').value,
+                    descuento: row.querySelector('.fac-item-descval').value
+                });
+            });
+
+            if(items.length === 0) { alert("Agrega al menos un ítem."); return; }
+
+            const subtotal = document.getElementById('fac-subtotal').innerText;
+            const descuento = document.getElementById('fac-total-desc').innerText;
+            const iva = document.getElementById('fac-iva').innerText;
+            const total = document.getElementById('fac-total-general').innerText;
+            
+            const nroFactura = document.getElementById('fac-nro').value.trim() || Math.floor(1000 + Math.random() * 9000).toString();
+            const fechaActual = new Date().toLocaleDateString("es-VE");
+
+            const objetoFactura = {
+                nro: nroFactura,
+                fecha: fechaActual,
+                cliente, rif, direccion, telefono,
+                items, subtotal, descuento, iva, total
+            };
+
+            const ventanaPDF = window.open('', '_blank');
+            if(!ventanaPDF) {
+                alert("⚠️ Atención: Tu navegador bloqueó la ventana de impresión.");
+                return;
+            }
+
+            try {
+                // 1. Guardar en Base de Datos (Colección nueva: facturas)
+                await addDoc(collection(db, "facturas"), objetoFactura);
+
+                // 2. Generar el PDF
+                const docHTML = construirHTMLFactura(objetoFactura);
+                const finalStyle = '<style>body{background:white;margin:0;padding:20px;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}@media print{@page{margin:0.5cm;}body{padding:0;}.no-print{display:none!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}}</style>';
+                const htmlParte1 = '<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n<title>Nota de Entrega F&B</title>\n' + finalStyle + '\n</head>\n<body>\n';
+                const htmlParte2 = '\n<div style="text-align:center;margin:40px 0;" class="no-print"><button onclick="window.print()" style="background:#28a745;color:white;border:none;padding:15px 30px;font-size:18px;font-weight:bold;border-radius:6px;cursor:pointer;">🖨️ Imprimir Factura PDF</button></div>\n</b' + 'ody>\n</h' + 'tml>';
+
+                ventanaPDF.document.open();
+                ventanaPDF.document.write(htmlParte1 + docHTML + htmlParte2);
+                ventanaPDF.document.close();
+
+                setTimeout(() => {
+                    ventanaPDF.focus();
+                    ventanaPDF.print();
+                }, 800);
+
+                document.getElementById('fac-nro').value = Math.floor(1000 + Math.random() * 9000);
+                window.actualizarPreviewFactura();
+                window.cargarHistorialFacturas();
+
+                // 3. ABRIR EL MODO CAJERO (MAGIA)
+                window.abrirModoCajeroParaFactura(objetoFactura);
+
+            } catch (error) {
+                console.error(error);
+                ventanaPDF.close();
+                alert("Hubo un error al guardar la factura.");
+            }
+        };
+
+        window.abrirVentanaFacturaExistente = function(fac) {
+            const ventanaPDF = window.open('', '_blank');
+            if(!ventanaPDF) { alert("⚠️ Por favor permite las ventanas emergentes (pop-ups)."); return; }
+            
+            const docHTML = construirHTMLFactura(fac);
+            const finalStyle = '<style>body{background:white;margin:0;padding:20px;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}@media print{@page{margin:0.5cm;}body{padding:0;}.no-print{display:none!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}}</style>';
+            
+            const htmlParte1 = '<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n<title>Nota de Entrega Oficial</title>\n' + finalStyle + '\n</head>\n<body>\n';
+            const htmlParte2 = '\n<div style="text-align:center;margin:40px 0;" class="no-print"><button onclick="window.print()" style="background:#28a745;color:white;border:none;padding:15px 30px;font-size:18px;font-weight:bold;border-radius:6px;cursor:pointer;">🖨️ Imprimir Factura PDF</button></div>\n</b' + 'ody>\n</h' + 'tml>';
+
+            ventanaPDF.document.open();
+            ventanaPDF.document.write(htmlParte1 + docHTML + htmlParte2);
+            ventanaPDF.document.close();
+
+            setTimeout(() => {
+                ventanaPDF.focus();
+                ventanaPDF.print();
+            }, 800);
+        };
+
+        window.cargarHistorialFacturas = async function() {
+            const tbody = document.getElementById('facturas-table-body');
+            if(!tbody) return;
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">Cargando historial de facturas...</td></tr>`;
+
+            try {
+                const snap = await getDocs(collection(db, "facturas"));
+                tbody.innerHTML = '';
+
+                if(snap.empty) {
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">No hay facturas guardadas.</td></tr>`;
+                    return;
+                }
+
+                snap.forEach(docSnap => {
+                    const fac = docSnap.data();
+                    const docId = docSnap.id;
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>#${fac.nro}</strong></td>
+                        <td>${fac.fecha}</td>
+                        <td><strong>${fac.cliente}</strong><br><span style="font-size:11px; color:#666;">RIF: ${fac.rif}</span></td>
+                        <td><strong style="color: #155724;">$${fac.total}</strong></td>
+                        <td style="text-align: center;"></td>
+                    `;
+
+                    // Boton Cajero
+                    const btnCajero = document.createElement('button');
+                    btnCajero.type = 'button';
+                    btnCajero.style = 'background:#f0ad4e; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; margin-right: 5px;';
+                    btnCajero.innerHTML = '<i class="fas fa-cash-register"></i>';
+                    btnCajero.title = "Abrir Modo Cajero";
+                    btnCajero.addEventListener('click', () => window.abrirModoCajeroParaFactura(fac));
+
+                    // Boton Imprimir
+                    const btnImprimir = document.createElement('button');
+                    btnImprimir.type = 'button';
+                    btnImprimir.style = 'background:#28a745; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; margin-right: 5px;';
+                    btnImprimir.innerHTML = '<i class="fas fa-print"></i> PDF';
+                    btnImprimir.addEventListener('click', () => window.abrirVentanaFacturaExistente(fac));
+
+                    // Boton Eliminar
+                    const btnEliminar = document.createElement('button');
+                    btnEliminar.type = 'button';
+                    btnEliminar.style = 'background:#d9534f; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;';
+                    btnEliminar.innerHTML = '<i class="fas fa-trash"></i>';
+                    btnEliminar.addEventListener('click', async () => {
+                        if(!confirm("¿Eliminar esta factura del historial?")) return;
+                        try {
+                            await deleteDoc(doc(db, "facturas", docId));
+                            window.cargarHistorialFacturas();
+                        } catch (e) { alert("Error al eliminar."); }
+                    });
+
+                    const tdAcciones = tr.querySelector('td:last-child');
+                    tdAcciones.appendChild(btnCajero);
+                    tdAcciones.appendChild(btnImprimir);
+                    tdAcciones.appendChild(btnEliminar);
+
+                    tbody.appendChild(tr);
+                });
+            } catch (error) { console.error(error); }
+        };
+
         // ==========================================
         // 🚀 GENERADOR DE SITEMAP SEO PARA GOOGLE
         // ==========================================
@@ -1733,11 +2438,13 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             document.getElementById('cot-nro').value = Math.floor(1000 + Math.random() * 9000);
+            document.getElementById('fac-nro').value = Math.floor(1000 + Math.random() * 9000);
             
             window.cargarPedidos();
             window.cargarCatalogoAdmin();
             window.cargarBaseClientes();
             window.calcularTotalCotizacion();
+            window.calcularTotalFactura();
         });
     </script>
 </body>
