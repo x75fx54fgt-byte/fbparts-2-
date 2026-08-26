@@ -73,6 +73,15 @@
         .cajero-item-details { flex: 1; padding-right: 10px; }
         .cajero-item-actions { display: flex; gap: 8px; }
 
+        /* NUEVOS ESTILOS DE ESTATUS */
+        .select-status { font-size: 12px; padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc; outline: none; cursor: pointer; width: 100%; font-weight: bold;}
+        .status-pendiente { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
+        .status-pagado { background-color: #d4edda; color: #155724; border-color: #c3e6cb; }
+        .status-credito { background-color: #fff3cd; color: #856404; border-color: #ffeeba; }
+        .status-importacion { background-color: #cce5ff; color: #004085; border-color: #b8daff; }
+        .btn-note { background: #f1f1f1; border: 1px solid #ccc; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; color: #555; }
+        .btn-note:hover { background: #e2e2e2; }
+
         /* REGLAS MÁGICAS DE IMPRESIÓN */
         @media screen {
             #print-container { display: none; }
@@ -230,7 +239,6 @@
                             </button>
                         </div>
 
-                        <!-- CORRECCIÓN AQUÍ: onsubmit agregado -->
                         <div class="card-form">
                             <h3><i class="fas fa-box-open"></i> Cargar Repuesto Individual</h3>
                             <form id="product-form" onsubmit="guardarNuevoRepuesto(event)">
@@ -309,7 +317,7 @@
 
                 <div class="admin-grid">
                     <div>
-                        <!-- NUEVO: Carga Masiva de Clientes -->
+                        <!-- Carga Masiva de Clientes -->
                         <div class="card-form" style="background: #e2f0d9; border-color: #c3e6cb;">
                             <h3 style="color: #155724; border-color: #c3e6cb;"><i class="fas fa-users"></i> Carga Masiva de Clientes</h3>
                             <p style="font-size: 12px; color: #155724; margin-top: 0; margin-bottom: 10px;">
@@ -409,7 +417,6 @@
                             </div>
                         </div>
 
-                        <!-- 🚀 NUEVO: Campo Editable Disponibilidad para Facturas -->
                         <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px;">
                             <div class="form-group">
                                 <label>Dirección</label>
@@ -498,12 +505,13 @@
                                 <th>Nro. Factura</th>
                                 <th>Fecha</th>
                                 <th>Cliente</th>
+                                <th>Estatus de Cobro y Envío</th>
                                 <th>Total</th>
                                 <th style="text-align: center;">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="facturas-table-body">
-                            <tr><td colspan="5" style="text-align: center;">Cargando facturas guardadas...</td></tr>
+                            <tr><td colspan="6" style="text-align: center;">Cargando facturas guardadas...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -564,7 +572,6 @@
                             </div>
                         </div>
 
-                        <!-- 🚀 NUEVO: Campo Editable Disponibilidad para Cotizaciones -->
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                             <div class="form-group">
                                 <label>Año del Vehículo</label>
@@ -622,7 +629,7 @@
                 </div>
             </div>
 
-            <!-- PESTAÑA 7: HISTORIAL -->
+            <!-- PESTAÑA 7: HISTORIAL DE COTIZACIONES -->
             <div id="tab-historial-cotizaciones" class="tab-content">
                 <div class="admin-header">
                     <h2>Historial y Base de Datos de Cotizaciones</h2>
@@ -636,7 +643,7 @@
                                 <th>Nro. Cotización</th>
                                 <th>Fecha</th>
                                 <th>Cliente / Aseguradora</th>
-                                <th>Vehículo</th>
+                                <th>Estatus Comercial</th>
                                 <th>Total ($)</th>
                                 <th style="text-align: center;">Acciones</th>
                             </tr>
@@ -662,12 +669,8 @@
             
             <div style="background: #f9f9f9; padding: 15px; border-radius: 6px; border: 1px solid #eee; margin-bottom: 20px;">
                 <h4 style="margin: 0 0 5px 0; color: #333; font-size: 14px;">Cliente: <strong id="cajero-cliente-nombre" style="color: #385723;"></strong></h4>
-                
                 <p id="cajero-cliente-detalles" style="margin: 0 0 10px 0; font-size: 12px; color: #555; display: flex; align-items: center; flex-wrap: wrap;"></p>
-                
-                <div id="cajero-items-lista" style="max-height: 300px; overflow-y: auto;">
-                    <!-- Inyectado dinámicamente -->
-                </div>
+                <div id="cajero-items-lista" style="max-height: 300px; overflow-y: auto;"></div>
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; background: #e2f0d9; padding: 15px; border-radius: 6px; border: 1px solid #c3e6cb;">
@@ -686,15 +689,32 @@
         </div>
     </div>
 
+    <!-- MODAL DE NOTAS INTERNAS (COBROS Y DESPACHOS) -->
+    <div id="modal-notas" class="modal-overlay">
+        <div class="modal-content">
+            <h3><i class="fas fa-sticky-note"></i> Notas Internas del Documento</h3>
+            <p style="font-size: 13px; color: #666; margin-top: -10px; margin-bottom: 15px;">Agrega detalles sobre el pago, chófer que despacha o acuerdos con el cliente. Esta información es privada.</p>
+            
+            <input type="hidden" id="nota-doc-id">
+            <input type="hidden" id="nota-doc-tipo"> <!-- 'factura' o 'cotizacion' -->
+            
+            <div class="form-group">
+                <textarea id="nota-texto" rows="5" placeholder="Ej: Se entregó la mercancía a Royner. El cliente transfirió a Banesco $150 y el resto en efectivo..." style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; outline: none;"></textarea>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="cerrarModalNotas()">Cerrar</button>
+                <button type="button" class="btn-save" onclick="guardarNotaInterna()">Guardar Nota</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL PARA ADMINISTRAR CATEGORÍAS -->
     <div id="modal-categorias" class="modal-overlay">
         <div class="modal-content">
             <h3><i class="fas fa-tags"></i> Administrar Categorías</h3>
             <p style="font-size: 13px; color: #666; margin-top: -10px; margin-bottom: 15px;">Elimina las categorías que ya no uses. Esto actualizará los filtros y formularios.</p>
-            
-            <div id="lista-categorias-modal" style="max-height: 350px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; padding: 10px; background: #fdfdfd;">
-            </div>
-            
+            <div id="lista-categorias-modal" style="max-height: 350px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; padding: 10px; background: #fdfdfd;"></div>
             <div class="modal-actions">
                 <button type="button" class="btn-cancel" onclick="cerrarModalCategorias()">Cerrar Administrador</button>
             </div>
@@ -706,23 +726,9 @@
         <div class="modal-content">
             <h3><i class="fas fa-user-cog"></i> Editar Mi Perfil</h3>
             <input type="hidden" id="edit-admin-docid">
-            
-            <div class="form-group">
-                <label>Nombre del Vendedor</label>
-                <input type="text" id="edit-admin-nombre" placeholder="Tu Nombre">
-            </div>
-            
-            <div class="form-group">
-                <label>Cargo (Fijo)</label>
-                <input type="text" id="edit-admin-cargo" disabled style="background: #f1f1f1; color: #666; cursor: not-allowed;" title="El cargo no se puede modificar">
-            </div>
-
-            <div class="form-group">
-                <label>URL de la Foto de Perfil</label>
-                <input type="text" id="edit-admin-foto" placeholder="https://ejemplo.com/tu-foto.jpg">
-                <small style="color: #666; font-size: 11px;">Pega un enlace directo de imagen (puedes subirla a Imgur, Cloudinary, etc.)</small>
-            </div>
-            
+            <div class="form-group"><label>Nombre del Vendedor</label><input type="text" id="edit-admin-nombre" placeholder="Tu Nombre"></div>
+            <div class="form-group"><label>Cargo (Fijo)</label><input type="text" id="edit-admin-cargo" disabled style="background: #f1f1f1; color: #666; cursor: not-allowed;" title="El cargo no se puede modificar"></div>
+            <div class="form-group"><label>URL de la Foto de Perfil</label><input type="text" id="edit-admin-foto" placeholder="https://ejemplo.com/tu-foto.jpg"><small style="color: #666; font-size: 11px;">Pega un enlace directo de imagen.</small></div>
             <div class="modal-actions">
                 <button type="button" class="btn-cancel" onclick="cerrarModalPerfil()">Cancelar</button>
                 <button type="button" class="btn-save" onclick="guardarPerfilAdmin()" id="btn-save-admin-perfil">Guardar Cambios</button>
@@ -735,52 +741,18 @@
         <div class="modal-content">
             <h3><i class="fas fa-edit"></i> Administrar Repuesto</h3>
             <input type="hidden" id="edit-id">
-            
-            <div class="form-group">
-                <label>Nombre del Repuesto</label>
-                <input type="text" id="edit-nombre">
-            </div>
-            
+            <div class="form-group"><label>Nombre del Repuesto</label><input type="text" id="edit-nombre"></div>
             <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div>
-                    <label>Precio ($)</label>
-                    <input type="number" step="0.01" id="edit-precio">
-                </div>
-                <div>
-                    <label>Cantidad en Stock</label>
-                    <input type="number" id="edit-stock" min="0">
-                </div>
+                <div><label>Precio ($)</label><input type="number" step="0.01" id="edit-precio"></div>
+                <div><label>Cantidad en Stock</label><input type="number" id="edit-stock" min="0"></div>
             </div>
-
             <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div>
-                    <label>Categoría</label>
-                    <select id="edit-categoria"></select>
-                </div>
-                <div>
-                    <label>Estado</label>
-                    <select id="edit-estado">
-                        <option value="activo">Activo (Visible)</option>
-                        <option value="inactivo">Inactivo (Pausado)</option>
-                    </select>
-                </div>
+                <div><label>Categoría</label><select id="edit-categoria"></select></div>
+                <div><label>Estado</label><select id="edit-estado"><option value="activo">Activo (Visible)</option><option value="inactivo">Inactivo (Pausado)</option></select></div>
             </div>
-            
-            <div class="form-group">
-                <label>Número de Parte / OEM</label>
-                <input type="text" id="edit-numero-parte">
-            </div>
-
-            <div class="form-group">
-                <label>Descripción Detallada</label>
-                <textarea id="edit-descripcion" rows="3"></textarea>
-            </div>
-
-            <div class="form-group">
-                <label>URL de la Imagen</label>
-                <textarea id="edit-imagen" style="height: 50px;"></textarea>
-            </div>
-            
+            <div class="form-group"><label>Número de Parte / OEM</label><input type="text" id="edit-numero-parte"></div>
+            <div class="form-group"><label>Descripción Detallada</label><textarea id="edit-descripcion" rows="3"></textarea></div>
+            <div class="form-group"><label>URL de la Imagen</label><textarea id="edit-imagen" style="height: 50px;"></textarea></div>
             <div class="modal-actions">
                 <button type="button" class="btn-delete" onclick="eliminarProducto()"><i class="fas fa-trash"></i> Eliminar</button>
                 <button type="button" class="btn-cancel" onclick="cerrarModalEdicion()">Cancelar</button>
@@ -794,41 +766,17 @@
         <div class="modal-content">
             <h3><i class="fas fa-shipping-fast"></i> Editar Envío y Pedido</h3>
             <input type="hidden" id="edit-pedido-id">
-            
-            <div class="form-group">
-                <label>Correo del Cliente</label>
-                <input type="email" id="edit-pedido-email">
-            </div>
-
-            <div class="form-group">
-                <label>Nombre / Cliente Registrado</label>
-                <input type="text" id="edit-pedido-cliente">
-            </div>
-
+            <div class="form-group"><label>Correo del Cliente</label><input type="email" id="edit-pedido-email"></div>
+            <div class="form-group"><label>Nombre / Cliente Registrado</label><input type="text" id="edit-pedido-cliente"></div>
             <div class="form-group">
                 <label>Método de Envío</label>
-                <select id="edit-pedido-envio">
-                    <option value="Motorizado Caracas">Motorizado (Caracas)</option>
-                    <option value="Encomienda Tealca">Encomienda / Tealca (Interior)</option>
-                    <option value="Retiro en Local">Retiro en Tienda / Local</option>
-                </select>
+                <select id="edit-pedido-envio"><option value="Motorizado Caracas">Motorizado (Caracas)</option><option value="Encomienda Tealca">Encomienda / Tealca (Interior)</option><option value="Retiro en Local">Retiro en Tienda / Local</option></select>
             </div>
-
-            <div class="form-group">
-                <label>Estatus / Nro. de Guía / Tracking</label>
-                <input type="text" id="edit-pedido-tracking" placeholder="Ej: Guía Tealca #123456 o En camino">
-            </div>
-
+            <div class="form-group"><label>Estatus / Nro. de Guía / Tracking</label><input type="text" id="edit-pedido-tracking" placeholder="Ej: Guía Tealca #123456 o En camino"></div>
             <div class="form-group">
                 <label>Estado del Pedido</label>
-                <select id="edit-pedido-estado">
-                    <option value="Pendiente">Pendiente</option>
-                    <option value="Procesando">Procesando</option>
-                    <option value="Enviado">Enviado</option>
-                    <option value="Entregado">Entregado</option>
-                </select>
+                <select id="edit-pedido-estado"><option value="Pendiente">Pendiente</option><option value="Procesando">Procesando</option><option value="Enviado">Enviado</option><option value="Entregado">Entregado</option></select>
             </div>
-            
             <div class="modal-actions">
                 <button type="button" class="btn-delete" onclick="eliminarPedido()"><i class="fas fa-trash"></i> Borrar</button>
                 <button type="button" class="btn-cancel" onclick="cerrarModalPedido()">Cancelar</button>
@@ -1069,15 +1017,11 @@
         window.procesarPegadoMasivoClientes = async function() {
             const texto = document.getElementById('excel-paste-clientes').value.trim();
             const btn = document.getElementById('btn-excel-upload-clientes');
-            
             if(!texto) { alert("Pega el contenido de tu Excel."); return; }
 
-            btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Procesando...";
-            btn.disabled = true;
-            
+            btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Procesando..."; btn.disabled = true;
             const lineas = texto.split('\n');
-            let importados = 0;
-            let ignorados = 0;
+            let importados = 0; let ignorados = 0;
             
             try {
                 for(let linea of lineas) {
@@ -1097,27 +1041,16 @@
                             }
 
                             if(!existe) {
-                                await addDoc(collection(db, "clientes"), {
-                                    nombre, rif, direccion, telefono
-                                });
-                                importados++;
-                                window.clientesDBLocal["temp_" + importados] = { rif: rif }; 
-                            } else {
-                                ignorados++;
-                            }
+                                await addDoc(collection(db, "clientes"), { nombre, rif, direccion, telefono });
+                                importados++; window.clientesDBLocal["temp_" + importados] = { rif: rif }; 
+                            } else { ignorados++; }
                         }
                     }
                 }
-                
                 alert(`¡Carga Completada!\n\n✅ Clientes nuevos subidos: ${importados}\n⚠️ Ignorados (ya existían): ${ignorados}`);
-                document.getElementById('excel-paste-clientes').value = "";
-                window.cargarBaseClientes();
-            } catch(e) {
-                console.error(e);
-                alert("Ocurrió un error al procesar el Excel de clientes.");
-            }
-            btn.innerHTML = "Subir Clientes";
-            btn.disabled = false;
+                document.getElementById('excel-paste-clientes').value = ""; window.cargarBaseClientes();
+            } catch(e) { console.error(e); alert("Ocurrió un error al procesar el Excel de clientes."); }
+            btn.innerHTML = "Subir Clientes"; btn.disabled = false;
         };
 
         window.guardarNuevoClienteDB = async function(e) {
@@ -1197,22 +1130,17 @@
             document.getElementById('edit-categoria').value = categoria;
             document.getElementById('edit-estado').value = estado || 'activo';
             document.getElementById('edit-imagen').value = imagen;
-            
             document.getElementById('edit-numero-parte').value = (numero_parte && numero_parte !== 'undefined') ? numero_parte : '';
             document.getElementById('edit-descripcion').value = (descripcion && descripcion !== 'undefined') ? descripcion.replace(/\\n/g, '\n') : '';
-            
             document.getElementById('modal-edicion').style.display = 'flex';
         };
 
-        window.cerrarModalEdicion = function() {
-            document.getElementById('modal-edicion').style.display = 'none';
-        };
+        window.cerrarModalEdicion = function() { document.getElementById('modal-edicion').style.display = 'none'; };
 
         window.guardarCambiosProducto = async function() {
             const docId = document.getElementById('edit-id').value;
             const btn = document.getElementById('btn-save-edit');
-            btn.innerHTML = "Guardando...";
-            btn.disabled = true;
+            btn.innerHTML = "Guardando..."; btn.disabled = true;
 
             const datosActualizados = {
                 nombre: document.getElementById('edit-nombre').value.trim(),
@@ -1227,22 +1155,17 @@
 
             try {
                 await updateDoc(doc(db, "productos", docId), datosActualizados);
-                window.cerrarModalEdicion();
-                window.cargarCatalogoAdmin();
+                window.cerrarModalEdicion(); window.cargarCatalogoAdmin();
             } catch (error) { console.error(error); alert("Ocurrió un error al guardar los cambios."); }
-            btn.innerHTML = "Guardar";
-            btn.disabled = false;
+            btn.innerHTML = "Guardar"; btn.disabled = false;
         };
 
         window.eliminarProducto = async function() {
             const docId = document.getElementById('edit-id').value;
             if(!confirm("¿Estás seguro de eliminar permanentemente este repuesto?")) return;
-
             try {
                 await deleteDoc(doc(db, "productos", docId));
-                window.cerrarModalEdicion();
-                window.cargarCatalogoAdmin();
-                alert("Repuesto eliminado con éxito.");
+                window.cerrarModalEdicion(); window.cargarCatalogoAdmin(); alert("Repuesto eliminado con éxito.");
             } catch (error) { console.error(error); alert("No se pudo eliminar el repuesto."); }
         };
 
@@ -1286,14 +1209,13 @@
                     }
                 }
                 alert(`¡Carga Completada!\n\n✅ Repuestos subidos: ${importados}\n📁 Categorías creadas: ${nuevasCatCount}`);
-                document.getElementById('excel-paste').value = "";
-                window.cargarCatalogoAdmin();
+                document.getElementById('excel-paste').value = ""; window.cargarCatalogoAdmin();
             } catch(e) { console.error(e); alert("Ocurrió un error al procesar el Excel."); }
             btn.innerHTML = "Subir y Crear Categorías"; btn.disabled = false;
         };
 
         // ==========================================
-        // MODO CAJERO (TABLET HKPOS) LÓGICA DE COPIADO
+        // MODO CAJERO (TABLET HKPOS)
         // ==========================================
         window.copiarAlPortapapeles = function(texto, btnElement) {
             navigator.clipboard.writeText(texto).then(() => {
@@ -1316,7 +1238,6 @@
             const emailStr = pedido.email ? `<span style="margin-left: 8px;">Correo: ${pedido.email}</span>` : '';
             let rifHtml = '';
             if (pedido.rif) {
-                // Quitamos el último guion para el HKPOS
                 let rifLimpio = pedido.rif;
                 const lastDash = pedido.rif.lastIndexOf('-');
                 if (lastDash > 0) { rifLimpio = pedido.rif.substring(0, lastDash) + pedido.rif.substring(lastDash + 1); }
@@ -1324,18 +1245,16 @@
             }
             document.getElementById('cajero-cliente-detalles').innerHTML = `<div style="display: flex; align-items: center; flex-wrap: wrap;">${rifHtml}${emailStr}</div>`;
 
-            // Establecemos el monto total crudo en el atributo data-raw para copiarlo sin el símbolo del $
             const totalF = Number(pedido.total || 0).toFixed(2);
             const totalEl = document.getElementById('cajero-total-monto');
-            totalEl.textContent = `$${totalF}`;
-            totalEl.setAttribute('data-raw', totalF);
+            totalEl.textContent = `$${totalF}`; totalEl.setAttribute('data-raw', totalF);
 
             const lista = document.getElementById('cajero-items-lista');
             lista.innerHTML = '';
             if (pedido.productos) {
                 pedido.productos.forEach(prod => {
                     const safeName = (prod.nombre || '').replace(/'/g, "\\'");
-                    const precioConIva = (Number(prod.precio || 0) * 1.16).toFixed(2); // Sumamos IVA 16%
+                    const precioConIva = (Number(prod.precio || 0) * 1.16).toFixed(2);
                     lista.innerHTML += `
                         <div class="cajero-item-row">
                             <div class="cajero-item-details">
@@ -1369,15 +1288,14 @@
             const simbolo = factura.simbolo || '$';
             const totalF = Number(factura.total || 0).toFixed(2);
             const totalEl = document.getElementById('cajero-total-monto');
-            totalEl.textContent = `${simbolo}${totalF}`;
-            totalEl.setAttribute('data-raw', totalF);
+            totalEl.textContent = `${simbolo}${totalF}`; totalEl.setAttribute('data-raw', totalF);
 
             const lista = document.getElementById('cajero-items-lista');
             lista.innerHTML = '';
             if (factura.items) {
                 factura.items.forEach(prod => {
                     const safeName = (prod.descripcion || '').replace(/'/g, "\\'");
-                    const precioConIva = (Number(prod.precioUnitario || 0) * 1.16).toFixed(2); // Sumamos IVA 16%
+                    const precioConIva = (Number(prod.precioUnitario || 0) * 1.16).toFixed(2); 
                     lista.innerHTML += `
                         <div class="cajero-item-row">
                             <div class="cajero-item-details">
@@ -1395,6 +1313,50 @@
         };
 
         window.cerrarModoCajero = function() { document.getElementById('modal-cajero').style.display = 'none'; };
+
+        // ==========================================
+        // 🚀 NUEVO: GESTIÓN DE NOTAS INTERNAS
+        // ==========================================
+        window.abrirModalNotas = function(docId, tipoDocumento, notaExistente) {
+            document.getElementById('nota-doc-id').value = docId;
+            document.getElementById('nota-doc-tipo').value = tipoDocumento;
+            document.getElementById('nota-texto').value = notaExistente && notaExistente !== 'undefined' ? notaExistente : '';
+            document.getElementById('modal-notas').style.display = 'flex';
+        };
+
+        window.cerrarModalNotas = function() {
+            document.getElementById('modal-notas').style.display = 'none';
+        };
+
+        window.guardarNotaInterna = async function() {
+            const docId = document.getElementById('nota-doc-id').value;
+            const tipo = document.getElementById('nota-doc-tipo').value; // 'facturas' o 'cotizaciones'
+            const texto = document.getElementById('nota-texto').value.trim();
+
+            try {
+                await updateDoc(doc(db, tipo, docId), { notaInterna: texto });
+                window.cerrarModalNotas();
+                
+                if(tipo === 'facturas') { window.cargarHistorialFacturas(); }
+                else if (tipo === 'cotizaciones') { window.cargarHistorialCotizaciones(); }
+                
+            } catch (error) { console.error("Error al guardar la nota:", error); alert("Error al guardar la nota."); }
+        };
+
+        window.actualizarEstatusDocumento = async function(docId, tipoDocumento, selectElement) {
+            const nuevoEstatus = selectElement.value;
+            // Cambiar color del select visualmente de inmediato
+            if (nuevoEstatus.includes("Pagado")) { selectElement.className = 'select-status status-pagado'; }
+            else if (nuevoEstatus.includes("Crédito")) { selectElement.className = 'select-status status-credito'; }
+            else if (nuevoEstatus.includes("Importación")) { selectElement.className = 'select-status status-importacion'; }
+            else { selectElement.className = 'select-status status-pendiente'; }
+
+            try {
+                await updateDoc(doc(db, tipoDocumento, docId), { estatusComercial: nuevoEstatus });
+            } catch (error) {
+                console.error("Error al actualizar estatus:", error);
+            }
+        };
 
         // ==========================================
         // PEDIDOS WEB
@@ -1479,9 +1441,8 @@
         };
 
         // ==========================================
-        // 🚀 LÓGICA DE FACTURACIÓN (POS) Y MULTIMONEDA
+        // FACTURACIÓN (POS) Y MULTIMONEDA
         // ==========================================
-        
         window.actualizarSimboloMoneda = function() {
             const simbolo = document.getElementById('fac-moneda').value.split('|')[1];
             document.querySelectorAll('.fac-simbolo-display').forEach(el => el.textContent = simbolo);
@@ -1744,7 +1705,9 @@
 
             const objetoFactura = {
                 nro: nroFactura, fecha: fechaActual, cliente, rif, direccion, telefono,
-                items, subtotal, descuento, iva, total, moneda, simbolo, tasa, disponibilidad
+                items, subtotal, descuento, iva, total, moneda, simbolo, tasa, disponibilidad,
+                estatusComercial: "Pendiente", // 🚀 Estatus por defecto
+                notaInterna: ""
             };
 
             const ventanaPDF = window.open('', '_blank');
@@ -1804,7 +1767,7 @@
         window.cargarHistorialFacturas = async function() {
             const tbody = document.getElementById('facturas-table-body');
             if(!tbody) return;
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">Cargando historial de facturas...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center;">Cargando historial de facturas...</td></tr>`;
 
             try {
                 const snap = await getDocs(collection(db, "facturas"));
@@ -1813,7 +1776,7 @@
                 let maxNro = 0;
 
                 if(snap.empty) { 
-                    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">No hay facturas guardadas.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center;">No hay facturas guardadas.</td></tr>`;
                     document.getElementById('fac-nro').value = "1000";
                     window.actualizarPreviewFactura();
                     return; 
@@ -1828,34 +1791,61 @@
 
                     const tr = document.createElement('tr');
                     const simbolo = fac.simbolo || '$';
+                    const estatus = fac.estatusComercial || 'Pendiente';
+                    const notaSegura = (fac.notaInterna || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    
+                    let colorClase = 'status-pendiente';
+                    if(estatus.includes("Pagado")) colorClase = 'status-pagado';
+                    else if (estatus.includes("Crédito")) colorClase = 'status-credito';
+                    else if (estatus.includes("Importación")) colorClase = 'status-importacion';
+
                     tr.innerHTML = `
                         <td><strong>#${fac.nro}</strong></td>
                         <td>${fac.fecha}</td>
                         <td><strong>${fac.cliente}</strong><br><span style="font-size:11px; color:#666;">RIF: ${fac.rif}</span></td>
+                        <td>
+                            <select class="select-status ${colorClase}" onchange="actualizarEstatusDocumento('${docId}', 'facturas', this)">
+                                <option value="Pendiente" ${estatus === 'Pendiente' ? 'selected' : ''}>⏳ Pendiente</option>
+                                <option value="Pagado y Despachado" ${estatus === 'Pagado y Despachado' ? 'selected' : ''}>✅ Pagado y Despachado</option>
+                                <option value="Crédito Despachado (15 Días)" ${estatus === 'Crédito Despachado (15 Días)' ? 'selected' : ''}>💳 Crédito Despachado (15 Días)</option>
+                                <option value="Crédito Despachado (30 Días)" ${estatus === 'Crédito Despachado (30 Días)' ? 'selected' : ''}>💳 Crédito Despachado (30 Días)</option>
+                                <option value="Crédito Pagado" ${estatus === 'Crédito Pagado' ? 'selected' : ''}>✅ Crédito Pagado</option>
+                                <option value="Bajo Importación" ${estatus === 'Bajo Importación' ? 'selected' : ''}>🚢 Bajo Importación</option>
+                            </select>
+                        </td>
                         <td><strong style="color: #155724;">${simbolo}${fac.total}</strong></td>
-                        <td style="text-align: center;"></td>
+                        <td style="text-align: center; min-width: 140px;"></td>
                     `;
 
+                    // Boton Notas
+                    const btnNotas = document.createElement('button');
+                    btnNotas.type = 'button'; btnNotas.className = 'btn-note'; btnNotas.style.marginRight = '5px';
+                    btnNotas.innerHTML = '<i class="fas fa-sticky-note"></i>'; btnNotas.title = "Notas Internas";
+                    btnNotas.addEventListener('click', () => window.abrirModalNotas(docId, 'facturas', fac.notaInterna));
+
                     const btnCajero = document.createElement('button');
-                    btnCajero.type = 'button'; btnCajero.style = 'background:#f0ad4e; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; margin-right: 5px;';
+                    btnCajero.type = 'button'; btnCajero.style = 'background:#f0ad4e; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; margin-right: 5px;';
                     btnCajero.innerHTML = '<i class="fas fa-cash-register"></i>'; btnCajero.title = "Abrir Modo Cajero";
                     btnCajero.addEventListener('click', () => window.abrirModoCajeroParaFactura(fac));
 
                     const btnImprimir = document.createElement('button');
-                    btnImprimir.type = 'button'; btnImprimir.style = 'background:#28a745; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; margin-right: 5px;';
-                    btnImprimir.innerHTML = '<i class="fas fa-print"></i> PDF';
+                    btnImprimir.type = 'button'; btnImprimir.style = 'background:#28a745; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; margin-right: 5px;';
+                    btnImprimir.innerHTML = '<i class="fas fa-print"></i>'; btnImprimir.title = "Imprimir";
                     btnImprimir.addEventListener('click', () => window.abrirVentanaFacturaExistente(fac));
 
                     const btnEliminar = document.createElement('button');
-                    btnEliminar.type = 'button'; btnEliminar.style = 'background:#d9534f; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;';
+                    btnEliminar.type = 'button'; btnEliminar.style = 'background:#d9534f; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;';
                     btnEliminar.innerHTML = '<i class="fas fa-trash"></i>';
                     btnEliminar.addEventListener('click', async () => {
                         if(!confirm("¿Eliminar esta factura del historial?")) return;
-                        try { await deleteDoc(doc(db, "facturas", docSnap.id)); window.cargarHistorialFacturas(); } catch (e) { alert("Error al eliminar."); }
+                        try { await deleteDoc(doc(db, "facturas", docId)); window.cargarHistorialFacturas(); } catch (e) { alert("Error al eliminar."); }
                     });
 
                     const tdAcciones = tr.querySelector('td:last-child');
-                    tdAcciones.appendChild(btnCajero); tdAcciones.appendChild(btnImprimir); tdAcciones.appendChild(btnEliminar);
+                    tdAcciones.appendChild(btnNotas);
+                    tdAcciones.appendChild(btnCajero); 
+                    tdAcciones.appendChild(btnImprimir); 
+                    tdAcciones.appendChild(btnEliminar);
                     tbody.appendChild(tr);
                 });
                 
@@ -2119,7 +2109,9 @@
 
             const objetoCotizacion = {
                 nro: nroCotizacion, fecha: fechaActual, cliente, rif, direccion, telefono, vehiculo, anio,
-                items, subtotal, descuento, iva, total, disponibilidad
+                items, subtotal, descuento, iva, total, disponibilidad,
+                estatusComercial: "Pendiente",
+                notaInterna: ""
             };
 
             const ventanaPDF = window.open('', '_blank');
@@ -2198,22 +2190,45 @@
                     if (!isNaN(currNro) && currNro > maxNro) maxNro = currNro;
                     
                     const tr = document.createElement('tr');
+                    const estatus = cot.estatusComercial || 'Pendiente';
+                    const notaSegura = (cot.notaInterna || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    
+                    let colorClase = 'status-pendiente';
+                    if(estatus.includes("Pagado")) colorClase = 'status-pagado';
+                    else if (estatus.includes("Crédito")) colorClase = 'status-credito';
+                    else if (estatus.includes("Importación")) colorClase = 'status-importacion';
+
                     tr.innerHTML = `
                         <td><strong>#${cot.nro}</strong></td>
                         <td>${cot.fecha}</td>
                         <td><strong>${cot.cliente}</strong><br><span style="font-size:11px; color:#666;">RIF: ${cot.rif}</span></td>
-                        <td>${cot.vehiculo} (${cot.anio})</td>
+                        <td>
+                            <select class="select-status ${colorClase}" onchange="actualizarEstatusDocumento('${docId}', 'cotizaciones', this)">
+                                <option value="Pendiente" ${estatus === 'Pendiente' ? 'selected' : ''}>⏳ Pendiente</option>
+                                <option value="Pagado y Despachado" ${estatus === 'Pagado y Despachado' ? 'selected' : ''}>✅ Pagado y Despachado</option>
+                                <option value="Crédito Despachado (15 Días)" ${estatus === 'Crédito Despachado (15 Días)' ? 'selected' : ''}>💳 Crédito Despachado (15 Días)</option>
+                                <option value="Crédito Despachado (30 Días)" ${estatus === 'Crédito Despachado (30 Días)' ? 'selected' : ''}>💳 Crédito Despachado (30 Días)</option>
+                                <option value="Crédito Pagado" ${estatus === 'Crédito Pagado' ? 'selected' : ''}>✅ Crédito Pagado</option>
+                                <option value="Bajo Importación" ${estatus === 'Bajo Importación' ? 'selected' : ''}>🚢 Bajo Importación</option>
+                            </select>
+                        </td>
                         <td><strong>$${cot.total}</strong></td>
-                        <td style="text-align: center;"></td>
+                        <td style="text-align: center; min-width: 140px;"></td>
                     `;
 
+                    // Boton Notas
+                    const btnNotas = document.createElement('button');
+                    btnNotas.type = 'button'; btnNotas.className = 'btn-note'; btnNotas.style.marginRight = '5px';
+                    btnNotas.innerHTML = '<i class="fas fa-sticky-note"></i>'; btnNotas.title = "Notas Internas";
+                    btnNotas.addEventListener('click', () => window.abrirModalNotas(docId, 'cotizaciones', cot.notaInterna));
+
                     const btnImprimir = document.createElement('button');
-                    btnImprimir.type = 'button'; btnImprimir.style = 'background:#1d6fa5; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; margin-right: 5px;';
-                    btnImprimir.innerHTML = '<i class="fas fa-print"></i> Imprimir';
+                    btnImprimir.type = 'button'; btnImprimir.style = 'background:#1d6fa5; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; margin-right: 5px;';
+                    btnImprimir.innerHTML = '<i class="fas fa-print"></i>'; btnImprimir.title = "Imprimir";
                     btnImprimir.addEventListener('click', () => window.abrirVentanaCotizacionExistente(cot));
 
                     const btnEliminar = document.createElement('button');
-                    btnEliminar.type = 'button'; btnEliminar.style = 'background:#d9534f; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;';
+                    btnEliminar.type = 'button'; btnEliminar.style = 'background:#d9534f; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;';
                     btnEliminar.innerHTML = '<i class="fas fa-trash"></i>';
                     btnEliminar.addEventListener('click', async () => {
                         if(!confirm("¿Eliminar esta cotización del historial?")) return;
@@ -2221,7 +2236,9 @@
                     });
 
                     const tdAcciones = tr.querySelector('td:last-child');
-                    tdAcciones.appendChild(btnImprimir); tdAcciones.appendChild(btnEliminar);
+                    tdAcciones.appendChild(btnNotas);
+                    tdAcciones.appendChild(btnImprimir); 
+                    tdAcciones.appendChild(btnEliminar);
                     tbody.appendChild(tr);
                 });
                 
@@ -2273,16 +2290,16 @@
         };
 
         window.addEventListener('DOMContentLoaded', () => {
-            // 🚀 Inicializamos TODO al cargar la página para que ninguna tabla se quede "Cargando..."
+            // 🚀 Inicializamos TODO al cargar la página
             window.cargarPedidos();
             window.cargarCatalogoAdmin();
             window.cargarBaseClientes();
             
             window.calcularTotalCotizacion();
-            window.cargarHistorialCotizaciones(); // Esto auto-calcula y asigna el próximo Nro.
+            window.cargarHistorialCotizaciones(); 
             
             window.calcularTotalFactura();
-            window.cargarHistorialFacturas(); // Esto auto-calcula y asigna el próximo Nro.
+            window.cargarHistorialFacturas(); 
         });
     </script>
 </body>
