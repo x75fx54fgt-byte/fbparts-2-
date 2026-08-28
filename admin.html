@@ -709,6 +709,22 @@
         </div>
     </div>
 
+    <!-- 🚀 NUEVO: MODAL DE RETENCIONES AUTOMÁTICAS -->
+    <div id="modal-retenciones" class="modal-overlay">
+        <div class="modal-content" style="max-width: 600px;">
+            <h3><i class="fas fa-file-invoice-dollar"></i> Comprobantes de Retención</h3>
+            <p style="font-size: 13px; color: #666; margin-top: -10px; margin-bottom: 15px;">
+                Retenciones extraídas automáticamente por la IA para la Factura Nro: <strong id="ret-nro-factura" style="color: #385723;"></strong>
+            </p>
+            <div id="lista-retenciones" style="max-height: 350px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; padding: 10px; background: #fdfdfd;">
+                <!-- Inyección dinámica -->
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="cerrarModalRetenciones()">Cerrar Ventana</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL PARA ADMINISTRAR CATEGORÍAS -->
     <div id="modal-categorias" class="modal-overlay">
         <div class="modal-content">
@@ -1315,7 +1331,7 @@
         window.cerrarModoCajero = function() { document.getElementById('modal-cajero').style.display = 'none'; };
 
         // ==========================================
-        // 🚀 NUEVO: GESTIÓN DE NOTAS INTERNAS
+        // GESTIÓN DE NOTAS INTERNAS
         // ==========================================
         window.abrirModalNotas = function(docId, tipoDocumento, notaExistente) {
             document.getElementById('nota-doc-id').value = docId;
@@ -1356,6 +1372,61 @@
             } catch (error) {
                 console.error("Error al actualizar estatus:", error);
             }
+        };
+
+        // ==========================================
+        // 🚀 NUEVO: GESTIÓN DE RETENCIONES AUTOMÁTICAS (MAKE/IA)
+        // ==========================================
+        window.abrirModalRetenciones = async function(nroFactura) {
+            document.getElementById('ret-nro-factura').textContent = nroFactura;
+            document.getElementById('modal-retenciones').style.display = 'flex';
+            const contenedor = document.getElementById('lista-retenciones');
+            contenedor.innerHTML = '<p style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin"></i> Buscando retenciones automáticas en la base de datos...</p>';
+
+            try {
+                // Consultamos la colección 'retenciones' creada por Make/Gemini
+                const q = query(collection(db, "retenciones"), where("factura", "==", String(nroFactura)));
+                const snap = await getDocs(q);
+
+                if (snap.empty) {
+                    contenedor.innerHTML = `
+                        <div style="text-align:center; padding:30px 10px; color:#666;">
+                            <i class="fas fa-inbox" style="font-size: 30px; color: #ccc; margin-bottom: 10px;"></i>
+                            <p style="margin:0;">No se han recibido comprobantes automáticos para esta factura aún.</p>
+                            <small style="font-size: 11px;">(Recuerda que Make las escanea del correo y las vincula aquí)</small>
+                        </div>`;
+                    return;
+                }
+
+                let html = '';
+                snap.forEach(docSnap => {
+                    const ret = docSnap.data();
+                    const montoDisplay = (!isNaN(parseFloat(ret.monto))) ? `$${parseFloat(ret.monto).toFixed(2)}` : (ret.monto || 'No especificado');
+                    
+                    html += `
+                        <div style="background: white; border: 1px solid #c3e6cb; border-left: 4px solid #28a745; padding: 12px; border-radius: 6px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02);">
+                            <div>
+                                <span style="display:block; font-weight:bold; color:#155724; font-size:14px;">RIF: ${ret.rif || 'N/A'}</span>
+                                <span style="font-size:12px; color:#555;">Monto Retenido: <strong style="color:#d9534f;">${montoDisplay}</strong></span>
+                            </div>
+                            <div>
+                                ${ret.link_pdf 
+                                    ? `<a href="${ret.link_pdf}" target="_blank" style="background:#1d6fa5; color:white; padding:6px 12px; border-radius:4px; text-decoration:none; font-size:12px; font-weight:bold; display:inline-block;"><i class="fas fa-file-pdf"></i> Ver PDF</a>` 
+                                    : `<span style="font-size:11px; background:#f1f1f1; padding:4px 8px; border-radius:4px; color:#666;"><i class="fas fa-robot"></i> Procesado por IA</span>`}
+                            </div>
+                        </div>
+                    `;
+                });
+                contenedor.innerHTML = html;
+
+            } catch (error) {
+                console.error(error);
+                contenedor.innerHTML = '<p style="text-align:center; color:#d9534f; padding:20px;"><i class="fas fa-exclamation-triangle"></i> Error al buscar las retenciones en Firestore.</p>';
+            }
+        };
+
+        window.cerrarModalRetenciones = function() {
+            document.getElementById('modal-retenciones').style.display = 'none';
         };
 
         // ==========================================
@@ -1817,6 +1888,14 @@
                         <td style="text-align: center; min-width: 140px;"></td>
                     `;
 
+                    // 🚀 NUEVO BOTÓN: VER RETENCIONES DE LA IA
+                    const btnRetencion = document.createElement('button');
+                    btnRetencion.type = 'button'; 
+                    btnRetencion.style = 'background:#17a2b8; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; margin-right: 5px;';
+                    btnRetencion.innerHTML = '<i class="fas fa-file-invoice-dollar"></i>'; 
+                    btnRetencion.title = "Ver Retenciones Automáticas (IA)";
+                    btnRetencion.addEventListener('click', () => window.abrirModalRetenciones(fac.nro));
+
                     // Boton Notas
                     const btnNotas = document.createElement('button');
                     btnNotas.type = 'button'; btnNotas.className = 'btn-note'; btnNotas.style.marginRight = '5px';
@@ -1842,6 +1921,7 @@
                     });
 
                     const tdAcciones = tr.querySelector('td:last-child');
+                    tdAcciones.appendChild(btnRetencion); // <-- AÑADIDO
                     tdAcciones.appendChild(btnNotas);
                     tdAcciones.appendChild(btnCajero); 
                     tdAcciones.appendChild(btnImprimir); 
@@ -1857,7 +1937,7 @@
         };
 
         // ==========================================
-        // 🚀 LÓGICA DE COTIZACIONES
+        // LÓGICA DE COTIZACIONES
         // ==========================================
         window.agregarFilaCotizacionVacia = function() {
             const container = document.getElementById('cotizacion-items-container');
