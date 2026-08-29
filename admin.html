@@ -1375,49 +1375,66 @@
         };
 
         // ==========================================
-        // 🚀 NUEVO: GESTIÓN DE RETENCIONES AUTOMÁTICAS (MAKE/IA)
+        // 🚀 NUEVO: GESTIÓN DE RETENCIONES AUTOMÁTICAS (IA)
         // ==========================================
         window.abrirModalRetenciones = async function(nroFactura) {
             document.getElementById('ret-nro-factura').textContent = nroFactura;
             document.getElementById('modal-retenciones').style.display = 'flex';
             const contenedor = document.getElementById('lista-retenciones');
-            contenedor.innerHTML = '<p style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin"></i> Buscando retenciones automáticas en la base de datos...</p>';
+            contenedor.innerHTML = '<p style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin"></i> Buscando retenciones automáticas...</p>';
 
             try {
-                // Consultamos la colección 'retenciones' creada por Make/Gemini
-                const q = query(collection(db, "retenciones"), where("factura", "==", String(nroFactura)));
-                const snap = await getDocs(q);
+                // Traemos las retenciones para filtrarlas inteligentemente con JS
+                const snap = await getDocs(collection(db, "retenciones"));
 
-                if (snap.empty) {
+                let html = '';
+                let encontradas = 0;
+
+                // 1. Limpiamos el número de factura del sistema (quitamos ceros a la izquierda y pasamos a mayúsculas)
+                // Ej: "00000585" se convierte en "585" | "fac-123" se convierte en "FAC-123"
+                const buscarNro = String(nroFactura).replace(/^0+/, '').toUpperCase();
+
+                snap.forEach(docSnap => {
+                    const ret = docSnap.data();
+                    
+                    // 2. Buscamos el campo sin importar si lo guardaste como 'Factura', 'factura' o 'FACTURA'
+                    const retNroOriginal = String(ret.Factura || ret.factura || ret.FACTURA || '');
+                    
+                    // 3. Limpiamos el número extraído de la base de datos igual que el anterior
+                    const retNroLimpio = retNroOriginal.replace(/^0+/, '').toUpperCase();
+
+                    // 4. ¡Comparamos! Si coinciden, mostramos la retención
+                    if (retNroLimpio === buscarNro && retNroLimpio !== '') {
+                        encontradas++;
+                        const montoDisplay = (!isNaN(parseFloat(ret.monto))) ? `$${parseFloat(ret.monto).toFixed(2)}` : (ret.monto || 'No especificado');
+                        
+                        html += `
+                            <div style="background: white; border: 1px solid #c3e6cb; border-left: 4px solid #28a745; padding: 12px; border-radius: 6px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02);">
+                                <div>
+                                    <span style="display:block; font-weight:bold; color:#155724; font-size:14px;">RIF: ${ret.rif || 'N/A'}</span>
+                                    <span style="font-size:12px; color:#555;">Monto Retenido: <strong style="color:#d9534f;">${montoDisplay}</strong></span>
+                                </div>
+                                <div>
+                                    ${ret.link_pdf 
+                                        ? `<a href="${ret.link_pdf}" target="_blank" style="background:#1d6fa5; color:white; padding:6px 12px; border-radius:4px; text-decoration:none; font-size:12px; font-weight:bold; display:inline-block;"><i class="fas fa-file-pdf"></i> Ver PDF</a>` 
+                                        : `<span style="font-size:11px; background:#f1f1f1; padding:4px 8px; border-radius:4px; color:#666;"><i class="fas fa-robot"></i> Procesado por IA</span>`}
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+
+                // Si después de revisar todo no encontró coincidencias:
+                if (encontradas === 0) {
                     contenedor.innerHTML = `
                         <div style="text-align:center; padding:30px 10px; color:#666;">
                             <i class="fas fa-inbox" style="font-size: 30px; color: #ccc; margin-bottom: 10px;"></i>
                             <p style="margin:0;">No se han recibido comprobantes automáticos para esta factura aún.</p>
                             <small style="font-size: 11px;">(Recuerda que Make las escanea del correo y las vincula aquí)</small>
                         </div>`;
-                    return;
+                } else {
+                    contenedor.innerHTML = html;
                 }
-
-                let html = '';
-                snap.forEach(docSnap => {
-                    const ret = docSnap.data();
-                    const montoDisplay = (!isNaN(parseFloat(ret.monto))) ? `$${parseFloat(ret.monto).toFixed(2)}` : (ret.monto || 'No especificado');
-                    
-                    html += `
-                        <div style="background: white; border: 1px solid #c3e6cb; border-left: 4px solid #28a745; padding: 12px; border-radius: 6px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02);">
-                            <div>
-                                <span style="display:block; font-weight:bold; color:#155724; font-size:14px;">RIF: ${ret.rif || 'N/A'}</span>
-                                <span style="font-size:12px; color:#555;">Monto Retenido: <strong style="color:#d9534f;">${montoDisplay}</strong></span>
-                            </div>
-                            <div>
-                                ${ret.link_pdf 
-                                    ? `<a href="${ret.link_pdf}" target="_blank" style="background:#1d6fa5; color:white; padding:6px 12px; border-radius:4px; text-decoration:none; font-size:12px; font-weight:bold; display:inline-block;"><i class="fas fa-file-pdf"></i> Ver PDF</a>` 
-                                    : `<span style="font-size:11px; background:#f1f1f1; padding:4px 8px; border-radius:4px; color:#666;"><i class="fas fa-robot"></i> Procesado por IA</span>`}
-                            </div>
-                        </div>
-                    `;
-                });
-                contenedor.innerHTML = html;
 
             } catch (error) {
                 console.error(error);
