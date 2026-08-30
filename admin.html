@@ -113,6 +113,7 @@
                         <a href="index.html">Sitio Web</a>
                         <a href="tienda.html">Tienda</a>
                         <a href="admin.html" style="color: #000; font-weight:bold;">Administración</a>
+                        <a href="#" onclick="cerrarSesion()" style="color: #d9534f; font-weight:bold; margin-left:15px;"><i class="fas fa-sign-out-alt"></i> Salir</a>
                     </nav>
 
                     <div id="admin-perfil-header" onclick="abrirModalPerfil()" style="display: flex; align-items: center; gap: 10px; background: #e2f0d9; padding: 6px 14px; border-radius: 6px; border: 1px solid #c3e6cb; cursor: pointer; transition: all 0.2s;" title="Haz clic para editar tu foto y nombre">
@@ -139,6 +140,8 @@
                 
                 <button class="tab-btn" onclick="mostrarPestana('cotizaciones', this)"><i class="fas fa-file-invoice-dollar"></i> Crear Cotización</button>
                 <button class="tab-btn" onclick="mostrarPestana('historial-cotizaciones', this)"><i class="fas fa-folder-open"></i> Base de Cotizaciones</button>
+                
+                <button class="tab-btn" onclick="mostrarPestana('importacion', this)"><i class="fas fa-calculator"></i> Landed Cost / Importación</button>
             </div>
 
             <!-- PESTAÑA 1: PEDIDOS -->
@@ -151,7 +154,7 @@
                 <div class="admin-grid">
                     <div class="card-form">
                         <h3><i class="fas fa-plus-circle"></i> Nuevo Pedido Manual</h3>
-                        <form id="manual-order-form">
+                        <form id="manual-order-form" onsubmit="guardarPedidoManual(event)">
                             <div class="form-group">
                                 <label>Correo del Cliente</label>
                                 <input type="email" id="client-email" placeholder="cliente@correo.com" required>
@@ -655,6 +658,117 @@
                 </div>
             </div>
 
+            <!-- PESTAÑA 8: CALCULADORA DE IMPORTACIÓN (LANDED COST) -->
+            <div id="tab-importacion" class="tab-content">
+                <div class="admin-header">
+                    <h2>Calculadora de Costos de Importación (Landed Cost)</h2>
+                    <span style="font-size: 13px; color: #666;">Distribución de flete, aduana y margen de ganancia</span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 30px; align-items: start;">
+                    
+                    <!-- Columna Izquierda: Gastos Globales del Embarque -->
+                    <div class="card-form" style="margin-bottom: 0;">
+                        <h3><i class="fas fa-file-invoice-dollar"></i> Desglose de Gastos Logísticos</h3>
+                        
+                        <div id="imp-gastos-container">
+                            <!-- Fila de gasto por defecto -->
+                            <div class="imp-gasto-row" style="display: flex; gap: 8px; margin-bottom: 10px; align-items: center;">
+                                <input type="text" class="imp-gasto-desc" value="Flete Internacional" placeholder="Descripción del gasto" style="flex: 2; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; outline: none;">
+                                <input type="number" step="0.01" class="imp-gasto-monto" value="0.00" placeholder="$0.00" oninput="calcularLandedCost()" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; outline: none;">
+                                <button type="button" onclick="this.parentElement.remove(); calcularLandedCost();" style="background: #d9534f; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;" title="Eliminar Gasto"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+
+                        <button type="button" onclick="agregarFilaGastoVacia()" style="background: #17a2b8; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; margin-bottom: 15px;">
+                            <i class="fas fa-plus"></i> Añadir otro gasto
+                        </button>
+
+                        <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
+
+                        <div class="form-group">
+                            <label>Origen / Criterio de Distribución</label>
+                            <select id="imp-criterio" onchange="cambiarCriterioMedida()">
+                                <option value="cbm">🇨🇳 China / Marítimo - Por Volumen (CBM / m³)</option>
+                                <option value="cuft">🇺🇸 EE.UU. / Miami - Por Pie Cúbico (ft³ / cu ft)</option>
+                                <option value="peso">🇧🇷 Brasil / Terrestre - Por Peso (kg)</option>
+                                <option value="fob">💰 General - Por Valor FOB ($)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label id="imp-label-medida-total">Volumen Total del Embarque (CBM / m³)</label>
+                            <input type="number" step="0.001" id="imp-cbm-total" value="1.000" oninput="calcularLandedCost()">
+                        </div>
+
+                        <div style="background: #e2f0d9; border: 1px solid #c3e6cb; padding: 12px; border-radius: 6px; margin-top: 15px;">
+                            <span style="display:block; font-size: 11px; color: #155724; font-weight: bold; text-transform: uppercase;">Total Gastos Logísticos</span>
+                            <strong style="font-size: 24px; color: #155724; font-family: 'Oswald', sans-serif;">$<span id="imp-total-gastos-display">0.00</span></strong>
+                        </div>
+                    </div>
+
+                    <!-- Columna Derecha: Detalle de Repuestos -->
+                    <div>
+                        <div class="card-form" style="margin-bottom: 20px;">
+                            <h3><i class="fas fa-boxes"></i> Repuestos en la Carga</h3>
+                            
+                            <div id="imp-items-container">
+                                <!-- Filas dinámicas de repuestos -->
+                            </div>
+
+                            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                                <button type="button" onclick="agregarFilaImportacionVacia()" style="background: #1d6fa5; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold;">
+                                    <i class="fas fa-plus"></i> Agregar Repuesto
+                                </button>
+                                <button type="button" onclick="calcularLandedCost()" style="background: #385723; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold;">
+                                    <i class="fas fa-calculator"></i> Recalcular
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Resumen Total -->
+                        <div style="background: white; border: 1px solid #ccc; padding: 15px; border-radius: 8px; text-align: right; font-size: 13px;">
+                            <div>Inversión Total Compra (FOB): <strong>$<span id="imp-resumen-fob">0.00</span></strong></div>
+                            <div>Costo Total Puesto en Almacén: <strong style="color: #385723; font-size: 16px;">$<span id="imp-resumen-landed">0.00</span></strong></div>
+                        </div>
+                        
+                        <!-- 🚀 BOTÓN DE GUARDAR CÁLCULO -->
+                        <div style="text-align: right;">
+                            <button type="button" class="btn-action" onclick="guardarImportacion()" style="margin-top: 20px; font-size: 15px; padding: 12px; background: #28a745; max-width: 300px;">
+                                <i class="fas fa-save"></i> Guardar Cálculo en Historial
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- 🚀 TABLA DE HISTORIAL DE IMPORTACIONES -->
+                <div style="margin-top: 40px; border-top: 2px solid #eee; padding-top: 25px;">
+                    <div class="admin-header" style="margin-bottom: 15px;">
+                        <h3><i class="fas fa-history"></i> Historial de Cálculos Guardados</h3>
+                        <button class="refresh-btn" onclick="cargarHistorialImportaciones()"><i class="fas fa-sync-alt"></i> Actualizar</button>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Origen / Medida</th>
+                                    <th>FOB Total</th>
+                                    <th>Gastos Logísticos</th>
+                                    <th>Costo Landed Total</th>
+                                    <th style="text-align: center;">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="importaciones-table-body">
+                                <tr><td colspan="6" style="text-align: center;">Cargando historial...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
         </div>
     </div> <!-- Cierre App Wrapper -->
 
@@ -804,7 +918,7 @@
     <!-- Scripts de Firebase -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, collection, getDocs, addDoc, doc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -852,6 +966,19 @@
         });
 
         // ==========================================
+        // CERRAR SESIÓN
+        // ==========================================
+        window.cerrarSesion = function() {
+            if(confirm("¿Estás seguro de que deseas cerrar sesión?")) {
+                signOut(auth).then(() => {
+                    window.location.href = "admin-login.html";
+                }).catch((error) => {
+                    console.error("Error cerrando sesión: ", error);
+                });
+            }
+        };
+
+        // ==========================================
         // FUNCIONES GENERALES DEL PANEL
         // ==========================================
         window.abrirModalPerfil = async function() {
@@ -893,6 +1020,7 @@
             if(id === 'historial-cotizaciones') { window.cargarHistorialCotizaciones(); }
             if(id === 'facturacion') { window.cargarBaseClientes(); window.actualizarPreviewFactura(); }
             if(id === 'historial-facturas') { window.cargarHistorialFacturas(); }
+            if(id === 'importacion') { window.cargarHistorialImportaciones(); }
         };
 
         // ==========================================
@@ -928,6 +1056,32 @@
                 await deleteDoc(doc(db, "categorias", docId));
                 await renderizarListaCategorias(); window.cargarCatalogoAdmin(); 
             } catch (error) { console.error(error); }
+        };
+
+        window.borrarTodoInventario = async function() {
+            if(!confirm("⚠️ ¡ADVERTENCIA EXTREMA!\n¿Estás absolutamente seguro de querer BORRAR TODO EL CATÁLOGO Y STOCK?\nEsta acción NO se puede deshacer.")) return;
+            
+            const btn = document.querySelector('button[onclick="borrarTodoInventario()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Borrando..."; 
+            btn.disabled = true;
+
+            try {
+                const querySnapshot = await getDocs(collection(db, "productos"));
+                const batchPromises = [];
+                querySnapshot.forEach((docSnap) => {
+                    batchPromises.push(deleteDoc(doc(db, "productos", docSnap.id)));
+                });
+                
+                await Promise.all(batchPromises); 
+                alert("✅ Todo el inventario ha sido borrado exitosamente.");
+                window.cargarCatalogoAdmin(); 
+            } catch (error) {
+                console.error("Error borrando inventario:", error);
+                alert("Error al intentar borrar el inventario.");
+            }
+            btn.innerHTML = originalText; 
+            btn.disabled = false;
         };
 
         window.guardarNuevoRepuesto = async function(e) {
@@ -1029,7 +1183,6 @@
         // ==========================================
         // BASE DE CLIENTES Y CARGA MASIVA
         // ==========================================
-        
         window.procesarPegadoMasivoClientes = async function() {
             const texto = document.getElementById('excel-paste-clientes').value.trim();
             const btn = document.getElementById('btn-excel-upload-clientes');
@@ -1346,7 +1499,7 @@
 
         window.guardarNotaInterna = async function() {
             const docId = document.getElementById('nota-doc-id').value;
-            const tipo = document.getElementById('nota-doc-tipo').value; // 'facturas' o 'cotizaciones'
+            const tipo = document.getElementById('nota-doc-tipo').value; 
             const texto = document.getElementById('nota-texto').value.trim();
 
             try {
@@ -1384,26 +1537,17 @@
             contenedor.innerHTML = '<p style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin"></i> Buscando retenciones automáticas...</p>';
 
             try {
-                // Traemos las retenciones para filtrarlas inteligentemente con JS
                 const snap = await getDocs(collection(db, "retenciones"));
-
                 let html = '';
                 let encontradas = 0;
 
-                // 1. Limpiamos el número de factura del sistema (quitamos ceros a la izquierda y pasamos a mayúsculas)
-                // Ej: "00000585" se convierte en "585" | "fac-123" se convierte en "FAC-123"
                 const buscarNro = String(nroFactura).replace(/^0+/, '').toUpperCase();
 
                 snap.forEach(docSnap => {
                     const ret = docSnap.data();
-                    
-                    // 2. Buscamos el campo sin importar si lo guardaste como 'Factura', 'factura' o 'FACTURA'
                     const retNroOriginal = String(ret.Factura || ret.factura || ret.FACTURA || '');
-                    
-                    // 3. Limpiamos el número extraído de la base de datos igual que el anterior
                     const retNroLimpio = retNroOriginal.replace(/^0+/, '').toUpperCase();
 
-                    // 4. ¡Comparamos! Si coinciden, mostramos la retención
                     if (retNroLimpio === buscarNro && retNroLimpio !== '') {
                         encontradas++;
                         const montoDisplay = (!isNaN(parseFloat(ret.monto))) ? `$${parseFloat(ret.monto).toFixed(2)}` : (ret.monto || 'No especificado');
@@ -1424,7 +1568,6 @@
                     }
                 });
 
-                // Si después de revisar todo no encontró coincidencias:
                 if (encontradas === 0) {
                     contenedor.innerHTML = `
                         <div style="text-align:center; padding:30px 10px; color:#666;">
@@ -1447,8 +1590,42 @@
         };
 
         // ==========================================
-        // PEDIDOS WEB
+        // PEDIDOS WEB Y PEDIDOS MANUALES
         // ==========================================
+        window.guardarPedidoManual = async function(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.innerHTML = "Registrando..."; btn.disabled = true;
+
+            const selectProd = document.getElementById('product-select');
+            const nombreProducto = selectProd.value;
+            const precioUnitario = parseFloat(selectProd.options[selectProd.selectedIndex].getAttribute('data-price')) || 0;
+            const cantidad = parseInt(document.getElementById('product-qty').value) || 1;
+            const total = precioUnitario * cantidad;
+
+            const nuevoPedido = {
+                fecha: new Date().toLocaleDateString("es-VE") + " " + new Date().toLocaleTimeString("es-VE"),
+                email: document.getElementById('client-email').value.trim(),
+                cliente: document.getElementById('client-name').value.trim(),
+                envio: document.getElementById('shipping-type').value,
+                tracking: document.getElementById('tracking-info').value.trim(),
+                estado: "Pendiente",
+                total: total,
+                productos: [{ nombre: nombreProducto, cantidad: cantidad, precio: precioUnitario }]
+            };
+
+            try {
+                await addDoc(collection(db, "pedidos"), nuevoPedido);
+                alert("✅ Pedido manual registrado con éxito.");
+                e.target.reset();
+                window.cargarPedidos();
+            } catch (error) {
+                console.error("Error guardando pedido:", error);
+                alert("Error al guardar el pedido.");
+            }
+            btn.innerHTML = "Registrar Pedido"; btn.disabled = false;
+        };
+
         window.cargarPedidos = async function() {
             const tableBody = document.getElementById('orders-table-body');
             tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center;">Actualizando...</td></tr>`;
@@ -1956,6 +2133,18 @@
         // ==========================================
         // LÓGICA DE COTIZACIONES
         // ==========================================
+        window.seleccionarClienteCotizacion = function() {
+            const clienteId = document.getElementById('cot-selector-clientes').value;
+            if(clienteId && window.clientesDBLocal[clienteId]) {
+                const cli = window.clientesDBLocal[clienteId];
+                document.getElementById('cot-cliente').value = cli.nombre;
+                document.getElementById('cot-rif').value = cli.rif;
+                document.getElementById('cot-direccion').value = cli.direccion;
+                document.getElementById('cot-telefono').value = cli.telefono;
+                window.actualizarPreview();
+            }
+        };
+
         window.agregarFilaCotizacionVacia = function() {
             const container = document.getElementById('cotizacion-items-container');
             const row = document.createElement('div');
@@ -2386,6 +2575,284 @@
             btnElement.innerHTML = originalText; btnElement.disabled = false;
         };
 
+        // ==========================================
+        // CALCULADORA DE IMPORTACIÓN (LANDED COST)
+        // ==========================================
+        window.cambiarCriterioMedida = function() {
+            const criterio = document.getElementById('imp-criterio').value;
+            const labelTotal = document.getElementById('imp-label-medida-total');
+            const inputTotal = document.getElementById('imp-cbm-total');
+
+            if (criterio === 'cbm') {
+                labelTotal.textContent = "Volumen Total del Embarque (CBM / m³)";
+                inputTotal.step = "0.001";
+            } else if (criterio === 'cuft') {
+                labelTotal.textContent = "Volumen Total del Embarque (Pie Cúbico / ft³)";
+                inputTotal.step = "0.01";
+            } else if (criterio === 'peso') {
+                labelTotal.textContent = "Peso Total del Embarque (kg)";
+                inputTotal.step = "0.01";
+            } else if (criterio === 'fob') {
+                labelTotal.textContent = "Referencia / No requerido para FOB";
+            }
+
+            document.querySelectorAll('.imp-item-row').forEach(row => {
+                const labelItem = row.querySelector('.imp-item-medida-label');
+                if (labelItem) {
+                    if (criterio === 'cbm') labelItem.textContent = "Vol. Unit. (CBM)";
+                    else if (criterio === 'cuft') labelItem.textContent = "Vol. Unit. (ft³)";
+                    else if (criterio === 'peso') labelItem.textContent = "Peso Unit. (kg)";
+                    else labelItem.textContent = "Medida (Opcional)";
+                }
+            });
+
+            window.calcularLandedCost();
+        };
+
+        window.agregarFilaGastoVacia = function() {
+            const container = document.getElementById('imp-gastos-container');
+            const row = document.createElement('div');
+            row.className = 'imp-gasto-row';
+            row.style = 'display: flex; gap: 8px; margin-bottom: 10px; align-items: center;';
+            
+            row.innerHTML = `
+                <input type="text" class="imp-gasto-desc" placeholder="Ej: Seguro, Aduana, Transporte..." style="flex: 2; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; outline: none;">
+                <input type="number" step="0.01" class="imp-gasto-monto" value="0.00" placeholder="$0.00" oninput="calcularLandedCost()" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; outline: none;">
+                <button type="button" onclick="this.parentElement.remove(); calcularLandedCost();" style="background: #d9534f; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;" title="Eliminar Gasto"><i class="fas fa-times"></i></button>
+            `;
+            container.appendChild(row);
+        };
+
+        window.agregarFilaImportacionVacia = function() {
+            const container = document.getElementById('imp-items-container');
+            const row = document.createElement('div');
+            row.className = 'imp-item-row';
+            row.style = 'background: #f9f9f9; border: 1px solid #ddd; padding: 12px; border-radius: 6px; margin-bottom: 12px;';
+            
+            const criterio = document.getElementById('imp-criterio')?.value || 'cbm';
+            let labelMedida = "Vol. Unit. (CBM)";
+            if (criterio === 'cuft') labelMedida = "Vol. Unit. (ft³)";
+            else if (criterio === 'peso') labelMedida = "Peso Unit. (kg)";
+            else if (criterio === 'fob') labelMedida = "Medida (Opcional)";
+
+            row.innerHTML = `
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 8px;">
+                    <div>
+                        <label style="font-size: 11px; font-weight: bold; color: #555;">Repuesto / Descripción</label>
+                        <input type="text" class="imp-item-desc" placeholder="Ej: Kit de Tiempo Yaris" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                    </div>
+                    <div>
+                        <label style="font-size: 11px; font-weight: bold; color: #555;">Cantidad</label>
+                        <input type="number" class="imp-item-cant" value="1" min="1" oninput="calcularLandedCost()" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                    </div>
+                    <div>
+                        <label style="font-size: 11px; font-weight: bold; color: #555;">Precio FOB ($ u.)</label>
+                        <input type="number" step="0.01" class="imp-item-fob" value="0.00" oninput="calcularLandedCost()" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                    </div>
+                    <div>
+                        <label class="imp-item-medida-label" style="font-size: 11px; font-weight: bold; color: #555;">${labelMedida}</label>
+                        <input type="number" step="0.001" class="imp-item-cbm" value="0.010" oninput="calcularLandedCost()" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 40px; gap: 10px; align-items: center; background: #eef2eb; padding: 8px; border-radius: 4px;">
+                    <div>
+                        <span style="font-size: 10px; color: #555; display:block;">Costo Puesto ($ u.):</span>
+                        <strong class="imp-item-landed-unit" style="font-size: 13px; color: #d9534f;">$0.00</strong>
+                    </div>
+                    <div>
+                        <label style="font-size: 10px; font-weight: bold; color: #555;">Margen Detal (%)</label>
+                        <input type="number" class="imp-item-margen-detal" value="40" oninput="calcularLandedCost()" style="width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: 4px; font-size: 11px;">
+                    </div>
+                    <div>
+                        <span style="font-size: 10px; color: #555; display:block;">P. Venta Detal ($):</span>
+                        <strong class="imp-item-precio-detal" style="font-size: 13px; color: #385723;">$0.00</strong>
+                    </div>
+                    <div>
+                        <span style="font-size: 10px; color: #555; display:block;">P. Venta Mayor ($):</span>
+                        <strong class="imp-item-precio-mayor" style="font-size: 13px; color: #1d6fa5;">$0.00</strong>
+                    </div>
+                    <button type="button" onclick="this.parentElement.parentElement.remove(); calcularLandedCost();" style="background: #d9534f; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;" title="Eliminar"><i class="fas fa-times"></i></button>
+                </div>
+            `;
+            container.appendChild(row);
+            window.calcularLandedCost();
+        };
+
+        window.calcularLandedCost = function() {
+            let gastosTotales = 0;
+            document.querySelectorAll('.imp-gasto-row').forEach(row => {
+                const monto = parseFloat(row.querySelector('.imp-gasto-monto').value) || 0;
+                gastosTotales += monto;
+            });
+
+            if (document.getElementById('imp-total-gastos-display')) {
+                document.getElementById('imp-total-gastos-display').innerText = gastosTotales.toFixed(2);
+            }
+
+            const medidaTotalCarga = parseFloat(document.getElementById('imp-cbm-total')?.value) || 1;
+            const criterio = document.getElementById('imp-criterio')?.value || 'cbm';
+
+            const rows = document.querySelectorAll('.imp-item-row');
+            let sumaFobTotal = 0;
+            let sumaMedidaTotalItems = 0;
+
+            rows.forEach(row => {
+                const cant = parseFloat(row.querySelector('.imp-item-cant').value) || 0;
+                const fob = parseFloat(row.querySelector('.imp-item-fob').value) || 0;
+                const medidaUnit = parseFloat(row.querySelector('.imp-item-cbm').value) || 0;
+
+                sumaFobTotal += (cant * fob);
+                sumaMedidaTotalItems += (cant * medidaUnit);
+            });
+
+            let acumLandedTotal = 0;
+
+            rows.forEach(row => {
+                const cant = parseFloat(row.querySelector('.imp-item-cant').value) || 1;
+                const fob = parseFloat(row.querySelector('.imp-item-fob').value) || 0;
+                const medidaUnit = parseFloat(row.querySelector('.imp-item-cbm').value) || 0;
+                const margenDetal = parseFloat(row.querySelector('.imp-item-margen-detal').value) || 0;
+
+                let costoGastosPorUnidad = 0;
+
+                if ((criterio === 'cbm' || criterio === 'cuft' || criterio === 'peso') && medidaTotalCarga > 0) {
+                    const fraccionMedida = medidaUnit / medidaTotalCarga;
+                    costoGastosPorUnidad = gastosTotales * fraccionMedida;
+                } else if (criterio === 'fob' && sumaFobTotal > 0) {
+                    const fraccionFob = fob / sumaFobTotal;
+                    costoGastosPorUnidad = (gastosTotales * fraccionFob) / cant;
+                }
+
+                const landedUnitario = fob + costoGastosPorUnidad;
+                const precioDetal = landedUnitario * (1 + (margenDetal / 100));
+                const precioMayor = landedUnitario * (1 + ((margenDetal * 0.7) / 100));
+
+                row.querySelector('.imp-item-landed-unit').innerText = `$${landedUnitario.toFixed(2)}`;
+                row.querySelector('.imp-item-precio-detal').innerText = `$${precioDetal.toFixed(2)}`;
+                row.querySelector('.imp-item-precio-mayor').innerText = `$${precioMayor.toFixed(2)}`;
+
+                acumLandedTotal += (landedUnitario * cant);
+            });
+
+            if (document.getElementById('imp-resumen-fob')) document.getElementById('imp-resumen-fob').innerText = sumaFobTotal.toFixed(2);
+            if (document.getElementById('imp-resumen-landed')) document.getElementById('imp-resumen-landed').innerText = acumLandedTotal.toFixed(2);
+        };
+
+        // ==========================================
+        // GUARDAR Y CARGAR HISTORIAL DE IMPORTACIONES
+        // ==========================================
+        window.guardarImportacion = async function() {
+            const btn = document.querySelector('button[onclick="guardarImportacion()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Guardando...";
+            btn.disabled = true;
+
+            const criterio = document.getElementById('imp-criterio').value;
+            const medidaTotal = document.getElementById('imp-cbm-total').value;
+            const totalGastos = document.getElementById('imp-total-gastos-display').innerText;
+            const fobTotal = document.getElementById('imp-resumen-fob').innerText;
+            const landedTotal = document.getElementById('imp-resumen-landed').innerText;
+            
+            const rows = document.querySelectorAll('.imp-item-row');
+            const items = [];
+            rows.forEach(row => {
+                items.push({
+                    descripcion: row.querySelector('.imp-item-desc').value || 'Sin descripción',
+                    cantidad: row.querySelector('.imp-item-cant').value,
+                    fob: row.querySelector('.imp-item-fob').value,
+                    medidaUnit: row.querySelector('.imp-item-cbm').value,
+                    landed: row.querySelector('.imp-item-landed-unit').innerText
+                });
+            });
+
+            if(items.length === 0) {
+                alert("Agrega al menos un repuesto para guardar el cálculo.");
+                btn.innerHTML = originalText; btn.disabled = false;
+                return;
+            }
+
+            let unidadTexto = 'm³ (China)';
+            if (criterio === 'cuft') unidadTexto = 'ft³ (USA)';
+            else if (criterio === 'peso') unidadTexto = 'kg (Brasil)';
+            else if (criterio === 'fob') unidadTexto = 'FOB ($)';
+
+            const data = {
+                fecha: new Date().toLocaleString("es-VE"),
+                criterio: criterio,
+                medidaTotal: medidaTotal,
+                unidadTexto: unidadTexto,
+                totalGastos: totalGastos,
+                fobTotal: fobTotal,
+                landedTotal: landedTotal,
+                items: items
+            };
+
+            try {
+                await addDoc(collection(db, "importaciones"), data);
+                alert("✅ Cálculo guardado exitosamente en el historial.");
+                window.cargarHistorialImportaciones();
+            } catch (error) {
+                console.error("Error al guardar:", error);
+                alert("Hubo un error al guardar el cálculo en la base de datos.");
+            }
+            btn.innerHTML = originalText; btn.disabled = false;
+        };
+
+        window.cargarHistorialImportaciones = async function() {
+            const tbody = document.getElementById('importaciones-table-body');
+            if(!tbody) return;
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center;">Cargando historial...</td></tr>`;
+            
+            try {
+                const snap = await getDocs(collection(db, "importaciones"));
+                tbody.innerHTML = '';
+                
+                if(snap.empty) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center;">No hay cálculos guardados.</td></tr>`;
+                    return;
+                }
+
+                snap.forEach(docSnap => {
+                    const data = docSnap.data();
+                    const docId = docSnap.id;
+                    
+                    let itemsList = data.items ? data.items.map(i => `• ${i.cantidad}x ${i.descripcion} | FOB: $${i.fob} | Medida: ${i.medidaUnit || '0'} | Costo Puesto: ${i.landed}`).join('<br>') : 'Sin detalles';
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${data.fecha || 'N/A'}</td>
+                        <td><strong>${data.medidaTotal || '0'} ${data.unidadTexto || 'm³'}</strong></td>
+                        <td><strong>$${data.fobTotal || '0.00'}</strong></td>
+                        <td>$${data.totalGastos || '0.00'}</td>
+                        <td>
+                            <strong style="color: #385723; font-size: 14px;">$${data.landedTotal || '0.00'}</strong>
+                            <details style="font-size: 11px; color: #555; margin-top: 5px; cursor: pointer;">
+                                <summary>Ver detalle de piezas</summary>
+                                <div style="margin-top: 5px; padding: 5px; background: #f1f1f1; border-radius: 4px; line-height: 1.4;">${itemsList}</div>
+                            </details>
+                        </td>
+                        <td style="text-align: center;">
+                            <button type="button" onclick="eliminarImportacion('${docId}')" style="background:#d9534f; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;" title="Eliminar"><i class="fas fa-trash"></i></button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch(error) {
+                console.error("Error cargando historial de importaciones:", error);
+            }
+        };
+
+        window.eliminarImportacion = async function(docId) {
+            if(!confirm("¿Seguro que deseas eliminar este cálculo del historial?")) return;
+            try {
+                await deleteDoc(doc(db, "importaciones", docId));
+                window.cargarHistorialImportaciones();
+            } catch (error) {
+                console.error("Error eliminando:", error);
+            }
+        };
+
         window.addEventListener('DOMContentLoaded', () => {
             // 🚀 Inicializamos TODO al cargar la página
             window.cargarPedidos();
@@ -2397,6 +2864,7 @@
             
             window.calcularTotalFactura();
             window.cargarHistorialFacturas(); 
+            window.cargarHistorialImportaciones();
         });
     </script>
 </body>
