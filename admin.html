@@ -444,9 +444,12 @@
                                 </select>
                             </div>
                             <div class="form-group" style="margin-bottom: 0;">
-                                <label style="color: #333;">Tasa de Cambio (Referencia)</label>
-                                <input type="number" step="0.0001" id="fac-tasa" value="1" style="border-color: #ccc;" oninput="actualizarPreviewFactura()">
-                                <small style="font-size: 10px; color: #666;">El precio del inventario se multiplicará por esta tasa al añadirlo.</small>
+                                <label style="color: #333; display: flex; justify-content: space-between; align-items: center;">
+                                    Tasa de Cambio 
+                                    <button type="button" onclick="cargarTasaBCV()" style="color: #1d6fa5; background: none; border: none; cursor: pointer; font-size: 11px; font-weight: bold;"><i class="fas fa-sync-alt"></i> Actualizar Tasa</button>
+                                </label>
+                                <input type="number" step="0.0001" id="fac-tasa" value="1" style="border-color: #ccc; font-weight: bold; color: #385723;" oninput="actualizarPreviewFactura()">
+                                <small style="font-size: 10px; color: #666;">Ojo: Edita la tasa si la base es otra moneda.</small>
                             </div>
                         </div>
 
@@ -734,7 +737,8 @@
                         
                         <!-- 🚀 BOTÓN DE GUARDAR CÁLCULO -->
                         <div style="text-align: right;">
-                            <button type="button" class="btn-action" onclick="guardarImportacion()" style="margin-top: 20px; font-size: 15px; padding: 12px; background: #28a745; max-width: 300px;">
+                            <input type="hidden" id="edit-imp-id">
+                            <button type="button" id="btn-save-imp" class="btn-action" onclick="guardarImportacion()" style="margin-top: 20px; font-size: 15px; padding: 12px; background: #28a745; max-width: 300px;">
                                 <i class="fas fa-save"></i> Guardar Cálculo en Historial
                             </button>
                         </div>
@@ -919,7 +923,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, getDocs, addDoc, doc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, getDoc, setDoc, addDoc, doc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
@@ -937,6 +941,7 @@
         let mapaCategorias = {};
         window.clientesDBLocal = {}; 
         window.pedidosDBLocal = {}; 
+        window.importacionesDBLocal = {}; // 🚀 NUEVO: Almacén local de importaciones
         window.currentAdminDocId = null; 
 
         onAuthStateChanged(auth, async (user) => {
@@ -1021,6 +1026,143 @@
             if(id === 'facturacion') { window.cargarBaseClientes(); window.actualizarPreviewFactura(); }
             if(id === 'historial-facturas') { window.cargarHistorialFacturas(); }
             if(id === 'importacion') { window.cargarHistorialImportaciones(); }
+        };
+
+        // ==========================================
+        // GESTIÓN DE PEDIDOS Y ENVÍOS
+        // ==========================================
+        window.cargarPedidos = async function() {
+            const tbody = document.getElementById('orders-table-body');
+            if(!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Buscando pedidos...</td></tr>';
+            window.pedidosDBLocal = {}; 
+
+            try {
+                const snap = await getDocs(collection(db, "pedidos"));
+                tbody.innerHTML = '';
+                
+                if(snap.empty) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No hay pedidos registrados en la base de datos.</td></tr>';
+                    return;
+                }
+
+                snap.forEach(docSnap => {
+                    const ped = docSnap.data();
+                    const docId = docSnap.id;
+                    window.pedidosDBLocal[docId] = ped;
+
+                    let badgeClass = 'badge-status-activo';
+                    if(ped.estado === 'Pendiente' || ped.estado === 'Procesando') badgeClass = 'badge-status-inactivo';
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${ped.fecha || 'N/A'}</td>
+                            <td><strong>${ped.cliente}</strong><br><span style="font-size:11px;color:#666;">${ped.email}</span></td>
+                            <td>${ped.cantidad}x ${ped.producto}</td>
+                            <td><strong>$${Number(ped.total || 0).toFixed(2)}</strong></td>
+                            <td>
+                                <span class="badge-shipping">${ped.envio}</span><br>
+                                <span style="font-size:11px;">${ped.tracking || 'Sin guía / tracking'}</span><br>
+                                <span class="${badgeClass}" style="margin-top:4px; display:inline-block;">${ped.estado || 'Pendiente'}</span>
+                            </td>
+                            <td style="text-align: center;">
+                                <button type="button" onclick="abrirModalPedido('${docId}')" style="background:#1d6fa5; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="Editar Envío"><i class="fas fa-edit"></i></button>
+                                <button type="button" onclick="abrirModoCajero('${docId}')" style="background:#f0ad4e; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; margin-left:4px;" title="Cajero / Facturar"><i class="fas fa-cash-register"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch(e) {
+                console.error("Error cargando pedidos:", e);
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: red;">Error al conectar con la base de datos de pedidos.</td></tr>';
+            }
+        };
+
+        window.guardarPedidoManual = async function(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.innerHTML = "Registrando..."; btn.disabled = true;
+
+            const selectProd = document.getElementById('product-select');
+            const precioUnitario = parseFloat(selectProd.options[selectProd.selectedIndex]?.getAttribute('data-price')) || 0;
+            const cantidad = parseInt(document.getElementById('product-qty').value) || 1;
+
+            const nuevoPedido = {
+                email: document.getElementById('client-email').value.trim(),
+                cliente: document.getElementById('client-name').value.trim(),
+                producto: selectProd.value,
+                cantidad: cantidad,
+                total: precioUnitario * cantidad,
+                envio: document.getElementById('shipping-type').value,
+                tracking: document.getElementById('tracking-info').value.trim(),
+                estado: "Pendiente",
+                fecha: new Date().toLocaleDateString("es-VE"),
+                productos: [{ nombre: selectProd.value, cantidad: cantidad, precio: precioUnitario }]
+            };
+
+            try {
+                await addDoc(collection(db, "pedidos"), nuevoPedido);
+                alert("¡Pedido registrado exitosamente!");
+                e.target.reset();
+                window.cargarPedidos();
+            } catch (error) {
+                console.error(error);
+                alert("Error al registrar el pedido.");
+            }
+            btn.innerHTML = "Registrar Pedido"; btn.disabled = false;
+        };
+
+        window.abrirModalPedido = function(docId) {
+            const ped = window.pedidosDBLocal[docId];
+            if(!ped) return;
+            document.getElementById('edit-pedido-id').value = docId;
+            document.getElementById('edit-pedido-email').value = ped.email || '';
+            document.getElementById('edit-pedido-cliente').value = ped.cliente || '';
+            document.getElementById('edit-pedido-envio').value = ped.envio || 'Retiro en Local';
+            document.getElementById('edit-pedido-tracking').value = ped.tracking || '';
+            document.getElementById('edit-pedido-estado').value = ped.estado || 'Pendiente';
+            document.getElementById('modal-pedido').style.display = 'flex';
+        };
+
+        window.cerrarModalPedido = function() {
+            document.getElementById('modal-pedido').style.display = 'none';
+        };
+
+        window.guardarCambiosPedido = async function() {
+            const docId = document.getElementById('edit-pedido-id').value;
+            const btn = document.getElementById('btn-save-pedido');
+            btn.innerHTML = "Guardando..."; btn.disabled = true;
+
+            const datosActualizados = {
+                email: document.getElementById('edit-pedido-email').value.trim(),
+                cliente: document.getElementById('edit-pedido-cliente').value.trim(),
+                envio: document.getElementById('edit-pedido-envio').value,
+                tracking: document.getElementById('edit-pedido-tracking').value.trim(),
+                estado: document.getElementById('edit-pedido-estado').value
+            };
+
+            try {
+                await updateDoc(doc(db, "pedidos", docId), datosActualizados);
+                window.cerrarModalPedido();
+                window.cargarPedidos();
+            } catch (error) {
+                console.error(error);
+                alert("Error al actualizar la información del pedido.");
+            }
+            btn.innerHTML = "Guardar"; btn.disabled = false;
+        };
+
+        window.eliminarPedido = async function() {
+            const docId = document.getElementById('edit-pedido-id').value;
+            if(!confirm("¿Estás seguro de eliminar este pedido del historial?")) return;
+            try {
+                await deleteDoc(doc(db, "pedidos", docId));
+                window.cerrarModalPedido();
+                window.cargarPedidos();
+            } catch (error) {
+                console.error(error);
+                alert("No se pudo eliminar el pedido.");
+            }
         };
 
         // ==========================================
@@ -1590,140 +1732,85 @@
         };
 
         // ==========================================
-        // PEDIDOS WEB Y PEDIDOS MANUALES
+        // 🚀 LECTURA DE TASA BCV Y EURO (NUEVO)
         // ==========================================
-        window.guardarPedidoManual = async function(e) {
-            e.preventDefault();
-            const btn = e.target.querySelector('button[type="submit"]');
-            btn.innerHTML = "Registrando..."; btn.disabled = true;
-
-            const selectProd = document.getElementById('product-select');
-            const nombreProducto = selectProd.value;
-            const precioUnitario = parseFloat(selectProd.options[selectProd.selectedIndex].getAttribute('data-price')) || 0;
-            const cantidad = parseInt(document.getElementById('product-qty').value) || 1;
-            const total = precioUnitario * cantidad;
-
-            const nuevoPedido = {
-                fecha: new Date().toLocaleDateString("es-VE") + " " + new Date().toLocaleTimeString("es-VE"),
-                email: document.getElementById('client-email').value.trim(),
-                cliente: document.getElementById('client-name').value.trim(),
-                envio: document.getElementById('shipping-type').value,
-                tracking: document.getElementById('tracking-info').value.trim(),
-                estado: "Pendiente",
-                total: total,
-                productos: [{ nombre: nombreProducto, cantidad: cantidad, precio: precioUnitario }]
-            };
-
+        window.cargarTasaBCV = async function() {
+            const inputTasa = document.getElementById('fac-tasa');
+            const monedaSeleccionada = document.getElementById('fac-moneda').value.split('|')[0];
+            
             try {
-                await addDoc(collection(db, "pedidos"), nuevoPedido);
-                alert("✅ Pedido manual registrado con éxito.");
-                e.target.reset();
-                window.cargarPedidos();
-            } catch (error) {
-                console.error("Error guardando pedido:", error);
-                alert("Error al guardar el pedido.");
-            }
-            btn.innerHTML = "Registrar Pedido"; btn.disabled = false;
-        };
+                // Dependiendo de la moneda, buscamos una u otra en la base de datos
+                // Si es USD, simplemente mostramos la del BCV por defecto como referencia legal
+                let nombreDocumento = "tasa_bcv";
+                if (monedaSeleccionada === "EUR") {
+                    nombreDocumento = "tasa_euro";
+                }
 
-        window.cargarPedidos = async function() {
-            const tableBody = document.getElementById('orders-table-body');
-            tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center;">Actualizando...</td></tr>`;
-            window.pedidosDBLocal = {}; 
-            try {
-                const querySnapshot = await getDocs(collection(db, "pedidos"));
-                tableBody.innerHTML = '';
-                if(querySnapshot.empty) { tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center;">No hay pedidos</td></tr>`; return; }
+                const docRef = doc(db, "configuracion", nombreDocumento);
+                const docSnap = await getDoc(docRef);
                 
-                querySnapshot.forEach((docSnap) => {
-                    const pedido = docSnap.data();
-                    window.pedidosDBLocal[docSnap.id] = pedido; 
-                    let prods = pedido.productos.map(p => `<li>${p.cantidad}x ${p.nombre}</li>`).join('');
-                    
-                    const sCli = (pedido.cliente || '').replace(/'/g, "\\'");
-                    const sEma = (pedido.email || '').replace(/'/g, "\\'");
-                    const sEnv = (pedido.envio || '').replace(/'/g, "\\'");
-                    const sTra = (pedido.tracking || '').replace(/'/g, "\\'");
-                    const sEst = (pedido.estado || 'Pendiente').replace(/'/g, "\\'");
-
-                    tableBody.innerHTML += `
-                        <tr>
-                            <td>${pedido.fecha || ''}</td>
-                            <td><strong>${pedido.cliente}</strong><br><span style="font-size:11px;color:#666;">${pedido.email}</span></td>
-                            <td><ul style="margin:0;padding-left:15px;font-size:12px;">${prods}</ul></td>
-                            <td><strong>$${Number(pedido.total || 0).toFixed(2)}</strong></td>
-                            <td>
-                                <span class="badge-shipping">${pedido.envio || 'N/D'}</span><br>
-                                <span style="font-size:12px;"><strong>Tracking:</strong> ${pedido.tracking || 'Sin guía'}</span><br>
-                                <span style="font-size:11px;background:#e2f0d9;padding:2px 6px;border-radius:4px;">Estado: ${pedido.estado || 'Pendiente'}</span>
-                            </td>
-                            <td style="text-align: center;">
-                                <button type="button" onclick="abrirModoCajero('${docSnap.id}')" style="background:#f0ad4e; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; margin-right: 5px;" title="Modo Cajero"><i class="fas fa-cash-register"></i></button>
-                                <button type="button" onclick="abrirEdicionPedido('${docSnap.id}', '${sCli}', '${sEma}', '${sEnv}', '${sTra}', '${sEst}')" style="background:#1d6fa5; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="Editar Envío"><i class="fas fa-edit"></i></button>
-                            </td>
-                        </tr>`;
-                });
-            } catch (error) { console.error(error); }
+                let tasaValor = 1;
+                if (docSnap.exists()) {
+                    tasaValor = docSnap.data().valor;
+                    inputTasa.value = tasaValor;
+                } else {
+                    await setDoc(docRef, { valor: 1 });
+                    inputTasa.value = 1;
+                }
+                
+                // Disparamos la actualización visual
+                window.actualizarPreviewFactura();
+            } catch (error) {
+                console.error("Error cargando tasa:", error);
+            }
         };
 
-        window.abrirEdicionPedido = function(id, cliente, email, envio, tracking, estado) {
-            document.getElementById('edit-pedido-id').value = id;
-            document.getElementById('edit-pedido-cliente').value = cliente;
-            document.getElementById('edit-pedido-email').value = email;
-            document.getElementById('edit-pedido-envio').value = envio;
-            document.getElementById('edit-pedido-tracking').value = tracking;
-            document.getElementById('edit-pedido-estado').value = estado;
-            document.getElementById('modal-pedido').style.display = 'flex';
-        };
-
-        window.cerrarModalPedido = function() { document.getElementById('modal-pedido').style.display = 'none'; };
-
-        window.guardarCambiosPedido = async function() {
-            const docId = document.getElementById('edit-pedido-id').value;
-            const btn = document.getElementById('btn-save-pedido');
-            btn.innerHTML = "Guardando..."; btn.disabled = true;
-            const datosPedido = {
-                cliente: document.getElementById('edit-pedido-cliente').value,
-                email: document.getElementById('edit-pedido-email').value,
-                envio: document.getElementById('edit-pedido-envio').value,
-                tracking: document.getElementById('edit-pedido-tracking').value,
-                estado: document.getElementById('edit-pedido-estado').value
-            };
-            try {
-                await updateDoc(doc(db, "pedidos", docId), datosPedido);
-                window.cerrarModalPedido(); window.cargarPedidos();
-            } catch (error) { console.error(error); alert("Error al actualizar la información del envío."); }
-            btn.innerHTML = "Guardar"; btn.disabled = false;
-        };
-
-        window.eliminarPedido = async function() {
-            const docId = document.getElementById('edit-pedido-id').value;
-            if(!confirm("¿Estás seguro de eliminar este registro de pedido permanentemente?")) return;
-            try {
-                await deleteDoc(doc(db, "pedidos", docId));
-                window.cerrarModalPedido(); window.cargarPedidos(); alert("Pedido eliminado con éxito.");
-            } catch (error) { console.error(error); alert("No se pudo eliminar el pedido."); }
-        };
-
-        // ==========================================
-        // FACTURACIÓN (POS) Y MULTIMONEDA
-        // ==========================================
         window.actualizarSimboloMoneda = function() {
             const simbolo = document.getElementById('fac-moneda').value.split('|')[1];
             document.querySelectorAll('.fac-simbolo-display').forEach(el => el.textContent = simbolo);
-            window.calcularTotalFactura();
+            window.cargarTasaBCV(); // 🚀 Llama a la tasa correcta automáticamente al cambiar la moneda
         };
 
-        window.seleccionarClienteFactura = function() {
-            const clienteId = document.getElementById('fac-selector-clientes').value;
-            if(clienteId && window.clientesDBLocal[clienteId]) {
-                const cli = window.clientesDBLocal[clienteId];
-                document.getElementById('fac-cliente').value = cli.nombre;
-                document.getElementById('fac-rif').value = cli.rif;
-                document.getElementById('fac-direccion').value = cli.direccion;
-                document.getElementById('fac-telefono').value = cli.telefono;
-                window.actualizarPreviewFactura();
+        window.agregarItemDesdeInventarioFactura = function() {
+            const select = document.getElementById('select-inventario-fac');
+            const selectedIndex = select.selectedIndex;
+            if (selectedIndex <= 0) { alert("Selecciona un repuesto del inventario primero."); return; }
+
+            const opt = select.options[selectedIndex];
+            const nombre = opt.getAttribute('data-nombre');
+            
+            // 🚀 Matemática Inteligente de Conversión
+            const monedaSeleccionada = document.getElementById('fac-moneda').value.split('|')[0];
+            const tasaMostrada = parseFloat(document.getElementById('fac-tasa').value) || 1;
+            const precioBaseUSD = parseFloat(opt.getAttribute('data-precio')) || 0;
+            
+            let precioCalculado = precioBaseUSD;
+            const simbolo = document.getElementById('fac-moneda').value.split('|')[1];
+
+            if (monedaSeleccionada === "VES") {
+                precioCalculado = precioBaseUSD * tasaMostrada;
+            } else if (monedaSeleccionada === "EUR") {
+                if (tasaMostrada > 10) {
+                     precioCalculado = precioBaseUSD * 0.92; 
+                } else {
+                     precioCalculado = precioBaseUSD * tasaMostrada;
+                }
             }
+
+            const container = document.getElementById('facturacion-items-container');
+            const row = document.createElement('div');
+            row.className = 'facturacion-item-row';
+            row.innerHTML = `
+                <input type="number" class="fac-item-cant" value="1" min="1" placeholder="Cant" oninput="calcularTotalFactura()">
+                <input type="text" class="fac-item-desc" value="${nombre}" placeholder="Descripción" oninput="actualizarPreviewFactura()">
+                <input type="number" step="0.01" class="fac-item-precio" value="${precioCalculado.toFixed(2)}" placeholder="Precio" oninput="calcularTotalFactura()">
+                <input type="number" step="0.01" class="fac-item-descval" value="0.00" placeholder="Desc." oninput="calcularTotalFactura()">
+                <input type="text" class="fac-item-total-line" value="${simbolo}${precioCalculado.toFixed(2)}" readonly style="background: #f1f1f1; text-align: right; font-weight: bold;">
+                <button type="button" onclick="this.parentElement.remove(); calcularTotalFactura();" style="background:#d9534f; color:white; border:none; border-radius:4px; cursor:pointer;"><i class="fas fa-times"></i></button>
+            `;
+            container.appendChild(row);
+            select.selectedIndex = 0;
+            window.calcularTotalFactura();
         };
 
         window.agregarFilaFacturaVacia = function() {
@@ -1743,34 +1830,6 @@
             window.calcularTotalFactura();
         };
 
-        window.agregarItemDesdeInventarioFactura = function() {
-            const select = document.getElementById('select-inventario-fac');
-            const selectedIndex = select.selectedIndex;
-            if (selectedIndex <= 0) { alert("Selecciona un repuesto del inventario primero."); return; }
-
-            const opt = select.options[selectedIndex];
-            const nombre = opt.getAttribute('data-nombre');
-            
-            const tasa = parseFloat(document.getElementById('fac-tasa').value) || 1;
-            const precioBase = parseFloat(opt.getAttribute('data-precio')) || 0;
-            const precioCalculado = precioBase * tasa;
-            const simbolo = document.getElementById('fac-moneda').value.split('|')[1];
-
-            const container = document.getElementById('facturacion-items-container');
-            const row = document.createElement('div');
-            row.className = 'facturacion-item-row';
-            row.innerHTML = `
-                <input type="number" class="fac-item-cant" value="1" min="1" placeholder="Cant" oninput="calcularTotalFactura()">
-                <input type="text" class="fac-item-desc" value="${nombre}" placeholder="Descripción" oninput="actualizarPreviewFactura()">
-                <input type="number" step="0.01" class="fac-item-precio" value="${precioCalculado.toFixed(2)}" placeholder="Precio" oninput="calcularTotalFactura()">
-                <input type="number" step="0.01" class="fac-item-descval" value="0.00" placeholder="Desc." oninput="calcularTotalFactura()">
-                <input type="text" class="fac-item-total-line" value="${simbolo}${precioCalculado.toFixed(2)}" readonly style="background: #f1f1f1; text-align: right; font-weight: bold;">
-                <button type="button" onclick="this.parentElement.remove(); calcularTotalFactura();" style="background:#d9534f; color:white; border:none; border-radius:4px; cursor:pointer;"><i class="fas fa-times"></i></button>
-            `;
-            container.appendChild(row);
-            select.selectedIndex = 0;
-            window.calcularTotalFactura();
-        };
 
         window.calcularTotalFactura = function() {
             const rows = document.querySelectorAll('.facturacion-item-row');
@@ -1802,7 +1861,7 @@
 
         function construirHTMLFactura(datos = null) {
             let cliente, rif, direccion, telefono, itemsHTML = '', subtotal, descuento, iva, total, nro;
-            let moneda, simbolo, disponibilidad;
+            let moneda, simbolo, disponibilidad, tasaGuardada;
             const fechaActual = new Date().toLocaleDateString("es-VE");
 
             if (datos) {
@@ -1810,6 +1869,7 @@
                 subtotal = datos.subtotal; descuento = datos.descuento; iva = datos.iva; total = datos.total;
                 nro = datos.nro; moneda = datos.moneda || 'USD'; simbolo = datos.simbolo || '$';
                 disponibilidad = datos.disponibilidad || 'ENTREGA INMEDIATA';
+                tasaGuardada = datos.tasa || '1';
 
                 datos.items.forEach(item => {
                     const totalLinea = (parseFloat(item.cantidad) * parseFloat(item.precioUnitario)) - parseFloat(item.descuento);
@@ -1834,6 +1894,7 @@
                 total = document.getElementById('fac-total-general')?.innerText || '0.00';
                 nro = document.getElementById('fac-nro')?.value || '0000';
                 disponibilidad = document.getElementById('fac-disponibilidad')?.value || 'ENTREGA INMEDIATA';
+                tasaGuardada = document.getElementById('fac-tasa')?.value || '1';
                 
                 const monedaData = document.getElementById('fac-moneda').value.split('|');
                 moneda = monedaData[0]; simbolo = monedaData[1];
@@ -1924,7 +1985,7 @@
                     </div>
 
                     <div style="border-top: 1px solid #ddd; padding-top: 8px; font-size: 9px; color: #555;">
-                        <p style="margin: 0 0 2px 0; font-weight: bold; color: #333;">Representado en ${moneda}. El documento fiscal original se emite por caja registradora.</p>
+                        <p style="margin: 0 0 2px 0; font-weight: bold; color: #333;">Representado en ${moneda}. Tasa Referencial de la Operación: ${tasaGuardada}. El documento fiscal original se emite por caja registradora.</p>
                     </div>
                 </div>
             `;
@@ -1971,7 +2032,7 @@
             const objetoFactura = {
                 nro: nroFactura, fecha: fechaActual, cliente, rif, direccion, telefono,
                 items, subtotal, descuento, iva, total, moneda, simbolo, tasa, disponibilidad,
-                estatusComercial: "Pendiente", // 🚀 Estatus por defecto
+                estatusComercial: "Pendiente", 
                 notaInterna: ""
             };
 
@@ -2082,7 +2143,7 @@
                         <td style="text-align: center; min-width: 140px;"></td>
                     `;
 
-                    // 🚀 NUEVO BOTÓN: VER RETENCIONES DE LA IA
+                    // Boton Retencion
                     const btnRetencion = document.createElement('button');
                     btnRetencion.type = 'button'; 
                     btnRetencion.style = 'background:#17a2b8; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; margin-right: 5px;';
@@ -2115,7 +2176,7 @@
                     });
 
                     const tdAcciones = tr.querySelector('td:last-child');
-                    tdAcciones.appendChild(btnRetencion); // <-- AÑADIDO
+                    tdAcciones.appendChild(btnRetencion); 
                     tdAcciones.appendChild(btnNotas);
                     tdAcciones.appendChild(btnCajero); 
                     tdAcciones.appendChild(btnImprimir); 
@@ -2740,13 +2801,15 @@
         };
 
         // ==========================================
-        // GUARDAR Y CARGAR HISTORIAL DE IMPORTACIONES
+        // GUARDAR, CARGAR Y EDITAR HISTORIAL DE IMPORTACIONES
         // ==========================================
         window.guardarImportacion = async function() {
-            const btn = document.querySelector('button[onclick="guardarImportacion()"]');
+            const btn = document.getElementById('btn-save-imp');
             const originalText = btn.innerHTML;
             btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Guardando...";
             btn.disabled = true;
+
+            const editId = document.getElementById('edit-imp-id').value;
 
             const criterio = document.getElementById('imp-criterio').value;
             const medidaTotal = document.getElementById('imp-cbm-total').value;
@@ -2754,6 +2817,16 @@
             const fobTotal = document.getElementById('imp-resumen-fob').innerText;
             const landedTotal = document.getElementById('imp-resumen-landed').innerText;
             
+            // 🚀 Capturar Gastos
+            const gastosDetalle = [];
+            document.querySelectorAll('.imp-gasto-row').forEach(row => {
+                gastosDetalle.push({
+                    desc: row.querySelector('.imp-gasto-desc').value,
+                    monto: row.querySelector('.imp-gasto-monto').value
+                });
+            });
+
+            // 🚀 Capturar Repuestos con Margen y Precios
             const rows = document.querySelectorAll('.imp-item-row');
             const items = [];
             rows.forEach(row => {
@@ -2762,7 +2835,10 @@
                     cantidad: row.querySelector('.imp-item-cant').value,
                     fob: row.querySelector('.imp-item-fob').value,
                     medidaUnit: row.querySelector('.imp-item-cbm').value,
-                    landed: row.querySelector('.imp-item-landed-unit').innerText
+                    margenDetal: row.querySelector('.imp-item-margen-detal').value,
+                    landed: row.querySelector('.imp-item-landed-unit').innerText,
+                    precioDetal: row.querySelector('.imp-item-precio-detal').innerText,
+                    precioMayor: row.querySelector('.imp-item-precio-mayor').innerText
                 });
             });
 
@@ -2785,24 +2861,34 @@
                 totalGastos: totalGastos,
                 fobTotal: fobTotal,
                 landedTotal: landedTotal,
+                gastosDetalle: gastosDetalle,
                 items: items
             };
 
             try {
-                await addDoc(collection(db, "importaciones"), data);
-                alert("✅ Cálculo guardado exitosamente en el historial.");
+                if (editId) {
+                    await updateDoc(doc(db, "importaciones", editId), data);
+                    alert("✅ Cálculo actualizado exitosamente.");
+                    document.getElementById('edit-imp-id').value = '';
+                    btn.style.background = '#28a745'; 
+                } else {
+                    await addDoc(collection(db, "importaciones"), data);
+                    alert("✅ Cálculo guardado exitosamente en el historial.");
+                }
                 window.cargarHistorialImportaciones();
             } catch (error) {
                 console.error("Error al guardar:", error);
                 alert("Hubo un error al guardar el cálculo en la base de datos.");
             }
-            btn.innerHTML = originalText; btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save"></i> Guardar Cálculo en Historial'; 
+            btn.disabled = false;
         };
 
         window.cargarHistorialImportaciones = async function() {
             const tbody = document.getElementById('importaciones-table-body');
             if(!tbody) return;
             tbody.innerHTML = `<tr><td colspan="6" style="text-align: center;">Cargando historial...</td></tr>`;
+            window.importacionesDBLocal = {}; // Reset db local
             
             try {
                 const snap = await getDocs(collection(db, "importaciones"));
@@ -2816,8 +2902,28 @@
                 snap.forEach(docSnap => {
                     const data = docSnap.data();
                     const docId = docSnap.id;
+                    window.importacionesDBLocal[docId] = data; // Guardamos para edición
                     
-                    let itemsList = data.items ? data.items.map(i => `• ${i.cantidad}x ${i.descripcion} | FOB: $${i.fob} | Medida: ${i.medidaUnit || '0'} | Costo Puesto: ${i.landed}`).join('<br>') : 'Sin detalles';
+                    let itemsList = data.items ? data.items.map(i => {
+                        const margen = i.margenDetal || '40';
+                        const pDetal = i.precioDetal || '$0.00';
+                        const pMayor = i.precioMayor || '$0.00';
+                        return `
+                            <div style="border-bottom: 1px dashed #ccc; padding-bottom: 6px; margin-bottom: 6px;">
+                                <strong style="color:#333;">${i.cantidad}x ${i.descripcion}</strong><br>
+                                <div style="display:flex; justify-content:space-between; font-size:10px; color:#666; margin-top:3px;">
+                                    <span>FOB: $${i.fob}</span>
+                                    <span>Medida: ${i.medidaUnit || '0'}</span>
+                                    <span>Costo Puesto: <strong style="color:#d9534f;">${i.landed}</strong></span>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; font-size:10px; color:#555; margin-top:3px; background:#eef2eb; padding:4px; border-radius:3px;">
+                                    <span>Margen: ${margen}%</span>
+                                    <span>P. Detal: <strong style="color:#385723;">${pDetal}</strong></span>
+                                    <span>P. Mayor: <strong style="color:#1d6fa5;">${pMayor}</strong></span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('') : 'Sin detalles';
 
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
@@ -2832,7 +2938,8 @@
                                 <div style="margin-top: 5px; padding: 5px; background: #f1f1f1; border-radius: 4px; line-height: 1.4;">${itemsList}</div>
                             </details>
                         </td>
-                        <td style="text-align: center;">
+                        <td style="text-align: center; min-width: 90px;">
+                            <button type="button" onclick="editarImportacion('${docId}')" style="background:#1d6fa5; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; margin-right:4px;" title="Editar"><i class="fas fa-edit"></i></button>
                             <button type="button" onclick="eliminarImportacion('${docId}')" style="background:#d9534f; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;" title="Eliminar"><i class="fas fa-trash"></i></button>
                         </td>
                     `;
@@ -2840,6 +2947,121 @@
                 });
             } catch(error) {
                 console.error("Error cargando historial de importaciones:", error);
+            }
+        };
+
+        // 🚀 NUEVO: Función para reconstruir la calculadora desde el historial
+        window.editarImportacion = function(docId) {
+            const data = window.importacionesDBLocal[docId];
+            if(!data) return;
+
+            document.getElementById('edit-imp-id').value = docId;
+            document.getElementById('imp-criterio').value = data.criterio || 'cbm';
+            document.getElementById('imp-cbm-total').value = data.medidaTotal || '1.000';
+            
+            // 1. Restaurar Gastos
+            const gastosContainer = document.getElementById('imp-gastos-container');
+            gastosContainer.innerHTML = '';
+            if (data.gastosDetalle && data.gastosDetalle.length > 0) {
+                data.gastosDetalle.forEach(g => {
+                    const row = document.createElement('div');
+                    row.className = 'imp-gasto-row';
+                    row.style = 'display: flex; gap: 8px; margin-bottom: 10px; align-items: center;';
+                    row.innerHTML = `
+                        <input type="text" class="imp-gasto-desc" value="${g.desc}" placeholder="Ej: Seguro, Aduana..." style="flex: 2; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; outline: none;">
+                        <input type="number" step="0.01" class="imp-gasto-monto" value="${g.monto}" placeholder="$0.00" oninput="calcularLandedCost()" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; outline: none;">
+                        <button type="button" onclick="this.parentElement.remove(); calcularLandedCost();" style="background: #d9534f; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;" title="Eliminar Gasto"><i class="fas fa-times"></i></button>
+                    `;
+                    gastosContainer.appendChild(row);
+                });
+            } else {
+                // Compatible con el historial antiguo
+                const row = document.createElement('div');
+                row.className = 'imp-gasto-row';
+                row.style = 'display: flex; gap: 8px; margin-bottom: 10px; align-items: center;';
+                row.innerHTML = `
+                    <input type="text" class="imp-gasto-desc" value="Gastos Generales (Historial Antiguo)" style="flex: 2; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; outline: none;">
+                    <input type="number" step="0.01" class="imp-gasto-monto" value="${(data.totalGastos || '0').replace('$','')}" oninput="calcularLandedCost()" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; outline: none;">
+                    <button type="button" onclick="this.parentElement.remove(); calcularLandedCost();" style="background: #d9534f; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;" title="Eliminar Gasto"><i class="fas fa-times"></i></button>
+                `;
+                gastosContainer.appendChild(row);
+            }
+
+            // 2. Restaurar Repuestos
+            const itemsContainer = document.getElementById('imp-items-container');
+            itemsContainer.innerHTML = '';
+            
+            let labelMedida = "Vol. Unit. (CBM)";
+            if (data.criterio === 'cuft') labelMedida = "Vol. Unit. (ft³)";
+            else if (data.criterio === 'peso') labelMedida = "Peso Unit. (kg)";
+            else if (data.criterio === 'fob') labelMedida = "Medida (Opcional)";
+
+            if (data.items && data.items.length > 0) {
+                data.items.forEach(i => {
+                    const row = document.createElement('div');
+                    row.className = 'imp-item-row';
+                    row.style = 'background: #f9f9f9; border: 1px solid #ddd; padding: 12px; border-radius: 6px; margin-bottom: 12px;';
+                    
+                    const margenDetal = i.margenDetal || '40';
+                    const precioDetal = i.precioDetal || '$0.00';
+                    const precioMayor = i.precioMayor || '$0.00';
+                    const landed = i.landed || '$0.00';
+                    const safeDesc = (i.descripcion || '').replace(/"/g, '&quot;');
+
+                    row.innerHTML = `
+                        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 8px;">
+                            <div>
+                                <label style="font-size: 11px; font-weight: bold; color: #555;">Repuesto / Descripción</label>
+                                <input type="text" class="imp-item-desc" value="${safeDesc}" placeholder="Ej: Kit de Tiempo Yaris" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 11px; font-weight: bold; color: #555;">Cantidad</label>
+                                <input type="number" class="imp-item-cant" value="${i.cantidad}" min="1" oninput="calcularLandedCost()" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 11px; font-weight: bold; color: #555;">Precio FOB ($ u.)</label>
+                                <input type="number" step="0.01" class="imp-item-fob" value="${i.fob}" oninput="calcularLandedCost()" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                            </div>
+                            <div>
+                                <label class="imp-item-medida-label" style="font-size: 11px; font-weight: bold; color: #555;">${labelMedida}</label>
+                                <input type="number" step="0.001" class="imp-item-cbm" value="${i.medidaUnit || '0'}" oninput="calcularLandedCost()" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                            </div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 40px; gap: 10px; align-items: center; background: #eef2eb; padding: 8px; border-radius: 4px;">
+                            <div>
+                                <span style="font-size: 10px; color: #555; display:block;">Costo Puesto ($ u.):</span>
+                                <strong class="imp-item-landed-unit" style="font-size: 13px; color: #d9534f;">${landed}</strong>
+                            </div>
+                            <div>
+                                <label style="font-size: 10px; font-weight: bold; color: #555;">Margen Detal (%)</label>
+                                <input type="number" class="imp-item-margen-detal" value="${margenDetal}" oninput="calcularLandedCost()" style="width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: 4px; font-size: 11px;">
+                            </div>
+                            <div>
+                                <span style="font-size: 10px; color: #555; display:block;">P. Venta Detal ($):</span>
+                                <strong class="imp-item-precio-detal" style="font-size: 13px; color: #385723;">${precioDetal}</strong>
+                            </div>
+                            <div>
+                                <span style="font-size: 10px; color: #555; display:block;">P. Venta Mayor ($):</span>
+                                <strong class="imp-item-precio-mayor" style="font-size: 13px; color: #1d6fa5;">${precioMayor}</strong>
+                            </div>
+                            <button type="button" onclick="this.parentElement.parentElement.remove(); calcularLandedCost();" style="background: #d9534f; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;" title="Eliminar"><i class="fas fa-times"></i></button>
+                        </div>
+                    `;
+                    itemsContainer.appendChild(row);
+                });
+            }
+
+            window.calcularLandedCost();
+            
+            // Subir pantalla hasta arriba
+            document.getElementById('tab-importacion').scrollIntoView({ behavior: 'smooth' });
+
+            // Cambiar Botón a Actualizar
+            const btnSave = document.getElementById('btn-save-imp');
+            if(btnSave) {
+                btnSave.innerHTML = '<i class="fas fa-sync"></i> Actualizar Cálculo Editado';
+                btnSave.style.background = '#1d6fa5'; // Azul para destacar
             }
         };
 
@@ -2865,6 +3087,9 @@
             window.calcularTotalFactura();
             window.cargarHistorialFacturas(); 
             window.cargarHistorialImportaciones();
+            
+            // 🚀 Carga la tasa automáticamente al abrir
+            window.cargarTasaBCV(); 
         });
     </script>
 </body>
