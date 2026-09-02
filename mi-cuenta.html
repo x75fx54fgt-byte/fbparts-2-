@@ -8,7 +8,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
+    <!-- 🚀 LIBRERÍA PUTER.JS -->
+    <script src="https://js.puter.com/v2/"></script>
+
     <link rel="stylesheet" href="styles.css">
+
+    
 
     <style>
         .portal-container { max-width: 1150px; margin: 40px auto; padding: 0 20px; }
@@ -124,6 +129,176 @@
             </div>
         </div>
     </div>
+
+    <!-- ========================================== -->
+    <!-- 🛒 BOTÓN CARRITO FLOTANTE (Oculto si está vacío) -->
+    <!-- ========================================== -->
+    <div id="btn-flotante-carrito-micuenta" style="position: fixed; bottom: 100px; right: 25px; z-index: 99998; width: 60px; height: 60px; display: none;">
+        <button onclick="window.location.href='tienda.html'" style="background: #fff; color: #385723; border: 2px solid #385723; width: 100%; height: 100%; border-radius: 50%; cursor: pointer; font-size: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; padding: 0; margin: 0; position: relative;" title="Ir a Pagar">
+            <i class="fas fa-shopping-cart"></i>
+        </button>
+        <span id="cart-badge-micuenta" style="position: absolute; top: -6px; right: -6px; background: #ff4d4d; color: white; font-size: 13px; font-weight: bold; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; pointer-events: none; z-index: 99999; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">0</span>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 🤖 WIDGET FLOTANTE: MECÁNICO VIRTUAL IA -->
+    <!-- ========================================== -->
+    <div id="ai-chat-widget" style="position: fixed; bottom: 25px; right: 25px; z-index: 99999; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+        <div id="ai-chat-box" style="display: none; position: absolute; bottom: 75px; right: 0; width: 340px; max-width: calc(100vw - 50px); background: #fff; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); overflow: hidden; border: 1px solid #eee; flex-direction: column;">
+            <div style="background: var(--green, #5b8743); color: white; padding: 15px; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="position: relative;">
+                        <div style="width: 38px; height: 38px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; color: var(--green, #5b8743); font-size: 20px;">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <span style="position: absolute; bottom: 0; right: 0; width: 10px; height: 10px; background: #25D366; border: 2px solid white; border-radius: 50%;"></span>
+                    </div>
+                    <div>
+                        <h4 style="margin: 0; font-size: 15px; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px; color: #fff;">Mecánico Virtual IA</h4>
+                        <span style="font-size: 11px; opacity: 0.9;">F&B Parts - Soporte en línea</span>
+                    </div>
+                </div>
+                <button onclick="toggleAiChat()" style="background: none; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0;"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="ai-chat-messages" style="height: 320px; overflow-y: auto; padding: 15px; background: #f4f6f4; display: flex; flex-direction: column; gap: 10px; font-size: 13px;">
+                <div style="align-self: flex-start; background: white; padding: 10px 14px; border-radius: 0 12px 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; border-left: 3px solid var(--green, #5b8743);">
+                    <p style="margin: 0 0 5px 0;">¡Hola! 👋 Soy el <strong>Mecánico Inteligente</strong> de F&B Parts.</p>
+                    <p style="margin: 0;">¿Tienes alguna falla en tu vehículo o buscas un repuesto en específico? Cuéntame y te asesoro.</p>
+                </div>
+            </div>
+            <div style="padding: 10px 15px; background: white; border-top: 1px solid #eee; text-align: center;">
+                <a href="https://wa.me/584120161036?text=Hola%20F%26B%20Parts,%20vengo%20del%20asistente%20virtual%20de%20mi%20cuenta." target="_blank" style="background: #25D366; color: white; text-decoration: none; display: flex; align-items: center; justify-content: center; padding: 10px; border-radius: 6px; font-weight: bold; font-family: 'Oswald', sans-serif; font-size: 14px; transition: background 0.2s; box-shadow: 0 2px 5px rgba(37, 211, 102, 0.3);">
+                    <i class="fab fa-whatsapp" style="margin-right: 8px; font-size: 18px;"></i> HABLAR CON UN ASESOR REAL
+                </a>
+            </div>
+            <div style="padding: 10px 15px; background: #fafafa; border-top: 1px solid #eee; display: flex; gap: 8px; align-items: center;">
+                <input type="text" id="ai-chat-input" placeholder="Ej: Mi Yaris 2008 bota agua..." style="flex: 1; padding: 10px 15px; border: 1px solid #ddd; border-radius: 20px; outline: none; font-size: 13px;" onkeypress="handleAiChatKey(event)">
+                <button id="ai-chat-send-btn" onclick="enviarMensajeAi()" style="background: var(--green, #5b8743); color: white; border: none; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+        <button onclick="toggleAiChat()" id="ai-chat-fab" style="background: var(--green, #5b8743); color: white; border: none; width: 65px; height: 65px; border-radius: 50%; cursor: pointer; font-size: 28px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; transition: transform 0.2s;">
+            <i class="fas fa-headset" id="ai-icon-toggle"></i>
+        </button>
+    </div>
+
+    <!-- Script de Visibilidad del Carrito y Mecánico IA -->
+    <script>
+        // 1. Lógica Condicional del Carrito
+        window.verificarCarritoVacio = function() {
+            let carrito = JSON.parse(localStorage.getItem('carritoFB')) || [];
+            let cantidadArticulos = 0;
+            carrito.forEach(item => cantidadArticulos += item.cantidad);
+            
+            const btnCarrito = document.getElementById('btn-flotante-carrito-micuenta');
+            const badge = document.getElementById('cart-badge-micuenta');
+            
+            if(btnCarrito && badge) {
+                if(cantidadArticulos > 0) {
+                    btnCarrito.style.display = 'block'; // Muestra el botón completo
+                    badge.innerText = cantidadArticulos;
+                } else {
+                    btnCarrito.style.display = 'none'; // Oculta todo si está en cero
+                }
+            }
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            verificarCarritoVacio();
+        });
+
+        // 2. Lógica del Mecánico Virtual
+        function toggleAiChat() {
+            const box = document.getElementById('ai-chat-box');
+            const icon = document.getElementById('ai-icon-toggle');
+            const fab = document.getElementById('ai-chat-fab');
+            if (box.style.display === 'none' || box.style.display === '') {
+                box.style.display = 'flex';
+                icon.className = 'fas fa-times';
+                fab.style.background = '#d9534f'; 
+                document.getElementById('ai-chat-input').focus();
+            } else {
+                box.style.display = 'none';
+                icon.className = 'fas fa-headset';
+                fab.style.background = 'var(--green, #5b8743)'; 
+            }
+        }
+
+        function handleAiChatKey(e) { if (e.key === 'Enter') enviarMensajeAi(); }
+
+        let conversacionIA = [];
+
+        async function enviarMensajeAi() {
+            const input = document.getElementById('ai-chat-input');
+            const mensaje = input.value.trim();
+            if (!mensaje) return;
+
+            const chatArea = document.getElementById('ai-chat-messages');
+            const btn = document.getElementById('ai-chat-send-btn');
+
+            chatArea.insertAdjacentHTML('beforeend', `
+                <div style="align-self: flex-end; background: #f0f7f2; padding: 10px 14px; border-radius: 12px 0 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; color: #333; border-right: 3px solid var(--green, #5b8743);">
+                    <p style="margin: 0;">${mensaje}</p>
+                </div>
+            `);
+            input.value = '';
+            chatArea.scrollTop = chatArea.scrollHeight;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            const typingId = 'typing-' + Date.now();
+            chatArea.insertAdjacentHTML('beforeend', `
+                <div id="${typingId}" style="align-self: flex-start; background: white; padding: 10px 14px; border-radius: 0 12px 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; border-left: 3px solid #ccc; color: #888; font-style: italic;">
+                    <i class="fas fa-circle-notch fa-spin"></i> Analizando...
+                </div>
+            `);
+            chatArea.scrollTop = chatArea.scrollHeight;
+
+            let promptBase = `Actúa como el "Mecánico Asesor" experto de la tienda automotriz 'F&B Parts' en Caracas, Venezuela.
+            Eres empático, usas un lenguaje técnico pero fácil de entender. 
+            Da respuestas CORTAS y concisas (máximo 2 párrafos). Evita formatos raros o asteriscos.`;
+
+            let historialContext = conversacionIA.map(msg => `Cliente: ${msg.user}\nMecánico: ${msg.ai}`).join("\n\n");
+            let promptFinal = promptBase + "\n\n" + (historialContext ? `HISTORIAL DE LA CHARLA:\n${historialContext}\n\n` : "") + `MENSAJE ACTUAL DEL CLIENTE: "${mensaje}"`;
+
+            try {
+                let respuestaFinal = "";
+                if (typeof puter !== 'undefined') {
+                    const respuesta = await puter.ai.chat(promptFinal);
+                    respuestaFinal = typeof respuesta === 'string' ? respuesta : respuesta.message.content;
+                } else {
+                    respuestaFinal = "Ups, problema de conexión. Por favor usa el botón de WhatsApp.";
+                }
+
+                document.getElementById(typingId).remove();
+
+                conversacionIA.push({ user: mensaje, ai: respuestaFinal });
+                if(conversacionIA.length > 3) conversacionIA.shift(); 
+
+                chatArea.insertAdjacentHTML('beforeend', `
+                    <div style="align-self: flex-start; background: white; padding: 10px 14px; border-radius: 0 12px 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; border-left: 3px solid var(--green, #5b8743); color: #333;">
+                        <p style="margin: 0; white-space: pre-wrap; line-height: 1.5;">${respuestaFinal.replace(/\*\*/g, '')}</p>
+                    </div>
+                `);
+                
+            } catch (e) {
+                console.error("Error Puter:", e);
+                document.getElementById(typingId).remove();
+                chatArea.insertAdjacentHTML('beforeend', `
+                    <div style="align-self: flex-start; background: #f8d7da; padding: 10px 14px; border-radius: 0 12px 12px 12px; border-left: 3px solid #d9534f; color: #721c24;">
+                        <p style="margin: 0;">Internet falló. Usa el botón de WhatsApp abajo.</p>
+                    </div>
+                `);
+            }
+
+            chatArea.scrollTop = chatArea.scrollHeight;
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+            input.focus();
+        }
+    </script>
+
 
     <!-- Lógica Principal -->
     <script type="module">
