@@ -883,10 +883,16 @@
                         </div>
                         
                         <!-- BOTÓN DE GUARDAR CÁLCULO -->
-                        <div style="text-align: right;">
+                        <!-- BOTONES DE ANÁLISIS IA Y GUARDAR CÁLCULO -->
+                        <div style="text-align: right; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; margin-top: 20px;">
                             <input type="hidden" id="edit-imp-id">
-                            <button type="button" id="btn-save-imp" class="btn-action" onclick="guardarImportacion()" style="margin-top: 20px; font-size: 15px; padding: 12px; background: #28a745; max-width: 300px;">
-                                <i class="fas fa-save"></i> Guardar Cálculo en Historial
+                            
+                            <button type="button" onclick="abrirAnalisisLandedIA()" style="font-size: 15px; padding: 12px; background: #1d6fa5; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                <i class="fas fa-robot"></i> Analizar con IA
+                            </button>
+                            
+                            <button type="button" id="btn-save-imp" class="btn-action" onclick="guardarImportacion()" style="font-size: 15px; padding: 12px; background: #28a745; max-width: 300px;">
+                                <i class="fas fa-save"></i> Guardar en Historial
                             </button>
                         </div>
                     </div>
@@ -1097,17 +1103,32 @@
             <h3><i class="fas fa-edit"></i> Administrar Repuesto</h3>
             <input type="hidden" id="edit-id">
             <div class="form-group"><label>Nombre del Repuesto</label><input type="text" id="edit-nombre"></div>
+            
             <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                 <div><label>Precio ($)</label><input type="number" step="0.01" id="edit-precio"></div>
                 <div><label>Cantidad en Stock</label><input type="number" id="edit-stock" min="0"></div>
             </div>
+            
             <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                 <div><label>Categoría</label><select id="edit-categoria"></select></div>
                 <div><label>Estado</label><select id="edit-estado"><option value="activo">Activo (Visible)</option><option value="inactivo">Inactivo (Pausado)</option></select></div>
             </div>
+            
             <div class="form-group"><label>Número de Parte / OEM</label><input type="text" id="edit-numero-parte"></div>
-            <div class="form-group"><label>Descripción Detallada</label><textarea id="edit-descripcion" rows="3"></textarea></div>
+            
+            <!-- 🚀 NUEVA SECCIÓN CON BOTÓN DE IA PARA LA DESCRIPCIÓN -->
+            <div class="form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                    <label style="margin-bottom: 0;">Descripción Detallada</label>
+                    <button type="button" id="btn-ia-desc" onclick="generarDescripcionIA()" style="background: #1d6fa5; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: bold; transition: background 0.2s;">
+                        <i class="fas fa-magic"></i> Redactar con IA
+                    </button>
+                </div>
+                <textarea id="edit-descripcion" rows="6" placeholder="Especifica compatibilidad, material, detalles..."></textarea>
+            </div>
+            
             <div class="form-group"><label>URL de la Imagen</label><textarea id="edit-imagen" style="height: 50px;"></textarea></div>
+            
             <div class="modal-actions">
                 <button type="button" class="btn-delete" onclick="eliminarProducto()"><i class="fas fa-trash"></i> Eliminar</button>
                 <button type="button" class="btn-cancel" onclick="cerrarModalEdicion()">Cancelar</button>
@@ -1140,6 +1161,38 @@
         </div>
     </div>
 
+    <!-- 🚀 MODAL ASISTENTE IA PARA COMPRAS (LANDED COST) -->
+    <div id="modal-ia-compras" class="modal-overlay">
+        <div class="modal-content" style="max-width: 650px;">
+            <h3><i class="fas fa-boxes" style="color:#1d6fa5;"></i> Analista de Compras IA</h3>
+            <p style="font-size: 13px; color: #666; margin-top: -10px; margin-bottom: 15px;">La IA de Puter evaluará la rentabilidad de tu importación.</p>
+            
+            <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #ddd; margin-bottom: 15px; font-size: 13px; display: flex; justify-content: space-between;">
+                <div><span style="color:#666; display:block; font-size:11px;">FOB Total</span><strong style="color:#333;">$<span id="ia-compras-fob">0.00</span></strong></div>
+                <div><span style="color:#666; display:block; font-size:11px;">Gastos Logísticos</span><strong style="color:#d9534f;">$<span id="ia-compras-gastos">0.00</span></strong></div>
+                <div><span style="color:#666; display:block; font-size:11px;">Costo Puesto Total</span><strong style="color:#385723;">$<span id="ia-compras-landed">0.00</span></strong></div>
+            </div>
+
+            <!-- NUEVO: Campo para conversar con la IA -->
+            <div class="form-group">
+                <label style="color: #1d6fa5;">¿Qué le quieres decir o pedir a la IA?</label>
+                <textarea id="ia-contexto-compras" rows="2" placeholder="Ej: Sí, calcúlame ese precio mínimo por favor." style="border-color: #1d6fa5;"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Evaluación y Chat de la IA</label>
+                <textarea id="ia-respuesta-compras" rows="8" style="font-family: Arial; font-size:13px; line-height:1.5; background:#f4f9fd;" placeholder="Presiona 'Generar Análisis' para iniciar..." readonly></textarea>
+            </div>
+            
+            <div class="modal-actions" style="gap: 8px;">
+                <button type="button" class="btn-cancel" onclick="cerrarModalComprasIA()">Cerrar</button>
+                <button type="button" class="btn-action" id="btn-generar-ia-compras" style="background:#1d6fa5; flex:1.5;" onclick="generarAnalisisComprasIA()">
+                    <i class="fas fa-comment-dots"></i> Enviar / Analizar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts de Lógica y Firebase -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -1150,9 +1203,6 @@
         // 🚀 CONFIGURACIÓN DE APIS Y BASES DE DATOS
         // ==========================================
         
-        // 👉 API KEY DE GEMINI
-        window.GEMINI_API_KEY = "AQ.Ab8RN6IhVBJOmce_vTm-G6IGuYUeKMPAq6hqKzcT5xah7b2KTg"; 
-
         const firebaseConfig = {
             apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
             authDomain: "fb-parts-app.firebaseapp.com",
@@ -3272,7 +3322,7 @@
             // Abre una pestaña nueva directo en la ventana de redactar de Gmail
             window.open(`https://mail.google.com/mail/?view=cm&fs=1&tf=1&su=${asunto}&body=${cuerpo}`, '_blank');
         };
-        
+
         // ==========================================
         // 🚀 GENERADOR DE SITEMAP SEO PARA GOOGLE
         // ==========================================
@@ -3972,6 +4022,179 @@
             
             window.cargarTasaBCV(); 
         });
+
+        // ==========================================
+        // 🚀 ANALISTA DE COMPRAS IA INTERACTIVO
+        // ==========================================
+        window.abrirAnalisisLandedIA = function() {
+            const rows = document.querySelectorAll('.imp-item-row');
+            if (rows.length === 0) {
+                alert("Debes agregar al menos un repuesto para que la IA tenga algo que analizar.");
+                return;
+            }
+            
+            document.getElementById('ia-compras-fob').textContent = document.getElementById('imp-resumen-fob').innerText;
+            document.getElementById('ia-compras-gastos').textContent = document.getElementById('imp-total-gastos-display').innerText;
+            document.getElementById('ia-compras-landed').textContent = document.getElementById('imp-resumen-landed').innerText;
+            
+            document.getElementById('ia-respuesta-compras').value = '';
+            document.getElementById('ia-contexto-compras').value = ''; 
+            document.getElementById('modal-ia-compras').style.display = 'flex';
+        };
+
+        window.cerrarModalComprasIA = function() {
+            document.getElementById('modal-ia-compras').style.display = 'none';
+        };
+
+        window.generarAnalisisComprasIA = async function() {
+            if (typeof puter === 'undefined') {
+                alert("⚠️ Puter no está cargado. Asegúrate de tener conexión a internet.");
+                return;
+            }
+
+            const btn = document.getElementById('btn-generar-ia-compras');
+            const respuestaArea = document.getElementById('ia-respuesta-compras');
+            const contextoInput = document.getElementById('ia-contexto-compras');
+            
+            const mensajeUsuario = contextoInput.value.trim();
+            const historialAnalisis = respuestaArea.value.trim();
+
+            // Evitar enviar un mensaje vacío si ya hay un chat
+            if (historialAnalisis !== "" && mensajeUsuario === "") {
+                alert("Escribe una respuesta o pregunta para la IA.");
+                return;
+            }
+
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analizando...';
+            btn.disabled = true;
+
+            const origen = document.getElementById('imp-criterio').options[document.getElementById('imp-criterio').selectedIndex].text;
+            const fobTotal = document.getElementById('imp-resumen-fob').innerText;
+            const gastosTotal = document.getElementById('imp-total-gastos-display').innerText;
+            const landedTotal = document.getElementById('imp-resumen-landed').innerText;
+
+            let listaItems = '';
+            document.querySelectorAll('.imp-item-row').forEach(row => {
+                const desc = row.querySelector('.imp-item-desc').value || 'Repuesto sin especificar';
+                const cant = row.querySelector('.imp-item-cant').value;
+                const fob = row.querySelector('.imp-item-fob').value;
+                const landedUnit = row.querySelector('.imp-item-landed-unit').innerText;
+                const margen = row.querySelector('.imp-item-margen-detal').value;
+                const pDetal = row.querySelector('.imp-item-precio-detal').innerText;
+                
+                listaItems += `- ${cant}x [${desc}] | FOB: $${fob} | Costo Puesto: ${landedUnit} | Margen: ${margen}% | PV Sugerido: ${pDetal}\n`;
+            });
+
+            let promptTexto = `Actúa como Analista de Compras y Estratega de Precios de repuestos automotrices. Yo soy Brhayan, el Gerente.
+            DATOS ACTUALES DEL EMBARQUE:
+            Origen: ${origen} | FOB Total: $${fobTotal} | Gastos Logísticos: $${gastosTotal} | Costo Final: $${landedTotal}
+            REPUESTOS:
+            ${listaItems}\n`;
+
+            if (historialAnalisis === "") {
+                // Si es la primera vez que se abre en este análisis
+                promptTexto += `INSTRUCCIONES: Evalúa la proporción Gastos vs FOB. Analiza márgenes y precios de venta. Dame 2 recomendaciones. Sé directo.`;
+            } else {
+                // Si ya es una conversación, le pasamos el historial y la nueva pregunta
+                promptTexto += `ESTE FUE TU ANÁLISIS ANTERIOR:\n"${historialAnalisis}"\n\nNUEVA INSTRUCCIÓN DE BRHAYAN: "${mensajeUsuario}"\nResponde directamente a esto último.`;
+                
+                // Reflejamos en la pantalla lo que el usuario escribió
+                respuestaArea.value += `\n\n--- Tú:\n${mensajeUsuario}\n\n--- IA Pensando...`;
+                contextoInput.value = ''; // Limpiamos la caja para la próxima pregunta
+                respuestaArea.scrollTop = respuestaArea.scrollHeight; // Baja el scroll
+            }
+
+            try {
+                const respuesta = await puter.ai.chat(promptTexto);
+                const textoFinal = typeof respuesta === 'string' ? respuesta : respuesta.message.content;
+                
+                if (historialAnalisis === "") {
+                    respuestaArea.value = textoFinal.trim();
+                } else {
+                    // Quitamos el texto de "Pensando" y ponemos la respuesta real
+                    respuestaArea.value = respuestaArea.value.replace("--- IA Pensando...", "--- IA:\n" + textoFinal.trim());
+                }
+                respuestaArea.scrollTop = respuestaArea.scrollHeight;
+                
+                btn.innerHTML = '<i class="fas fa-check"></i> ¡Listo!';
+            } catch (error) {
+                console.error("Error Puter:", error);
+                alert("⚠️ Error al generar el análisis con Puter: " + error.message);
+                btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
+                if (historialAnalisis !== "") {
+                    respuestaArea.value = respuestaArea.value.replace("\n\n--- IA Pensando...", "");
+                }
+            }
+
+            setTimeout(() => {
+                btn.innerHTML = '<i class="fas fa-comment-dots"></i> Enviar / Analizar';
+                btn.disabled = false;
+            }, 3000);
+        };
+
+        // ==========================================
+        // 🚀 CREADOR DE DESCRIPCIONES PARA MERCADO LIBRE (IA)
+        // ==========================================
+        window.generarDescripcionIA = async function() {
+            const nombre = document.getElementById('edit-nombre').value.trim();
+            const categoriaElement = document.getElementById('edit-categoria');
+            const categoria = categoriaElement.options[categoriaElement.selectedIndex]?.text || 'Repuestos Automotrices';
+            const numParte = document.getElementById('edit-numero-parte').value.trim();
+            const textArea = document.getElementById('edit-descripcion');
+            const btn = document.getElementById('btn-ia-desc');
+
+            if (!nombre) {
+                alert("Por favor, escribe primero el 'Nombre del Repuesto' para que la IA sepa qué producto es.");
+                return;
+            }
+
+            if (typeof puter === 'undefined') {
+                alert("⚠️ Puter no está cargado. Revisa tu conexión a internet.");
+                return;
+            }
+
+            const textoBotonOriginal = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redactando...';
+            btn.disabled = true;
+
+            // Instrucciones precisas para la IA enfocadas en Mercado Libre Venezuela
+            let promptTexto = `Actúa como un experto en ventas y Copywriting para Mercado Libre Venezuela.
+            Escribe una descripción de producto altamente persuasiva, profesional y vendedora para este repuesto automotriz:
+
+            - Nombre del Repuesto: ${nombre}
+            - Categoría: ${categoria}`;
+
+            if (numParte) {
+                promptTexto += `\n- Número de Parte / Código OEM: ${numParte}`;
+            }
+
+            promptTexto += `\n\nESTRUCTURA OBLIGATORIA DE LA DESCRIPCIÓN:
+            1. Título llamativo resaltando el repuesto.
+            2. Beneficios breves: ¿Por qué comprar esta pieza de reemplazo?
+            3. Especificaciones: Si no conoces los modelos/años exactos de compatibilidad, coloca espacios para llenar así: "[Completar vehículos compatibles]".
+            4. Condiciones Comerciales de la tienda: Menciona que somos "Inversiones FB Parts, C.A.", que tenemos excelente reputación, realizamos entregas personales en Caracas y enviamos por Tealca/MRW a nivel nacional.
+            5. Llamado a la acción invitando a preguntar disponibilidad antes de ofertar.
+
+            REGLA CRÍTICA: Mercado Libre no soporta formato Markdown (no uses asteriscos **, ni negritas de código). Solo usa mayúsculas, saltos de línea y emojis básicos (✅, 🚗, ⭐, 📦). Devuelve ÚNICAMENTE el texto listo para copiar y pegar.`;
+
+            try {
+                // Llamada a la IA de Puter
+                const respuesta = await puter.ai.chat(promptTexto);
+                const textoFinal = typeof respuesta === 'string' ? respuesta : respuesta.message.content;
+                
+                // Limpiamos cualquier markdown remanente (asteriscos molestos)
+                const textoLimpio = textoFinal.replace(/\*\*/g, '').replace(/\*/g, '•');
+                
+                textArea.value = textoLimpio.trim();
+                
+            } catch (error) {
+                console.error("Error Puter Descripciones:", error);
+                alert("⚠️ Error al generar la descripción: " + error.message);
+            }
+
+            btn.innerHTML = textoBotonOriginal;
+            btn.disabled = false;
+        };
     </script>
 </body>
 </html>
