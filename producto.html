@@ -4,14 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
-    <title id="seo-title">Detalle del Repuesto | F&B Parts</title>
-    <meta id="seo-desc" name="description" content="Encuentra repuestos originales y autopartes de alta calidad en Caracas, Venezuela.">
-    <link id="seo-canonical" rel="canonical" href="https://www.fybparts.com/producto.html">
-
-    <meta property="og:title" content="Catálogo de Repuestos | F&B Parts" id="og-title">
-    <meta property="og:description" content="Encuentra repuestos originales y accesorios para tu vehículo en Caracas." id="og-desc">
-    <meta property="og:image" content="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png" id="og-image">
+    <!-- 🚀 ETIQUETAS SEO DINÁMICAS -->
+    <title>Cargando repuesto... | F&B Parts</title>
+    <meta name="description" content="Encuentra los mejores repuestos automotrices al mejor precio en F&B Parts, Caracas." id="meta-desc">
+    
+    <!-- Etiquetas Open Graph (Para la vista previa bonita en WhatsApp, Facebook, etc) -->
     <meta property="og:type" content="product">
+    <meta property="og:title" content="F&B Parts - Repuestos Automotrices" id="og-title">
+    <meta property="og:description" content="Catálogo de repuestos con envío a nivel nacional." id="og-desc">
+    <meta property="og:image" content="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png" id="og-image">
     <meta property="og:url" content="https://www.fybparts.com/producto.html" id="og-url">
 
     <link rel="icon" type="image/png" href="img/favicon.png">
@@ -341,7 +342,7 @@
         }
     </script>
 
-        <!-- ========================================== -->
+    <!-- ========================================== -->
     <!-- 🛒 PANEL LATERAL DEL CARRITO Y BOTÓN       -->
     <!-- ========================================== -->
     <div class="cart-panel-overlay" id="cart-panel-overlay" onclick="cerrarPanelCarrito(event)">
@@ -450,12 +451,13 @@
                 const tituloSEO = `${prod.nombre} | F&B Parts Caracas`;
                 const descripcionSEO = `Compra ${prod.nombre} original en Caracas. Precio: $${Number(prod.precio).toFixed(2)}. Envíos a toda Venezuela.`;
 
+                // 🚀 INYECCIÓN DINÁMICA DE SEO PARA GOOGLE Y WHATSAPP
                 document.title = tituloSEO;
-                document.getElementById('seo-desc').content = descripcionSEO;
-                document.getElementById('og-title').content = tituloSEO;
-                document.getElementById('og-desc').content = descripcionSEO;
-                document.getElementById('og-image').content = prod.imagen;
-                document.getElementById('og-url').content = window.location.href;
+                if(document.getElementById('meta-desc')) document.getElementById('meta-desc').setAttribute("content", descripcionSEO);
+                if(document.getElementById('og-title')) document.getElementById('og-title').setAttribute("content", tituloSEO);
+                if(document.getElementById('og-desc')) document.getElementById('og-desc').setAttribute("content", descripcionSEO);
+                if(document.getElementById('og-image')) document.getElementById('og-image').setAttribute("content", prod.imagen);
+                if(document.getElementById('og-url')) document.getElementById('og-url').setAttribute("content", window.location.href);
 
                 const productSchema = {
                     "@context": "https://schema.org/",
