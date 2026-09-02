@@ -322,11 +322,18 @@
 
                             <div id="pedidos-items-container">
                                 <!-- Items de pedidos dinámicos -->
-                            </div>
+                            </div>                           
 
-                            <button type="button" onclick="agregarFilaPedidoVacia()" style="background: #1d6fa5; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; margin-bottom: 20px;">
-                                <i class="fas fa-keyboard"></i> Fila Manual
-                            </button>
+                            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                                <button type="button" onclick="agregarFilaPedidoVacia()" style="background: #1d6fa5; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold;">
+                                    <i class="fas fa-keyboard"></i> Fila Manual
+                                </button>
+
+                                <!-- 🚀 BOTÓN UP-SELLING IA PARA PEDIDOS -->
+                                <button type="button" onclick="abrirAsesorVentasCruzadas('pedido')" style="background: #8e44ad; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold; box-shadow: 0 4px 10px rgba(142, 68, 173, 0.3);">
+                                    <i class="fas fa-magic"></i> Asesor de Ventas IA
+                                </button>
+                            </div>
 
                             <div style="text-align: right; background: #f8f9fa; padding: 10px; border-radius: 4px; margin-bottom: 15px; font-weight: bold; color: #385723; font-size: 16px;">
                                 Total Pedido: $<span id="ped-total-general">0.00</span>
@@ -597,9 +604,17 @@
                             <!-- Items dinámicos -->
                         </div>
 
-                        <button type="button" onclick="agregarFilaFacturaVacia()" style="background: #1d6fa5; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold; margin-bottom: 20px;">
-                            <i class="fas fa-keyboard"></i> Fila Manual (Reventa)
-                        </button>
+                         <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                            <button type="button" onclick="agregarFilaFacturaVacia()" style="background: #1d6fa5; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold;">
+                                <i class="fas fa-keyboard"></i> Fila Manual (Reventa)
+                            </button>
+
+                            <!-- 🚀 BOTÓN UP-SELLING IA -->
+                            <button type="button" onclick="abrirAsesorVentasCruzadas('facturacion')" style="background: #8e44ad; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold; box-shadow: 0 4px 10px rgba(142, 68, 173, 0.3);">
+                                <i class="fas fa-magic"></i> Asesor de Ventas Cruzadas IA
+                            </button>
+                        </div>
+
 
                         <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #ddd; text-align: right; margin-bottom: 20px; font-size: 13px;">
                             <div>Sub-Total: <span class="fac-simbolo-display">$</span><span id="fac-subtotal">0.00</span></div>
@@ -748,9 +763,17 @@
                             <!-- Items cotizacion -->
                         </div>
 
-                        <button type="button" onclick="agregarFilaCotizacionVacia()" style="background: #1d6fa5; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold; margin-bottom: 20px;">
-                            <i class="fas fa-plus"></i> Fila Manual
-                        </button>
+                        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                            <button type="button" onclick="agregarFilaCotizacionVacia()" style="background: #1d6fa5; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold;">
+                                <i class="fas fa-plus"></i> Fila Manual
+                            </button>
+                            
+                            <!-- 🚀 BOTÓN UP-SELLING IA -->
+                            <button type="button" onclick="abrirAsesorVentasCruzadas('cotizacion')" style="background: #8e44ad; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold; box-shadow: 0 4px 10px rgba(142, 68, 173, 0.3);">
+                                <i class="fas fa-magic"></i> Asesor de Ventas Cruzadas IA
+                            </button>
+                        </div>
+
 
                         <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #ddd; text-align: right; margin-bottom: 20px; font-size: 13px;">
                             <div>Sub-Total: $<span id="cot-subtotal">0.00</span></div>
@@ -1216,8 +1239,28 @@
                    </div>
                </div>
             </div>
-        
-    
+
+            <!-- 🚀 MODAL ASESOR DE VENTAS CRUZADAS (UP-SELLING) -->
+            <div id="modal-upselling-ia" class="modal-overlay">
+                <div class="modal-content" style="max-width: 600px;">
+                    <h3><i class="fas fa-bullseye" style="color:#8e44ad;"></i> Asesor de Ventas Cruzadas IA</h3>
+                    <p style="font-size: 13px; color: #666; margin-top: -10px; margin-bottom: 15px;">La IA analizará los repuestos del presupuesto y te sugerirá qué más ofrecerle al cliente para aumentar el ticket de compra.</p>
+            
+                <div style="background: #fcf9ff; padding: 15px; border-radius: 6px; border: 1px dashed #8e44ad; margin-bottom: 15px;">
+                    <strong style="font-size: 12px; color: #8e44ad; text-transform: uppercase;">Repuestos actuales en la lista:</strong>
+                    <ul id="upselling-lista-actual" style="font-size: 13px; color: #333; margin-top: 5px; padding-left: 20px; font-weight: bold;"></ul>
+                </div>
+
+                <div class="form-group">
+                    <label style="color: #333;">Estrategia Comercial Sugerida:</label>
+                    <textarea id="upselling-respuesta" rows="7" style="font-family: Arial; font-size:14px; line-height:1.5; border-color:#8e44ad; background:#f9f9f9; padding: 12px; outline: none;" readonly placeholder="Esperando repuestos..."></textarea>
+                </div>
+            
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="cerrarModalUpSelling()" style="background: #eee;">Cerrar Asesor</button>
+                </div>
+            </div>
+        </div>                       
 
     <!-- Scripts de Lógica y Firebase -->
     <script type="module">
@@ -4359,6 +4402,65 @@
             document.getElementById('modal-cobrador-ia').style.display = 'none';
         };
 
+        // ==========================================
+        // 🚀 ASESOR DE VENTAS CRUZADAS (UP-SELLING IA)
+        // ==========================================
+        window.abrirAsesorVentasCruzadas = async function(origen) {
+            let items = [];
+            let selectorClase = '';
+            
+            // Evaluamos de dónde viene el clic para buscar en la tabla correcta
+            if (origen === 'cotizacion') selectorClase = '.cotizacion-item-row .item-desc';
+            else if (origen === 'facturacion') selectorClase = '.facturacion-item-row .fac-item-desc';
+            else if (origen === 'pedido') selectorClase = '.pedido-item-row .ped-item-desc';
+            
+            // Recolectar todos los repuestos escritos
+            document.querySelectorAll(selectorClase).forEach(input => {
+                if (input.value.trim() !== '') items.push(input.value.trim());
+            });
+
+            if (items.length === 0) {
+                alert("⚠️ Primero debes agregar al menos un repuesto a la lista para que la IA tenga algo que analizar.");
+                return;
+            }
+
+            // Mostrar el Modal
+            const listaUI = document.getElementById('upselling-lista-actual');
+            listaUI.innerHTML = items.map(i => `<li>${i}</li>`).join('');
+            document.getElementById('upselling-respuesta').value = "⏳ Pensando en la mejor estrategia de venta... \n\nDiagnosticando reparación...";
+            document.getElementById('modal-upselling-ia').style.display = 'flex';
+
+            if (typeof puter === 'undefined') {
+                document.getElementById('upselling-respuesta').value = "⚠️ Puter no está cargado. Revisa tu conexión a internet.";
+                return;
+            }
+
+            // El Prompt Estratégico
+            const promptTexto = `Eres un vendedor estrella de repuestos automotrices trabajando para "F&B Parts". 
+            Tu objetivo es el "Up-Selling" (ventas cruzadas).
+            
+            El cliente está armando un presupuesto con estos repuestos:
+            ${items.map(i => "- " + i).join('\n')}
+            
+            Analiza qué tipo de reparación está haciendo. 
+            Dime a mí (Brhayan) 2 o 3 repuestos o consumibles ADICIONALES lógicos que el cliente olvidó comprar o que debería cambiar aprovechando la mano de obra (Ej: Si compra pastillas, ofrécele liga de frenos).
+            
+            FORMATO ESTRICTO:
+            1. Diagnóstico: [Dime qué reparación crees que está haciendo].
+            2. Ofrécele: [Lista de 2-3 piezas con viñetas cortas].
+            3. Frase de Cierre: [Escribe 1 sola frase persuasiva que puedo copiar y pegarle al cliente por WhatsApp para convencerlo de llevar esos extras].
+            
+            Sé directo, sin saludos largos y NO uses formato markdown (**).`;
+
+            try {
+                const respuesta = await puter.ai.chat(promptTexto);
+                const textoFinal = typeof respuesta === 'string' ? respuesta : respuesta.message.content;
+                document.getElementById('upselling-respuesta').value = textoFinal.replace(/\*\*/g, '').replace(/\*/g, '•').trim();
+            } catch (error) {
+                console.error("Error UpSelling IA:", error);
+                document.getElementById('upselling-respuesta').value = "⚠️ Ocurrió un error al consultar a la IA.";
+            }
+        };
 
     </script>
 </body>
