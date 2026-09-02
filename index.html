@@ -62,6 +62,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 
+    <!-- 🚀 LIBRERÍA PUTER.JS (EL CEREBRO DEL MECÁNICO) -->
+    <script src="https://js.puter.com/v2/"></script>
+
     <style>
         .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: stretch; }
         .contact-box { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; flex-direction: column; box-sizing: border-box; }
@@ -389,50 +392,169 @@
     </footer>
 
     <!-- ========================================== -->
-    <!-- WIDGET FLOTANTE DE WHATSAPP TIPO CHATBOT   -->
+    <!-- 🤖 WIDGET FLOTANTE: MECÁNICO VIRTUAL IA & WHATSAPP -->
     <!-- ========================================== -->
-    <div id="wa-chat-widget" style="position: fixed; bottom: 25px; right: 25px; z-index: 99999; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
-        <div id="wa-chat-box" style="display: none; position: absolute; bottom: 75px; right: 0; width: 320px; background: white; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); overflow: hidden; border: 1px solid #eee;">
+    <div id="ai-chat-widget" style="position: fixed; bottom: 25px; right: 25px; z-index: 99999; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+        
+        <!-- Ventana del Chatbot -->
+        <div id="ai-chat-box" style="display: none; position: absolute; bottom: 75px; right: 0; width: 340px; max-width: calc(100vw - 50px); background: #fff; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); overflow: hidden; border: 1px solid #eee; flex-direction: column;">
+            
+            <!-- Encabezado -->
             <div style="background: #385723; color: white; padding: 15px; display: flex; align-items: center; justify-content: space-between;">
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <div style="position: relative;">
-                        <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" style="width: 35px; height: 35px; border-radius: 50%; background: white; object-fit: contain; padding: 2px;" alt="F&B Parts">
+                        <div style="width: 38px; height: 38px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; color: #385723; font-size: 22px;">
+                            <i class="fas fa-robot"></i>
+                        </div>
                         <span style="position: absolute; bottom: 0; right: 0; width: 10px; height: 10px; background: #25D366; border: 2px solid white; border-radius: 50%;"></span>
                     </div>
                     <div>
-                        <h4 style="margin: 0; font-size: 15px; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px; color: #fff;">F&B Parts Soporte</h4>
-                        <span style="font-size: 11px; opacity: 0.9;">En línea para ayudarte</span>
+                        <h4 style="margin: 0; font-size: 15px; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px; color: #fff;">Mecánico Virtual IA</h4>
+                        <span style="font-size: 11px; opacity: 0.9;">F&B Parts - En línea 24/7</span>
                     </div>
                 </div>
-                <button onclick="toggleWaChat()" style="background: none; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0;" aria-label="Cerrar chat"><i class="fas fa-times"></i></button>
+                <button onclick="toggleAiChat()" style="background: none; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0;" aria-label="Cerrar chat"><i class="fas fa-times"></i></button>
             </div>
-            <div style="padding: 15px; background: #f9f9f9; font-size: 13px; color: #333; line-height: 1.4;">
-                <div style="background: white; padding: 12px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 3px solid #385723;">
-                    <p style="margin: 0 0 5px 0; font-weight: bold; color: #385723;">¡Hola! 👋</p>
-                    <p style="margin: 0;">¿Buscas algún repuesto o autoparte original para tu vehículo en Caracas? Escríbenos y te cotizamos al instante.</p>
+
+            <!-- Área de Mensajes (Scrollable) -->
+            <div id="ai-chat-messages" style="height: 320px; overflow-y: auto; padding: 15px; background: #f4f6f4; display: flex; flex-direction: column; gap: 10px; font-size: 13px;">
+                <!-- Mensaje Inicial -->
+                <div style="align-self: flex-start; background: white; padding: 10px 14px; border-radius: 0 12px 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; border-left: 3px solid #385723;">
+                    <p style="margin: 0 0 5px 0;">¡Hola! 👋 Soy el <strong>Mecánico Inteligente</strong> de F&B Parts.</p>
+                    <p style="margin: 0;">¿Tienes alguna falla en tu vehículo o buscas un repuesto en específico? Cuéntame y te asesoro.</p>
                 </div>
             </div>
-            <div style="padding: 15px; background: white; border-top: 1px solid #eee; text-align: center;">
-                <a href="https://wa.me/584120161036?text=Hola%20F%26B%20Parts,%20estoy%20en%20su%20web%20y%20necesito%20informaci%C3%B3n%20sobre%20un%20repuesto." target="_blank" style="background: #25D366; color: white; text-decoration: none; display: block; padding: 12px; border-radius: 6px; font-weight: bold; font-family: 'Oswald', sans-serif; font-size: 15px; transition: background 0.2s; box-shadow: 0 4px 10px rgba(37, 211, 102, 0.3);">
-                    <i class="fab fa-whatsapp" style="margin-right: 5px; font-size: 18px;"></i> INICIAR CHAT EN WHATSAPP
+
+            <!-- Botón de Escape hacia WhatsApp (Siempre visible) -->
+            <div style="padding: 10px 15px; background: white; border-top: 1px solid #eee; text-align: center;">
+                <a href="https://wa.me/584120161036?text=Hola%20F%26B%20Parts,%20vengo%20del%20asistente%20virtual%20de%20su%20página%20y%20deseo%20cotizar." target="_blank" style="background: #25D366; color: white; text-decoration: none; display: flex; align-items: center; justify-content: center; padding: 10px; border-radius: 6px; font-weight: bold; font-family: 'Oswald', sans-serif; font-size: 14px; transition: background 0.2s; box-shadow: 0 2px 5px rgba(37, 211, 102, 0.3);">
+                    <i class="fab fa-whatsapp" style="margin-right: 8px; font-size: 18px;"></i> HABLAR CON UN ASESOR REAL
                 </a>
             </div>
+
+            <!-- Input del usuario para la IA -->
+            <div style="padding: 10px 15px; background: #fafafa; border-top: 1px solid #eee; display: flex; gap: 8px; align-items: center;">
+                <input type="text" id="ai-chat-input" placeholder="Ej: Mi Yaris 2008 bota agua por debajo..." style="flex: 1; padding: 10px 15px; border: 1px solid #ddd; border-radius: 20px; outline: none; font-size: 13px;" onkeypress="handleAiChatKey(event)">
+                <button id="ai-chat-send-btn" onclick="enviarMensajeAi()" style="background: #385723; color: white; border: none; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; flex-shrink: 0;">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
         </div>
-        <button onclick="toggleWaChat()" style="background: #25D366; color: white; border: none; width: 60px; height: 60px; border-radius: 50%; cursor: pointer; font-size: 28px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; transition: transform 0.2s;" aria-label="Abrir Chat de WhatsApp">
-            <i class="fab fa-whatsapp" id="wa-icon-toggle"></i>
+
+        <!-- Botón Flotante Principal -->
+        <button onclick="toggleAiChat()" id="ai-chat-fab" style="background: #385723; color: white; border: none; width: 65px; height: 65px; border-radius: 50%; cursor: pointer; font-size: 28px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; transition: transform 0.2s;" aria-label="Abrir Chat Inteligente">
+            <i class="fas fa-comment-dots" id="ai-icon-toggle"></i>
         </button>
     </div>
+
+    <!-- Script del Mecánico Virtual -->
     <script>
-        function toggleWaChat() {
-            const box = document.getElementById('wa-chat-box');
-            const icon = document.getElementById('wa-icon-toggle');
+        function toggleAiChat() {
+            const box = document.getElementById('ai-chat-box');
+            const icon = document.getElementById('ai-icon-toggle');
+            const fab = document.getElementById('ai-chat-fab');
+            
             if (box.style.display === 'none' || box.style.display === '') {
-                box.style.display = 'block';
+                box.style.display = 'flex';
                 icon.className = 'fas fa-times';
+                fab.style.background = '#d9534f'; // Se pone rojo al abrir para indicar "Cerrar"
+                document.getElementById('ai-chat-input').focus();
             } else {
                 box.style.display = 'none';
-                icon.className = 'fab fa-whatsapp';
+                icon.className = 'fas fa-comment-dots';
+                fab.style.background = '#385723';
             }
+        }
+
+        function handleAiChatKey(e) {
+            if (e.key === 'Enter') {
+                enviarMensajeAi();
+            }
+        }
+
+        // Historial de memoria corta
+        let conversacionIA = [];
+
+        async function enviarMensajeAi() {
+            const input = document.getElementById('ai-chat-input');
+            const mensaje = input.value.trim();
+            if (!mensaje) return;
+
+            const chatArea = document.getElementById('ai-chat-messages');
+            const btn = document.getElementById('ai-chat-send-btn');
+
+            // 1. Mostrar burbuja del usuario
+            const userMsgHtml = `
+                <div style="align-self: flex-end; background: #e2f0d9; padding: 10px 14px; border-radius: 12px 0 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; color: #155724; border-right: 3px solid #385723;">
+                    <p style="margin: 0;">${mensaje}</p>
+                </div>
+            `;
+            chatArea.insertAdjacentHTML('beforeend', userMsgHtml);
+            input.value = '';
+            chatArea.scrollTop = chatArea.scrollHeight;
+
+            // 2. Indicador de "Pensando..."
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            const typingId = 'typing-' + Date.now();
+            const typingHtml = `
+                <div id="${typingId}" style="align-self: flex-start; background: white; padding: 10px 14px; border-radius: 0 12px 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; border-left: 3px solid #ccc; color: #888; font-style: italic;">
+                    <i class="fas fa-circle-notch fa-spin"></i> El mecánico está analizando...
+                </div>
+            `;
+            chatArea.insertAdjacentHTML('beforeend', typingHtml);
+            chatArea.scrollTop = chatArea.scrollHeight;
+
+            // 3. Preparar el cerebro de la IA
+            let promptBase = `Actúa como el "Mecánico Asesor" experto de la tienda automotriz 'F&B Parts' en Caracas, Venezuela.
+            Eres empático, usas un lenguaje técnico pero fácil de entender.
+            TU OBJETIVO ES:
+            1. Diagnosticar brevemente la falla que describe el cliente.
+            2. Sugerir sutilmente qué repuestos podría necesitar (enfatizando que venden repuestos para Toyota, Ford, Dongfeng, Mazda y Honda).
+            3. SIEMPRE concluir invitando al cliente a pulsar el botón verde gigante de "HABLAR CON UN ASESOR REAL" que está en su pantalla para consultar disponibilidad y precios reales.
+            REGLA VITAL: Da respuestas CORTAS y concisas (máximo 2 párrafos). Evita formatos raros o asteriscos.`;
+
+            let historialContext = conversacionIA.map(msg => `Cliente: ${msg.user}\nMecánico: ${msg.ai}`).join("\n\n");
+            let promptFinal = promptBase + "\n\n" + (historialContext ? `HISTORIAL DE LA CHARLA:\n${historialContext}\n\n` : "") + `MENSAJE ACTUAL DEL CLIENTE: "${mensaje}"`;
+
+            try {
+                // 4. Llamada a Puter.js
+                let respuestaFinal = "";
+                if (typeof puter !== 'undefined') {
+                    const respuesta = await puter.ai.chat(promptFinal);
+                    respuestaFinal = typeof respuesta === 'string' ? respuesta : respuesta.message.content;
+                } else {
+                    respuestaFinal = "Ups, tengo un pequeño problema de conexión con el taller. Por favor, pulsa el botón verde de abajo para que mis compañeros te atiendan por WhatsApp.";
+                }
+
+                document.getElementById(typingId).remove();
+
+                conversacionIA.push({ user: mensaje, ai: respuestaFinal });
+                if(conversacionIA.length > 3) conversacionIA.shift(); // Memoriza solo los últimos 3 mensajes
+
+                // 5. Mostrar respuesta de la IA
+                const aiMsgHtml = `
+                    <div style="align-self: flex-start; background: white; padding: 10px 14px; border-radius: 0 12px 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; border-left: 3px solid #385723; color: #333;">
+                        <p style="margin: 0; white-space: pre-wrap; line-height: 1.5;">${respuestaFinal.replace(/\*\*/g, '')}</p>
+                    </div>
+                `;
+                chatArea.insertAdjacentHTML('beforeend', aiMsgHtml);
+                
+            } catch (e) {
+                console.error("Error Puter:", e);
+                document.getElementById(typingId).remove();
+                const errorHtml = `
+                    <div style="align-self: flex-start; background: #f8d7da; padding: 10px 14px; border-radius: 0 12px 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; border-left: 3px solid #d9534f; color: #721c24;">
+                        <p style="margin: 0;">Lo siento, mi internet falló. Por favor, usa el botón de WhatsApp abajo para hablar con un asesor.</p>
+                    </div>
+                `;
+                chatArea.insertAdjacentHTML('beforeend', errorHtml);
+            }
+
+            chatArea.scrollTop = chatArea.scrollHeight;
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+            input.focus();
         }
     </script>
     <!-- ========================================== -->
