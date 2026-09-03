@@ -285,6 +285,16 @@
                     <button class="refresh-btn" onclick="cargarPedidos()"><i class="fas fa-sync-alt"></i> Actualizar</button>
                 </div>
 
+                <div class="admin-header">
+                    <h2>Control de Envíos y Pedidos</h2>
+                    <div>
+                        <button class="refresh-btn" style="background: #1d6fa5; margin-right: 5px;" onclick="abrirLiquidacionMotorizados()">
+                            <i class="fas fa-motorcycle"></i> Liquidar Motorizados
+                        </button>
+                        <button class="refresh-btn" onclick="cargarPedidos()"><i class="fas fa-sync-alt"></i> Actualizar</button>
+                    </div>
+                </div>
+
                 <div class="admin-grid">
                     <div class="card-form">
                         <h3><i class="fas fa-plus-circle"></i> Nuevo Pedido Manual</h3>
@@ -1165,9 +1175,28 @@
             <div class="form-group"><label>Nombre / Cliente Registrado</label><input type="text" id="edit-pedido-cliente"></div>
             <div class="form-group">
                 <label>Método de Envío</label>
-                <select id="edit-pedido-envio"><option value="Motorizado Caracas">Motorizado (Caracas)</option><option value="Encomienda Tealca">Encomienda / Tealca (Interior)</option><option value="Retiro en Local">Retiro en Tienda / Local</option></select>
+                <select id="edit-pedido-envio" onchange="mostrarOpcionesMotorizado()">
+                    <option value="Motorizado Caracas">Motorizado (Caracas)</option>
+                    <option value="Encomienda Tealca">Encomienda / Tealca (Interior)</option>
+                    <option value="Retiro en Local">Retiro en Tienda / Local</option>
+                </select>
             </div>
             <div class="form-group"><label>Estatus / Nro. de Guía / Tracking</label><input type="text" id="edit-pedido-tracking" placeholder="Ej: Guía Tealca #123456 o En camino"></div>
+            
+            <!-- 🏍️ ZONA EXCLUSIVA PARA MOTORIZADOS -->
+            <div id="zona-motorizado" style="display: none; background: #eef2eb; padding: 12px; border-radius: 6px; border: 1px dashed #385723; margin-bottom: 15px;">
+                <label style="color: #155724; font-size: 12px;"><i class="fas fa-motorcycle"></i> Asignación de Motorizado (Pago Semanal)</label>
+                <div style="display: flex; gap: 10px; margin-top: 5px;">
+                    <select id="edit-pedido-motorizado" style="flex: 2; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+                        <option value="">Selecciona el Chofer...</option>
+                        <option value="Jhon">Jhon (Logística)</option>
+                        <option value="Bryan">Bryan (Ventas)</option>
+                    </select>
+                    <input type="number" step="0.01" id="edit-pedido-tarifa" placeholder="Costo Vje ($)" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+                </div>
+                <small style="color: #666; font-size: 10px; display: block; margin-top: 5px;">Si la guía arriba está vacía, se autogenerará un código MOT-XXXX al guardar.</small>
+            </div>
+
             <div class="form-group">
                 <label>Estado del Pedido</label>
                 <select id="edit-pedido-estado"><option value="Pendiente">Pendiente</option><option value="Procesando">Procesando</option><option value="Enviado">Enviado</option><option value="Entregado">Entregado</option></select>
@@ -1176,6 +1205,22 @@
                 <button type="button" class="btn-delete" onclick="eliminarPedido()"><i class="fas fa-trash"></i> Borrar</button>
                 <button type="button" class="btn-cancel" onclick="cerrarModalPedido()">Cancelar</button>
                 <button type="button" class="btn-save" onclick="guardarCambiosPedido()" id="btn-save-pedido">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 💰 MODAL DE LIQUIDACIÓN SEMANAL DE MOTORIZADOS -->
+    <div id="modal-liquidar-motorizados" class="modal-overlay">
+        <div class="modal-content" style="max-width: 600px;">
+            <h3 style="color: #1d6fa5;"><i class="fas fa-wallet"></i> Liquidación de Motorizados</h3>
+            <p style="font-size: 13px; color: #666; margin-top: -10px; margin-bottom: 15px;">Resumen de los viajes realizados pendientes por pago.</p>
+            
+            <div id="lista-viajes-pendientes" style="max-height: 400px; overflow-y: auto;">
+                <!-- Se llena por JavaScript -->
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="document.getElementById('modal-liquidar-motorizados').style.display = 'none';">Cerrar</button>
             </div>
         </div>
     </div>
@@ -4567,6 +4612,160 @@
                 ventanaTicket.focus(); 
                 ventanaTicket.print(); 
             }, 500);
+        };
+
+        // ==========================================
+        // 🚀 LÓGICA DE PEDIDOS Y MOTORIZADOS
+        // ==========================================
+        window.mostrarOpcionesMotorizado = function() {
+            const envio = document.getElementById('edit-pedido-envio').value;
+            const zonaMot = document.getElementById('zona-motorizado');
+            if (envio.includes('Motorizado')) zonaMot.style.display = 'block';
+            else zonaMot.style.display = 'none';
+        };
+
+        window.abrirModalPedido = function(docId) {
+            const ped = window.pedidosDBLocal[docId];
+            if(!ped) return;
+            document.getElementById('edit-pedido-id').value = docId;
+            document.getElementById('edit-pedido-email').value = ped.email || '';
+            document.getElementById('edit-pedido-cliente').value = ped.cliente || '';
+            document.getElementById('edit-pedido-envio').value = ped.envio || 'Retiro en Local';
+            document.getElementById('edit-pedido-tracking').value = ped.tracking || '';
+            document.getElementById('edit-pedido-estado').value = ped.estado || 'Pendiente';
+            
+            // Cargar datos del motorizado si existen
+            document.getElementById('edit-pedido-motorizado').value = ped.motorizado || '';
+            document.getElementById('edit-pedido-tarifa').value = ped.tarifaMotorizado || '';
+            window.mostrarOpcionesMotorizado();
+
+            document.getElementById('modal-pedido').style.display = 'flex';
+        };
+
+        window.cerrarModalPedido = function() {
+            document.getElementById('modal-pedido').style.display = 'none';
+        };
+
+        window.guardarCambiosPedido = async function() {
+            const docId = document.getElementById('edit-pedido-id').value;
+            const pedOriginal = window.pedidosDBLocal[docId] || {};
+            const btn = document.getElementById('btn-save-pedido');
+            btn.innerHTML = "Guardando..."; btn.disabled = true;
+
+            let trackingVal = document.getElementById('edit-pedido-tracking').value.trim();
+            const envioVal = document.getElementById('edit-pedido-envio').value;
+            const motorizadoVal = document.getElementById('edit-pedido-motorizado').value;
+            const tarifaVal = parseFloat(document.getElementById('edit-pedido-tarifa').value) || 0;
+
+            // Auto-generar código MOT si está vacío y es motorizado
+            if (envioVal.includes('Motorizado') && trackingVal === '') {
+                const aleatorio = Math.floor(1000 + Math.random() * 9000);
+                const letMot = motorizadoVal ? motorizadoVal.substring(0,1).toUpperCase() : 'M';
+                trackingVal = `MOT${letMot}-${aleatorio}`;
+            }
+
+            const datosActualizados = {
+                email: document.getElementById('edit-pedido-email').value.trim(),
+                cliente: document.getElementById('edit-pedido-cliente').value.trim(),
+                envio: envioVal,
+                tracking: trackingVal,
+                estado: document.getElementById('edit-pedido-estado').value,
+                motorizado: motorizadoVal,
+                tarifaMotorizado: tarifaVal,
+                pagoMotorizadoEstatus: pedOriginal.pagoMotorizadoEstatus || 'Pendiente' // Mantiene el estatus de pago
+            };
+
+            try {
+                await updateDoc(doc(db, "pedidos", docId), datosActualizados);
+                window.cerrarModalPedido();
+                window.cargarPedidos();
+            } catch (error) {
+                console.error(error);
+                alert("Error al actualizar la información del pedido.");
+            }
+            btn.innerHTML = "Guardar"; btn.disabled = false;
+        };
+
+        window.eliminarPedido = async function() {
+            const docId = document.getElementById('edit-pedido-id').value;
+            if(!confirm("¿Estás seguro de eliminar este pedido del historial?")) return;
+            try {
+                await deleteDoc(doc(db, "pedidos", docId));
+                window.cerrarModalPedido();
+                window.cargarPedidos();
+            } catch (error) {
+                console.error(error);
+                alert("No se pudo eliminar el pedido.");
+            }
+        };
+
+        // 💰 PANEL DE LIQUIDACIÓN DE MOTORIZADOS
+        window.abrirLiquidacionMotorizados = function() {
+            const lista = document.getElementById('lista-viajes-pendientes');
+            let viajesJhon = []; let totalJhon = 0;
+            let viajesBryan = []; let totalBryan = 0;
+
+            // Revisar la memoria local de pedidos
+            for (const docId in window.pedidosDBLocal) {
+                const ped = window.pedidosDBLocal[docId];
+                if (ped.envio && ped.envio.includes('Motorizado') && ped.pagoMotorizadoEstatus !== 'Pagado') {
+                    if (ped.motorizado === 'Jhon') {
+                        viajesJhon.push({ id: docId, ...ped });
+                        totalJhon += (parseFloat(ped.tarifaMotorizado) || 0);
+                    } else if (ped.motorizado === 'Bryan') {
+                        viajesBryan.push({ id: docId, ...ped });
+                        totalBryan += (parseFloat(ped.tarifaMotorizado) || 0);
+                    }
+                }
+            }
+
+            // Construir HTML del resumen
+            let html = '';
+            
+            const generarBloque = (nombre, viajes, total) => {
+                if(viajes.length === 0) return '';
+                let filas = viajes.map(v => `<div style="display:flex; justify-content:space-between; border-bottom:1px dashed #ccc; padding:4px 0; font-size:12px;"><span>${v.fecha} | ${v.tracking || 'Sin guía'} - ${v.cliente}</span> <strong>$${(v.tarifaMotorizado || 0).toFixed(2)}</strong></div>`).join('');
+                return `
+                    <div style="background: #f9f9f9; border: 1px solid #ddd; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+                        <h4 style="margin: 0 0 10px 0; color: #333; display: flex; justify-content: space-between; align-items: center;">
+                            <span><i class="fas fa-motorcycle"></i> Viajes de ${nombre}</span>
+                            <strong style="color:#d9534f;">Deuda: $${total.toFixed(2)}</strong>
+                        </h4>
+                        ${filas}
+                        <button onclick="marcarMotorizadoPagado('${nombre}')" style="margin-top: 10px; width: 100%; background: #28a745; color: white; border: none; padding: 8px; border-radius: 4px; font-weight: bold; cursor: pointer;">
+                            <i class="fas fa-check-double"></i> Marcar semana como PAGADA a ${nombre}
+                        </button>
+                    </div>
+                `;
+            };
+
+            html += generarBloque('Jhon', viajesJhon, totalJhon);
+            html += generarBloque('Bryan', viajesBryan, totalBryan);
+
+            if(html === '') html = '<div style="text-align:center; padding:20px; color:#666;">No hay viajes de motorizados pendientes por liquidar.</div>';
+
+            lista.innerHTML = html;
+            document.getElementById('modal-liquidar-motorizados').style.display = 'flex';
+        };
+
+        window.marcarMotorizadoPagado = async function(nombreChofer) {
+            if(!confirm(`¿Estás seguro de marcar todos los viajes pendientes de ${nombreChofer} como PAGADOS?`)) return;
+            
+            try {
+                // Actualizamos todos los que correspondan
+                for (const docId in window.pedidosDBLocal) {
+                    const ped = window.pedidosDBLocal[docId];
+                    if (ped.motorizado === nombreChofer && ped.pagoMotorizadoEstatus !== 'Pagado') {
+                        await updateDoc(doc(db, "pedidos", docId), { pagoMotorizadoEstatus: 'Pagado' });
+                    }
+                }
+                alert(`¡Semana liquidada para ${nombreChofer} exitosamente!`);
+                window.cargarPedidos(); // Recargar datos frescos
+                document.getElementById('modal-liquidar-motorizados').style.display = 'none';
+            } catch (error) {
+                console.error(error);
+                alert("Hubo un error al intentar marcar los pagos.");
+            }
         };
 
     </script>
