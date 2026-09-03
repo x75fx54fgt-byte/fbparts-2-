@@ -3443,7 +3443,7 @@
         };
 
         // ==========================================
-        // 🚀 GENERADOR DE SITEMAP SEO PARA GOOGLE
+        // 🚀 GENERADOR DE SITEMAP SEO PARA GOOGLE (CON URLS AMIGABLES)
         // ==========================================
         window.generarSitemapXML = async function(btnElement) {
             const originalText = btnElement.innerHTML;
@@ -3462,8 +3462,13 @@
 
                 const prodSnap = await getDocs(collection(db, "productos"));
                 prodSnap.forEach(docSnap => {
-                    if (docSnap.data().estado !== 'inactivo') {
-                        xml += `  <url>\n    <loc>${baseUrl}producto.html?id=${docSnap.id}</loc>\n    <lastmod>${fechaHoy}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+                    const data = docSnap.data();
+                    if (data.estado !== 'inactivo') {
+                        // 🚀 CREAR "SLUG" AMIGABLE (Ej: Bomba de Agua -> bomba-de-agua)
+                        const slug = (data.nombre || 'repuesto').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '-').replace(/(^-|-$)/g, '').replace(/-+/g, '-');
+                        
+                        // NOTA: En XML, el símbolo "&" debe escribirse como "&amp;" obligatoriamente
+                        xml += `  <url>\n    <loc>${baseUrl}producto.html?id=${docSnap.id}&amp;pieza=${slug}</loc>\n    <lastmod>${fechaHoy}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
                     }
                 });
                 xml += '</urlset>';
@@ -4251,7 +4256,7 @@
             }, 3000);
         };
 
-                // ==========================================
+        // ==========================================
         // 🚀 CREADOR DE DESCRIPCIONES (PLANTILLA FIJA FB PARTS)
         // ==========================================
         window.generarDescripcionIA = async function() {
