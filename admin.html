@@ -1968,10 +1968,12 @@
                                 <span class="badge-shipping">${ped.envio}</span><br>
                                 <span style="font-size:11px;">${ped.tracking || 'Sin guía / tracking'}</span><br>
                                 <span class="${badgeClass}" style="margin-top:4px; display:inline-block;">${ped.estado || 'Pendiente'}</span>
-                            </td>
                             <td style="display: flex; gap: 5px; justify-content: center; align-items: center;">
                                 <button type="button" onclick="abrirModalPedido('${docId}')" style="background:#1d6fa5; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="Editar Envío"><i class="fas fa-edit"></i></button>
                                 <button type="button" onclick="enviarPedidoAFacturacion('${docId}')" style="background:#28a745; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="Facturar / Nota de Entrega"><i class="fas fa-file-invoice"></i></button>
+                                
+                                <!-- 🖨️ NUEVO BOTÓN: ETIQUETA TÉRMICA -->
+                                <button type="button" onclick="imprimirEtiquetaEnvio('${docId}')" style="background:#333; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="Imprimir Etiqueta (58mm)"><i class="fas fa-print"></i></button>
                             </td>
                         </tr>
                     `;
@@ -4465,6 +4467,106 @@
                 console.error("Error UpSelling IA:", error);
                 document.getElementById('upselling-respuesta').value = "⚠️ Ocurrió un error al consultar a la IA.";
             }
+        };
+
+        // ==========================================
+        // 🖨️ GENERADOR DE ETIQUETAS TÉRMICAS (58MM)
+        // ==========================================
+        window.imprimirEtiquetaEnvio = function(docId) {
+            const ped = window.pedidosDBLocal[docId];
+            if(!ped) return;
+
+            // Extraer productos a formato texto
+            let productosHTML = '';
+            if(ped.productos && Array.isArray(ped.productos)) {
+                ped.productos.forEach(p => {
+                    productosHTML += `
+                    <tr>
+                        <td style="padding: 2px 0; border-bottom: 1px dashed #000; font-size: 13px;"><b>${p.cantidad}x</b> ${p.nombre}</td>
+                    </tr>`;
+                });
+            } else {
+                productosHTML = `<tr><td style="padding: 2px 0; border-bottom: 1px dashed #000; font-size: 13px;"><b>${ped.cantidad || 1}x</b> ${ped.producto || 'Repuesto'}</td></tr>`;
+            }
+
+            const ventanaTicket = window.open('', '_blank', 'width=400,height=600');
+            if(!ventanaTicket) { alert("⚠️ Tu navegador bloqueó la ventana de impresión."); return; }
+
+            // CSS Mágico para impresoras de 58mm
+            const estiloTermico = `
+                <style>
+                    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #fff; margin: 0; padding: 0; color: #000; }
+                    .ticket-container { width: 58mm; max-width: 100%; margin: 0 auto; padding: 2mm; box-sizing: border-box; }
+                    h2 { margin: 0 0 5px 0; font-size: 18px; text-align: center; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 5px; }
+                    p { margin: 3px 0; font-size: 13px; line-height: 1.2; }
+                    .info-box { border: 1px solid #000; padding: 5px; margin-bottom: 5px; border-radius: 3px; }
+                    .resaltado { font-weight: bold; font-size: 15px; text-align: center; display: block; margin: 5px 0; border: 1px dashed #000; padding: 4px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+                    .cut-line { text-align: center; margin-top: 20px; font-size: 12px; color: #000; border-top: 1px dashed #000; padding-top: 5px; margin-bottom: 15px; }
+                    
+                    /* Reglas exclusivas para el momento de imprimir */
+                    @media print {
+                        @page { margin: 0; size: 58mm auto; }
+                        body { width: 58mm; }
+                        .no-print { display: none !important; }
+                    }
+                </style>
+            `;
+
+            const contenidoTicket = `
+                <!DOCTYPE html>
+                <html lang="es">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Ticket de Envío</title>
+                    ${estiloTermico}
+                </head>
+                <body>
+                    <div style="text-align:center; padding: 10px;" class="no-print">
+                        <button onclick="window.print()" style="background:#000; color:#fff; border:none; padding:10px 20px; font-size:16px; font-weight:bold; cursor:pointer; border-radius:5px;">🖨️ IMPRIMIR TICKET</button>
+                        <p style="font-size:12px; color:#666;">(Asegúrate de seleccionar tu impresora de 58mm en Destino)</p>
+                    </div>
+
+                    <div class="ticket-container">
+                        <h2>F&B PARTS</h2>
+                        <p style="text-align: center; font-weight: bold; font-size: 14px; margin-bottom: 10px;">ORDEN DE DESPACHO</p>
+                        
+                        <p><b>Fecha:</b> ${ped.fecha || new Date().toLocaleDateString("es-VE")}</p>
+                        
+                        <div class="info-box">
+                            <p style="font-size: 11px;">CLIENTE DESTINO:</p>
+                            <p style="font-weight: bold; font-size: 16px;">${ped.cliente}</p>
+                            <p><b>Tlf/Correo:</b> ${ped.email}</p>
+                        </div>
+
+                        <span class="resaltado">🚚 ${ped.envio}</span>
+                        ${ped.tracking ? `<p style="text-align:center;">Guía: <b>${ped.tracking}</b></p>` : ''}
+                        
+                        <p style="margin-top: 10px; font-weight: bold; border-bottom: 1px solid #000;">CONTENIDO DEL PAQUETE:</p>
+                        <table>
+                            ${productosHTML}
+                        </table>
+
+                        <p style="text-align: center; font-size: 11px; margin-top: 15px;">
+                            *** GRACIAS POR SU COMPRA ***<br>
+                            www.fybparts.com
+                        </p>
+                        
+                        <div class="cut-line">✂ - - - - - - - - - - - - </div>
+                    </div>
+                </body>
+                </html>
+            `;
+
+            ventanaTicket.document.open();
+            ventanaTicket.document.write(contenidoTicket);
+            ventanaTicket.document.close();
+
+            // Lanzar impresión automática después de cargar
+            setTimeout(() => { 
+                ventanaTicket.focus(); 
+                ventanaTicket.print(); 
+            }, 500);
         };
 
     </script>
