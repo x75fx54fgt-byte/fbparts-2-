@@ -508,7 +508,7 @@
                 const safeName = prod.nombre.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                 const stockTxt = prod.stock > 0 ? `<span style="color: #27ae60; font-weight: bold;">En Stock (${prod.stock} disponibles)</span>` : `<span style="color: #c0392b; font-weight: bold;">Agotado</span>`;
                 const numParteTxt = prod.numero_parte ? `<p style="margin: 5px 0;"><strong>Número de Parte / OEM:</strong> ${prod.numero_parte}</p>` : '';
-                const descTxt = prod.descripcion ? `<p style="margin: 10px 0; color: #666; font-size: 14px; line-height: 1.5;">${prod.descripcion}</p>` : '<p style="margin: 10px 0; color: #888; font-size: 13px;">Sin descripción detallada para este repuesto. Contáctanos para mayor información de compatibilidad.</p>';
+                const descTxt = prod.descripcion ? `<div style="margin: 15px 0; color: #444; font-size: 14px; line-height: 1.6; white-space: pre-wrap; font-family: inherit;">${prod.descripcion}</div>` : '<p style="margin: 10px 0; color: #888; font-size: 13px;">Sin descripción detallada para este repuesto. Contáctanos para mayor información de compatibilidad.</p>';
 
                 container.innerHTML = `
                     <div class="product-img-box">
