@@ -62,7 +62,7 @@
         @media (max-width: 900px) { .cotizacion-item-row, .facturacion-item-row, .pedido-item-row { grid-template-columns: 1fr; } }
 
         /* Estilos de Modales */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; }
         .modal-content { background: white; padding: 30px; border-radius: 8px; width: 90%; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
         .modal-content h3 { font-family: 'Oswald', sans-serif; color: #385723; font-size: 22px; margin-top: 0; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
         .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
@@ -1297,10 +1297,34 @@
                 </div>
             
                 <div class="modal-actions">
-                    <button type="button" class="btn-cancel" onclick="cerrarModalUpSelling()" style="background: #eee;">Cerrar Asesor</button>
+                    <button type="button" class="btn-cancel" onclick="document.getElementById('modal-upselling-ia').style.display='none';" style="background: #eee;">Cerrar Asesor</button>
                 </div>
             </div>
-        </div>                       
+        </div>            
+        
+        <!-- 🚀 MODAL PARA EDITAR DATOS DE FACTURA -->
+    <div id="modal-editar-factura" class="modal-overlay">
+        <div class="modal-content" style="max-width: 400px;">
+            <h3 style="color: #6c757d;"><i class="fas fa-edit"></i> Corregir Factura</h3>
+            <p style="font-size: 13px; color: #666; margin-top: -10px; margin-bottom: 15px;">Corrige el número de control o la fecha de emisión.</p>
+            <input type="hidden" id="edit-fac-id">
+            
+            <div class="form-group">
+                <label>Nro. de Factura / Control</label>
+                <input type="text" id="edit-fac-nro" style="font-weight: bold; color: #385723;" placeholder="Ej: 00000617">
+            </div>
+            <div class="form-group">
+                <label>Fecha</label>
+                <input type="text" id="edit-fac-fecha" placeholder="DD/MM/YYYY">
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="document.getElementById('modal-editar-factura').style.display='none'">Cancelar</button>
+                <button type="button" class="btn-save" onclick="guardarEdicionFactura()">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+        
 
     <!-- Scripts de Lógica y Firebase -->
     <script type="module">
@@ -2890,6 +2914,13 @@
 
                     const tdAcciones = tr.querySelector('td:last-child');
 
+                    const btnEditar = document.createElement('button');
+                    btnEditar.type = 'button'; 
+                    btnEditar.style = 'background:#6c757d; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;';
+                    btnEditar.innerHTML = '<i class="fas fa-edit"></i>'; 
+                    btnEditar.title = "Corregir Nro o Fecha";
+                    btnEditar.addEventListener('click', () => window.abrirModalEditarFactura(docId));
+
                     const btnRetencion = document.createElement('button');
                     btnRetencion.type = 'button'; 
                     btnRetencion.style = 'background:#17a2b8; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;';
@@ -2920,6 +2951,7 @@
                         try { await deleteDoc(doc(db, "facturas", docId)); window.cargarHistorialFacturas(); window.cargarDashboard(); window.cargarFinanzas(); } catch (e) { alert("Error al eliminar."); }
                     });
 
+                    tdAcciones.appendChild(btnEditar);
                     tdAcciones.appendChild(btnRetencion); 
                     tdAcciones.appendChild(btnNotas);
                     tdAcciones.appendChild(btnCajero); 
@@ -4335,25 +4367,11 @@
 
             --- COPIA Y RELLENA ESTA PLANTILLA EXACTA DESDE AQUÍ ---
 
-            🚗 PRODUCTO: [Coloca aquí el nombre exacto del repuesto]
-            📌 NRO DE PARTE / OEM: [Coloca aquí el número de parte]
-            ⚙️ CATEGORÍA: [Coloca aquí la categoría]
-
             ✅ FUNCIÓN Y BENEFICIOS:
             [Redacta aquí 2 o 3 líneas atractivas explicando brevemente para qué sirve esta pieza en el vehículo y por qué es importante cambiarla a tiempo. Usa un tono experto y vendedor].
 
             🔧 COMPATIBILIDAD SUGERIDA:
-            - [Menciona aquí 2 o 3 vehículos o motores compatibles que conozcas para este repuesto. Si no los conoces con seguridad, escribe: "Aplica para varios modelos. Por favor consultar compatibilidad indicando el modelo y año de su vehículo"].
-
-            📦 MÉTODOS DE ENVÍO Y ENTREGAS:
-            • Entregas personales en Caracas (Sede Principal).
-            • Envíos Nacionales (Cobro en Destino) por MRW, Tealca y Zoom.
-            • Contamos con servicio de Delivery en la Gran Caracas.
-
-            💳 MÉTODOS DE PAGO:
-            • Pago Móvil y Transferencias (Banesco, BNC, BVC, Bancamiga).
-            • Efectivo en divisas.
-            • Binance.`
+            - [Menciona aquí 2 o 3 vehículos o motores compatibles que conozcas para este repuesto. Si no los conoces con seguridad, escribe: "Aplica para varios modelos. Por favor consultar compatibilidad indicando el modelo y año de su vehículo"].`
             
 
             try {
@@ -4760,6 +4778,39 @@
             } catch (error) {
                 console.error(error);
                 alert("Hubo un error al intentar marcar los pagos.");
+            }
+        };
+
+        // ==========================================
+        // 🚀 LÓGICA PARA EDITAR FACTURA
+        // ==========================================
+        window.abrirModalEditarFactura = function(docId) {
+            const fac = window.facturasDBLocal[docId];
+            if(!fac) return;
+            document.getElementById('edit-fac-id').value = docId;
+            document.getElementById('edit-fac-nro').value = fac.nro || '';
+            document.getElementById('edit-fac-fecha').value = fac.fecha || '';
+            document.getElementById('modal-editar-factura').style.display = 'flex';
+        };
+
+        window.guardarEdicionFactura = async function() {
+            const docId = document.getElementById('edit-fac-id').value;
+            const nuevoNro = document.getElementById('edit-fac-nro').value.trim();
+            const nuevaFecha = document.getElementById('edit-fac-fecha').value.trim();
+            
+            if(!nuevoNro) { alert("El número de factura no puede estar vacío."); return; }
+
+            try {
+                await updateDoc(doc(db, "facturas", docId), {
+                    nro: nuevoNro,
+                    fecha: nuevaFecha
+                });
+                document.getElementById('modal-editar-factura').style.display = 'none';
+                window.cargarHistorialFacturas();
+                window.cargarFinanzas(); // Actualizar finanzas por si estaba pendiente
+            } catch (error) {
+                console.error("Error editando factura:", error);
+                alert("Hubo un error al guardar los cambios.");
             }
         };
 
