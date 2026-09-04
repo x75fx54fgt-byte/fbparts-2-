@@ -225,21 +225,6 @@
                         <div class="table-toolbar" style="background: #fff3cd; border-color: #ffeeba;">
                             <h3 style="color: #856404;"><i class="fas fa-hand-holding-usd"></i> Cuentas por Cobrar (Facturas a Crédito)</h3>
                         </div>
-                        <div style="overflow-x: auto; background: white; border: 1px solid #eee; border-top: none; border-radius: 0 0 8px 8px; box-shadow: 0 4px 15px rgba(0,0,0,.05);">
-                            <table class="data-table" style="box-shadow: none; border: none; border-radius: 0;">
-                                <thead>
-                                    <tr style="background: #f8f9fa;">
-                                        <th style="color: #333;">Cliente / Factura</th>
-                                        <th style="color: #333; text-align: right;">Total</th>
-                                        <th style="color: #333; text-align: right;">Deuda</th>
-                                        <th style="text-align: center; color: #333;">Abonar</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="cxc-table-body">
-                                    <tr><td colspan="4" style="text-align: center;">Cargando cuentas por cobrar...</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
                         <!-- 🟦 INICIO CUADRO AZUL: CXC PERSONAL Y MOTORIZADOS -->
                         <div style="background: #e2eef7; border: 1px solid #b8daff; border-radius: 8px; overflow: hidden; margin-top: 20px;">
                             <h3 style="margin: 0; padding: 15px; background: #b8daff; color: #004085; font-size: 16px; font-family: 'Oswald', sans-serif;">
@@ -266,7 +251,22 @@
                                     <div style="padding: 15px; text-align: center; color: #666; font-size: 13px;">Cargando deudas...</div>
                                 </div>
                             </div>
-                        </div>                                             
+                        </div>            
+                        <div style="overflow-x: auto; background: white; border: 1px solid #eee; border-top: none; border-radius: 0 0 8px 8px; box-shadow: 0 4px 15px rgba(0,0,0,.05);">
+                            <table class="data-table" style="box-shadow: none; border: none; border-radius: 0;">
+                                <thead>
+                                    <tr style="background: #f8f9fa;">
+                                        <th style="color: #333;">Cliente / Factura</th>
+                                        <th style="color: #333; text-align: right;">Total</th>
+                                        <th style="color: #333; text-align: right;">Deuda</th>
+                                        <th style="text-align: center; color: #333;">Abonar</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cxc-table-body">
+                                    <tr><td colspan="4" style="text-align: center;">Cargando cuentas por cobrar...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>                                 
                     </div>
 
                     <!-- CUENTAS POR PAGAR (MULTIMONEDA) -->
