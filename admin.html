@@ -211,137 +211,144 @@
                 </div>
             </div>
 
-            <!-- ========================================== -->
-            <!-- 📊 DASHBOARD DE FINANZAS A DOS COLUMNAS    -->
-            <!-- ========================================== -->
-            <div
-                style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 25px; align-items: start; width: 100%; margin-top: 15px;">
-            
-                <!-- === COLUMNA IZQUIERDA: FACTURAS (AMARILLO) === -->
-                <div
-                    style="background: white; border: 1px solid #ffeeba; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,.05); overflow: hidden;">
-                    <div style="background: #fff3cd; padding: 15px; border-bottom: 1px solid #ffeeba;">
-                        <h3 style="color: #856404; margin: 0; font-size: 16px; font-family: 'Oswald', sans-serif;"><i
-                                class="fas fa-hand-holding-usd"></i> Cuentas por Cobrar (Facturas a Crédito)</h3>
-                    </div>
-                    <!-- SCROLL INTERNO PARA EL AMARILLO -->
-                    <div style="max-height: 580px; overflow-y: auto; background: white;">
-                        <table class="data-table" style="box-shadow: none; border: none; margin: 0; width: 100%;">
-                            <thead
-                                style="position: sticky; top: 0; z-index: 10; background: #f8f9fa; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                                <tr>
-                                    <th style="color: #333; padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">Cliente
-                                        / Factura</th>
-                                    <th style="color: #333; padding: 12px; text-align: right; border-bottom: 1px solid #ddd;">Total
-                                    </th>
-                                    <th style="color: #333; padding: 12px; text-align: right; border-bottom: 1px solid #ddd;">Deuda
-                                    </th>
-                                    <th style="color: #333; padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">
-                                        Abonar</th>
-                                </tr>
-                            </thead>
-                            <tbody id="cxc-table-body">
-                                <tr>
-                                    <td colspan="4" style="text-align: center; padding: 20px;">Cargando cuentas por cobrar...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+            <!-- PESTAÑA FINANZAS (CxC y CxP MULTIMONEDA) -->
+            <div id="tab-finanzas" class="tab-content">
+                <div class="admin-header">
+                    <h2>Cuentas por Cobrar y Cuentas por Pagar</h2>
+                    <button class="refresh-btn" onclick="cargarFinanzas()"><i class="fas fa-sync-alt"></i> Actualizar</button>
                 </div>
-            
-                <!-- === COLUMNA DERECHA: PROVEEDORES Y PERSONAL === -->
-                <div style="display: flex; flex-direction: column; gap: 25px;">
-            
-                    <!-- CUADRO ROJO: PROVEEDORES -->
+
+                <!-- ========================================== -->
+                <!-- 📊 DASHBOARD DE FINANZAS A DOS COLUMNAS    -->
+                <!-- ========================================== -->
+                <div
+                    style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 25px; align-items: start; width: 100%; margin-top: 15px;">
+                
+                    <!-- === COLUMNA IZQUIERDA: FACTURAS (AMARILLO) === -->
                     <div
-                        style="background: white; border: 1px solid #f5c6cb; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,.05);">
-                        <div style="background: #f8d7da; padding: 15px; border-bottom: 1px solid #f5c6cb;">
-                            <h3 style="color: #721c24; margin: 0; font-size: 16px; font-family: 'Oswald', sans-serif;"><i
-                                    class="fas fa-file-invoice"></i> Cuentas por Pagar (Proveedores)</h3>
+                        style="background: white; border: 1px solid #ffeeba; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,.05); overflow: hidden;">
+                        <div style="background: #fff3cd; padding: 15px; border-bottom: 1px solid #ffeeba;">
+                            <h3 style="color: #856404; margin: 0; font-size: 16px; font-family: 'Oswald', sans-serif;"><i
+                                    class="fas fa-hand-holding-usd"></i> Cuentas por Cobrar (Facturas a Crédito)</h3>
                         </div>
-                        <div style="padding: 15px;">
-                            <form id="form-cxp" onsubmit="guardarNuevaCxP(event)"
-                                style="display: flex; gap: 10px; margin-bottom: 15px;">
-                                <input type="text" id="cxp-proveedor" placeholder="Proveedor / Concepto" required
-                                    style="flex: 2; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
-                                <select id="cxp-moneda"
-                                    style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
-                                    <option value="USD|$">USD ($)</option>
-                                    <option value="VES|Bs">VES (Bs)</option>
-                                    <option value="EUR|€">EUR (€)</option>
-                                </select>
-                                <input type="number" step="0.01" id="cxp-monto" placeholder="Monto" required
-                                    style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
-                                <button type="submit"
-                                    style="background: #d9534f; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">Agregar</button>
-                            </form>
-                            <!-- SCROLL INTERNO PARA EL ROJO -->
-                            <div style="max-height: 200px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px;">
-                                <table class="data-table" style="box-shadow: none; border: none; margin: 0; width: 100%;">
-                                    <thead
-                                        style="position: sticky; top: 0; background: #f8f9fa; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                                        <tr>
-                                            <th
-                                                style="color: #333; padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">
-                                                Proveedor / Concepto</th>
-                                            <th
-                                                style="color: #333; padding: 10px; text-align: right; border-bottom: 1px solid #ddd;">
-                                                Monto</th>
-                                            <th
-                                                style="color: #333; padding: 10px; text-align: center; border-bottom: 1px solid #ddd;">
-                                                Liquidado</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="cxp-table-body">
-                                        <tr>
-                                            <td colspan="3" style="text-align: center; padding: 15px;">Cargando deudas...</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
+                        <!-- SCROLL INTERNO PARA EL AMARILLO -->
+                        <div style="max-height: 580px; overflow-y: auto; background: white;">
+                            <table class="data-table" style="box-shadow: none; border: none; margin: 0; width: 100%;">
+                                <thead
+                                    style="position: sticky; top: 0; z-index: 10; background: #f8f9fa; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                                    <tr>
+                                        <th style="color: #333; padding: 12px; text-align: left; border-bottom: 1px solid #ddd;">Cliente
+                                            / Factura</th>
+                                        <th style="color: #333; padding: 12px; text-align: right; border-bottom: 1px solid #ddd;">Total
+                                        </th>
+                                        <th style="color: #333; padding: 12px; text-align: right; border-bottom: 1px solid #ddd;">Deuda
+                                        </th>
+                                        <th style="color: #333; padding: 12px; text-align: center; border-bottom: 1px solid #ddd;">
+                                            Abonar</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cxc-table-body">
+                                    <tr>
+                                        <td colspan="4" style="text-align: center; padding: 20px;">Cargando cuentas por cobrar...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-            
-                    <!-- CUADRO AZUL: PERSONAL -->
-                    <div
-                        style="background: white; border: 1px solid #b8daff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,.05);">
-                        <div style="background: #e2eef7; padding: 15px; border-bottom: 1px solid #b8daff;">
-                            <h3 style="color: #004085; margin: 0; font-size: 16px; font-family: 'Oswald', sans-serif;"><i
-                                    class="fas fa-motorcycle"></i> Cuentas por Cobrar (Personal / Otros)</h3>
-                        </div>
-                        <div style="padding: 15px;">
-                            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                                <input type="text" id="cxc-pers-concepto" placeholder="Personal (Ej: Jhon - Efectivo)"
-                                    style="flex: 2; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
-                                <select id="cxc-pers-moneda"
-                                    style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
-                                    <option value="USD ($)">USD ($)</option>
-                                    <option value="Bs (Bs)">Bs (Bs)</option>
-                                    <option value="EUR (€)">EUR (€)</option>
-                                </select>
-                                <input type="number" step="0.01" id="cxc-pers-monto" placeholder="Monto"
-                                    style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
-                                <button type="button" onclick="agregarCxCPersonal()"
-                                    style="background: #17a2b8; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">Agregar</button>
+                
+                    <!-- === COLUMNA DERECHA: PROVEEDORES Y PERSONAL === -->
+                    <div style="display: flex; flex-direction: column; gap: 25px;">
+                
+                        <!-- CUADRO ROJO: PROVEEDORES -->
+                        <div
+                            style="background: white; border: 1px solid #f5c6cb; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,.05);">
+                            <div style="background: #f8d7da; padding: 15px; border-bottom: 1px solid #f5c6cb;">
+                                <h3 style="color: #721c24; margin: 0; font-size: 16px; font-family: 'Oswald', sans-serif;"><i
+                                        class="fas fa-file-invoice"></i> Cuentas por Pagar (Proveedores)</h3>
                             </div>
-            
-                            <!-- ENCABEZADO Y SCROLL INTERNO PARA EL AZUL -->
-                            <div
-                                style="background: #f8f9fa; border: 1px solid #eee; display: flex; padding: 10px; font-weight: bold; border-radius: 4px 4px 0 0; font-size: 13px; color: #333; border-bottom: 2px solid #ddd;">
-                                <div style="flex: 2;">Personal / Concepto</div>
-                                <div style="flex: 1; text-align: center;">Monto</div>
-                                <div style="flex: 1; text-align: center;">Liquidado</div>
-                            </div>
-                            <div id="lista-cxc-personal"
-                                style="border: 1px solid #eee; border-top: none; border-radius: 0 0 4px 4px; background: white; max-height: 200px; overflow-y: auto;">
-                                <div style="padding: 15px; text-align: center; color: #666; font-size: 13px;">Cargando deudas...
+                            <div style="padding: 15px;">
+                                <form id="form-cxp" onsubmit="guardarNuevaCxP(event)"
+                                    style="display: flex; gap: 10px; margin-bottom: 15px;">
+                                    <input type="text" id="cxp-proveedor" placeholder="Proveedor / Concepto" required
+                                        style="flex: 2; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+                                    <select id="cxp-moneda"
+                                        style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+                                        <option value="USD|$">USD ($)</option>
+                                        <option value="VES|Bs">VES (Bs)</option>
+                                        <option value="EUR|€">EUR (€)</option>
+                                    </select>
+                                    <input type="number" step="0.01" id="cxp-monto" placeholder="Monto" required
+                                        style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+                                    <button type="submit"
+                                        style="background: #d9534f; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">Agregar</button>
+                                </form>
+                                <!-- SCROLL INTERNO PARA EL ROJO -->
+                                <div style="max-height: 200px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px;">
+                                    <table class="data-table" style="box-shadow: none; border: none; margin: 0; width: 100%;">
+                                        <thead
+                                            style="position: sticky; top: 0; background: #f8f9fa; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                                            <tr>
+                                                <th
+                                                    style="color: #333; padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">
+                                                    Proveedor / Concepto</th>
+                                                <th
+                                                    style="color: #333; padding: 10px; text-align: right; border-bottom: 1px solid #ddd;">
+                                                    Monto</th>
+                                                <th
+                                                    style="color: #333; padding: 10px; text-align: center; border-bottom: 1px solid #ddd;">
+                                                    Liquidado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="cxp-table-body">
+                                            <tr>
+                                                <td colspan="3" style="text-align: center; padding: 15px;">Cargando deudas...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
-                    </div>
-            
-                </div> <!-- FIN COLUMNA DERECHA -->
-            
+                
+                        <!-- CUADRO AZUL: PERSONAL -->
+                        <div
+                            style="background: white; border: 1px solid #b8daff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,.05);">
+                            <div style="background: #e2eef7; padding: 15px; border-bottom: 1px solid #b8daff;">
+                                <h3 style="color: #004085; margin: 0; font-size: 16px; font-family: 'Oswald', sans-serif;"><i
+                                        class="fas fa-motorcycle"></i> Cuentas por Cobrar (Personal / Otros)</h3>
+                            </div>
+                            <div style="padding: 15px;">
+                                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                                    <input type="text" id="cxc-pers-concepto" placeholder="Personal (Ej: Jhon - Efectivo)"
+                                        style="flex: 2; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+                                    <select id="cxc-pers-moneda"
+                                        style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+                                        <option value="USD ($)">USD ($)</option>
+                                        <option value="Bs (Bs)">Bs (Bs)</option>
+                                        <option value="EUR (€)">EUR (€)</option>
+                                    </select>
+                                    <input type="number" step="0.01" id="cxc-pers-monto" placeholder="Monto"
+                                        style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+                                    <button type="button" onclick="agregarCxCPersonal()"
+                                        style="background: #17a2b8; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">Agregar</button>
+                                </div>
+                
+                                <!-- ENCABEZADO Y SCROLL INTERNO PARA EL AZUL -->
+                                <div
+                                    style="background: #f8f9fa; border: 1px solid #eee; display: flex; padding: 10px; font-weight: bold; border-radius: 4px 4px 0 0; font-size: 13px; color: #333; border-bottom: 2px solid #ddd;">
+                                    <div style="flex: 2;">Personal / Concepto</div>
+                                    <div style="flex: 1; text-align: center;">Monto</div>
+                                    <div style="flex: 1; text-align: center;">Liquidado</div>
+                                </div>
+                                <div id="lista-cxc-personal"
+                                    style="border: 1px solid #eee; border-top: none; border-radius: 0 0 4px 4px; background: white; max-height: 200px; overflow-y: auto;">
+                                    <div style="padding: 15px; text-align: center; color: #666; font-size: 13px;">Cargando deudas...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                
+                    </div> <!-- FIN COLUMNA DERECHA -->               
+                </div>
             </div>
 
             <!-- PESTAÑA PEDIDOS (MULTI-ITEMS Y BÚSQUEDA) -->
