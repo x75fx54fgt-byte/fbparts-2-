@@ -218,90 +218,92 @@
                     <button class="refresh-btn" onclick="cargarFinanzas()"><i class="fas fa-sync-alt"></i> Actualizar</button>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: start;">
-                    <!-- CUENTAS POR COBRAR -->
-                    <div>
-                        <!-- 🟦 INICIO CUADRO AZUL: CXC PERSONAL Y MOTORIZADOS -->
-                        <div style="background: #e2eef7; border: 1px solid #b8daff; border-radius: 8px; overflow: hidden; margin-top: 20px;">
-                            <h3 style="margin: 0; padding: 15px; background: #b8daff; color: #004085; font-size: 16px; font-family: 'Oswald', sans-serif;">
-                                <i class="fas fa-motorcycle"></i> Cuentas por Cobrar (Personal / Otros)
-                            </h3>
-                            <div style="padding: 15px;">
-                                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                                    <input type="text" id="cxc-pers-concepto" placeholder="Personal y Concepto (Ej: Jhon - Efectivo)" style="flex: 2; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
-                                    <select id="cxc-pers-moneda" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
-                                        <option value="USD ($)">USD ($)</option>
-                                        <option value="Bs (Bs)">Bs (Bs)</option>
-                                        <option value="EUR (€)">EUR (€)</option>
-                                    </select>
-                                    <input type="number" step="0.01" id="cxc-pers-monto" placeholder="Monto" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
-                                    <button type="button" onclick="agregarCxCPersonal()" style="background: #17a2b8; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px;">Agregar</button>
-                                </div>
-                                
-                                <div style="background: #1d6fa5; color: white; display: flex; padding: 10px; font-weight: bold; border-radius: 4px 4px 0 0; font-size: 13px;">
-                                    <div style="flex: 2;">Personal / Concepto</div>
-                                    <div style="flex: 1; text-align: center;">Monto</div>
-                                    <div style="flex: 1; text-align: center;">Liquidado</div>
-                                </div>
-                                <div id="lista-cxc-personal" style="border: 1px solid #ccc; border-top: none; border-radius: 0 0 4px 4px; background: white; max-height: 250px; overflow-y: auto;">
-                                    <div style="padding: 15px; text-align: center; color: #666; font-size: 13px;">Cargando deudas...</div>
-                                </div>
-                            </div>
-                        </div> 
-
-                        <div class="table-toolbar" style="background: #fff3cd; border-color: #ffeeba;">
-                            <h3 style="color: #856404;"><i class="fas fa-hand-holding-usd"></i> Cuentas por Cobrar (Facturas a Crédito)</h3>
-                        </div>
-                        <div style="overflow-x: auto; background: white; border: 1px solid #eee; border-top: none; border-radius: 0 0 8px 8px; box-shadow: 0 4px 15px rgba(0,0,0,.05);">
-                            <table class="data-table" style="box-shadow: none; border: none; border-radius: 0;">
-                                <thead>
-                                    <tr style="background: #f8f9fa;">
-                                        <th style="color: #333;">Cliente / Factura</th>
-                                        <th style="color: #333; text-align: right;">Total</th>
-                                        <th style="color: #333; text-align: right;">Deuda</th>
-                                        <th style="text-align: center; color: #333;">Abonar</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="cxc-table-body">
-                                    <tr><td colspan="4" style="text-align: center;">Cargando cuentas por cobrar...</td></tr>
-                                </tbody>
-                            </table>
-                        </div>                                 
+                <!-- === COLUMNA IZQUIERDA === -->
+                <div>
+                    <!-- CUENTAS POR COBRAR (Facturas a Crédito) -->
+                    <div class="table-toolbar" style="background: #fff3cd; border-color: #ffeeba;">
+                        <h3 style="color: #856404;"><i class="fas fa-hand-holding-usd"></i> Cuentas por Cobrar (Facturas a Crédito)</h3>
                     </div>
+                    <div style="overflow-x: auto; background: white; border: 1px solid #eee; border-top: none; border-radius: 0 0 8px 8px; box-shadow: 0 4px 15px rgba(0,0,0,.05);">
+                        <table class="data-table" style="box-shadow: none; border: none; border-radius: 0;">
+                            <thead>
+                                <tr style="background: #f8f9fa;">
+                                    <th style="color: #333;">Cliente / Factura</th>
+                                    <th style="color: #333; text-align: right;">Total</th>
+                                    <th style="color: #333; text-align: right;">Deuda</th>
+                                    <th style="text-align: center; color: #333;">Abonar</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cxc-table-body">
+                                <tr><td colspan="4" style="text-align: center;">Cargando cuentas por cobrar...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- === FIN COLUMNA IZQUIERDA === -->
 
-                    <!-- CUENTAS POR PAGAR (MULTIMONEDA) -->
-                    <div>
-                        <div class="table-toolbar" style="background: #f8d7da; border-color: #f5c6cb;">
-                            <h3 style="color: #721c24;"><i class="fas fa-file-invoice"></i> Cuentas por Pagar (Proveedores)</h3>
-                        </div>
-                        <div style="background: white; border: 1px solid #eee; border-top: none; padding: 15px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 15px rgba(0,0,0,.05); margin-bottom: 20px;">
-                            <form id="form-cxp" onsubmit="guardarNuevaCxP(event)" style="display: flex; gap: 10px; margin-bottom: 15px;">
-                                <input type="text" id="cxp-proveedor" placeholder="Proveedor / Concepto" required style="flex: 2; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
-                                
-                                <select id="cxp-moneda" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
-                                    <option value="USD|$">USD ($)</option>
-                                    <option value="VES|Bs">VES (Bs)</option>
-                                    <option value="EUR|€">EUR (€)</option>
+                <!-- === COLUMNA DERECHA === -->
+                <div>
+                    <!-- CUENTAS POR PAGAR (Proveedores) -->
+                    <div class="table-toolbar" style="background: #f8d7da; border-color: #f5c6cb;">
+                        <h3 style="color: #721c24;"><i class="fas fa-file-invoice"></i> Cuentas por Pagar (Proveedores)</h3>
+                    </div>
+                    <div style="background: white; border: 1px solid #eee; border-top: none; padding: 15px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 15px rgba(0,0,0,.05); margin-bottom: 20px;">
+                        <form id="form-cxp" onsubmit="guardarNuevaCxP(event)" style="display: flex; gap: 10px; margin-bottom: 15px;">
+                            <input type="text" id="cxp-proveedor" placeholder="Proveedor / Concepto" required style="flex: 2; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+            
+                            <select id="cxp-moneda" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+                                <option value="USD|$">USD ($)</option>
+                                <option value="VES|Bs">VES (Bs)</option>
+                                <option value="EUR|€">EUR (€)</option>
+                            </select>
+
+                            <input type="number" step="0.01" id="cxp-monto" placeholder="Monto" required style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+                            <button type="submit" style="background: #d9534f; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">Agregar</button>
+                        </form>
+                        <table class="data-table" style="box-shadow: none; border: 1px solid #eee; border-radius: 4px;">
+                            <thead>
+                                <tr style="background: #f8f9fa;">
+                                    <th style="color: #333;">Proveedor / Concepto</th>
+                                    <th style="color: #333; text-align: right;">Monto</th>
+                                    <th style="text-align: center; color: #333;">Liquidado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cxp-table-body">
+                                <tr><td colspan="3" style="text-align: center;">Cargando deudas...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+    
+                    <!-- CUENTAS POR COBRAR (Personal / Otros) -->
+                    <div style="background: #e2eef7; border: 1px solid #b8daff; border-radius: 8px; overflow: hidden;">
+                        <h3 style="margin: 0; padding: 15px; background: #b8daff; color: #004085; font-size: 16px; font-family: 'Oswald', sans-serif;">
+                            <i class="fas fa-motorcycle"></i> Cuentas por Cobrar (Personal / Otros)
+                        </h3>
+                        <div style="padding: 15px;">
+                            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                                <input type="text" id="cxc-pers-concepto" placeholder="Personal y Concepto (Ej: Jhon - Efectivo)" style="flex: 2; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+                                <select id="cxc-pers-moneda" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+                                    <option value="USD ($)">USD ($)</option>
+                                    <option value="Bs (Bs)">Bs (Bs)</option>
+                                    <option value="EUR (€)">EUR (€)</option>
                                 </select>
-
-                                <input type="number" step="0.01" id="cxp-monto" placeholder="Monto" required style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
-                                <button type="submit" style="background: #d9534f; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">Agregar</button>
-                            </form>
-                            <table class="data-table" style="box-shadow: none; border: 1px solid #eee; border-radius: 4px;">
-                                <thead>
-                                    <tr style="background: #f8f9fa;">
-                                        <th style="color: #333;">Proveedor / Concepto</th>
-                                        <th style="color: #333; text-align: right;">Monto</th>
-                                        <th style="text-align: center; color: #333;">Liquidado</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="cxp-table-body">
-                                    <tr><td colspan="3" style="text-align: center;">Cargando deudas...</td></tr>
-                                </tbody>
-                            </table>
+                                <input type="number" step="0.01" id="cxc-pers-monto" placeholder="Monto" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+                                <button type="button" onclick="agregarCxCPersonal()" style="background: #17a2b8; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px;">Agregar</button>
+                            </div>
+            
+                            <div style="background: #1d6fa5; color: white; display: flex; padding: 10px; font-weight: bold; border-radius: 4px 4px 0 0; font-size: 13px;">
+                                <div style="flex: 2;">Personal / Concepto</div>
+                                <div style="flex: 1; text-align: center;">Monto</div>
+                                <div style="flex: 1; text-align: center;">Liquidado</div>
+                            </div>
+                            <div id="lista-cxc-personal" style="border: 1px solid #ccc; border-top: none; border-radius: 0 0 4px 4px; background: white; max-height: 250px; overflow-y: auto;">
+                                <div style="padding: 15px; text-align: center; color: #666; font-size: 13px;">Cargando deudas...</div>
+                            </div>
                         </div>
                     </div>
                 </div>
+                <!-- === FIN COLUMNA DERECHA === -->
             </div>
 
             <!-- PESTAÑA PEDIDOS (MULTI-ITEMS Y BÚSQUEDA) -->
