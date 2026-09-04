@@ -275,6 +275,34 @@
                         </div>
                     </div>
 
+                    <!-- 🏍️ CUENTAS POR COBRAR (PERSONAL Y MOTORIZADOS) -->
+                    <div style="background: #e2eef7; border: 1px solid #b8daff; border-radius: 8px; overflow: hidden; margin-top: 20px;">
+                        <h3 style="margin: 0; padding: 15px; background: #b8daff; color: #004085; font-size: 16px; font-family: 'Oswald', sans-serif;">
+                            <i class="fas fa-motorcycle"></i> Cuentas por Cobrar (Personal / Otros)
+                        </h3>
+                        <div style="padding: 15px;">
+                            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                                <input type="text" id="cxc-pers-concepto" placeholder="Personal y Concepto (Ej: Jhon - Efectivo)" style="flex: 2; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+                                <select id="cxc-pers-moneda" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+                                    <option value="USD ($)">USD ($)</option>
+                                    <option value="Bs (Bs)">Bs (Bs)</option>
+                                    <option value="EUR (€)">EUR (€)</option>
+                                </select>
+                                <input type="number" step="0.01" id="cxc-pers-monto" placeholder="Monto" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+                                <button type="button" onclick="agregarCxCPersonal()" style="background: #17a2b8; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px;">Agregar</button>
+                            </div>
+                    
+                            <div style="background: #1d6fa5; color: white; display: flex; padding: 10px; font-weight: bold; border-radius: 4px 4px 0 0; font-size: 13px;">
+                                <div style="flex: 2;">Personal / Concepto</div>
+                                <div style="flex: 1; text-align: center;">Monto</div>
+                                <div style="flex: 1; text-align: center;">Liquidado</div>
+                            </div>
+                            <div id="lista-cxc-personal" style="border: 1px solid #ccc; border-top: none; border-radius: 0 0 4px 4px; background: white; max-height: 250px; overflow-y: auto;">
+                                <div style="padding: 15px; text-align: center; color: #666; font-size: 13px;">Cargando deudas...</div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -4813,6 +4841,98 @@
                 alert("Hubo un error al guardar los cambios.");
             }
         };
+
+        // ==========================================
+        // 🏍️ LÓGICA DE CXC PERSONAL Y MOTORIZADOS
+        // ==========================================
+        window.agregarCxCPersonal = async function() {
+            const concepto = document.getElementById('cxc-pers-concepto').value.trim();
+            const moneda = document.getElementById('cxc-pers-moneda').value;
+            const monto = parseFloat(document.getElementById('cxc-pers-monto').value);
+
+            if (!concepto || isNaN(monto) || monto <= 0) {
+                alert("Por favor ingresa a quién se le cobra (concepto) y un monto válido.");
+                return;
+            }
+
+            try {
+                // Creamos una nueva colección exclusiva para el personal
+                await addDoc(collection(db, "cxc_personal"), {
+                    concepto: concepto,
+                    moneda: moneda,
+                    monto: monto,
+                    fechaCreacion: new Date().toISOString(),
+                    estado: 'Pendiente'
+                });
+                
+                document.getElementById('cxc-pers-concepto').value = '';
+                document.getElementById('cxc-pers-monto').value = '';
+                window.cargarCxCPersonal();
+            } catch (error) {
+                console.error("Error agregando CxC Personal:", error);
+                alert("Error al guardar la deuda.");
+            }
+        };
+
+        window.cargarCxCPersonal = async function() {
+            const lista = document.getElementById('lista-cxc-personal');
+            if (!lista) return;
+
+            lista.innerHTML = '<div style="padding:15px; text-align:center; color:#666;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+
+            try {
+                const q = query(collection(db, "cxc_personal"), where("estado", "==", "Pendiente"));
+                const snap = await getDocs(q);
+                
+                if (snap.empty) {
+                    lista.innerHTML = '<div style="padding: 15px; text-align: center; color: #666; font-size: 13px;">No hay deudas de personal pendientes.</div>';
+                    return;
+                }
+
+                let html = '';
+                snap.forEach(docSnap => {
+                    const data = docSnap.data();
+                    let simbolo = '$';
+                    if (data.moneda.includes('Bs')) simbolo = 'Bs';
+                    if (data.moneda.includes('€')) simbolo = '€';
+
+                    html += `
+                        <div style="display: flex; padding: 10px; border-bottom: 1px solid #eee; align-items: center; font-size: 13px;">
+                            <div style="flex: 2; font-weight: bold; color: #333;">${data.concepto}</div>
+                            <div style="flex: 1; text-align: center; font-weight: bold; color: #d9534f;">${simbolo}${data.monto.toFixed(2)}</div>
+                            <div style="flex: 1; text-align: center;">
+                                <button onclick="cobrarCxCPersonal('${docSnap.id}')" style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight:bold;">
+                                    <i class="fas fa-check-double"></i> Recibido
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                lista.innerHTML = html;
+            } catch (error) {
+                console.error("Error cargando CxC Personal:", error);
+                lista.innerHTML = '<div style="padding:15px; text-align:center; color:red;">Error al cargar.</div>';
+            }
+        };
+
+        window.cobrarCxCPersonal = async function(docId) {
+            if (!confirm("¿Confirmas que este dinero ya fue entregado/devuelto por el personal?")) return;
+            try {
+                await updateDoc(doc(db, "cxc_personal", docId), {
+                    estado: 'Cobrado',
+                    fechaCobro: new Date().toISOString()
+                });
+                window.cargarCxCPersonal();
+            } catch (error) {
+                console.error("Error al cobrar:", error);
+                alert("Hubo un error al procesar el cobro.");
+            }
+        };
+        
+        // Auto-cargar al iniciar la página
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => { if (typeof window.cargarCxCPersonal === 'function') window.cargarCxCPersonal(); }, 1500);
+        });
 
     </script>
 </body>
