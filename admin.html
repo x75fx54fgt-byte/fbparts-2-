@@ -1293,36 +1293,49 @@
         </div>
     </div>
 
-    <!-- 🚀 MODAL ASISTENTE IA PARA COMPRAS (LANDED COST) -->
-    <div id="modal-ia-compras" class="modal-overlay">
-        <div class="modal-content" style="max-width: 650px;">
-            <h3><i class="fas fa-boxes" style="color:#1d6fa5;"></i> Analista de Compras IA</h3>
-            <p style="font-size: 13px; color: #666; margin-top: -10px; margin-bottom: 15px;">La IA de Puter evaluará la rentabilidad de tu importación.</p>
+    <!-- ========================================== -->
+    <!-- 🤖 WIDGET FLOTANTE: ANALISTA IA CON MEMORIA -->
+    <!-- ========================================== -->
+    <div id="admin-ai-widget" style="position: fixed; bottom: 25px; right: 25px; z-index: 99999; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+        
+        <!-- Ventana del Chatbot -->
+        <div id="admin-ai-box" style="display: none; position: absolute; bottom: 75px; right: 0; width: 360px; max-width: calc(100vw - 50px); background: #fff; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); overflow: hidden; border: 1px solid #eee; flex-direction: column;">
             
-            <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #ddd; margin-bottom: 15px; font-size: 13px; display: flex; justify-content: space-between;">
-                <div><span style="color:#666; display:block; font-size:11px;">FOB Total</span><strong style="color:#333;">$<span id="ia-compras-fob">0.00</span></strong></div>
-                <div><span style="color:#666; display:block; font-size:11px;">Gastos Logísticos</span><strong style="color:#d9534f;">$<span id="ia-compras-gastos">0.00</span></strong></div>
-                <div><span style="color:#666; display:block; font-size:11px;">Costo Puesto Total</span><strong style="color:#385723;">$<span id="ia-compras-landed">0.00</span></strong></div>
+            <!-- Encabezado Azul -->
+            <div style="background: #1d6fa5; color: white; padding: 15px; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 38px; height: 38px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; color: #1d6fa5; font-size: 20px;">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <div>
+                        <h4 style="margin: 0; font-size: 15px; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px; color: #fff;">Analista IA</h4>
+                        <span style="font-size: 11px; opacity: 0.9;">Memoria Activa.</span>
+                    </div>
+                </div>
+                <button onclick="toggleAdminAi()" style="background: none; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0;"><i class="fas fa-minus"></i></button>
             </div>
 
-            <!-- NUEVO: Campo para conversar con la IA -->
-            <div class="form-group">
-                <label style="color: #1d6fa5;">¿Qué le quieres decir o pedir a la IA?</label>
-                <textarea id="ia-contexto-compras" rows="2" placeholder="Ej: Sí, calcúlame ese precio mínimo por favor." style="border-color: #1d6fa5;"></textarea>
+            <!-- Área de Mensajes -->
+            <div id="admin-ai-messages" style="height: 400px; overflow-y: auto; padding: 15px; background: #f4f6f4; display: flex; flex-direction: column; gap: 10px; font-size: 13px;">
+                <div style="align-self: flex-start; background: white; padding: 10px 14px; border-radius: 0 12px 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; border-left: 3px solid #1d6fa5;">
+                    <p style="margin: 0 0 5px 0;">¡Hola Brhayan! 👋</p>
+                    <p style="margin: 0;">He sincronizado nuestra memoria de Firebase. Puedes navegar por cualquier pestaña y yo mantendré nuestro historial a salvo aquí.</p>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label>Evaluación y Chat de la IA</label>
-                <textarea id="ia-respuesta-compras" rows="8" style="font-family: Arial; font-size:13px; line-height:1.5; background:#f4f9fd;" placeholder="Presiona 'Generar Análisis' para iniciar..." readonly></textarea>
-            </div>
-            
-            <div class="modal-actions" style="gap: 8px;">
-                <button type="button" class="btn-cancel" onclick="cerrarModalComprasIA()">Cerrar</button>
-                <button type="button" class="btn-action" id="btn-generar-ia-compras" style="background:#1d6fa5; flex:1.5;" onclick="generarAnalisisComprasIA()">
-                    <i class="fas fa-comment-dots"></i> Enviar / Analizar
+            <!-- Input de Chat -->
+            <div style="padding: 10px 15px; background: #fafafa; border-top: 1px solid #eee; display: flex; gap: 8px; align-items: center;">
+                <input type="text" id="admin-ai-input" placeholder="Escribe aquí tu consulta..." style="flex: 1; padding: 10px 15px; border: 1px solid #ddd; border-radius: 20px; outline: none; font-size: 13px;" onkeypress="if(event.key === 'Enter') enviarMensajeAdminAi()">
+                <button id="admin-ai-send-btn" onclick="enviarMensajeAdminAi()" style="background: #1d6fa5; color: white; border: none; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; flex-shrink: 0;">
+                    <i class="fas fa-paper-plane"></i>
                 </button>
             </div>
         </div>
+
+        <!-- Botón Redondo Flotante -->
+        <button onclick="toggleAdminAi()" id="admin-ai-fab" style="background: #1d6fa5; color: white; border: none; width: 65px; height: 65px; border-radius: 50%; cursor: pointer; font-size: 28px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; transition: transform 0.2s;">
+            <i class="fas fa-robot" id="admin-ai-icon"></i>
+        </button>
     </div>
             <!-- ========================================== -->
             <!-- 🤖 MODAL: COBRADOR INTELIGENTE IA          -->
@@ -1403,7 +1416,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, getDocs, getDoc, setDoc, addDoc, doc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, getDoc, setDoc, addDoc, doc, updateDoc, deleteDoc, query, where, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         // ==========================================
         // 🚀 CONFIGURACIÓN DE APIS Y BASES DE DATOS
@@ -4295,112 +4308,162 @@
         });
 
         // ==========================================
-        // 🚀 ANALISTA DE COMPRAS IA INTERACTIVO
+        // 🚀 ANALISTA IA CON MEMORIA FIREBASE (sesion_001)
         // ==========================================
+        window.historialAdminIA = [];
+
+        window.toggleAdminAi = function() {
+            const box = document.getElementById('admin-ai-box');
+            const icon = document.getElementById('admin-ai-icon');
+            const chatArea = document.getElementById('admin-ai-messages');
+            
+            if (box.style.display === 'none' || box.style.display === '') {
+                box.style.display = 'flex';
+                icon.className = 'fas fa-times';
+                document.getElementById('admin-ai-input').focus();
+                
+                // Cargar historial de Firebase si el chat solo tiene el saludo inicial
+                if (chatArea.children.length <= 1) {
+                    window.cargarHistorialAI();
+                }
+            } else {
+                box.style.display = 'none';
+                icon.className = 'fas fa-robot';
+            }
+        };
+
+        window.cargarHistorialAI = async function() {
+            const chatArea = document.getElementById('admin-ai-messages');
+            try {
+                const docRef = doc(db, "ai_copilot_sessions", "sesion_001");
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.historial_mensajes && data.historial_mensajes.length > 0) {
+                        chatArea.innerHTML = ''; // Limpiamos el saludo default
+                        window.historialAdminIA = [];
+
+                        data.historial_mensajes.forEach(msg => {
+                            window.historialAdminIA.push({ user: msg.user, ai: msg.ai });
+                            
+                            // Burbuja Tuya
+                            chatArea.innerHTML += `
+                                <div style="align-self: flex-end; background: #e2eef7; padding: 10px 14px; border-radius: 12px 0 12px 12px; max-width: 85%; color: #333; border-right: 3px solid #1d6fa5; margin-bottom: 10px;">
+                                    <p style="margin: 0;">${msg.user}</p>
+                                </div>`;
+                            // Burbuja IA
+                            chatArea.innerHTML += `
+                                <div style="align-self: flex-start; background: white; padding: 10px 14px; border-radius: 0 12px 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; border-left: 3px solid #1d6fa5; color: #333; margin-bottom: 10px;">
+                                    <p style="margin: 0; white-space: pre-wrap; line-height: 1.5;">${msg.ai}</p>
+                                </div>`;
+                        });
+                        chatArea.scrollTop = chatArea.scrollHeight;
+                    }
+                }
+            } catch (error) { console.error("Error cargando la memoria:", error); }
+        };
+
+        window.enviarMensajeAdminAi = async function() {
+            const input = document.getElementById('admin-ai-input');
+            const mensaje = input.value.trim();
+            if (!mensaje) return;
+
+            const chatArea = document.getElementById('admin-ai-messages');
+            const btn = document.getElementById('admin-ai-send-btn');
+
+            chatArea.innerHTML += `
+                <div style="align-self: flex-end; background: #e2eef7; padding: 10px 14px; border-radius: 12px 0 12px 12px; max-width: 85%; color: #333; border-right: 3px solid #1d6fa5; margin-bottom: 10px;">
+                    <p style="margin: 0;">${mensaje}</p>
+                </div>`;
+            input.value = '';
+            chatArea.scrollTop = chatArea.scrollHeight;
+
+            btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            const typingId = 'typing-' + Date.now();
+            chatArea.innerHTML += `
+                <div id="${typingId}" style="align-self: flex-start; background: white; padding: 10px 14px; border-radius: 0 12px 12px 12px; max-width: 85%; border-left: 3px solid #ccc; color: #888; font-style: italic; margin-bottom: 10px;">
+                    <i class="fas fa-circle-notch fa-spin"></i> Analizando...
+                </div>`;
+            chatArea.scrollTop = chatArea.scrollHeight;
+
+            // Preparamos el contexto con el historial
+            let promptBase = "Actúa como el Analista Financiero de F&B Parts. Respuestas cortas, concretas y directas al grano sobre rentabilidad e importaciones. NO uses formato markdown (**) en tus respuestas.";
+            let contextoHistorial = window.historialAdminIA.map(msg => `Brhayan: ${msg.user}\nAnalista: ${msg.ai}`).join("\n\n");
+            let promptFinal = promptBase + "\n\n" + (contextoHistorial ? `HISTORIAL DE SESIÓN:\n${contextoHistorial}\n\n` : "") + `BRHAYAN: "${mensaje}"`;
+
+            try {
+                const respuesta = await puter.ai.chat(promptFinal);
+                const respuestaFinal = typeof respuesta === 'string' ? respuesta : respuesta.message.content;
+                document.getElementById(typingId).remove();
+
+                chatArea.innerHTML += `
+                    <div style="align-self: flex-start; background: white; padding: 10px 14px; border-radius: 0 12px 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; border-left: 3px solid #1d6fa5; color: #333; margin-bottom: 10px;">
+                        <p style="margin: 0; white-space: pre-wrap; line-height: 1.5;">${respuestaFinal.replace(/\*\*/g, '')}</p>
+                    </div>`;
+                chatArea.scrollTop = chatArea.scrollHeight;
+
+                // 💾 GUARDAR EN LA MEMORIA DE FIREBASE (sesion_001)
+                window.historialAdminIA.push({ user: mensaje, ai: respuestaFinal });
+                const docRef = doc(db, "ai_copilot_sessions", "sesion_001");
+                await updateDoc(docRef, {
+                    historial_mensajes: arrayUnion({ user: mensaje, ai: respuestaFinal, fecha: new Date().toISOString() })
+                });
+
+            } catch (e) {
+                console.error(e);
+                document.getElementById(typingId).remove();
+                chatArea.innerHTML += `<div style="color: #d9534f; margin-bottom: 10px;">Error de conexión IA.</div>`;
+            }
+
+            btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i>'; input.focus();
+        };
+
+        // Función puente para el botón de "Landed Cost"
         window.abrirAnalisisLandedIA = function() {
             const rows = document.querySelectorAll('.imp-item-row');
-            if (rows.length === 0) {
-                alert("Debes agregar al menos un repuesto para que la IA tenga algo que analizar.");
-                return;
-            }
+            if (rows.length === 0) { alert("Agrega un repuesto primero a la calculadora."); return; }
             
-            document.getElementById('ia-compras-fob').textContent = document.getElementById('imp-resumen-fob').innerText;
-            document.getElementById('ia-compras-gastos').textContent = document.getElementById('imp-total-gastos-display').innerText;
-            document.getElementById('ia-compras-landed').textContent = document.getElementById('imp-resumen-landed').innerText;
-            
-            document.getElementById('ia-respuesta-compras').value = '';
-            document.getElementById('ia-contexto-compras').value = ''; 
-            document.getElementById('modal-ia-compras').style.display = 'flex';
-        };
-
-        window.cerrarModalComprasIA = function() {
-            document.getElementById('modal-ia-compras').style.display = 'none';
-        };
-
-        window.generarAnalisisComprasIA = async function() {
-            if (typeof puter === 'undefined') {
-                alert("⚠️ Puter no está cargado. Asegúrate de tener conexión a internet.");
-                return;
-            }
-
-            const btn = document.getElementById('btn-generar-ia-compras');
-            const respuestaArea = document.getElementById('ia-respuesta-compras');
-            const contextoInput = document.getElementById('ia-contexto-compras');
-            
-            const mensajeUsuario = contextoInput.value.trim();
-            const historialAnalisis = respuestaArea.value.trim();
-
-            // Evitar enviar un mensaje vacío si ya hay un chat
-            if (historialAnalisis !== "" && mensajeUsuario === "") {
-                alert("Escribe una respuesta o pregunta para la IA.");
-                return;
-            }
-
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analizando...';
-            btn.disabled = true;
-
             const origen = document.getElementById('imp-criterio').options[document.getElementById('imp-criterio').selectedIndex].text;
             const fobTotal = document.getElementById('imp-resumen-fob').innerText;
             const gastosTotal = document.getElementById('imp-total-gastos-display').innerText;
             const landedTotal = document.getElementById('imp-resumen-landed').innerText;
 
+            // 🚀 NUEVO: Extraer cada línea de repuesto con lujo de detalles
             let listaItems = '';
-            document.querySelectorAll('.imp-item-row').forEach(row => {
+            rows.forEach(row => {
                 const desc = row.querySelector('.imp-item-desc').value || 'Repuesto sin especificar';
                 const cant = row.querySelector('.imp-item-cant').value;
                 const fob = row.querySelector('.imp-item-fob').value;
+                const medidaUnit = row.querySelector('.imp-item-cbm').value;
                 const landedUnit = row.querySelector('.imp-item-landed-unit').innerText;
                 const margen = row.querySelector('.imp-item-margen-detal').value;
                 const pDetal = row.querySelector('.imp-item-precio-detal').innerText;
                 
-                listaItems += `- ${cant}x [${desc}] | FOB: $${fob} | Costo Puesto: ${landedUnit} | Margen: ${margen}% | PV Sugerido: ${pDetal}\n`;
+                listaItems += `- ${cant}x [${desc}] | FOB: $${fob} | Vol/Peso: ${medidaUnit} | Costo Puesto: ${landedUnit} | Margen: ${margen}% | PV Detal: ${pDetal}\n`;
             });
 
-            let promptTexto = `Actúa como Analista de Compras y Estratega de Precios de repuestos automotrices. Yo soy Brhayan, el Gerente.
-            DATOS ACTUALES DEL EMBARQUE:
-            Origen: ${origen} | FOB Total: $${fobTotal} | Gastos Logísticos: $${gastosTotal} | Costo Final: $${landedTotal}
-            REPUESTOS:
-            ${listaItems}\n`;
+            // Armamos un súper-prompt para la IA
+            let promptTexto = `Revisa mi pantalla actual del Landed Cost.\n\n` +
+                              `📊 RESUMEN GLOBAL:\n` +
+                              `Origen: ${origen}\n` +
+                              `FOB Total: $${fobTotal} | Gastos Logísticos: $${gastosTotal} | Costo Puesto Total: $${landedTotal}\n\n` +
+                              `📦 DESGLOSE DE REPUESTOS:\n${listaItems}\n` +
+                              `Por favor, analiza estos datos. Detecta si hay algún repuesto cuyo volumen o peso se esté comiendo el margen de ganancia (los gastos logísticos), dime si los precios de venta son competitivos y qué estrategia recomiendas.`;
 
-            if (historialAnalisis === "") {
-                // Si es la primera vez que se abre en este análisis
-                promptTexto += `INSTRUCCIONES: Evalúa la proporción Gastos vs FOB. Analiza márgenes y precios de venta. Dame 2 recomendaciones. Sé directo.`;
+            document.getElementById('admin-ai-box').style.display = 'flex';
+            document.getElementById('admin-ai-icon').className = 'fas fa-times';
+            
+            // Carga memoria previa primero, si no lo ha hecho
+            if (document.getElementById('admin-ai-messages').children.length <= 1) {
+                window.cargarHistorialAI().then(() => {
+                    document.getElementById('admin-ai-input').value = promptTexto;
+                    window.enviarMensajeAdminAi();
+                });
             } else {
-                // Si ya es una conversación, le pasamos el historial y la nueva pregunta
-                promptTexto += `ESTE FUE TU ANÁLISIS ANTERIOR:\n"${historialAnalisis}"\n\nNUEVA INSTRUCCIÓN DE BRHAYAN: "${mensajeUsuario}"\nResponde directamente a esto último.`;
-                
-                // Reflejamos en la pantalla lo que el usuario escribió
-                respuestaArea.value += `\n\n--- Tú:\n${mensajeUsuario}\n\n--- IA Pensando...`;
-                contextoInput.value = ''; // Limpiamos la caja para la próxima pregunta
-                respuestaArea.scrollTop = respuestaArea.scrollHeight; // Baja el scroll
+                document.getElementById('admin-ai-input').value = promptTexto;
+                window.enviarMensajeAdminAi();
             }
-
-            try {
-                const respuesta = await puter.ai.chat(promptTexto);
-                const textoFinal = typeof respuesta === 'string' ? respuesta : respuesta.message.content;
-                
-                if (historialAnalisis === "") {
-                    respuestaArea.value = textoFinal.trim();
-                } else {
-                    // Quitamos el texto de "Pensando" y ponemos la respuesta real
-                    respuestaArea.value = respuestaArea.value.replace("--- IA Pensando...", "--- IA:\n" + textoFinal.trim());
-                }
-                respuestaArea.scrollTop = respuestaArea.scrollHeight;
-                
-                btn.innerHTML = '<i class="fas fa-check"></i> ¡Listo!';
-            } catch (error) {
-                console.error("Error Puter:", error);
-                alert("⚠️ Error al generar el análisis con Puter: " + error.message);
-                btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
-                if (historialAnalisis !== "") {
-                    respuestaArea.value = respuestaArea.value.replace("\n\n--- IA Pensando...", "");
-                }
-            }
-
-            setTimeout(() => {
-                btn.innerHTML = '<i class="fas fa-comment-dots"></i> Enviar / Analizar';
-                btn.disabled = false;
-            }, 3000);
         };
 
         // ==========================================
@@ -4685,8 +4748,8 @@
                         
                         <div class="cut-line">✂ - - - - - - - - - - - - </div>
                     </div>
-                </body>
-                </html>
+                </${'body'}>
+                </${'html'}>
             `;
 
             ventanaTicket.document.open();
