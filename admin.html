@@ -4388,7 +4388,21 @@
             chatArea.scrollTop = chatArea.scrollHeight;
 
             // Preparamos el contexto con el historial
-            let promptBase = "Actúa como el Analista Financiero de F&B Parts. Respuestas cortas, concretas y directas al grano sobre rentabilidad e importaciones. NO uses formato markdown (**) en tus respuestas.";
+            // 🧠 SÚPER CONTEXTO EN TIEMPO REAL PARA LA IA
+            const ventasMes = document.getElementById('dash-v-total')?.innerText || '0.00';
+            const cxcTotal = document.getElementById('dash-cxc-total')?.innerText || '0.00';
+            const cxpTotal = document.getElementById('dash-cxp-total')?.innerText || '0.00';
+            const invTotal = document.getElementById('dash-inventario')?.innerText || '$0.00';
+
+            let promptBase = `Actúa como el Director Financiero (CFO) y Analista Estratégico de "Inversiones FB Parts, C.A.". Eres la mano derecha del Gerente (Brhayan).
+            
+            📊 ESTADO FINANCIERO EN TIEMPO REAL:
+            - Ventas del Mes: $${ventasMes}
+            - Cuentas por Cobrar (Dinero en la calle): $${cxcTotal}
+            - Cuentas por Pagar (Deudas a proveedores): $${cxpTotal}
+            - Capital en Inventario: ${invTotal}
+            
+            INSTRUCCIONES: Tienes visión global de toda la empresa, no solo de importaciones. Da respuestas analíticas, cortas y estratégicas basadas en estos números si el gerente te pide un resumen o consejo financiero. NO uses formato markdown (**) ni asteriscos en tus respuestas.`;
             let contextoHistorial = window.historialAdminIA.map(msg => `Brhayan: ${msg.user}\nAnalista: ${msg.ai}`).join("\n\n");
             let promptFinal = promptBase + "\n\n" + (contextoHistorial ? `HISTORIAL DE SESIÓN:\n${contextoHistorial}\n\n` : "") + `BRHAYAN: "${mensaje}"`;
 
