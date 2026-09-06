@@ -650,22 +650,38 @@
                         <h3 style="margin-top: 25px;"><i class="fas fa-list"></i> Ítems a Facturar (Reventa o Catálogo)</h3>
                         
                         <!-- SELECTOR DE MONEDA Y TASA -->
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; background: #f4f6f4; padding: 15px; border-radius: 6px; border: 1px solid #ddd;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px; background: #f4f6f4; padding: 15px; border-radius: 6px; border: 1px solid #ddd; align-items: end;">
+                            
                             <div class="form-group" style="margin-bottom: 0;">
-                                <label style="color: #333;">Moneda de Facturación</label>
-                                <select id="fac-moneda" onchange="actualizarSimboloMoneda()" style="border-color: #ccc;">
-                                    <option value="USD|$">Dólares (USD $)</option>
-                                    <option value="VES|Bs">Bolívares (VES Bs)</option>
-                                    <option value="EUR|€">Euros (EUR €)</option>
-                                </select>
+                                <label style="color: #333; font-weight: bold; margin-bottom: 8px; display: block;">Moneda de Facturación</label>
+                                <div style="position: relative;">
+                                    <select id="fac-moneda" onchange="actualizarSimboloMoneda()" style="width: 100%; padding: 10px 30px 10px 10px; border: 1px solid #ccc; border-radius: 4px; outline: none; font-size: 14px; background: white; cursor: pointer; -webkit-appearance: none; -moz-appearance: none; appearance: none;">
+                                        <option value="USD|$">Dólares (USD $)</option>
+                                        <option value="VES|Bs">Bolívares (VES Bs)</option>
+                                        <option value="EUR|€">Euros (EUR €)</option>
+                                    </select>
+                                    <i class="fas fa-chevron-down" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #666; pointer-events: none; font-size: 12px;"></i>
+                                </div>
                             </div>
+                            
+                            <!-- NUEVO: Selector de Moneda Base (Oculto por defecto) -->
+                            <div class="form-group" id="div-base-moneda" style="margin-bottom: 0; display: none;">
+                                <label style="color: #333; font-weight: bold; margin-bottom: 8px; display: block;">Moneda Base</label>
+                                <div style="position: relative;">
+                                    <select id="fac-base-moneda" onchange="cargarTasaBCV()" style="width: 100%; padding: 10px 30px 10px 10px; border: 1px solid #ccc; border-radius: 4px; outline: none; font-size: 14px; background: white; cursor: pointer; -webkit-appearance: none; -moz-appearance: none; appearance: none;">
+                                        <option value="USD">Tasa Dólar BCV</option>
+                                        <option value="EUR">Tasa Euro BCV</option>
+                                    </select>
+                                    <i class="fas fa-chevron-down" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #666; pointer-events: none; font-size: 12px;"></i>
+                                </div>
+                            </div>
+
                             <div class="form-group" style="margin-bottom: 0;">
-                                <label style="color: #333; display: flex; justify-content: space-between; align-items: center;">
+                                <label style="color: #333; display: flex; justify-content: space-between; align-items: center; font-weight: bold; margin-bottom: 8px;">
                                     Tasa de Cambio 
-                                    <button type="button" onclick="cargarTasaBCV()" style="color: #1d6fa5; background: none; border: none; cursor: pointer; font-size: 11px; font-weight: bold;"><i class="fas fa-sync-alt"></i> Actualizar Tasa</button>
+                                    <button type="button" onclick="cargarTasaBCV()" style="color: #1d6fa5; background: none; border: none; cursor: pointer; font-size: 12px; font-weight: bold;"><i class="fas fa-sync-alt"></i> Actualizar</button>
                                 </label>
-                                <input type="number" step="0.0001" id="fac-tasa" value="1" style="border-color: #ccc; font-weight: bold; color: #385723;" oninput="actualizarPreviewFactura()">
-                                <small style="font-size: 10px; color: #666;">Ojo: Edita la tasa si la base es otra moneda.</small>
+                                <input type="number" step="0.0001" id="fac-tasa" value="1" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; outline: none; font-size: 14px; background: white; font-weight: bold; color: #385723; box-sizing: border-box;" oninput="actualizarPreviewFactura()">
                             </div>
                         </div>
 
@@ -1241,28 +1257,30 @@
             <input type="hidden" id="edit-pedido-id">
             <div class="form-group"><label>Correo del Cliente</label><input type="email" id="edit-pedido-email"></div>
             <div class="form-group"><label>Nombre / Cliente Registrado</label><input type="text" id="edit-pedido-cliente"></div>
+            
             <div class="form-group">
                 <label>Método de Envío</label>
                 <select id="edit-pedido-envio" onchange="mostrarOpcionesMotorizado()">
                     <option value="Motorizado Caracas">Motorizado (Caracas)</option>
-                    <option value="Encomienda Tealca">Encomienda / Tealca (Interior)</option>
+                    <option value="Encomienda Tealca/Zoom">Encomienda / Tealca / Zoom (Interior)</option>
                     <option value="Retiro en Local">Retiro en Tienda / Local</option>
                 </select>
             </div>
+            
             <div class="form-group"><label>Estatus / Nro. de Guía / Tracking</label><input type="text" id="edit-pedido-tracking" placeholder="Ej: Guía Tealca #123456 o En camino"></div>
             
-            <!-- 🏍️ ZONA EXCLUSIVA PARA MOTORIZADOS -->
+            <!-- 🏍️ ZONA EXCLUSIVA PARA MOTORIZADOS (EDICIÓN) -->
             <div id="zona-motorizado" style="display: none; background: #eef2eb; padding: 12px; border-radius: 6px; border: 1px dashed #385723; margin-bottom: 15px;">
-                <label style="color: #155724; font-size: 12px;"><i class="fas fa-motorcycle"></i> Asignación de Motorizado (Pago Semanal)</label>
+                <label style="color: #155724; font-size: 12px; font-weight:bold;"><i class="fas fa-motorcycle"></i> Asignación de Motorizado (Cobro de Base/Viaje)</label>
                 <div style="display: flex; gap: 10px; margin-top: 5px;">
-                    <select id="edit-pedido-motorizado" style="flex: 2; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
-                        <option value="">Selecciona el Chofer...</option>
+                    <select id="edit-pedido-motorizado" style="flex: 2; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; background: white;">
+                        <option value="">Sin motorizado (No aplica)</option>
                         <option value="Jhon">Jhon (Logística)</option>
                         <option value="Bryan">Bryan (Ventas)</option>
                     </select>
                     <input type="number" step="0.01" id="edit-pedido-tarifa" placeholder="Costo Vje ($)" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
                 </div>
-                <small style="color: #666; font-size: 10px; display: block; margin-top: 5px;">Si la guía arriba está vacía, se autogenerará un código MOT-XXXX al guardar.</small>
+                <small style="color: #666; font-size: 10px; display: block; margin-top: 5px;">Aplica para delivery o carrera por dejar el paquete en la agencia.</small>
             </div>
 
             <div class="form-group">
@@ -1966,6 +1984,19 @@
             document.getElementById('ped-total-general').innerText = total.toFixed(2);
         };
 
+        window.mostrarOpcionesMotorizadoCreacion = function() {
+            const envio = document.getElementById('shipping-type').value;
+            const zonaMot = document.getElementById('zona-motorizado-creacion');
+            // Si el cliente retira en local, ocultamos el pago al motorizado
+            if (envio.includes('Retiro')) {
+                zonaMot.style.display = 'none';
+                document.getElementById('ped-motorizado').value = '';
+                document.getElementById('ped-tarifa-mot').value = '';
+            } else {
+                zonaMot.style.display = 'block';
+            }
+        };
+
         window.guardarPedidoManual = async function(e) {
             e.preventDefault();
             const btn = e.target.querySelector('button[type="submit"]');
@@ -1988,15 +2019,30 @@
 
             btn.innerHTML = "Registrando..."; btn.disabled = true;
 
+            const envioVal = document.getElementById('shipping-type').value;
+            let trackingVal = document.getElementById('tracking-info').value.trim();
+            const motorizadoVal = document.getElementById('ped-motorizado').value;
+            const tarifaVal = parseFloat(document.getElementById('ped-tarifa-mot').value) || 0;
+
+            // Auto-generar código MOT si está vacío y va con motorizado
+            if (envioVal.includes('Motorizado') && trackingVal === '') {
+                const aleatorio = Math.floor(1000 + Math.random() * 9000);
+                const letMot = motorizadoVal ? motorizadoVal.substring(0,1).toUpperCase() : 'M';
+                trackingVal = `MOT${letMot}-${aleatorio}`;
+            }
+
             const nuevoPedido = {
                 email: document.getElementById('client-email').value.trim(),
                 cliente: document.getElementById('client-name').value.trim(),
                 total: totalPedido,
-                envio: document.getElementById('shipping-type').value,
-                tracking: document.getElementById('tracking-info').value.trim(),
+                envio: envioVal,
+                tracking: trackingVal,
                 estado: "Pendiente",
                 fecha: new Date().toLocaleDateString("es-VE"),
-                productos: productos
+                productos: productos,
+                motorizado: motorizadoVal,
+                tarifaMotorizado: tarifaVal,
+                pagoMotorizadoEstatus: motorizadoVal ? 'Pendiente' : '' // Marca la deuda con el chófer
             };
 
             try {
@@ -2005,6 +2051,7 @@
                 e.target.reset();
                 document.getElementById('pedidos-items-container').innerHTML = '';
                 document.getElementById('ped-total-general').innerText = '0.00';
+                window.mostrarOpcionesMotorizadoCreacion(); // Restablecer la vista
                 window.cargarPedidos();
             } catch (error) {
                 console.error(error);
@@ -4260,36 +4307,70 @@
         };
 
         // ==========================================
-        // 🚀 LECTURA DE TASA BCV Y EURO
+        // 🚀 LECTURA DE TASAS (CORREGIDO Y MEJORADO)
         // ==========================================
         window.cargarTasaBCV = async function() {
             const inputTasa = document.getElementById('fac-tasa');
             const monedaSeleccionada = document.getElementById('fac-moneda').value.split('|')[0];
+            const baseMoneda = document.getElementById('fac-base-moneda') ? document.getElementById('fac-base-moneda').value : 'USD';
             
             try {
                 let nombreDocumento = "tasa_bcv";
-                if (monedaSeleccionada === "EUR") { nombreDocumento = "tasa_euro"; }
+                
+                // Lógica inteligente para saber qué tasa buscar en Firebase
+                if (monedaSeleccionada === "EUR") { 
+                    nombreDocumento = "tasa_euro"; 
+                } else if (monedaSeleccionada === "VES") {
+                    if (baseMoneda === "EUR") {
+                        nombreDocumento = "tasa_euro";
+                    } else {
+                        nombreDocumento = "tasa_bcv";
+                    }
+                } else if (monedaSeleccionada === "USD") {
+                    // Para USD, mostramos la Tasa BCV para que aparezca en el recibo legal
+                    nombreDocumento = "tasa_bcv";
+                }
 
                 const docRef = doc(db, "configuracion", nombreDocumento);
                 const docSnap = await getDoc(docRef);
                 
                 let tasaValor = 1;
                 if (docSnap.exists()) {
-                    tasaValor = docSnap.data().valor;
-                    if (inputTasa) inputTasa.value = tasaValor;
+                    tasaValor = docSnap.data().Valor || docSnap.data().valor || 1;
+                    if (inputTasa) inputTasa.value = parseFloat(tasaValor).toFixed(4);
                 } else {
-                    await setDoc(docRef, { valor: 1 });
                     if (inputTasa) inputTasa.value = 1;
                 }
+                
                 if (window.actualizarPreviewFactura) window.actualizarPreviewFactura();
             } catch (error) { console.error("Error cargando tasa:", error); }
         };
 
         window.actualizarSimboloMoneda = function() {
-            const simbolo = document.getElementById('fac-moneda').value.split('|')[1];
+            const monedaStr = document.getElementById('fac-moneda').value;
+            const monedaCode = monedaStr.split('|')[0];
+            const simbolo = monedaStr.split('|')[1];
+            
+            // Actualiza los símbolos visuales ($, Bs, €)
             document.querySelectorAll('.fac-simbolo-display').forEach(el => el.textContent = simbolo);
+            
+            // Mostrar/Ocultar el selector de base si es VES
+            const divBase = document.getElementById('div-base-moneda');
+            if (divBase) {
+                if (monedaCode === 'VES') {
+                    divBase.style.display = 'block';
+                } else {
+                    divBase.style.display = 'none';
+                }
+            }
+            
+            // Recargar la tasa automáticamente según la nueva selección
             window.cargarTasaBCV();
         };
+
+        // ==========================================
+        // 🚀 MOTOR DE ARRANQUE INICIAL
+        // ==========================================
         window.addEventListener('DOMContentLoaded', () => {
             window.cargarDashboard();
             window.cargarFinanzas();
@@ -4305,6 +4386,11 @@
             window.cargarHistorialImportaciones();
             
             window.cargarTasaBCV(); 
+            
+            // Cargar deudas del personal
+            setTimeout(() => { 
+                if (typeof window.cargarCxCPersonal === 'function') window.cargarCxCPersonal(); 
+            }, 1500);
         });
 
         // ==========================================
@@ -4783,25 +4869,38 @@
         window.mostrarOpcionesMotorizado = function() {
             const envio = document.getElementById('edit-pedido-envio').value;
             const zonaMot = document.getElementById('zona-motorizado');
-            if (envio.includes('Motorizado')) zonaMot.style.display = 'block';
-            else zonaMot.style.display = 'none';
+            // Ocultar base del motorizado SOLAMENTE si el cliente retira en local
+            if (envio.includes('Retiro')) {
+                zonaMot.style.display = 'none';
+            } else {
+                zonaMot.style.display = 'block';
+            }
         };
 
         window.abrirModalPedido = function(docId) {
             const ped = window.pedidosDBLocal[docId];
             if(!ped) return;
+            
             document.getElementById('edit-pedido-id').value = docId;
             document.getElementById('edit-pedido-email').value = ped.email || '';
             document.getElementById('edit-pedido-cliente').value = ped.cliente || '';
-            document.getElementById('edit-pedido-envio').value = ped.envio || 'Retiro en Local';
+            
+            // Reparación del select: Si era un pedido viejo que decía "Encomienda Tealca", lo forzamos al nombre nuevo
+            const envioSelect = document.getElementById('edit-pedido-envio');
+            if (ped.envio === "Encomienda Tealca") {
+                envioSelect.value = "Encomienda Tealca/Zoom";
+            } else {
+                envioSelect.value = ped.envio || 'Retiro en Local';
+            }
+            
             document.getElementById('edit-pedido-tracking').value = ped.tracking || '';
             document.getElementById('edit-pedido-estado').value = ped.estado || 'Pendiente';
             
             // Cargar datos del motorizado si existen
             document.getElementById('edit-pedido-motorizado').value = ped.motorizado || '';
             document.getElementById('edit-pedido-tarifa').value = ped.tarifaMotorizado || '';
+            
             window.mostrarOpcionesMotorizado();
-
             document.getElementById('modal-pedido').style.display = 'flex';
         };
 
@@ -4820,10 +4919,10 @@
             const motorizadoVal = document.getElementById('edit-pedido-motorizado').value;
             const tarifaVal = parseFloat(document.getElementById('edit-pedido-tarifa').value) || 0;
 
-            // Auto-generar código MOT si está vacío y es motorizado
-            if (envioVal.includes('Motorizado') && trackingVal === '') {
+            // Auto-generar código MOT si no tiene guía, tiene chofer y no es retiro en local
+            if (!envioVal.includes('Retiro') && motorizadoVal !== '' && trackingVal === '') {
                 const aleatorio = Math.floor(1000 + Math.random() * 9000);
-                const letMot = motorizadoVal ? motorizadoVal.substring(0,1).toUpperCase() : 'M';
+                const letMot = motorizadoVal.substring(0,1).toUpperCase();
                 trackingVal = `MOT${letMot}-${aleatorio}`;
             }
 
@@ -4835,7 +4934,7 @@
                 estado: document.getElementById('edit-pedido-estado').value,
                 motorizado: motorizadoVal,
                 tarifaMotorizado: tarifaVal,
-                pagoMotorizadoEstatus: pedOriginal.pagoMotorizadoEstatus || 'Pendiente' // Mantiene el estatus de pago
+                pagoMotorizadoEstatus: motorizadoVal ? (pedOriginal.pagoMotorizadoEstatus || 'Pendiente') : ''
             };
 
             try {
@@ -4871,7 +4970,9 @@
             // Revisar la memoria local de pedidos
             for (const docId in window.pedidosDBLocal) {
                 const ped = window.pedidosDBLocal[docId];
-                if (ped.envio && ped.envio.includes('Motorizado') && ped.pagoMotorizadoEstatus !== 'Pagado') {
+                
+                // 🚀 CORRECCIÓN: Ahora busca cualquier pedido que tenga a un chofer asignado, sin importar si es Tealca o Delivery
+                if (ped.motorizado && ped.motorizado !== '' && ped.pagoMotorizadoEstatus !== 'Pagado') {
                     if (ped.motorizado === 'Jhon') {
                         viajesJhon.push({ id: docId, ...ped });
                         totalJhon += (parseFloat(ped.tarifaMotorizado) || 0);
