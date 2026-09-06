@@ -17,6 +17,23 @@
     <link rel="stylesheet" href="styles.css">
 
     <style>
+
+        /* 🚀 REPARACIÓN GLOBAL DE BORDES ROTOS EN TABLAS */
+        .data-table td[style*="display: flex"] {
+            display: table-cell !important;
+            text-align: center !important;
+            vertical-align: middle !important;
+            white-space: nowrap !important; /* 👈 Esta es la magia que los pone lado a lado */
+        }
+        .data-table td[style*="display: flex"] > button,
+        .data-table td[style*="display: flex"] > a {
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            margin: 0 3px !important; 
+            vertical-align: middle;
+        }
+
         .admin-container { max-width: 1250px; margin: 40px auto; padding: 0 20px; }
         
         .admin-tabs { display: flex; gap: 10px; margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 10px; flex-wrap: wrap; }
