@@ -418,16 +418,38 @@
                             </div>
 
                             <div class="form-group">
-                                <label>Método de Envio</label>
-                                <select id="shipping-type" required>
+                                <label>Método de Envío</label>
+                                <select id="shipping-type" onchange="mostrarOpcionesMotorizadoCreacion()" required>
                                     <option value="Motorizado Caracas">Motorizado (Caracas)</option>
-                                    <option value="Encomienda Tealca">Encomienda / Tealca (Interior)</option>
+                                    <option value="Encomienda Tealca/Zoom">Encomienda / Tealca / Zoom (Interior)</option>
                                     <option value="Retiro en Local">Retiro en Tienda / Local</option>
                                 </select>
                             </div>
-                            <div class="form-group">
-                                <label>Detalle / Nro. de Guía</label>
-                                <input type="text" id="tracking-info" placeholder="Ej: En camino con motorizado">
+
+                            <!-- 🏍️ ZONA DE MOTORIZADO (CREACIÓN) -->
+                            <div id="zona-motorizado-creacion" style="background: #eef2eb; padding: 12px; border-radius: 6px; border: 1px dashed #385723; margin-bottom: 15px;">
+                                <label style="color: #155724; font-size: 12px; font-weight:bold;"><i class="fas fa-motorcycle"></i> Asignar Motorizado (Cobro de Base/Viaje)</label>
+                                <div style="display: flex; gap: 10px; margin-top: 5px;">
+                                    <select id="ped-motorizado" style="flex: 2; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; background: white;">
+                                        <option value="">Sin motorizado (No aplica)</option>
+                                        <option value="Jhon">Jhon (Logística)</option>
+                                        <option value="Bryan">Bryan (Ventas)</option>
+                                    </select>
+                                    <input type="number" step="0.01" id="ped-tarifa-mot" placeholder="Costo Total ($)" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+                                </div>
+                                <input type="text" id="ped-ruta-mot" placeholder="Notas (Ej: Retirar en Chacao y Boleíta)" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; margin-top: 8px; box-sizing: border-box;">
+                                <small style="color: #666; font-size: 10px; display: block; margin-top: 5px;">Si son varios retiros, suma el costo de las bases y detalla la ruta.</small>
+                            </div>
+
+                            <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                <div>
+                                    <label>Guía Encomienda (Tealca/Zoom)</label>
+                                    <input type="text" id="tracking-info" placeholder="Ej: 20145678">
+                                </div>
+                                <div>
+                                    <label>Guía / Estatus Motorizado</label>
+                                    <input type="text" id="tracking-motorizado" placeholder="Ej: MOTJ-1234">
+                                </div>
                             </div>
                             <button type="submit" class="btn-action">Registrar Pedido</button>
                         </form>
@@ -1267,7 +1289,16 @@
                 </select>
             </div>
             
-            <div class="form-group"><label>Estatus / Nro. de Guía / Tracking</label><input type="text" id="edit-pedido-tracking" placeholder="Ej: Guía Tealca #123456 o En camino"></div>
+            <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div>
+                    <label>Guía Encomienda (Agencia)</label>
+                    <input type="text" id="edit-pedido-tracking" placeholder="Ej: 20145678" style="background: #fff;">
+                </div>
+                <div>
+                    <label>Guía / Estatus Motorizado</label>
+                    <input type="text" id="edit-pedido-tracking-mot" placeholder="Ej: MOTJ-1234" style="background: #eef2eb; color: #1d6fa5; font-weight: bold;">
+                </div>
+            </div>
             
             <!-- 🏍️ ZONA EXCLUSIVA PARA MOTORIZADOS (EDICIÓN) -->
             <div id="zona-motorizado" style="display: none; background: #eef2eb; padding: 12px; border-radius: 6px; border: 1px dashed #385723; margin-bottom: 15px;">
@@ -1278,9 +1309,10 @@
                         <option value="Jhon">Jhon (Logística)</option>
                         <option value="Bryan">Bryan (Ventas)</option>
                     </select>
-                    <input type="number" step="0.01" id="edit-pedido-tarifa" placeholder="Costo Vje ($)" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+                    <input type="number" step="0.01" id="edit-pedido-tarifa" placeholder="Costo Total ($)" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
                 </div>
-                <small style="color: #666; font-size: 10px; display: block; margin-top: 5px;">Aplica para delivery o carrera por dejar el paquete en la agencia.</small>
+                <input type="text" id="edit-pedido-ruta" placeholder="Notas (Ej: Retirar en Chacao y Boleíta)" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; margin-top: 8px; box-sizing: border-box;">
+                <small style="color: #666; font-size: 10px; display: block; margin-top: 5px;">Si son varios retiros, suma el costo de las bases y detalla la ruta.</small>
             </div>
 
             <div class="form-group">
@@ -2009,26 +2041,28 @@
                 const cant = parseInt(row.querySelector('.ped-item-cant').value) || 1;
                 const desc = row.querySelector('.ped-item-desc').value.trim();
                 const precio = parseFloat(row.querySelector('.ped-item-precio').value) || 0;
-                if(desc) {
-                    productos.push({ nombre: desc, cantidad: cant, precio: precio });
-                    totalPedido += (cant * precio);
-                }
+                if(desc) { productos.push({ nombre: desc, cantidad: cant, precio: precio }); totalPedido += (cant * precio); }
             });
 
             if(productos.length === 0) { alert("Agrega al menos un repuesto al pedido."); return; }
-
             btn.innerHTML = "Registrando..."; btn.disabled = true;
 
             const envioVal = document.getElementById('shipping-type').value;
             let trackingVal = document.getElementById('tracking-info').value.trim();
+            let trackingMotVal = document.getElementById('tracking-motorizado').value.trim();
             const motorizadoVal = document.getElementById('ped-motorizado').value;
             const tarifaVal = parseFloat(document.getElementById('ped-tarifa-mot').value) || 0;
 
-            // Auto-generar código MOT si está vacío y va con motorizado
-            if (envioVal.includes('Motorizado') && trackingVal === '') {
+            // Limpieza inteligente al editar para pedidos viejos
+            if (envioVal.includes('Motorizado')) {
+                if (trackingVal !== '' && trackingMotVal === '') trackingMotVal = trackingVal;
+                trackingVal = ''; // Forzamos a vaciar la agencia porque es moto directa
+            }
+
+            if (!envioVal.includes('Retiro') && motorizadoVal !== '' && trackingMotVal === '') {
                 const aleatorio = Math.floor(1000 + Math.random() * 9000);
-                const letMot = motorizadoVal ? motorizadoVal.substring(0,1).toUpperCase() : 'M';
-                trackingVal = `MOT${letMot}-${aleatorio}`;
+                const letMot = motorizadoVal.substring(0,1).toUpperCase();
+                trackingMotVal = `MOT${letMot}-${aleatorio}`;
             }
 
             const nuevoPedido = {
@@ -2037,12 +2071,14 @@
                 total: totalPedido,
                 envio: envioVal,
                 tracking: trackingVal,
+                trackingMotorizado: trackingMotVal,
                 estado: "Pendiente",
                 fecha: new Date().toLocaleDateString("es-VE"),
                 productos: productos,
                 motorizado: motorizadoVal,
                 tarifaMotorizado: tarifaVal,
-                pagoMotorizadoEstatus: motorizadoVal ? 'Pendiente' : '' // Marca la deuda con el chófer
+                pagoMotorizadoEstatus: motorizadoVal ? 'Pendiente' : '',
+                rutasMotorizado: document.getElementById('ped-ruta-mot').value.trim()
             };
 
             try {
@@ -2051,12 +2087,9 @@
                 e.target.reset();
                 document.getElementById('pedidos-items-container').innerHTML = '';
                 document.getElementById('ped-total-general').innerText = '0.00';
-                window.mostrarOpcionesMotorizadoCreacion(); // Restablecer la vista
+                window.mostrarOpcionesMotorizadoCreacion();
                 window.cargarPedidos();
-            } catch (error) {
-                console.error(error);
-                alert("Error al registrar el pedido.");
-            }
+            } catch (error) { console.error(error); alert("Error al registrar."); }
             btn.innerHTML = "Registrar Pedido"; btn.disabled = false;
         };
 
@@ -2155,6 +2188,20 @@
                         productosStr = `${ped.cantidad}x ${ped.producto}`;
                     }
 
+                    let trackingHtml = '';
+                    if (ped.envio && ped.envio.includes('Motorizado')) {
+                        // Si es moto directa, usamos la guía del motorizado (o la vieja si se quedó trabada)
+                        let guiaReal = ped.trackingMotorizado || ped.tracking || 'Pendiente';
+                        trackingHtml = `<span style="font-size:11px; color:#1d6fa5;">🏍️ Guía Moto: <b>${guiaReal}</b></span><br>`;
+                    } else if (ped.envio && ped.envio.includes('Encomienda')) {
+                        // Si es encomienda, se muestran los dos viajes
+                        if (ped.trackingMotorizado) trackingHtml += `<span style="font-size:11px; color:#1d6fa5;">🏍️ Traslado Agencia: <b>${ped.trackingMotorizado}</b></span><br>`;
+                        if (ped.tracking) trackingHtml += `<span style="font-size:11px; color:#d35400;">📦 Guía Tealca/Zoom: <b>${ped.tracking}</b></span><br>`;
+                        if (!ped.tracking && !ped.trackingMotorizado) trackingHtml += `<span style="font-size:11px; color:#999;">Sin guías asignadas</span><br>`;
+                    } else {
+                        trackingHtml = `<span style="font-size:11px; color:#999;">Sin guía (Retiro en Local)</span><br>`;
+                    }
+
                     tbody.innerHTML += `
                         <tr>
                             <td>${ped.fecha || 'N/A'}</td>
@@ -2163,12 +2210,12 @@
                             <td><strong>$${Number(ped.total || 0).toFixed(2)}</strong></td>
                             <td>
                                 <span class="badge-shipping">${ped.envio}</span><br>
-                                <span style="font-size:11px;">${ped.tracking || 'Sin guía / tracking'}</span><br>
+                                ${trackingHtml}
                                 <span class="${badgeClass}" style="margin-top:4px; display:inline-block;">${ped.estado || 'Pendiente'}</span>
+                            </td>
                             <td style="display: flex; gap: 5px; justify-content: center; align-items: center;">
                                 <button type="button" onclick="abrirModalPedido('${docId}')" style="background:#1d6fa5; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="Editar Envío"><i class="fas fa-edit"></i></button>
                                 <button type="button" onclick="enviarPedidoAFacturacion('${docId}')" style="background:#28a745; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="Facturar / Nota de Entrega"><i class="fas fa-file-invoice"></i></button>
-                                
                                 <!-- 🖨️ NUEVO BOTÓN: ETIQUETA TÉRMICA -->
                                 <button type="button" onclick="imprimirEtiquetaEnvio('${docId}')" style="background:#333; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="Imprimir Etiqueta (58mm)"><i class="fas fa-print"></i></button>
                             </td>
@@ -2184,39 +2231,87 @@
         window.abrirModalPedido = function(docId) {
             const ped = window.pedidosDBLocal[docId];
             if(!ped) return;
+            
             document.getElementById('edit-pedido-id').value = docId;
             document.getElementById('edit-pedido-email').value = ped.email || '';
             document.getElementById('edit-pedido-cliente').value = ped.cliente || '';
-            document.getElementById('edit-pedido-envio').value = ped.envio || 'Retiro en Local';
-            document.getElementById('edit-pedido-tracking').value = ped.tracking || '';
-            document.getElementById('edit-pedido-estado').value = ped.estado || 'Pendiente';
-            document.getElementById('modal-pedido').style.display = 'flex';
-        };
+            
+            const envioSelect = document.getElementById('edit-pedido-envio');
+            if (ped.envio === "Encomienda Tealca") envioSelect.value = "Encomienda Tealca/Zoom";
+            else envioSelect.value = ped.envio || 'Retiro en Local';
+            
+            // 🚀 RESCATE BLINDADO DE GUÍAS
+            let valAgencia = ped.tracking ? ped.tracking.trim() : '';
+            let valMot = ped.trackingMotorizado ? ped.trackingMotorizado.trim() : '';
+            
+            // Si es Motorizado y la guía se quedó atrapada en la agencia, sácala de ahí
+            if (envioSelect.value.includes('Motorizado')) {
+                if (valAgencia !== '' && valMot === '') {
+                    valMot = valAgencia;
+                    valAgencia = '';
+                }
+            } else if (valAgencia.toUpperCase().includes('MOT') && valMot === '') {
+                valMot = valAgencia;
+                valAgencia = '';
+            }
 
-        window.cerrarModalPedido = function() {
-            document.getElementById('modal-pedido').style.display = 'none';
+            document.getElementById('edit-pedido-tracking').value = valAgencia;
+            document.getElementById('edit-pedido-tracking-mot').value = valMot;
+            
+            document.getElementById('edit-pedido-estado').value = ped.estado || 'Pendiente';
+            
+            document.getElementById('edit-pedido-motorizado').value = ped.motorizado || '';
+            document.getElementById('edit-pedido-tarifa').value = ped.tarifaMotorizado || '';
+            document.getElementById('edit-pedido-ruta').value = ped.rutasMotorizado || '';
+            
+            window.mostrarOpcionesMotorizado();
+            document.getElementById('modal-pedido').style.display = 'flex';
         };
 
         window.guardarCambiosPedido = async function() {
             const docId = document.getElementById('edit-pedido-id').value;
+            const pedOriginal = window.pedidosDBLocal[docId] || {};
             const btn = document.getElementById('btn-save-pedido');
             btn.innerHTML = "Guardando..."; btn.disabled = true;
+
+            let trackingVal = document.getElementById('edit-pedido-tracking').value.trim();
+            let trackingMotVal = document.getElementById('edit-pedido-tracking-mot').value.trim();
+            const envioVal = document.getElementById('edit-pedido-envio').value;
+            const motorizadoVal = document.getElementById('edit-pedido-motorizado').value;
+            const tarifaVal = parseFloat(document.getElementById('edit-pedido-tarifa').value) || 0;
+
+            // Limpieza antes de guardar a Firebase
+            if (envioVal.includes('Motorizado')) {
+                if (trackingVal !== '' && trackingMotVal === '') trackingMotVal = trackingVal;
+                trackingVal = ''; 
+            }
+
+            if (!envioVal.includes('Retiro') && motorizadoVal !== '' && trackingMotVal === '') {
+                const aleatorio = Math.floor(1000 + Math.random() * 9000);
+                const letMot = motorizadoVal.substring(0,1).toUpperCase();
+                trackingMotVal = `MOT${letMot}-${aleatorio}`;
+            }
 
             const datosActualizados = {
                 email: document.getElementById('edit-pedido-email').value.trim(),
                 cliente: document.getElementById('edit-pedido-cliente').value.trim(),
-                envio: document.getElementById('edit-pedido-envio').value,
-                tracking: document.getElementById('edit-pedido-tracking').value.trim(),
-                estado: document.getElementById('edit-pedido-estado').value
+                envio: envioVal,
+                tracking: trackingVal,
+                trackingMotorizado: trackingMotVal,
+                estado: document.getElementById('edit-pedido-estado').value,
+                motorizado: motorizadoVal,
+                tarifaMotorizado: tarifaVal,
+                pagoMotorizadoEstatus: motorizadoVal ? (pedOriginal.pagoMotorizadoEstatus || 'Pendiente') : '',
+                rutasMotorizado: document.getElementById('edit-pedido-ruta').value.trim()
             };
 
             try {
                 await updateDoc(doc(db, "pedidos", docId), datosActualizados);
                 window.cerrarModalPedido();
                 window.cargarPedidos();
-            } catch (error) {
-                console.error(error);
-                alert("Error al actualizar la información del pedido.");
+            } catch (error) { 
+                console.error(error); 
+                alert("Error al actualizar la información del pedido."); 
             }
             btn.innerHTML = "Guardar"; btn.disabled = false;
         };
@@ -5156,6 +5251,88 @@
         window.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => { if (typeof window.cargarCxCPersonal === 'function') window.cargarCxCPersonal(); }, 1500);
         });
+
+        // 🚀 CORRECCIÓN DEFINITIVA DE GUÍAS (FORZAR LECTURA DE CAJAS NUEVAS)
+        window.abrirModalPedido = function(docId) {
+            const ped = window.pedidosDBLocal[docId];
+            if(!ped) return;
+            
+            document.getElementById('edit-pedido-id').value = docId;
+            document.getElementById('edit-pedido-email').value = ped.email || '';
+            document.getElementById('edit-pedido-cliente').value = ped.cliente || '';
+            
+            const envioSelect = document.getElementById('edit-pedido-envio');
+            if (ped.envio === "Encomienda Tealca") envioSelect.value = "Encomienda Tealca/Zoom";
+            else envioSelect.value = ped.envio || 'Retiro en Local';
+            
+            let valAgencia = ped.tracking ? ped.tracking.trim() : '';
+            let valMot = ped.trackingMotorizado ? ped.trackingMotorizado.trim() : '';
+            
+            // Si es Motorizado y la guía se quedó atrapada en la agencia, sácala de ahí
+            if (envioSelect.value.includes('Motorizado')) {
+                if (valAgencia !== '' && valMot === '') { valMot = valAgencia; valAgencia = ''; }
+            } else if (valAgencia.toUpperCase().includes('MOT') && valMot === '') {
+                valMot = valAgencia; valAgencia = '';
+            }
+
+            document.getElementById('edit-pedido-tracking').value = valAgencia;
+            document.getElementById('edit-pedido-tracking-mot').value = valMot;
+            document.getElementById('edit-pedido-estado').value = ped.estado || 'Pendiente';
+            
+            document.getElementById('edit-pedido-motorizado').value = ped.motorizado || '';
+            document.getElementById('edit-pedido-tarifa').value = ped.tarifaMotorizado || '';
+            document.getElementById('edit-pedido-ruta').value = ped.rutasMotorizado || '';
+            
+            window.mostrarOpcionesMotorizado();
+            document.getElementById('modal-pedido').style.display = 'flex';
+        };
+
+        window.guardarCambiosPedido = async function() {
+            const docId = document.getElementById('edit-pedido-id').value;
+            const pedOriginal = window.pedidosDBLocal[docId] || {};
+            const btn = document.getElementById('btn-save-pedido');
+            btn.innerHTML = "Guardando..."; btn.disabled = true;
+
+            let trackingVal = document.getElementById('edit-pedido-tracking').value.trim();
+            let trackingMotVal = document.getElementById('edit-pedido-tracking-mot').value.trim();
+            const envioVal = document.getElementById('edit-pedido-envio').value;
+            const motorizadoVal = document.getElementById('edit-pedido-motorizado').value;
+            const tarifaVal = parseFloat(document.getElementById('edit-pedido-tarifa').value) || 0;
+
+            if (envioVal.includes('Motorizado')) {
+                if (trackingVal !== '' && trackingMotVal === '') trackingMotVal = trackingVal;
+                trackingVal = ''; 
+            }
+
+            if (!envioVal.includes('Retiro') && motorizadoVal !== '' && trackingMotVal === '') {
+                const aleatorio = Math.floor(1000 + Math.random() * 9000);
+                const letMot = motorizadoVal.substring(0,1).toUpperCase();
+                trackingMotVal = `MOT${letMot}-${aleatorio}`;
+            }
+
+            const datosActualizados = {
+                email: document.getElementById('edit-pedido-email').value.trim(),
+                cliente: document.getElementById('edit-pedido-cliente').value.trim(),
+                envio: envioVal,
+                tracking: trackingVal,
+                trackingMotorizado: trackingMotVal,
+                estado: document.getElementById('edit-pedido-estado').value,
+                motorizado: motorizadoVal,
+                tarifaMotorizado: tarifaVal,
+                pagoMotorizadoEstatus: motorizadoVal ? (pedOriginal.pagoMotorizadoEstatus || 'Pendiente') : '',
+                rutasMotorizado: document.getElementById('edit-pedido-ruta').value.trim()
+            };
+
+            try {
+                await updateDoc(doc(db, "pedidos", docId), datosActualizados);
+                window.cerrarModalPedido();
+                window.cargarPedidos();
+            } catch (error) { 
+                console.error(error); 
+                alert("Error al actualizar la información del pedido."); 
+            }
+            btn.innerHTML = "Guardar"; btn.disabled = false;
+        };
 
     </script>
 </body>
