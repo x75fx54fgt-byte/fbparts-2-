@@ -4585,12 +4585,46 @@
                 </div>`;
             chatArea.scrollTop = chatArea.scrollHeight;
 
-            // Preparamos el contexto con el historial
             // 🧠 SÚPER CONTEXTO EN TIEMPO REAL PARA LA IA
             const ventasMes = document.getElementById('dash-v-total')?.innerText || '0.00';
             const cxcTotal = document.getElementById('dash-cxc-total')?.innerText || '0.00';
             const cxpTotal = document.getElementById('dash-cxp-total')?.innerText || '0.00';
             const invTotal = document.getElementById('dash-inventario')?.innerText || '$0.00';
+
+            // 🚀 NUEVA MAGIA: INTERCEPTOR DE DOCUMENTOS
+            let contextoExtra = "";
+            
+            // Buscar menciones a Cotizaciones (Ej: "cotizacion 1837" o "cotización #1837")
+            const regexCot = /cotizaci[oó]n\s*#?\s*(\d+)/i;
+            const matchCot = mensaje.match(regexCot);
+            if (matchCot) {
+                const nroBusqueda = parseInt(matchCot[1]);
+                for (const docId in window.cotizacionesDBLocal) {
+                    if (parseInt(window.cotizacionesDBLocal[docId].nro) === nroBusqueda) {
+                        const cot = window.cotizacionesDBLocal[docId];
+                        contextoExtra += `\n\n📄 [ATENCIÓN IA: El usuario te está preguntando por la COTIZACIÓN #${cot.nro}. Aquí tienes los datos extraídos de la base de datos para que le respondas con precisión absoluta]:\n`;
+                        contextoExtra += `- Cliente: ${cot.cliente} (RIF: ${cot.rif})\n- Vehículo: ${cot.vehiculo} (${cot.anio})\n- Estatus: ${cot.estatusComercial}\n- Fecha: ${cot.fecha}\n- Total General: $${cot.total}\n- Ítems cotizados:\n`;
+                        cot.items.forEach(i => { contextoExtra += `  * ${i.cantidad}x ${i.descripcion} a $${i.precioUnitario} c/u (Desc: $${i.descuento})\n`; });
+                        break;
+                    }
+                }
+            }
+
+            // Buscar menciones a Facturas (Ej: "factura 0607" o "factura 607")
+            const regexFac = /factura\s*#?\s*(\d+)/i;
+            const matchFac = mensaje.match(regexFac);
+            if (matchFac) {
+                const nroBusqueda = parseInt(matchFac[1]);
+                for (const docId in window.facturasDBLocal) {
+                    if (parseInt(window.facturasDBLocal[docId].nro) === nroBusqueda) {
+                        const fac = window.facturasDBLocal[docId];
+                        contextoExtra += `\n\n🧾 [ATENCIÓN IA: El usuario te está preguntando por la FACTURA #${fac.nro}. Aquí tienes los datos extraídos de la base de datos para que le respondas con precisión absoluta]:\n`;
+                        contextoExtra += `- Cliente: ${fac.cliente} (RIF: ${fac.rif})\n- Estatus: ${fac.estatusComercial}\n- Fecha: ${fac.fecha}\n- Total General: ${fac.simbolo}${fac.total}\n- Ítems facturados:\n`;
+                        if(fac.items) fac.items.forEach(i => { contextoExtra += `  * ${i.cantidad}x ${i.descripcion} a ${fac.simbolo}${i.precioUnitario} c/u\n`; });
+                        break;
+                    }
+                }
+            }
 
             let promptBase = `Actúa como el Director Financiero (CFO) y Analista Estratégico de "Inversiones FB Parts, C.A.". Eres la mano derecha del Gerente (Brhayan).
             
@@ -4600,9 +4634,12 @@
             - Cuentas por Pagar (Deudas a proveedores): $${cxpTotal}
             - Capital en Inventario: ${invTotal}
             
-            INSTRUCCIONES: Tienes visión global de toda la empresa, no solo de importaciones. Da respuestas analíticas, cortas y estratégicas basadas en estos números si el gerente te pide un resumen o consejo financiero. NO uses formato markdown (**) ni asteriscos en tus respuestas.`;
+            INSTRUCCIONES: Tienes visión global de toda la empresa. Da respuestas analíticas, cortas y estratégicas. NO uses formato markdown (**) ni asteriscos en tus respuestas.`;
+            
             let contextoHistorial = window.historialAdminIA.map(msg => `Brhayan: ${msg.user}\nAnalista: ${msg.ai}`).join("\n\n");
-            let promptFinal = promptBase + "\n\n" + (contextoHistorial ? `HISTORIAL DE SESIÓN:\n${contextoHistorial}\n\n` : "") + `BRHAYAN: "${mensaje}"`;
+            
+            // Unimos el prompt + historial + documento inyectado + mensaje del usuario
+            let promptFinal = promptBase + "\n\n" + (contextoHistorial ? `HISTORIAL DE SESIÓN:\n${contextoHistorial}\n\n` : "") + contextoExtra + `\n\nBRHAYAN: "${mensaje}"`;
 
             try {
                 const respuesta = await puter.ai.chat(promptFinal);
