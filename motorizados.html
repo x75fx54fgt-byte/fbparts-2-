@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Portal de Logística | F&B Parts</title>
+    <link rel="icon" type="image/png" href="img/favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Librería de Mapas Gratis (Leaflet) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        body { background-color: #f4f6f4; font-family: 'Helvetica Neue', sans-serif; }
+        .app-container { max-width: 480px; margin: 0 auto; background: white; min-height: 100vh; box-shadow: 0 0 20px rgba(0,0,0,0.05); position: relative; }
+        .header-mobile { background: #385723; color: white; padding: 20px; text-align: center; border-radius: 0 0 20px 20px; box-shadow: 0 4px 10px rgba(56,87,35,0.2); }
+        .ganancia-box { background: #e2f0d9; border: 1px solid #c3e6cb; border-radius: 12px; padding: 20px; text-align: center; margin: -20px 20px 20px 20px; position: relative; z-index: 10; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        .timeline { border-left: 3px solid #1d6fa5; margin-left: 20px; padding-left: 20px; position: relative; }
+        .timeline-item { margin-bottom: 20px; position: relative; }
+        .timeline-item::before { content: ''; position: absolute; left: -28px; top: 0; width: 14px; height: 14px; background: #1d6fa5; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 0 2px #1d6fa5; }
+        
+        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #385723; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
+        #login-box { background: white; padding: 30px; border-radius: 16px; width: 100%; max-width: 350px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+
+        .parada-box { background: #fff; border: 1px solid #eee; padding: 12px; border-radius: 8px; margin-top: 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+    </style>
+</head>
+<body>
+
+    <!-- PANTALLA DE ACCESO -->
+    <div id="login-screen">
+        <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png" alt="F&B Parts" style="width: 150px; margin-bottom: 30px; filter: brightness(0) invert(1);">
+        <div id="login-box">
+            <h2 style="color: #385723; font-size: 22px; font-weight: bold; margin-bottom: 5px;">Portal del Conductor</h2>
+            <p style="color: #666; font-size: 13px; margin-bottom: 25px;">El sistema pedirá tu ubicación GPS al entrar.</p>
+            
+            <select id="login-user" style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 15px; font-size: 16px; outline: none; background: #f9f9f9;">
+                <option value="">Selecciona tu nombre...</option>
+                <option value="Jhon">Jhon</option>
+                <option value="Bryan">Bryan</option>
+            </select>
+            
+            <input type="password" id="login-pin" placeholder="PIN de Seguridad" style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 20px; font-size: 16px; text-align: center; letter-spacing: 5px; outline: none;">
+            
+            <button onclick="entrarPortal()" style="width: 100%; background: #1d6fa5; color: white; border: none; padding: 14px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer;">
+                Ingresar e Iniciar Ruta
+            </button>
+        </div>
+    </div>
+
+    <!-- APP PRINCIPAL -->
+    <div class="app-container" id="app-main" style="display: none;">
+        <div class="header-mobile">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png" alt="Logo" style="height: 35px; filter: brightness(0) invert(1);">
+                <button onclick="salirPortal()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px;"><i class="fas fa-sign-out-alt"></i> Salir</button>
+            </div>
+            <h1 style="font-size: 18px; margin: 0;">Hola, <span id="nombre-chofer" style="font-weight: bold;">---</span> 👋</h1>
+            <p style="font-size: 12px; opacity: 0.8; margin: 2px 0 20px 0;"><i class="fas fa-satellite-dish"></i> GPS Activo y Transmitiendo</p>
+        </div>
+
+        <div class="ganancia-box">
+            <span style="font-size: 12px; color: #385723; font-weight: bold; text-transform: uppercase;">Por Cobrar Esta Semana</span>
+            <div style="font-size: 38px; color: #155724; font-weight: bold; margin: 5px 0;">$<span id="total-pendiente">0.00</span></div>
+        </div>
+
+        <!-- SECCIÓN DE MAPA -->
+        <div style="padding: 0 20px; margin-bottom: 25px;">
+            <h3 style="color: #333; font-size: 15px; font-weight: bold; margin-bottom: 10px;"><i class="fas fa-map-marked-alt" style="color:#1d6fa5;"></i> Tu Ruta Hoy</h3>
+            <div id="mapa-caracas" style="height: 250px; border-radius: 12px; border: 1px solid #ddd; z-index: 1;"></div>
+        </div>
+
+        <!-- SECCIÓN BITÁCORA DE RUTAS -->
+        <div style="padding: 0 20px 30px 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="color: #333; font-size: 15px; font-weight: bold; margin:0;"><i class="fas fa-clipboard-list" style="color:#28a745;"></i> Tareas Asignadas</h3>
+                <button onclick="cargarBitacora(currentUser)" style="background:none; border:none; color:#1d6fa5; font-size:12px; cursor:pointer;"><i class="fas fa-sync-alt"></i> Actualizar</button>
+            </div>
+            
+            <div class="timeline" id="bitacora-lista">
+                <p style="font-size: 13px; color: #666; text-align: center;">Cargando tus rutas...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts de Lógica y Firebase -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getFirestore, collection, getDocs, query, where, doc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
+            authDomain: "fb-parts-app.firebaseapp.com",
+            projectId: "fb-parts-app",
+            storageBucket: "fb-parts-app.firebasestorage.app",
+            messagingSenderId: "21714159445",
+            appId: "1:21714159445:web:8f4946cd1c98d9b95dd1dc"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let mapa = null;
+        window.currentUser = null;
+        let watchIdGPS = null;
+        let marcadorPiloto = null;
+
+        const PINES_ACCESO = { "Jhon": "1234", "Bryan": "5678" };
+
+        window.entrarPortal = function() {
+            const user = document.getElementById('login-user').value;
+            const pin = document.getElementById('login-pin').value;
+
+            if(!user) { alert("Selecciona tu nombre"); return; }
+            if(pin !== PINES_ACCESO[user]) { alert("PIN incorrecto"); return; }
+
+            window.currentUser = user;
+            document.getElementById('nombre-chofer').textContent = user;
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('app-main').style.display = 'block';
+
+            iniciarMapa();
+            iniciarTransmisionGPS(user);
+            window.cargarBitacora(user);
+            
+            // Recargar finanzas cada rato
+            setInterval(() => { if(window.currentUser) window.cargarBitacora(window.currentUser); }, 30000);
+        };
+
+        window.salirPortal = function() {
+            if(watchIdGPS) navigator.geolocation.clearWatch(watchIdGPS);
+            window.currentUser = null;
+            document.getElementById('app-main').style.display = 'none';
+            document.getElementById('login-screen').style.display = 'flex';
+            document.getElementById('login-pin').value = '';
+        };
+
+        function iniciarMapa() {
+            if(mapa !== null) return; 
+            mapa = L.map('mapa-caracas').setView([10.4806, -66.9036], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapa);
+        }
+
+        // 🚀 TRANSMISOR GPS EN TIEMPO REAL
+        function iniciarTransmisionGPS(chofer) {
+            if ("geolocation" in navigator) {
+                watchIdGPS = navigator.geolocation.watchPosition(async (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+
+                    // Mover la moto del motorizado en su propio mapa
+                    if (!marcadorPiloto) {
+                        const motoIcon = L.icon({ iconUrl: 'https://cdn-icons-png.flaticon.com/512/1048/1048314.png', iconSize: [36, 36], iconAnchor: [18, 36] });
+                        marcadorPiloto = L.marker([lat, lng], {icon: motoIcon}).addTo(mapa).bindPopup("¡Estás aquí!").openPopup();
+                        mapa.setView([lat, lng], 15);
+                    } else {
+                        marcadorPiloto.setLatLng([lat, lng]);
+                    }
+
+                    // Enviar a la Base de Datos para el Admin
+                    try {
+                        await setDoc(doc(db, "choferes_gps", chofer), {
+                            lat: lat, lng: lng, 
+                            hora: new Date().toLocaleTimeString("es-VE"), 
+                            timestamp: Date.now()
+                        });
+                    } catch(e) { console.error("Error transmitiendo GPS:", e); }
+
+                }, (error) => {
+                    if (error.code === error.PERMISSION_DENIED) {
+                        alert("⚠️ Debes permitir el uso del GPS en tu navegador para que logística pueda hacerte seguimiento.");
+                    }
+                }, { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 });
+            }
+        }
+
+        window.cargarBitacora = async function(chofer) {
+            const lista = document.getElementById('bitacora-lista');
+            let totalPendiente = 0;
+            const coordenadasRuta = [];
+
+            try {
+                // 1. CARGAR RUTAS AGRUPADAS (TAREAS)
+                const qRutas = query(collection(db, "rutas_puntos"), where("chofer", "==", chofer), where("estado", "==", "Activa"));
+                const snapRutas = await getDocs(qRutas);
+                
+                // Limpiar mapa (excepto al piloto)
+                mapa.eachLayer((layer) => { if (layer !== marcadorPiloto && layer.toGeoJSON) mapa.removeLayer(layer); });
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapa);
+
+                const rutasAgrupadas = {};
+                snapRutas.forEach(docSnap => {
+                    const r = docSnap.data();
+                    const rId = r.rutaId || docSnap.id;
+                    if(!rutasAgrupadas[rId]) rutasAgrupadas[rId] = [];
+                    rutasAgrupadas[rId].push({ id: docSnap.id, ...r });
+                });
+
+                let tareasHTML = '';
+                
+                Object.values(rutasAgrupadas).forEach((rutaArr, idxRuta) => {
+                    rutaArr.sort((a,b) => (a.orden || 0) - (b.orden || 0));
+                    
+                    tareasHTML += `
+                        <div class="timeline-item">
+                            <div style="background: #e2f0d9; padding: 12px; border-radius: 8px; border: 1px dashed #28a745; margin-bottom: 10px;">
+                                <div style="font-size: 13px; color: #155724; font-weight: bold; margin-bottom: 8px;"><i class="fas fa-map-pin"></i> Ruta Asignada #${idxRuta + 1}</div>
+                    `;
+
+                    rutaArr.forEach((p, i) => {
+                        coordenadasRuta.push([p.lat, p.lng]);
+                        L.marker([p.lat, p.lng]).addTo(mapa).bindPopup(`<b>Parada ${i+1}</b><br>${p.rawTipo}: ${p.rawNota}`);
+                        
+                        tareasHTML += `
+                            <div class="parada-box" id="parada-box-${p.id}">
+                                <div style="flex:1;">
+                                    <strong style="color:#333; font-size:12px;">Parada ${i+1}: ${p.rawTipo || 'Detalle'}</strong>
+                                    <div style="font-size:11px; color:#555;">${p.rawNota || p.nota}</div>
+                                </div>
+                                <button onclick="marcarCompletada(this, '${p.id}')" style="background:#1d6fa5; color:white; border:none; padding:8px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:pointer; flex-shrink:0;">
+                                    <i class="fas fa-check"></i> Listo
+                                </button>
+                            </div>
+                        `;
+                    });
+
+                    tareasHTML += `</div></div>`;
+                });
+
+                if (coordenadasRuta.length > 0) {
+                    L.polyline(coordenadasRuta, { color: 'red', weight: 4, opacity: 0.7, dashArray: '10, 10' }).addTo(mapa);
+                    if(!marcadorPiloto) mapa.fitBounds(L.polyline(coordenadasRuta).getBounds(), { padding: [20, 20] });
+                }
+
+                // 2. CALCULAR DINERO POR COBRAR
+                const qPedidos = query(collection(db, "pedidos"), where("motorizado", "==", chofer));
+                const snapPedidos = await getDocs(qPedidos);
+                
+                snapPedidos.forEach(doc => {
+                    const v = doc.data();
+                    if (v.pagoMotorizadoEstatus !== 'Pagado' && parseFloat(v.tarifaMotorizado) > 0) {
+                        totalPendiente += parseFloat(v.tarifaMotorizado);
+                    }
+                });
+
+                lista.innerHTML = tareasHTML;
+                if (lista.innerHTML === '') { lista.innerHTML = '<p style="font-size: 13px; color: #666; background:#f9f9f9; padding:15px; border-radius:6px;">No tienes rutas activas. ¡Día libre o a la espera! 😎</p>'; }
+                document.getElementById('total-pendiente').innerText = totalPendiente.toFixed(2);
+
+            } catch (error) {
+                console.error(error);
+                lista.innerHTML = '<p style="font-size: 13px; color: #d9534f;">Error de conexión.</p>';
+            }
+        };
+
+        // 🚀 MARCAR PARADA COMO LISTA
+        window.marcarCompletada = async function(btnElement, docId) {
+            btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btnElement.disabled = true;
+            try {
+                await updateDoc(doc(db, "rutas_puntos", docId), { estado: "Completada" });
+                
+                // Efecto visual de tachado
+                const box = document.getElementById(`parada-box-${docId}`);
+                box.style.opacity = '0.5';
+                box.style.textDecoration = 'line-through';
+                box.style.background = '#f1f1f1';
+                btnElement.innerHTML = '<i class="fas fa-check-double"></i>';
+                btnElement.style.background = '#28a745';
+                
+                // Borrar del mapa al instante
+                window.cargarBitacora(window.currentUser);
+            } catch (error) {
+                alert("Error al marcar. Intenta de nuevo.");
+                btnElement.innerHTML = '<i class="fas fa-check"></i> Listo';
+                btnElement.disabled = false;
+            }
+        };
+    </script>
+</body>
+</html>
