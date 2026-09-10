@@ -121,6 +121,11 @@
             #app-wrapper { display: none !important; }
             #print-container { display: block !important; width: 100%; }
         }
+
+        /* 🚀 HABILITAR SALTOS DE LÍNEA EN EL CHAT DE LA IA */
+        #admin-ai-messages p {
+            white-space: pre-wrap !important;
+        }
     </style>
 </head>
 <body style="background-color: #f8f8f8;">
@@ -1392,7 +1397,7 @@
 
             <!-- Input de Chat -->
             <div style="padding: 10px 15px; background: #fafafa; border-top: 1px solid #eee; display: flex; gap: 8px; align-items: center;">
-                <input type="text" id="admin-ai-input" placeholder="Escribe aquí tu consulta..." style="flex: 1; padding: 10px 15px; border: 1px solid #ddd; border-radius: 20px; outline: none; font-size: 13px;" onkeypress="if(event.key === 'Enter') enviarMensajeAdminAi()">
+                <textarea id="admin-ai-input" placeholder="Escribe aquí tu consulta... (Shift + Enter para nueva línea)" style="flex: 1; padding: 10px 15px; border: 1px solid #ddd; border-radius: 20px; outline: none; font-size: 13px; font-family: inherit; resize: none; overflow-y: auto; height: 40px; box-sizing: border-box;" onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); enviarMensajeAdminAi(); }"></textarea>
                 <button id="admin-ai-send-btn" onclick="enviarMensajeAdminAi()" style="background: #1d6fa5; color: white; border: none; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; flex-shrink: 0;">
                     <i class="fas fa-paper-plane"></i>
                 </button>
@@ -3631,6 +3636,12 @@
                     btnImprimir.innerHTML = '<i class="fas fa-print"></i>'; btnImprimir.title = "Imprimir";
                     btnImprimir.addEventListener('click', () => window.abrirVentanaCotizacionExistente(cot));
 
+                    // 🚀 NUEVO BOTÓN: ENVIAR A PEDIDOS
+                    const btnPedido = document.createElement('button');
+                    btnPedido.type = 'button'; btnPedido.style = 'background:#f0ad4e; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;';
+                    btnPedido.innerHTML = '<i class="fas fa-box"></i>'; btnPedido.title = "Convertir a Pedido";
+                    btnPedido.addEventListener('click', () => window.enviarCotizacionAPedido(docId));
+
                     const btnEliminar = document.createElement('button');
                     btnEliminar.type = 'button'; btnEliminar.style = 'background:#d9534f; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;';
                     btnEliminar.innerHTML = '<i class="fas fa-trash"></i>';
@@ -3642,6 +3653,7 @@
                     tdAcciones.appendChild(btnWhatsApp);
                     tdAcciones.appendChild(btnCorreo);
                     tdAcciones.appendChild(btnImprimir); 
+                    tdAcciones.appendChild(btnPedido); // 👈 Lo agregamos aquí
                     tdAcciones.appendChild(btnEliminar);
                     tbody.appendChild(tr);
                 });
@@ -5386,6 +5398,73 @@
                 alert("Error al actualizar la información del pedido."); 
             }
             btn.innerHTML = "Guardar"; btn.disabled = false;
+        };
+
+        // 🚀 FUNCIÓN PARA CONVERTIR COTIZACIÓN EN PEDIDO
+        window.enviarCotizacionAPedido = function(docId) {
+            const cot = window.cotizacionesDBLocal[docId];
+            if(!cot) return;
+
+            // 1. Verificación de Seguridad (Aprobada)
+            if(cot.estatusComercial !== 'Aprobada') {
+                if(!confirm(`⚠️ Esta cotización está en estatus "${cot.estatusComercial}".\n¿Estás seguro de que deseas procesarla como un Pedido de todas formas?`)) {
+                    return;
+                }
+            }
+
+            // 2. Cambiar a la pestaña de Pedidos
+            const btnPedidos = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.textContent.includes('Gestión de Pedidos'));
+            if(btnPedidos) {
+                window.mostrarPestana('pedidos', btnPedidos);
+            }
+
+            // 3. Llenar los datos del cliente
+            document.getElementById('client-name').value = cot.cliente || '';
+            document.getElementById('client-email').value = cot.telefono || ''; 
+            
+            // Opcional: Intentar autoseleccionar el cliente si existe en el selector
+            const selectPedido = document.getElementById('ped-selector-clientes');
+            for(let i = 0; i < selectPedido.options.length; i++) {
+                if(selectPedido.options[i].text.toUpperCase().includes(cot.cliente.toUpperCase())) {
+                    selectPedido.selectedIndex = i;
+                    break;
+                }
+            }
+
+            // 4. Trasladar los repuestos al carrito de Pedidos
+            const container = document.getElementById('pedidos-items-container');
+            container.innerHTML = ''; // Limpiar cualquier pedido a medias
+            
+            if(cot.items && Array.isArray(cot.items)) {
+                cot.items.forEach(prod => {
+                    const row = document.createElement('div');
+                    row.className = 'pedido-item-row';
+                    
+                    // Extraemos los valores de la cotización
+                    const cant = parseInt(prod.cantidad) || 1;
+                    const precioUnit = parseFloat(prod.precioUnitario) || 0;
+                    const descuentoLinea = parseFloat(prod.descuento) || 0;
+                    
+                    // Calculamos el precio real (restándole el descuento proporcional si le hiciste descuento en la cotización)
+                    const precioFinalReal = precioUnit - (descuentoLinea / cant);
+                    const safeDesc = (prod.descripcion || '').replace(/"/g, '&quot;');
+
+                    row.innerHTML = `
+                        <input type="number" class="ped-item-cant" value="${cant}" min="1" placeholder="Cant" oninput="calcularTotalPedido()">
+                        <input type="text" class="ped-item-desc" value="${safeDesc}" placeholder="Descripción" style="grid-column: span 3;">
+                        <input type="number" step="0.01" class="ped-item-precio" value="${precioFinalReal.toFixed(2)}" placeholder="Precio" oninput="calcularTotalPedido()">
+                        <button type="button" onclick="this.parentElement.remove(); calcularTotalPedido();" style="background:#d9534f; color:white; border:none; border-radius:4px; cursor:pointer;"><i class="fas fa-times"></i></button>
+                    `;
+                    container.appendChild(row);
+                });
+            }
+
+            // 5. Recalcular el total y avisar al usuario
+            window.calcularTotalPedido();
+            alert("✅ Cotización enviada a Pedidos con éxito.\nRevisa los datos, selecciona el Motorizado/Encomienda y haz clic en 'Registrar Pedido'.");
+            
+            // Hacer scroll hacia arriba para que el usuario vea el formulario
+            document.querySelector('.admin-container').scrollIntoView({ behavior: 'smooth' });
         };
 
     </script>
