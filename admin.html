@@ -5590,7 +5590,7 @@
         };
 
         // ==========================================
-        // 🚀 LÓGICA MULTIPARADA, PAGOS Y RADAR GPS
+        // 🚀 LÓGICA MULTIPARADA, PAGOS Y RADAR GPS (VERSIÓN A COLOR)
         // ==========================================
         window.mapaAdmin = null;
         window.marcadorTemporal = null;
@@ -5599,6 +5599,15 @@
         window.marcadoresConstruccion = []; 
         window.rutasAgrupadasLocal = {}; 
         window.marcadoresMotos = {};
+
+        // 🎨 DICCIONARIO DE COLORES OFICIALES
+        window.coloresMotorizados = {
+            "Jhon": "#1d6fa5",   // Azul Logística
+            "Bryan": "#28a745",  // Verde Ventas
+            "Moto A": "#f0ad4e", // Naranja
+            "Moto B": "#d9534f", // Rojo
+            "Moto C": "#8e44ad"  // Morado
+        };
 
         window.iniciarMapaAdmin = function() {
             if(window.mapaAdmin) { window.mapaAdmin.invalidateSize(); return; }
@@ -5615,17 +5624,10 @@
                 window.marcadorTemporal = L.marker([lat, lng]).addTo(window.mapaAdmin).bindPopup("<b>Fijar coordenada</b><br>Llena los datos a la izquierda").openPopup();
             });
 
-            // Iniciar el radar GPS de los motorizados
             window.iniciarRastreoMotorizados();
         };
 
         window.iniciarRastreoMotorizados = function() {
-            const motoIcon = L.icon({
-                iconUrl: 'https://cdn-icons-png.flaticon.com/512/1048/1048314.png',
-                iconSize: [36, 36],
-                iconAnchor: [18, 36]
-            });
-
             setInterval(async () => {
                 if(!window.mapaAdmin) return;
                 try {
@@ -5634,14 +5636,22 @@
                         const data = docSnap.data();
                         const chofer = docSnap.id;
                         
-                        if (Date.now() - data.timestamp < 600000) {
+                        // Obtenemos el color del chofer (si no existe, usa gris oscuro)
+                        const colorChofer = window.coloresMotorizados[chofer] || "#333";
+                        
+                        // 🛵 Creamos el Icono de la Moto con el color de fondo dinámico
+                        const motoHtml = `<div style="background-color: ${colorChofer}; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.4); color: white; font-size: 16px;"><i class="fas fa-motorcycle"></i></div>`;
+                        const motoIconColor = L.divIcon({ className: '', html: motoHtml, iconSize: [34, 34], iconAnchor: [17, 17] });
+
+                        if (Date.now() - data.timestamp < 600000) { // Activo en los últimos 10 minutos
                             if (!window.marcadoresMotos[chofer]) {
-                                window.marcadoresMotos[chofer] = L.marker([data.lat, data.lng], {icon: motoIcon})
+                                window.marcadoresMotos[chofer] = L.marker([data.lat, data.lng], {icon: motoIconColor})
                                     .addTo(window.mapaAdmin)
-                                    .bindPopup(`<div style="text-align:center;"><b>🏍️ ${chofer}</b><br><span style="color:green;">Activo y en ruta</span><br><span style="font-size:10px;color:#666;">Última señal: ${data.hora}</span></div>`);
+                                    .bindPopup(`<div style="text-align:center;"><b>🏍️ ${chofer}</b><br><span style="color:${colorChofer}; font-weight:bold;">En Ruta</span><br><span style="font-size:10px;color:#666;">Señal: ${data.hora}</span></div>`);
                             } else {
                                 window.marcadoresMotos[chofer].setLatLng([data.lat, data.lng]);
-                                window.marcadoresMotos[chofer].getPopup().setContent(`<div style="text-align:center;"><b>🏍️ ${chofer}</b><br><span style="color:green;">Activo y en ruta</span><br><span style="font-size:10px;color:#666;">Última señal: ${data.hora}</span></div>`);
+                                window.marcadoresMotos[chofer].setIcon(motoIconColor); // Actualizamos color por si cambió
+                                window.marcadoresMotos[chofer].getPopup().setContent(`<div style="text-align:center;"><b>🏍️ ${chofer}</b><br><span style="color:${colorChofer}; font-weight:bold;">En Ruta</span><br><span style="font-size:10px;color:#666;">Señal: ${data.hora}</span></div>`);
                             }
                         }
                     });
@@ -5653,7 +5663,7 @@
             const lat = document.getElementById('ruta-lat').value;
             const lng = document.getElementById('ruta-lng').value;
             const nota = document.getElementById('stop-nota').value.trim();
-            const pagoDinero = parseFloat(document.getElementById('stop-pago-dinero').value) || 0; // Captura el costo individual
+            const pagoDinero = parseFloat(document.getElementById('stop-pago-dinero').value) || 0; 
             
             if(!lat || !lng || !nota) { alert("⚠️ Haz clic en el mapa y escribe qué hará el motorizado."); return; }
 
@@ -5663,7 +5673,7 @@
                 pago: document.getElementById('stop-pago').value,
                 tlf: document.getElementById('stop-tlf').value.trim() || 'Sin teléfono',
                 confianza: document.getElementById('stop-confianza').value,
-                pagoDinero: pagoDinero, // Guarda el costo individual en memoria
+                pagoDinero: pagoDinero,
                 nota: nota
             };
 
@@ -5681,12 +5691,12 @@
             document.getElementById('stop-tlf').value = '';
             document.getElementById('ruta-lat').value = '';
             document.getElementById('ruta-lng').value = '';
-            document.getElementById('stop-pago-dinero').value = ''; // Limpiar casilla de pago
+            document.getElementById('stop-pago-dinero').value = '';
         };
 
         window.actualizarListaRutaUI = function() {
             const container = document.getElementById('lista-ruta-temp');
-            let totalAuto = 0; // Acumulador del costo total
+            let totalAuto = 0; 
 
             if(window.rutaEnConstruccion.length === 0) {
                 container.innerHTML = '<span style="color: #999;">Ruta vacía. Agrega la primera parada.</span>';
@@ -5696,7 +5706,7 @@
             let html = '';
             window.rutaEnConstruccion.forEach((p, i) => {
                 const icon = p.tipo === 'Retiro' ? '🟢' : '🔵';
-                totalAuto += p.pagoDinero; // Suma el costo de cada parada
+                totalAuto += p.pagoDinero; 
                 html += `<div style="margin-bottom:5px; border-bottom: 1px solid #eee; padding-bottom: 5px; display:flex; justify-content:space-between; align-items:center;">
                             <div style="flex:1;">
                                 <strong>${icon} Parada ${i+1}:</strong> ${p.nota} <br>
@@ -5709,25 +5719,17 @@
                          </div>`;
             });
             container.innerHTML = html;
-            document.getElementById('ruta-pago').value = totalAuto.toFixed(2); // Auto-llena la casilla de pago total
+            document.getElementById('ruta-pago').value = totalAuto.toFixed(2);
         };
 
-        // 🚀 NUEVA FUNCIÓN: BORRAR UNA PARADA MIENTRAS SE CONSTRUYE LA RUTA
         window.eliminarParadaTemporal = function(index) {
-            // 1. Borramos la parada de la memoria
             window.rutaEnConstruccion.splice(index, 1);
-            
-            // 2. Limpiamos todos los pines temporales del mapa
             window.marcadoresConstruccion.forEach(m => window.mapaAdmin.removeLayer(m));
             window.marcadoresConstruccion = [];
-            
-            // 3. Volvemos a dibujar los pines restantes para que los números (Parada 1, 2...) se reordenen
             window.rutaEnConstruccion.forEach((p, i) => {
                 const marker = L.marker([p.lat, p.lng]).addTo(window.mapaAdmin).bindPopup(`<b>Parada ${i+1}</b><br>${p.tipo}: ${p.nota}`);
                 window.marcadoresConstruccion.push(marker);
             });
-            
-            // 4. Refrescamos la lista visual y el total de dinero
             window.actualizarListaRutaUI();
         };
 
@@ -5772,10 +5774,10 @@
                     
                     await setDoc(doc(collection(db, "rutas_puntos")), {
                         rutaId: rutaIdMaster, orden: i + 1, chofer: chofer, rutaPagoTotal: pagoTotal,
-                        subChofer: "", // Espacio para que Jhon delegue a las Motos A, B o C
+                        subChofer: "", 
                         nota: `(Parada ${i+1}) ${p.nota} | Tlf: ${p.tlf} | ${p.pago} | ${p.confianza}`,
                         rawTipo: p.tipo, rawNota: p.nota, rawTlf: p.tlf, rawPago: p.pago, rawConfianza: p.confianza,
-                        pagoDinero: p.pagoDinero, // Guarda el costo individual
+                        pagoDinero: p.pagoDinero, 
                         lat: p.lat, lng: p.lng,
                         fecha: new Date().toLocaleDateString("es-VE"), timestamp: Date.now(), estado: "Activa"
                     });
@@ -5811,7 +5813,6 @@
             btn.innerHTML = '<i class="fab fa-whatsapp"></i> Guardar y Enviar'; btn.disabled = false;
         };
 
-        // 3. Cargar historial y mostrar Tareas Completadas
         window.cargarPuntosRuta = async function() {
             const tbody = document.getElementById('tabla-puntos-rutas');
             const btnActualizar = document.querySelector('button[onclick="cargarPuntosRuta()"]');
@@ -5820,7 +5821,7 @@
             if(btnActualizar) btnActualizar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando...';
 
             try {
-                const q = query(collection(db, "rutas_puntos")); // Trae TODO
+                const q = query(collection(db, "rutas_puntos")); 
                 const snap = await getDocs(q);
                 tbody.innerHTML = '';
                 
@@ -5844,16 +5845,22 @@
                         }
                         window.rutasAgrupadasLocal[rId].puntos.push({ idDoc: docSnap.id, ...data });
 
-                        // Dibuja el pin solo si NO está Completada
+                        // 📍 DIBUJAMOS EL PIN DE LA PARADA EN EL MAPA CON EL COLOR DEL CHOFER
                         if(data.lat && data.lng && data.estado !== 'Completada') {
-                            const m = L.marker([data.lat, data.lng]).addTo(window.mapaAdmin).bindPopup(`<b>${data.chofer}</b><br>${data.nota}`);
+                            const colorChofer = window.coloresMotorizados[data.chofer] || "#333";
+                            const pinHtml = `<div style="color: ${colorChofer}; font-size: 32px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); text-align: center; margin-top:-10px;"><i class="fas fa-map-marker-alt"></i></div>`;
+                            const pinIconColor = L.divIcon({ className: '', html: pinHtml, iconSize: [30, 30], iconAnchor: [15, 30] });
+
+                            const m = L.marker([data.lat, data.lng], {icon: pinIconColor}).addTo(window.mapaAdmin).bindPopup(`<b>${data.chofer}</b><br>${data.nota}`);
                             window.marcadoresGuardados.push(m);
                         }
                     });
 
                     Object.values(window.rutasAgrupadasLocal).forEach(ruta => {
                         ruta.puntos.sort((a,b) => (a.orden || 0) - (b.orden || 0));
-                        const color = ruta.chofer === 'Jhon' ? 'blue' : 'green';
+                        
+                        // 🎨 EL COLOR AHORA SE APLICA TAMBIÉN AL NOMBRE EN LA TABLA
+                        const colorChofer = window.coloresMotorizados[ruta.chofer] || "#333";
                         
                         const todasCompletadas = ruta.puntos.every(p => p.estado === "Completada");
                         const badgeRuta = todasCompletadas ? 
@@ -5870,7 +5877,7 @@
 
                         tbody.innerHTML += `<tr>
                                 <td>${ruta.fecha || ''}</td>
-                                <td><strong style="color: ${color};">${ruta.chofer || ''}</strong></td>
+                                <td><strong style="color: ${colorChofer};">${ruta.chofer || ''}</strong></td>
                                 <td>
                                     <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
                                         <strong style="color:#333; font-size:13px;">📍 Ruta Maestra (${ruta.puntos.length} paradas)</strong>
@@ -5899,7 +5906,7 @@
                 pago: p.rawPago || 'Pagado',
                 tlf: p.rawTlf || '',
                 confianza: p.rawConfianza || 'Conocido',
-                pagoDinero: p.pagoDinero || 0, // Recupera el costo individual
+                pagoDinero: p.pagoDinero || 0,
                 nota: p.rawNota || p.nota
             }));
 
@@ -5917,7 +5924,7 @@
                 window.marcadoresConstruccion.push(marker);
             });
 
-            window.actualizarListaRutaUI(); // Esto auto-recalculará el pago final en la vista
+            window.actualizarListaRutaUI(); 
             document.querySelector('#form-rutas-container').scrollIntoView({ behavior: 'smooth' });
         };
 

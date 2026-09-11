@@ -30,25 +30,12 @@
         <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png" alt="F&B Parts" style="width: 150px; margin-bottom: 30px; filter: brightness(0) invert(1);">
         <div id="login-box">
             <h2 style="color: #385723; font-size: 22px; font-weight: bold; margin-bottom: 5px;">Portal Operativo</h2>
-            <p style="color: #666; font-size: 13px; margin-bottom: 25px;">El sistema pedirá tu ubicación GPS al entrar.</p>
+            <p style="color: #666; font-size: 13px; margin-bottom: 25px;">Ingresa tu código de acceso único.</p>
             
-            <select id="login-user" style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 15px; font-size: 16px; outline: none; background: #f9f9f9;">
-                <option value="">Selecciona tu perfil...</option>
-                <optgroup label="Coordinadores">
-                    <option value="Jhon">Jhon (Logística)</option>
-                    <option value="Bryan">Bryan (Ventas)</option>
-                </optgroup>
-                <optgroup label="Flota Sub-Contratada">
-                    <option value="Moto A">Motorizado A</option>
-                    <option value="Moto B">Motorizado B</option>
-                    <option value="Moto C">Motorizado C</option>
-                </optgroup>
-            </select>
-            
-            <input type="password" id="login-pin" placeholder="PIN de Seguridad" style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 20px; font-size: 16px; text-align: center; letter-spacing: 5px; outline: none;">
+            <input type="password" id="login-pin" placeholder="****" style="width: 100%; padding: 15px; border: 2px solid #ccc; border-radius: 8px; margin-bottom: 20px; font-size: 24px; text-align: center; letter-spacing: 15px; outline: none; font-weight: bold;">
             
             <button onclick="entrarPortal()" style="width: 100%; background: #1d6fa5; color: white; border: none; padding: 14px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer;">
-                Ingresar e Iniciar Ruta
+                Ingresar al Portal
             </button>
         </div>
     </div>
@@ -110,19 +97,30 @@
         let marcadorPiloto = null;
 
         // PIN DE ACCESO (0000 para los sub-motorizados)
-        const PINES_ACCESO = { "Jhon": "1234", "Bryan": "5678", "Moto A": "0000", "Moto B": "0000", "Moto C": "0000" };
+        // 🚀 PINES ÚNICOS Y SECRETOS (Nadie ve los nombres de los demás)
+        const USUARIOS_POR_PIN = { 
+            "1234": "Jhon", 
+            "5678": "Bryan", 
+            "1001": "Moto A", 
+            "1002": "Moto B", 
+            "1003": "Moto C" 
+        };
 
         window.entrarPortal = function() {
-            const user = document.getElementById('login-user').value;
-            const pin = document.getElementById('login-pin').value;
+            const pin = document.getElementById('login-pin').value.trim();
+            const user = USUARIOS_POR_PIN[pin];
 
-            if(!user) { alert("Selecciona tu perfil"); return; }
-            if(pin !== PINES_ACCESO[user]) { alert("PIN incorrecto"); return; }
+            // Si el PIN no existe en la lista, lo rebotamos
+            if(!user) { 
+                alert("Código PIN incorrecto o no autorizado."); 
+                document.getElementById('login-pin').value = '';
+                return; 
+            }
 
             window.currentUser = user;
             document.getElementById('nombre-chofer').textContent = user;
             
-            // Ocultar caja de dinero si es Sub-Motorizado
+            // Ocultar caja de dinero si es la flota Sub-Contratada (Moto A, B o C)
             if(user === "Jhon" || user === "Bryan") {
                 document.getElementById('caja-ganancias').style.display = 'block';
             } else {
