@@ -1097,7 +1097,6 @@
                 <div class="admin-grid">
                     <!-- Controles -->
                     <!-- Controles Multiparada -->
-                    <!-- Controles Multiparada -->
                     <div class="card-form" id="form-rutas-container">
                         <h3 style="margin-bottom: 5px;" id="titulo-ruta"><i class="fas fa-route"></i> Armar Ruta Multiparada</h3>
                         <p style="font-size: 11px; color: #666; margin-bottom: 15px;" id="subtitulo-ruta">Haz clic en el mapa y llena los datos de cada parada.</p>
@@ -5587,14 +5586,15 @@
         };
 
         // ==========================================
-        // 🚀 LÓGICA DE RUTAS MAESTRAS AGRUPADAS
+        // 🚀 LÓGICA MULTIPARADA Y RADAR GPS
         // ==========================================
         window.mapaAdmin = null;
         window.marcadorTemporal = null;
         window.marcadoresGuardados = [];
         window.rutaEnConstruccion = []; 
         window.marcadoresConstruccion = []; 
-        window.rutasAgrupadasLocal = {}; // Memoria de las rutas unificadas
+        window.rutasAgrupadasLocal = {}; 
+        window.marcadoresMotos = {};
 
         window.iniciarMapaAdmin = function() {
             if(window.mapaAdmin) { window.mapaAdmin.invalidateSize(); return; }
@@ -5611,21 +5611,16 @@
                 window.marcadorTemporal = L.marker([lat, lng]).addTo(window.mapaAdmin).bindPopup("<b>Fijar coordenada</b><br>Llena los datos a la izquierda").openPopup();
             });
 
-            // 🚀 INICIAR RADAR GPS AL ABRIR EL MAPA
             window.iniciarRastreoMotorizados();
         };
 
-        // 🚀 RADAR GPS EN TIEMPO REAL (ADMIN)
-        window.marcadoresMotos = {};
         window.iniciarRastreoMotorizados = function() {
-            // Icono de motocicleta para el mapa
             const motoIcon = L.icon({
                 iconUrl: 'https://cdn-icons-png.flaticon.com/512/1048/1048314.png',
                 iconSize: [36, 36],
                 iconAnchor: [18, 36]
             });
 
-            // Escanear el cielo cada 5 segundos
             setInterval(async () => {
                 if(!window.mapaAdmin) return;
                 try {
@@ -5634,16 +5629,13 @@
                         const data = docSnap.data();
                         const chofer = docSnap.id;
                         
-                        // Solo mostramos motos que hayan transmitido en los últimos 10 minutos
                         if (Date.now() - data.timestamp < 600000) {
                             if (!window.marcadoresMotos[chofer]) {
                                 window.marcadoresMotos[chofer] = L.marker([data.lat, data.lng], {icon: motoIcon})
                                     .addTo(window.mapaAdmin)
                                     .bindPopup(`<div style="text-align:center;"><b>🏍️ ${chofer}</b><br><span style="color:green;">Activo y en ruta</span><br><span style="font-size:10px;color:#666;">Última señal: ${data.hora}</span></div>`);
                             } else {
-                                // Mover la moto en el mapa suavemente
                                 window.marcadoresMotos[chofer].setLatLng([data.lat, data.lng]);
-                                // Actualizar la hora en el popup
                                 window.marcadoresMotos[chofer].getPopup().setContent(`<div style="text-align:center;"><b>🏍️ ${chofer}</b><br><span style="color:green;">Activo y en ruta</span><br><span style="font-size:10px;color:#666;">Última señal: ${data.hora}</span></div>`);
                             }
                         }
@@ -5676,7 +5668,7 @@
             const marker = L.marker([lat, lng]).addTo(window.mapaAdmin).bindPopup(`<b>Parada ${window.rutaEnConstruccion.length}</b><br>${parada.tipo}: ${parada.nota}`);
             window.marcadoresConstruccion.push(marker);
 
-            actualizarListaRutaUI();
+            window.actualizarListaRutaUI();
             
             document.getElementById('stop-nota').value = '';
             document.getElementById('stop-tlf').value = '';
@@ -5684,7 +5676,7 @@
             document.getElementById('ruta-lng').value = '';
         };
 
-        function actualizarListaRutaUI() {
+        window.actualizarListaRutaUI = function() {
             const container = document.getElementById('lista-ruta-temp');
             if(window.rutaEnConstruccion.length === 0) {
                 container.innerHTML = '<span style="color: #999;">Ruta vacía. Agrega la primera parada.</span>';
@@ -5699,13 +5691,13 @@
                          </div>`;
             });
             container.innerHTML = html;
-        }
+        };
 
         window.cancelarEdicionRuta = function() {
             window.rutaEnConstruccion = [];
             window.marcadoresConstruccion.forEach(m => window.mapaAdmin.removeLayer(m));
             window.marcadoresConstruccion = [];
-            actualizarListaRutaUI();
+            window.actualizarListaRutaUI();
             document.getElementById('edit-ruta-id').value = '';
             document.getElementById('ruta-pago').value = '';
             document.getElementById('titulo-ruta').innerHTML = '<i class="fas fa-route"></i> Armar Ruta Multiparada';
@@ -5725,7 +5717,6 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...'; btn.disabled = true;
 
             try {
-                // Si estamos editando, borramos los puntos y el pago viejo para sobreescribirlos limpios
                 if (editRutaId) {
                     const qPuntos = query(collection(db, "rutas_puntos"), where("rutaId", "==", editRutaId));
                     const snapPuntos = await getDocs(qPuntos);
@@ -5737,53 +5728,39 @@
                 }
 
                 let resumenRuta = "";
-                // Guardar la nueva ruta agrupada
                 for (let i = 0; i < window.rutaEnConstruccion.length; i++) {
                     const p = window.rutaEnConstruccion[i];
                     resumenRuta += `${p.tipo} ${p.nota} -> `;
                     
                     await setDoc(doc(collection(db, "rutas_puntos")), {
-                        rutaId: rutaIdMaster,
-                        orden: i + 1,
-                        chofer: chofer,
-                        rutaPagoTotal: pagoTotal,
+                        rutaId: rutaIdMaster, orden: i + 1, chofer: chofer, rutaPagoTotal: pagoTotal,
                         nota: `(Parada ${i+1}) ${p.nota} | Tlf: ${p.tlf} | ${p.pago} | ${p.confianza}`,
                         rawTipo: p.tipo, rawNota: p.nota, rawTlf: p.tlf, rawPago: p.pago, rawConfianza: p.confianza,
                         lat: p.lat, lng: p.lng,
-                        fecha: new Date().toLocaleDateString("es-VE"),
-                        timestamp: Date.now(),
-                        estado: "Activa"
+                        fecha: new Date().toLocaleDateString("es-VE"), timestamp: Date.now(), estado: "Activa"
                     });
                 }
 
-                // Guardar Pago en Logística
                 if(pagoTotal > 0) {
                     await setDoc(doc(collection(db, "pedidos")), {
-                        cliente: "📍 RUTA MAESTRA MULTIPARADA",
-                        motorizado: chofer,
-                        tarifaMotorizado: pagoTotal,
-                        pagoMotorizadoEstatus: "Pendiente",
-                        rutasMotorizado: resumenRuta.slice(0, -4),
-                        trackingMotorizado: rutaIdMaster,
-                        estatusEnvio: "Entregado",
-                        fecha: new Date().toLocaleDateString("es-VE"),
-                        timestamp: Date.now()
+                        cliente: "📍 RUTA MAESTRA MULTIPARADA", motorizado: chofer, tarifaMotorizado: pagoTotal,
+                        pagoMotorizadoEstatus: "Pendiente", rutasMotorizado: resumenRuta.slice(0, -4),
+                        trackingMotorizado: rutaIdMaster, estatusEnvio: "Entregado",
+                        fecha: new Date().toLocaleDateString("es-VE"), timestamp: Date.now()
                     });
                 }
 
-                // Generar WhatsApp
                 let waText = `🛵 *RUTA ASIGNADA* 🛵\n*Chofer:* ${chofer}\n\n`;
                 window.rutaEnConstruccion.forEach((p, i) => {
                     const icon = p.tipo === 'Retiro' ? '🟢' : '🔵';
-                    waText += `*${icon} PARADA ${i+1}: ${p.tipo.toUpperCase()}*\n`;
-                    waText += `📦 Tarea: ${p.nota}\n📞 Tlf: ${p.tlf}\n💰 Estatus: ${p.pago}\n🛡️ Zona: ${p.confianza}\n📍 GPS: https://maps.google.com/?q=${p.lat},${p.lng}\n\n`;
+                    waText += `*${icon} PARADA ${i+1}: ${p.tipo.toUpperCase()}*\n📦 Tarea: ${p.nota}\n📞 Tlf: ${p.tlf}\n💰 Estatus: ${p.pago}\n🛡️ Zona: ${p.confianza}\n📍 GPS: https://maps.google.com/?q=${p.lat},${p.lng}\n\n`;
                 });
                 waText += `*(Recuerda marcar las paradas en tu aplicación)*`;
 
-                window.cancelarEdicionRuta(); // Limpia el formulario
-                window.cargarPuntosRuta(); // Refresca la tabla
+                window.cancelarEdicionRuta(); 
+                window.cargarPuntosRuta(); 
+                if (typeof window.cargarPedidos === 'function') window.cargarPedidos(); 
 
-                // Abrir WhatsApp
                 const telefonosChoferes = { "Jhon": "584120000000", "Bryan": "584120161036" };
                 const numeroDestino = telefonosChoferes[chofer] || "";
                 window.open(`https://api.whatsapp.com/send?phone=${numeroDestino}&text=${encodeURIComponent(waText)}`, '_blank');
@@ -5794,7 +5771,6 @@
             btn.innerHTML = '<i class="fab fa-whatsapp"></i> Guardar y Enviar'; btn.disabled = false;
         };
 
-        // 3. Cargar tabla agrupada por Ruta Maestra
         window.cargarPuntosRuta = async function() {
             const tbody = document.getElementById('tabla-puntos-rutas');
             if(!tbody) return;
@@ -5813,7 +5789,6 @@
                     return;
                 }
 
-                // Agrupar puntos por Ruta ID
                 snap.forEach(docSnap => {
                     const data = docSnap.data();
                     const rId = data.rutaId || docSnap.id; 
@@ -5825,16 +5800,13 @@
                     }
                     window.rutasAgrupadasLocal[rId].puntos.push({ idDoc: docSnap.id, ...data });
 
-                    // Pintar Pines Globales en el Mapa
                     if(data.lat && data.lng) {
                         const m = L.marker([data.lat, data.lng]).addTo(window.mapaAdmin).bindPopup(`<b>${data.chofer}</b><br>${data.nota}`);
                         window.marcadoresGuardados.push(m);
                     }
                 });
 
-                // Dibujar filas maestras en la tabla
                 Object.values(window.rutasAgrupadasLocal).forEach(ruta => {
-                    // Ordenar paradas lógicamente 1, 2, 3...
                     ruta.puntos.sort((a,b) => (a.orden || 0) - (b.orden || 0));
                     const color = ruta.chofer === 'Jhon' ? 'blue' : 'green';
                     
@@ -5856,12 +5828,10 @@
             } catch(e) { console.error("Error al cargar la tabla:", e); }
         };
 
-        // 🚀 Cargar la ruta de vuelta a la izquierda
         window.editarRutaMaestra = function(rutaId) {
             const ruta = window.rutasAgrupadasLocal[rutaId];
             if(!ruta) return;
 
-            // Extraer las paradas puras
             window.rutaEnConstruccion = ruta.puntos.map(p => ({
                 lat: p.lat, lng: p.lng,
                 tipo: p.rawTipo || 'Retiro',
@@ -5871,17 +5841,14 @@
                 nota: p.rawNota || p.nota
             }));
 
-            // Cargar Formulario
             document.getElementById('edit-ruta-id').value = ruta.rutaId;
             document.getElementById('ruta-chofer').value = ruta.chofer;
             document.getElementById('ruta-pago').value = ruta.pagoTotal || '';
 
-            // Actualizar interfaz visual
             document.getElementById('titulo-ruta').innerHTML = '<i class="fas fa-edit"></i> Editando Ruta Maestra';
             document.getElementById('btn-cancelar-ruta').style.display = 'block';
             document.getElementById('btn-guardar-ruta').innerHTML = '<i class="fas fa-sync"></i> Actualizar y Reenviar';
 
-            // Dibujar solo los pines de esta ruta en el mapa
             window.marcadoresConstruccion.forEach(m => window.mapaAdmin.removeLayer(m));
             window.marcadoresConstruccion = [];
             window.rutaEnConstruccion.forEach((p, i) => {
@@ -5889,28 +5856,25 @@
                 window.marcadoresConstruccion.push(marker);
             });
 
-            actualizarListaRutaUI();
+            window.actualizarListaRutaUI();
             document.querySelector('#form-rutas-container').scrollIntoView({ behavior: 'smooth' });
         };
 
-        // 🚀 Borrar ruta completa y su pago
         window.eliminarRutaMaestra = async function(rutaId) {
             if(!confirm("¿Estás seguro de borrar TODA esta ruta completa? (Se borrará también el dinero pendiente al motorizado).")) return;
             try {
-                // Borrar todos los puntos
                 const qPuntos = query(collection(db, "rutas_puntos"), where("rutaId", "==", rutaId));
                 const snapPuntos = await getDocs(qPuntos);
                 snapPuntos.forEach(async (d) => await deleteDoc(d.ref));
 
-                // Borrar el pago en pedidos
                 const qPed = query(collection(db, "pedidos"), where("trackingMotorizado", "==", rutaId));
                 const snapPed = await getDocs(qPed);
                 snapPed.forEach(async (d) => await deleteDoc(d.ref));
 
-                // Respaldo por si era una ruta viejita individual
                 try { await deleteDoc(doc(db, "rutas_puntos", rutaId)); } catch(e){}
 
                 window.cargarPuntosRuta(); 
+                if (typeof window.cargarPedidos === 'function') window.cargarPedidos(); 
             } catch(e) { console.error(e); alert("Error borrando la ruta."); }
         };
 
