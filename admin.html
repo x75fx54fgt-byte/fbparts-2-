@@ -1091,9 +1091,13 @@
             <div id="tab-rutas" class="tab-content">
                 <div class="admin-header">
                     <h2>Centro de Control GPS y Rutas</h2>
-                    <button class="refresh-btn" onclick="cargarPuntosRuta()"><i class="fas fa-sync-alt"></i> Actualizar Rutas</button>
+                    <div>
+                        <button class="refresh-btn" style="background: #1d6fa5; margin-right: 5px;" onclick="abrirLiquidacionMotorizados()">
+                            <i class="fas fa-wallet"></i> Liquidar Motorizados
+                        </button>
+                        <button class="refresh-btn" onclick="cargarPuntosRuta()"><i class="fas fa-sync-alt"></i> Actualizar Rutas</button>
+                    </div>
                 </div>
-
                 <div class="admin-grid">
                     <!-- Controles -->
                     <!-- Controles Multiparada -->
@@ -1101,23 +1105,19 @@
                         <h3 style="margin-bottom: 5px;" id="titulo-ruta"><i class="fas fa-route"></i> Armar Ruta Multiparada</h3>
                         <p style="font-size: 11px; color: #666; margin-bottom: 15px;" id="subtitulo-ruta">Haz clic en el mapa y llena los datos de cada parada.</p>
                         
-                        <!-- Campos Ocultos para el Modo Edición -->
                         <input type="hidden" id="edit-ruta-id">
 
                         <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                             <div>
-                                <label>Tipo</label>
+                                <label>Tipo de Tarea</label>
                                 <select id="stop-tipo" style="font-size: 12px; padding: 6px;">
                                     <option value="Retiro">🟢 Retiro en Tienda</option>
                                     <option value="Entrega">🔵 Entrega a Cliente</option>
                                 </select>
                             </div>
                             <div>
-                                <label>Estatus Repuesto</label>
-                                <select id="stop-pago" style="font-size: 12px; padding: 6px;">
-                                    <option value="Pagado">Ya está Pagado</option>
-                                    <option value="Por Pagar">Debe pagar allá</option>
-                                </select>
+                                <label>Costo de esta parada ($)</label>
+                                <input type="number" id="stop-pago-dinero" placeholder="Ej: 6" step="0.01" min="0" style="font-size: 12px; background: #e2f0d9; border: 1px solid #28a745; font-weight: bold; color: #155724;">
                             </div>
                         </div>
 
@@ -1126,16 +1126,23 @@
                             <input type="text" id="stop-nota" placeholder="Ej: Retirar 2 parachoques" style="font-size: 12px;">
                         </div>
 
-                        <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
                             <div>
                                 <label>Teléfono del Sitio</label>
                                 <input type="text" id="stop-tlf" placeholder="Ej: 0414-1234567" style="font-size: 12px;">
                             </div>
                             <div>
+                                <label>Repuesto Pagado</label>
+                                <select id="stop-pago" style="font-size: 12px; padding: 6px;">
+                                    <option value="Pagado">Sí, pagado</option>
+                                    <option value="Por Pagar">No (Pagar allá)</option>
+                                </select>
+                            </div>
+                            <div>
                                 <label>Confianza</label>
                                 <select id="stop-confianza" style="font-size: 12px; padding: 6px;">
-                                    <option value="Conocido">✅ Tienda/Zona Segura</option>
-                                    <option value="Precaucion">⚠️ Desconocido/Cuidado</option>
+                                    <option value="Conocido">✅ Segura</option>
+                                    <option value="Precaucion">⚠️ Cuidado</option>
                                 </select>
                             </div>
                         </div>
@@ -1147,29 +1154,26 @@
 
                         <button type="button" onclick="agregarParadaTemporal()" style="width: 100%; background: #17a2b8; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-bottom: 15px;"><i class="fas fa-plus"></i> Agregar Parada a la Ruta</button>
                         
-                        <!-- Lista visual de la ruta en construcción -->
-                        <div id="lista-ruta-temp" style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 10px; min-height: 40px; margin-bottom: 15px; font-size: 11px; max-height: 120px; overflow-y: auto;">
+                        <div id="lista-ruta-temp" style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 10px; min-height: 40px; margin-bottom: 15px; font-size: 11px; max-height: 150px; overflow-y: auto;">
                             <span style="color: #999;">Ruta vacía. Agrega la primera parada.</span>
                         </div>
 
                         <hr style="margin: 15px 0;">
                         
-                        <!-- Cierre de la ruta completa -->
                         <div class="form-group" style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
                             <div>
-                                <label>Motorizado</label>
+                                <label>Motorizado Asignado</label>
                                 <select id="ruta-chofer" style="font-size: 12px; padding: 6px;">
-                                    <option value="Jhon">Jhon (Logística)</option>
+                                    <option value="Jhon">Jhon (Coord. Logística)</option>
                                     <option value="Bryan">Bryan (Ventas)</option>
                                 </select>
                             </div>
                             <div>
-                                <label>Pago Total ($)</label>
-                                <input type="number" id="ruta-pago" placeholder="Ej: 6" step="0.01" min="0" style="font-size: 12px;">
+                                <label>Total Ruta ($)</label>
+                                <input type="number" id="ruta-pago" placeholder="Suma Auto" step="0.01" min="0" style="font-size: 12px; font-weight: bold; background: #f1f1f1;" readonly>
                             </div>
                         </div>
 
-                        <!-- Botones Dinámicos -->
                         <div style="display: flex; gap: 10px;">
                             <button type="button" id="btn-cancelar-ruta" onclick="cancelarEdicionRuta()" style="display: none; background: #6c757d; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; flex: 1;"><i class="fas fa-times"></i> Cancelar</button>
                             <button type="button" id="btn-guardar-ruta" onclick="guardarRutaCompleta()" style="flex: 2; background: #25D366; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold;"><i class="fab fa-whatsapp"></i> Guardar y Enviar</button>
@@ -5586,7 +5590,7 @@
         };
 
         // ==========================================
-        // 🚀 LÓGICA MULTIPARADA Y RADAR GPS
+        // 🚀 LÓGICA MULTIPARADA, PAGOS Y RADAR GPS
         // ==========================================
         window.mapaAdmin = null;
         window.marcadorTemporal = null;
@@ -5611,6 +5615,7 @@
                 window.marcadorTemporal = L.marker([lat, lng]).addTo(window.mapaAdmin).bindPopup("<b>Fijar coordenada</b><br>Llena los datos a la izquierda").openPopup();
             });
 
+            // Iniciar el radar GPS de los motorizados
             window.iniciarRastreoMotorizados();
         };
 
@@ -5648,6 +5653,7 @@
             const lat = document.getElementById('ruta-lat').value;
             const lng = document.getElementById('ruta-lng').value;
             const nota = document.getElementById('stop-nota').value.trim();
+            const pagoDinero = parseFloat(document.getElementById('stop-pago-dinero').value) || 0; // Captura el costo individual
             
             if(!lat || !lng || !nota) { alert("⚠️ Haz clic en el mapa y escribe qué hará el motorizado."); return; }
 
@@ -5657,6 +5663,7 @@
                 pago: document.getElementById('stop-pago').value,
                 tlf: document.getElementById('stop-tlf').value.trim() || 'Sin teléfono',
                 confianza: document.getElementById('stop-confianza').value,
+                pagoDinero: pagoDinero, // Guarda el costo individual en memoria
                 nota: nota
             };
 
@@ -5674,23 +5681,54 @@
             document.getElementById('stop-tlf').value = '';
             document.getElementById('ruta-lat').value = '';
             document.getElementById('ruta-lng').value = '';
+            document.getElementById('stop-pago-dinero').value = ''; // Limpiar casilla de pago
         };
 
         window.actualizarListaRutaUI = function() {
             const container = document.getElementById('lista-ruta-temp');
+            let totalAuto = 0; // Acumulador del costo total
+
             if(window.rutaEnConstruccion.length === 0) {
                 container.innerHTML = '<span style="color: #999;">Ruta vacía. Agrega la primera parada.</span>';
+                document.getElementById('ruta-pago').value = '';
                 return;
             }
             let html = '';
             window.rutaEnConstruccion.forEach((p, i) => {
                 const icon = p.tipo === 'Retiro' ? '🟢' : '🔵';
-                html += `<div style="margin-bottom:5px; border-bottom: 1px solid #eee; padding-bottom: 5px;">
-                            <strong>${icon} Parada ${i+1}:</strong> ${p.nota} <br>
-                            <span style="color:#666;">📞 ${p.tlf} | 💰 ${p.pago}</span>
+                totalAuto += p.pagoDinero; // Suma el costo de cada parada
+                html += `<div style="margin-bottom:5px; border-bottom: 1px solid #eee; padding-bottom: 5px; display:flex; justify-content:space-between; align-items:center;">
+                            <div style="flex:1;">
+                                <strong>${icon} Parada ${i+1}:</strong> ${p.nota} <br>
+                                <span style="color:#666;">📞 ${p.tlf} | Estatus: ${p.pago}</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <strong style="color:#28a745;">$${p.pagoDinero.toFixed(2)}</strong>
+                                <button type="button" onclick="eliminarParadaTemporal(${i})" style="background:#d9534f; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:10px;" title="Borrar parada"><i class="fas fa-times"></i></button>
+                            </div>
                          </div>`;
             });
             container.innerHTML = html;
+            document.getElementById('ruta-pago').value = totalAuto.toFixed(2); // Auto-llena la casilla de pago total
+        };
+
+        // 🚀 NUEVA FUNCIÓN: BORRAR UNA PARADA MIENTRAS SE CONSTRUYE LA RUTA
+        window.eliminarParadaTemporal = function(index) {
+            // 1. Borramos la parada de la memoria
+            window.rutaEnConstruccion.splice(index, 1);
+            
+            // 2. Limpiamos todos los pines temporales del mapa
+            window.marcadoresConstruccion.forEach(m => window.mapaAdmin.removeLayer(m));
+            window.marcadoresConstruccion = [];
+            
+            // 3. Volvemos a dibujar los pines restantes para que los números (Parada 1, 2...) se reordenen
+            window.rutaEnConstruccion.forEach((p, i) => {
+                const marker = L.marker([p.lat, p.lng]).addTo(window.mapaAdmin).bindPopup(`<b>Parada ${i+1}</b><br>${p.tipo}: ${p.nota}`);
+                window.marcadoresConstruccion.push(marker);
+            });
+            
+            // 4. Refrescamos la lista visual y el total de dinero
+            window.actualizarListaRutaUI();
         };
 
         window.cancelarEdicionRuta = function() {
@@ -5734,8 +5772,10 @@
                     
                     await setDoc(doc(collection(db, "rutas_puntos")), {
                         rutaId: rutaIdMaster, orden: i + 1, chofer: chofer, rutaPagoTotal: pagoTotal,
+                        subChofer: "", // Espacio para que Jhon delegue a las Motos A, B o C
                         nota: `(Parada ${i+1}) ${p.nota} | Tlf: ${p.tlf} | ${p.pago} | ${p.confianza}`,
                         rawTipo: p.tipo, rawNota: p.nota, rawTlf: p.tlf, rawPago: p.pago, rawConfianza: p.confianza,
+                        pagoDinero: p.pagoDinero, // Guarda el costo individual
                         lat: p.lat, lng: p.lng,
                         fecha: new Date().toLocaleDateString("es-VE"), timestamp: Date.now(), estado: "Activa"
                     });
@@ -5750,12 +5790,12 @@
                     });
                 }
 
-                let waText = `🛵 *RUTA ASIGNADA* 🛵\n*Chofer:* ${chofer}\n\n`;
+                let waText = `🛵 *RUTA ASIGNADA* 🛵\n*Chofer:* ${chofer}\n*Total Ruta:* $${pagoTotal}\n\n`;
                 window.rutaEnConstruccion.forEach((p, i) => {
                     const icon = p.tipo === 'Retiro' ? '🟢' : '🔵';
-                    waText += `*${icon} PARADA ${i+1}: ${p.tipo.toUpperCase()}*\n📦 Tarea: ${p.nota}\n📞 Tlf: ${p.tlf}\n💰 Estatus: ${p.pago}\n🛡️ Zona: ${p.confianza}\n📍 GPS: https://maps.google.com/?q=${p.lat},${p.lng}\n\n`;
+                    waText += `*${icon} PARADA ${i+1}: ${p.tipo.toUpperCase()} ($${p.pagoDinero})*\n📦 Tarea: ${p.nota}\n📞 Tlf: ${p.tlf}\n💰 Estatus: ${p.pago}\n🛡️ Zona: ${p.confianza}\n📍 GPS: https://maps.google.com/?q=${p.lat},${p.lng}\n\n`;
                 });
-                waText += `*(Recuerda marcar las paradas en tu aplicación)*`;
+                waText += `*(Ingresa al Portal para marcar las paradas o delegar la ruta)*`;
 
                 window.cancelarEdicionRuta(); 
                 window.cargarPuntosRuta(); 
@@ -5771,61 +5811,82 @@
             btn.innerHTML = '<i class="fab fa-whatsapp"></i> Guardar y Enviar'; btn.disabled = false;
         };
 
+        // 3. Cargar historial y mostrar Tareas Completadas
         window.cargarPuntosRuta = async function() {
             const tbody = document.getElementById('tabla-puntos-rutas');
+            const btnActualizar = document.querySelector('button[onclick="cargarPuntosRuta()"]');
+            
             if(!tbody) return;
+            if(btnActualizar) btnActualizar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando...';
 
             try {
-                const q = query(collection(db, "rutas_puntos"), where("estado", "==", "Activa"));
+                const q = query(collection(db, "rutas_puntos")); // Trae TODO
                 const snap = await getDocs(q);
                 tbody.innerHTML = '';
                 
-                if(window.marcadoresGuardados) window.marcadoresGuardados.forEach(m => window.mapaAdmin.removeLayer(m));
+                if(window.marcadoresGuardados && window.mapaAdmin) { 
+                    window.marcadoresGuardados.forEach(m => window.mapaAdmin.removeLayer(m)); 
+                }
                 window.marcadoresGuardados = [];
                 window.rutasAgrupadasLocal = {};
 
                 if(snap.empty) { 
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No hay rutas activas</td></tr>'; 
-                    return;
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No hay rutas asignadas.</td></tr>'; 
+                } else {
+                    snap.forEach(docSnap => {
+                        const data = docSnap.data();
+                        const rId = data.rutaId || docSnap.id; 
+                        
+                        if(!window.rutasAgrupadasLocal[rId]) {
+                            window.rutasAgrupadasLocal[rId] = {
+                                rutaId: rId, chofer: data.chofer, fecha: data.fecha, pagoTotal: data.rutaPagoTotal || 0, puntos: []
+                            };
+                        }
+                        window.rutasAgrupadasLocal[rId].puntos.push({ idDoc: docSnap.id, ...data });
+
+                        // Dibuja el pin solo si NO está Completada
+                        if(data.lat && data.lng && data.estado !== 'Completada') {
+                            const m = L.marker([data.lat, data.lng]).addTo(window.mapaAdmin).bindPopup(`<b>${data.chofer}</b><br>${data.nota}`);
+                            window.marcadoresGuardados.push(m);
+                        }
+                    });
+
+                    Object.values(window.rutasAgrupadasLocal).forEach(ruta => {
+                        ruta.puntos.sort((a,b) => (a.orden || 0) - (b.orden || 0));
+                        const color = ruta.chofer === 'Jhon' ? 'blue' : 'green';
+                        
+                        const todasCompletadas = ruta.puntos.every(p => p.estado === "Completada");
+                        const badgeRuta = todasCompletadas ? 
+                            `<span style="background:#28a745; color:white; padding:3px 6px; border-radius:4px; font-size:10px;"><i class="fas fa-check-double"></i> Ruta Terminada</span>` : 
+                            `<span style="background:#f0ad4e; color:white; padding:3px 6px; border-radius:4px; font-size:10px;"><i class="fas fa-motorcycle"></i> En Progreso</span>`;
+                        
+                        let desgloseHtml = ruta.puntos.map((p, i) => {
+                            const isDone = p.estado === 'Completada';
+                            const icon = isDone ? '<i class="fas fa-check-circle" style="color:#28a745;"></i>' : '<i class="fas fa-clock" style="color:#f0ad4e;"></i>';
+                            const style = isDone ? 'text-decoration: line-through; color: #999;' : 'color: #555;';
+                            const delegadoStr = p.subChofer ? ` <span style="background:#1d6fa5; color:white; padding:2px 4px; border-radius:3px; font-size:9px;">Delegado a ${p.subChofer}</span>` : '';
+                            return `<div style="font-size:11px; margin-bottom:3px; ${style}"><b>${i+1}.</b> ${icon} ${p.rawTipo||'Punto'}: ${p.rawNota || p.nota} ${delegadoStr}</div>`;
+                        }).join('');
+
+                        tbody.innerHTML += `<tr>
+                                <td>${ruta.fecha || ''}</td>
+                                <td><strong style="color: ${color};">${ruta.chofer || ''}</strong></td>
+                                <td>
+                                    <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                                        <strong style="color:#333; font-size:13px;">📍 Ruta Maestra (${ruta.puntos.length} paradas)</strong>
+                                        ${badgeRuta}
+                                    </div>
+                                    ${desgloseHtml}
+                                </td>
+                                <td style="text-align: center; display: flex; gap: 5px; justify-content: center; align-items: center; height:100%;">
+                                    <button type="button" onclick="editarRutaMaestra('${ruta.rutaId}')" style="background:#f0ad4e; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold;" title="Editar Ruta"><i class="fas fa-edit"></i> Editar</button>
+                                    <button type="button" onclick="eliminarRutaMaestra('${ruta.rutaId}')" style="background:#d9534f; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold;" title="Borrar Toda la Ruta"><i class="fas fa-times"></i> Borrar</button>
+                                </td>
+                            </tr>`;
+                    });
                 }
-
-                snap.forEach(docSnap => {
-                    const data = docSnap.data();
-                    const rId = data.rutaId || docSnap.id; 
-                    
-                    if(!window.rutasAgrupadasLocal[rId]) {
-                        window.rutasAgrupadasLocal[rId] = {
-                            rutaId: rId, chofer: data.chofer, fecha: data.fecha, pagoTotal: data.rutaPagoTotal || 0, puntos: []
-                        };
-                    }
-                    window.rutasAgrupadasLocal[rId].puntos.push({ idDoc: docSnap.id, ...data });
-
-                    if(data.lat && data.lng) {
-                        const m = L.marker([data.lat, data.lng]).addTo(window.mapaAdmin).bindPopup(`<b>${data.chofer}</b><br>${data.nota}`);
-                        window.marcadoresGuardados.push(m);
-                    }
-                });
-
-                Object.values(window.rutasAgrupadasLocal).forEach(ruta => {
-                    ruta.puntos.sort((a,b) => (a.orden || 0) - (b.orden || 0));
-                    const color = ruta.chofer === 'Jhon' ? 'blue' : 'green';
-                    
-                    let desgloseHtml = ruta.puntos.map((p, i) => `<div style="font-size:11px; color:#555; margin-bottom:3px;"><b>${i+1}.</b> ${p.rawTipo||'Punto'}: ${p.rawNota || p.nota}</div>`).join('');
-
-                    tbody.innerHTML += `<tr>
-                            <td>${ruta.fecha || ''}</td>
-                            <td><strong style="color: ${color};">${ruta.chofer || ''}</strong></td>
-                            <td>
-                                <strong style="color:#333; font-size:13px;">📍 Ruta Maestra (${ruta.puntos.length} paradas)</strong><br>
-                                ${desgloseHtml}
-                            </td>
-                            <td style="text-align: center; display: flex; gap: 5px; justify-content: center; align-items: center; height:100%;">
-                                <button type="button" onclick="editarRutaMaestra('${ruta.rutaId}')" style="background:#f0ad4e; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold;" title="Editar Ruta Completa"><i class="fas fa-edit"></i> Editar Ruta</button>
-                                <button type="button" onclick="eliminarRutaMaestra('${ruta.rutaId}')" style="background:#d9534f; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold;" title="Borrar Toda la Ruta"><i class="fas fa-times"></i> Borrar</button>
-                            </td>
-                        </tr>`;
-                });
             } catch(e) { console.error("Error al cargar la tabla:", e); }
+            if(btnActualizar) btnActualizar.innerHTML = '<i class="fas fa-sync-alt"></i> Actualizar Rutas';
         };
 
         window.editarRutaMaestra = function(rutaId) {
@@ -5838,12 +5899,12 @@
                 pago: p.rawPago || 'Pagado',
                 tlf: p.rawTlf || '',
                 confianza: p.rawConfianza || 'Conocido',
+                pagoDinero: p.pagoDinero || 0, // Recupera el costo individual
                 nota: p.rawNota || p.nota
             }));
 
             document.getElementById('edit-ruta-id').value = ruta.rutaId;
             document.getElementById('ruta-chofer').value = ruta.chofer;
-            document.getElementById('ruta-pago').value = ruta.pagoTotal || '';
 
             document.getElementById('titulo-ruta').innerHTML = '<i class="fas fa-edit"></i> Editando Ruta Maestra';
             document.getElementById('btn-cancelar-ruta').style.display = 'block';
@@ -5856,7 +5917,7 @@
                 window.marcadoresConstruccion.push(marker);
             });
 
-            window.actualizarListaRutaUI();
+            window.actualizarListaRutaUI(); // Esto auto-recalculará el pago final en la vista
             document.querySelector('#form-rutas-container').scrollIntoView({ behavior: 'smooth' });
         };
 

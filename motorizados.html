@@ -8,7 +8,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
-    <!-- Librería de Mapas Gratis (Leaflet) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -17,30 +16,33 @@
         .app-container { max-width: 480px; margin: 0 auto; background: white; min-height: 100vh; box-shadow: 0 0 20px rgba(0,0,0,0.05); position: relative; }
         .header-mobile { background: #385723; color: white; padding: 20px; text-align: center; border-radius: 0 0 20px 20px; box-shadow: 0 4px 10px rgba(56,87,35,0.2); }
         .ganancia-box { background: #e2f0d9; border: 1px solid #c3e6cb; border-radius: 12px; padding: 20px; text-align: center; margin: -20px 20px 20px 20px; position: relative; z-index: 10; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        
         .timeline { border-left: 3px solid #1d6fa5; margin-left: 20px; padding-left: 20px; position: relative; }
         .timeline-item { margin-bottom: 20px; position: relative; }
         .timeline-item::before { content: ''; position: absolute; left: -28px; top: 0; width: 14px; height: 14px; background: #1d6fa5; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 0 2px #1d6fa5; }
-        
         #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #385723; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
         #login-box { background: white; padding: 30px; border-radius: 16px; width: 100%; max-width: 350px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-
         .parada-box { background: #fff; border: 1px solid #eee; padding: 12px; border-radius: 8px; margin-top: 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
     </style>
 </head>
 <body>
 
-    <!-- PANTALLA DE ACCESO -->
     <div id="login-screen">
         <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png" alt="F&B Parts" style="width: 150px; margin-bottom: 30px; filter: brightness(0) invert(1);">
         <div id="login-box">
-            <h2 style="color: #385723; font-size: 22px; font-weight: bold; margin-bottom: 5px;">Portal del Conductor</h2>
+            <h2 style="color: #385723; font-size: 22px; font-weight: bold; margin-bottom: 5px;">Portal Operativo</h2>
             <p style="color: #666; font-size: 13px; margin-bottom: 25px;">El sistema pedirá tu ubicación GPS al entrar.</p>
             
             <select id="login-user" style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 15px; font-size: 16px; outline: none; background: #f9f9f9;">
-                <option value="">Selecciona tu nombre...</option>
-                <option value="Jhon">Jhon</option>
-                <option value="Bryan">Bryan</option>
+                <option value="">Selecciona tu perfil...</option>
+                <optgroup label="Coordinadores">
+                    <option value="Jhon">Jhon (Logística)</option>
+                    <option value="Bryan">Bryan (Ventas)</option>
+                </optgroup>
+                <optgroup label="Flota Sub-Contratada">
+                    <option value="Moto A">Motorizado A</option>
+                    <option value="Moto B">Motorizado B</option>
+                    <option value="Moto C">Motorizado C</option>
+                </optgroup>
             </select>
             
             <input type="password" id="login-pin" placeholder="PIN de Seguridad" style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 20px; font-size: 16px; text-align: center; letter-spacing: 5px; outline: none;">
@@ -51,7 +53,6 @@
         </div>
     </div>
 
-    <!-- APP PRINCIPAL -->
     <div class="app-container" id="app-main" style="display: none;">
         <div class="header-mobile">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
@@ -62,31 +63,31 @@
             <p style="font-size: 12px; opacity: 0.8; margin: 2px 0 20px 0;"><i class="fas fa-satellite-dish"></i> GPS Activo y Transmitiendo</p>
         </div>
 
-        <div class="ganancia-box">
+        <!-- Solo visible para Jhon y Bryan -->
+        <div class="ganancia-box" id="caja-ganancias">
             <span style="font-size: 12px; color: #385723; font-weight: bold; text-transform: uppercase;">Por Cobrar Esta Semana</span>
             <div style="font-size: 38px; color: #155724; font-weight: bold; margin: 5px 0;">$<span id="total-pendiente">0.00</span></div>
         </div>
 
-        <!-- SECCIÓN DE MAPA -->
-        <div style="padding: 0 20px; margin-bottom: 25px;">
-            <h3 style="color: #333; font-size: 15px; font-weight: bold; margin-bottom: 10px;"><i class="fas fa-map-marked-alt" style="color:#1d6fa5;"></i> Tu Ruta Hoy</h3>
+        <div style="padding: 0 20px; margin-bottom: 25px; margin-top: 20px;">
+            <h3 style="color: #333; font-size: 15px; font-weight: bold; margin-bottom: 10px;"><i class="fas fa-map-marked-alt" style="color:#1d6fa5;"></i> Mapa Radar</h3>
             <div id="mapa-caracas" style="height: 250px; border-radius: 12px; border: 1px solid #ddd; z-index: 1;"></div>
         </div>
 
-        <!-- SECCIÓN BITÁCORA DE RUTAS -->
-        <div style="padding: 0 20px 30px 20px;">
+        <div style="padding: 0 20px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 style="color: #333; font-size: 15px; font-weight: bold; margin:0;"><i class="fas fa-clipboard-list" style="color:#28a745;"></i> Tareas Asignadas</h3>
-                <button onclick="cargarBitacora(currentUser)" style="background:none; border:none; color:#1d6fa5; font-size:12px; cursor:pointer;"><i class="fas fa-sync-alt"></i> Actualizar</button>
+                <h3 style="color: #333; font-size: 15px; font-weight: bold; margin:0;"><i class="fas fa-clipboard-list" style="color:#28a745;"></i> Rutas y Paradas</h3>
+                <button onclick="cargarBitacora(currentUser)" style="background:none; border:none; color:#1d6fa5; font-size:12px; cursor:pointer; font-weight:bold;"><i class="fas fa-sync-alt"></i> Refrescar</button>
             </div>
-            
-            <div class="timeline" id="bitacora-lista">
-                <p style="font-size: 13px; color: #666; text-align: center;">Cargando tus rutas...</p>
-            </div>
+            <div class="timeline" id="bitacora-lista"></div>
+        </div>
+
+        <div style="padding: 0 20px 30px 20px; border-top: 1px solid #eee; margin-top: 20px; padding-top: 20px;">
+            <h3 style="color: #333; font-size: 15px; font-weight: bold; margin-bottom: 15px;"><i class="fas fa-history" style="color:#6c757d;"></i> Historial Completado</h3>
+            <div id="historial-lista"></div>
         </div>
     </div>
 
-    <!-- Scripts de Lógica y Firebase -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getFirestore, collection, getDocs, query, where, doc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -108,26 +109,32 @@
         let watchIdGPS = null;
         let marcadorPiloto = null;
 
-        const PINES_ACCESO = { "Jhon": "1234", "Bryan": "5678" };
+        // PIN DE ACCESO (0000 para los sub-motorizados)
+        const PINES_ACCESO = { "Jhon": "1234", "Bryan": "5678", "Moto A": "0000", "Moto B": "0000", "Moto C": "0000" };
 
         window.entrarPortal = function() {
             const user = document.getElementById('login-user').value;
             const pin = document.getElementById('login-pin').value;
 
-            if(!user) { alert("Selecciona tu nombre"); return; }
+            if(!user) { alert("Selecciona tu perfil"); return; }
             if(pin !== PINES_ACCESO[user]) { alert("PIN incorrecto"); return; }
 
             window.currentUser = user;
             document.getElementById('nombre-chofer').textContent = user;
+            
+            // Ocultar caja de dinero si es Sub-Motorizado
+            if(user === "Jhon" || user === "Bryan") {
+                document.getElementById('caja-ganancias').style.display = 'block';
+            } else {
+                document.getElementById('caja-ganancias').style.display = 'none';
+            }
+
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('app-main').style.display = 'block';
 
             iniciarMapa();
             iniciarTransmisionGPS(user);
             window.cargarBitacora(user);
-            
-            // Recargar finanzas cada rato
-            setInterval(() => { if(window.currentUser) window.cargarBitacora(window.currentUser); }, 30000);
         };
 
         window.salirPortal = function() {
@@ -144,89 +151,123 @@
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapa);
         }
 
-        // 🚀 TRANSMISOR GPS EN TIEMPO REAL
         function iniciarTransmisionGPS(chofer) {
             if ("geolocation" in navigator) {
                 watchIdGPS = navigator.geolocation.watchPosition(async (position) => {
                     const lat = position.coords.latitude;
                     const lng = position.coords.longitude;
 
-                    // Mover la moto del motorizado en su propio mapa
                     if (!marcadorPiloto) {
                         const motoIcon = L.icon({ iconUrl: 'https://cdn-icons-png.flaticon.com/512/1048/1048314.png', iconSize: [36, 36], iconAnchor: [18, 36] });
-                        marcadorPiloto = L.marker([lat, lng], {icon: motoIcon}).addTo(mapa).bindPopup("¡Estás aquí!").openPopup();
+                        marcadorPiloto = L.marker([lat, lng], {icon: motoIcon}).addTo(mapa).bindPopup("Tu ubicación actual").openPopup();
                         mapa.setView([lat, lng], 15);
                     } else {
                         marcadorPiloto.setLatLng([lat, lng]);
                     }
 
-                    // Enviar a la Base de Datos para el Admin
                     try {
                         await setDoc(doc(db, "choferes_gps", chofer), {
-                            lat: lat, lng: lng, 
-                            hora: new Date().toLocaleTimeString("es-VE"), 
-                            timestamp: Date.now()
+                            lat: lat, lng: lng, hora: new Date().toLocaleTimeString("es-VE"), timestamp: Date.now()
                         });
-                    } catch(e) { console.error("Error transmitiendo GPS:", e); }
-
+                    } catch(e) {}
                 }, (error) => {
-                    if (error.code === error.PERMISSION_DENIED) {
-                        alert("⚠️ Debes permitir el uso del GPS en tu navegador para que logística pueda hacerte seguimiento.");
-                    }
+                    if (error.code === error.PERMISSION_DENIED) alert("⚠️ Debes permitir el uso del GPS en tu celular.");
                 }, { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 });
             }
         }
 
         window.cargarBitacora = async function(chofer) {
-            const lista = document.getElementById('bitacora-lista');
+            const listaActivas = document.getElementById('bitacora-lista');
+            const listaHistorial = document.getElementById('historial-lista');
             let totalPendiente = 0;
             const coordenadasRuta = [];
 
             try {
-                // 1. CARGAR RUTAS AGRUPADAS (TAREAS)
-                const qRutas = query(collection(db, "rutas_puntos"), where("chofer", "==", chofer), where("estado", "==", "Activa"));
+                // Jerarquía de búsqueda: Jhon/Bryan buscan por 'chofer', los Moto A/B/C buscan por 'subChofer'
+                const esJefe = (chofer === 'Jhon' || chofer === 'Bryan');
+                const qField = esJefe ? "chofer" : "subChofer";
+                
+                const qRutas = query(collection(db, "rutas_puntos"), where(qField, "==", chofer));
                 const snapRutas = await getDocs(qRutas);
                 
-                // Limpiar mapa (excepto al piloto)
                 mapa.eachLayer((layer) => { if (layer !== marcadorPiloto && layer.toGeoJSON) mapa.removeLayer(layer); });
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapa);
 
-                const rutasAgrupadas = {};
+                const rutasAgrupadasActivas = {};
+                const historialCompletadas = [];
+
                 snapRutas.forEach(docSnap => {
                     const r = docSnap.data();
                     const rId = r.rutaId || docSnap.id;
-                    if(!rutasAgrupadas[rId]) rutasAgrupadas[rId] = [];
-                    rutasAgrupadas[rId].push({ id: docSnap.id, ...r });
+                    
+                    if (r.estado === 'Activa') {
+                        if(!rutasAgrupadasActivas[rId]) rutasAgrupadasActivas[rId] = [];
+                        rutasAgrupadasActivas[rId].push({ id: docSnap.id, ...r });
+                    } else if (r.estado === 'Completada') {
+                        historialCompletadas.push({ id: docSnap.id, ...r });
+                    }
                 });
 
+                // --- 1. RENDERIZAR TAREAS ACTIVAS ---
                 let tareasHTML = '';
-                
-                Object.values(rutasAgrupadas).forEach((rutaArr, idxRuta) => {
+                Object.values(rutasAgrupadasActivas).forEach((rutaArr, idxRuta) => {
                     rutaArr.sort((a,b) => (a.orden || 0) - (b.orden || 0));
+                    
+                    let delegadorUI = '';
+                    let badgeDelegado = '';
+                    const subActual = rutaArr[0].subChofer || '';
+
+                    if (chofer === 'Jhon') {
+                        delegadorUI = `
+                            <select onchange="delegarRutaMaestra('${rutaArr[0].rutaId}', this.value)" style="margin-top:8px; width:100%; padding:6px; border:1px solid #c3e6cb; border-radius:4px; font-size:11px; background:white; color:#155724; font-weight:bold; outline:none;">
+                                <option value="">🛵 (Yo haré esta ruta)</option>
+                                <option value="Moto A" ${subActual==='Moto A'?'selected':''}>Delega a: Motorizado A</option>
+                                <option value="Moto B" ${subActual==='Moto B'?'selected':''}>Delega a: Motorizado B</option>
+                                <option value="Moto C" ${subActual==='Moto C'?'selected':''}>Delega a: Motorizado C</option>
+                            </select>
+                        `;
+                    }
+                    
+                    if (esJefe && subActual !== '') {
+                        badgeDelegado = `<span style="background:#1d6fa5; color:white; padding:2px 6px; border-radius:10px; font-size:10px; margin-left:5px;">Delegado a ${subActual}</span>`;
+                    }
                     
                     tareasHTML += `
                         <div class="timeline-item">
                             <div style="background: #e2f0d9; padding: 12px; border-radius: 8px; border: 1px dashed #28a745; margin-bottom: 10px;">
-                                <div style="font-size: 13px; color: #155724; font-weight: bold; margin-bottom: 8px;"><i class="fas fa-map-pin"></i> Ruta Asignada #${idxRuta + 1}</div>
+                                <div style="font-size: 13px; color: #155724; font-weight: bold; margin-bottom: 8px;">
+                                    <i class="fas fa-map-pin"></i> Ruta Maestra #${idxRuta + 1} ${badgeDelegado}
+                                </div>
+                                ${delegadorUI}
                     `;
 
                     rutaArr.forEach((p, i) => {
                         coordenadasRuta.push([p.lat, p.lng]);
                         L.marker([p.lat, p.lng]).addTo(mapa).bindPopup(`<b>Parada ${i+1}</b><br>${p.rawTipo}: ${p.rawNota}`);
                         
+                        const costoUI = esJefe ? `<strong style="color:#28a745; font-size:13px; display:block;">$${(p.pagoDinero || 0).toFixed(2)}</strong>` : ``;
+
+                        // 🚀 AQUÍ AÑADIMOS EL BOTÓN "IR" CON EL ENLACE UNIVERSAL A GOOGLE MAPS/WAZE
                         tareasHTML += `
                             <div class="parada-box" id="parada-box-${p.id}">
-                                <div style="flex:1;">
-                                    <strong style="color:#333; font-size:12px;">Parada ${i+1}: ${p.rawTipo || 'Detalle'}</strong>
-                                    <div style="font-size:11px; color:#555;">${p.rawNota || p.nota}</div>
+                                <div style="flex:1; padding-right: 8px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                                        <strong style="color:#333; font-size:12px;">Parada ${i+1}: ${p.rawTipo || 'Detalle'}</strong>
+                                        ${costoUI}
+                                    </div>
+                                    <div style="font-size:11px; color:#555; margin-top:2px;">${p.rawNota || p.nota}</div>
                                 </div>
-                                <button onclick="marcarCompletada(this, '${p.id}')" style="background:#1d6fa5; color:white; border:none; padding:8px 12px; border-radius:4px; font-weight:bold; font-size:11px; cursor:pointer; flex-shrink:0;">
-                                    <i class="fas fa-check"></i> Listo
-                                </button>
+                                <div style="display:flex; gap:5px; flex-shrink:0;">
+                                    <a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}" target="_blank" style="background:#28a745; color:white; border:none; padding:8px 10px; border-radius:4px; font-weight:bold; font-size:11px; cursor:pointer; text-decoration:none; display:flex; align-items:center; gap:4px;" title="Navegar por GPS">
+                                        <i class="fas fa-location-arrow"></i> Ir
+                                    </a>
+                                    <button onclick="marcarCompletada(this, '${p.id}')" style="background:#1d6fa5; color:white; border:none; padding:8px 10px; border-radius:4px; font-weight:bold; font-size:11px; cursor:pointer; display:flex; align-items:center; gap:4px;">
+                                        <i class="fas fa-check"></i> Listo
+                                    </button>
+                                </div>
                             </div>
                         `;
                     });
-
                     tareasHTML += `</div></div>`;
                 });
 
@@ -234,45 +275,81 @@
                     L.polyline(coordenadasRuta, { color: 'red', weight: 4, opacity: 0.7, dashArray: '10, 10' }).addTo(mapa);
                     if(!marcadorPiloto) mapa.fitBounds(L.polyline(coordenadasRuta).getBounds(), { padding: [20, 20] });
                 }
+                listaActivas.innerHTML = tareasHTML;
+                if (listaActivas.innerHTML === '') { listaActivas.innerHTML = '<p style="font-size: 13px; color: #666; background:#f9f9f9; padding:15px; border-radius:6px;">No tienes rutas activas pendientes.</p>'; }
 
-                // 2. CALCULAR DINERO POR COBRAR
-                const qPedidos = query(collection(db, "pedidos"), where("motorizado", "==", chofer));
-                const snapPedidos = await getDocs(qPedidos);
-                
-                snapPedidos.forEach(doc => {
-                    const v = doc.data();
-                    if (v.pagoMotorizadoEstatus !== 'Pagado' && parseFloat(v.tarifaMotorizado) > 0) {
-                        totalPendiente += parseFloat(v.tarifaMotorizado);
-                    }
+                // --- 2. RENDERIZAR HISTORIAL ---
+                historialCompletadas.sort((a,b) => b.timestamp - a.timestamp);
+                let histHTML = '';
+                historialCompletadas.forEach(p => {
+                    const costoHist = esJefe ? `<span style="color:#28a745; font-weight:bold; margin-right:8px;">$${(p.pagoDinero || 0).toFixed(2)}</span>` : ``;
+                    histHTML += `
+                        <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #eee; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                            <div>
+                                <strong style="font-size: 12px; color: #333;"><i class="fas fa-check-circle" style="color:#28a745;"></i> ${p.rawTipo || 'Tarea'} Lista</strong>
+                                <div style="font-size: 11px; color: #666; margin-top:2px;">${p.rawNota || p.nota}</div>
+                            </div>
+                            <div style="text-align:right;">
+                                ${costoHist}
+                                <span style="font-size: 10px; color: #999;">${p.fecha}</span>
+                            </div>
+                        </div>
+                    `;
                 });
+                listaHistorial.innerHTML = histHTML;
+                if (listaHistorial.innerHTML === '') { listaHistorial.innerHTML = '<p style="font-size: 13px; color: #666; text-align: center;">Aún no has completado paradas.</p>'; }
 
-                lista.innerHTML = tareasHTML;
-                if (lista.innerHTML === '') { lista.innerHTML = '<p style="font-size: 13px; color: #666; background:#f9f9f9; padding:15px; border-radius:6px;">No tienes rutas activas. ¡Día libre o a la espera! 😎</p>'; }
-                document.getElementById('total-pendiente').innerText = totalPendiente.toFixed(2);
+                // --- 3. CALCULAR DINERO POR COBRAR (SOLO JEFES) ---
+                if (esJefe) {
+                    const qPedidos = query(collection(db, "pedidos"), where("motorizado", "==", chofer));
+                    const snapPedidos = await getDocs(qPedidos);
+                    snapPedidos.forEach(doc => {
+                        const v = doc.data();
+                        if (v.pagoMotorizadoEstatus !== 'Pagado' && parseFloat(v.tarifaMotorizado) > 0) {
+                            totalPendiente += parseFloat(v.tarifaMotorizado);
+                        }
+                    });
+                    document.getElementById('total-pendiente').innerText = totalPendiente.toFixed(2);
+                }
 
             } catch (error) {
                 console.error(error);
-                lista.innerHTML = '<p style="font-size: 13px; color: #d9534f;">Error de conexión.</p>';
+                listaActivas.innerHTML = '<p style="font-size: 13px; color: #d9534f;">Error de conexión.</p>';
             }
         };
 
-        // 🚀 MARCAR PARADA COMO LISTA
+        // 🚀 FUNCIÓN EXCLUSIVA PARA QUE JHON DELEGUE RUTAS
+        window.delegarRutaMaestra = async function(rutaId, subChoferAsignado) {
+            try {
+                // Buscamos todos los puntos que pertenecen a esta ruta maestra
+                const qPuntos = query(collection(db, "rutas_puntos"), where("rutaId", "==", rutaId));
+                const snapPuntos = await getDocs(qPuntos);
+                
+                // Actualizamos el campo subChofer a todos los puntos a la vez
+                snapPuntos.forEach(async (docSnap) => {
+                    await updateDoc(docSnap.ref, { subChofer: subChoferAsignado });
+                });
+                
+                alert(subChoferAsignado === '' ? "Ruta devuelta a tu bandeja personal." : `¡Ruta delegada a ${subChoferAsignado} exitosamente!`);
+                window.cargarBitacora(window.currentUser);
+            } catch (error) {
+                console.error(error); alert("Hubo un error al delegar la ruta.");
+            }
+        };
+
         window.marcarCompletada = async function(btnElement, docId) {
             btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             btnElement.disabled = true;
             try {
                 await updateDoc(doc(db, "rutas_puntos", docId), { estado: "Completada" });
                 
-                // Efecto visual de tachado
                 const box = document.getElementById(`parada-box-${docId}`);
                 box.style.opacity = '0.5';
-                box.style.textDecoration = 'line-through';
                 box.style.background = '#f1f1f1';
                 btnElement.innerHTML = '<i class="fas fa-check-double"></i>';
                 btnElement.style.background = '#28a745';
                 
-                // Borrar del mapa al instante
-                window.cargarBitacora(window.currentUser);
+                setTimeout(() => { window.cargarBitacora(window.currentUser); }, 1000);
             } catch (error) {
                 alert("Error al marcar. Intenta de nuevo.");
                 btnElement.innerHTML = '<i class="fas fa-check"></i> Listo';
