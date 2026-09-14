@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mis Pedidos y Envíos | F&B Parts</title>
+    <link rel="icon" type="image/png" href="img/favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="styles.css">
+
+    <style>
+        .container-orders { max-width: 900px; margin: 40px auto; padding: 0 20px; }
+        .orders-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid var(--green); padding-bottom: 15px; }
+        .orders-header h2 { color: var(--green); font-family: 'Oswald', sans-serif; font-size: 30px; margin: 0; }
+        
+        .order-card { background: white; border: 1px solid #eee; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,.03); }
+        .order-card-header { display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; font-size: 14px; color: #666; }
+        
+        .order-products { margin-bottom: 15px; }
+        .order-item-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #f0f0f0; font-size: 15px; }
+        
+        .order-shipping-box { background: #f8f9fa; padding: 12px; border-radius: 6px; border-left: 4px solid var(--green); font-size: 14px; margin-top: 10px; }
+        .order-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 10px; border-top: 1px solid #eee; font-size: 18px; font-weight: bold; }
+        
+        .btn-logout { background: #d9534f; color: white; border: none; padding: 8px 15px; border-radius: 4px; font-family: 'Oswald', sans-serif; cursor: pointer; font-size: 14px; }
+        .btn-logout:hover { background: #c9302c; }
+    </style>
+</head>
+<body>
+
+    <div class="topbar">
+        <h2>PORTAL DE CLIENTES</h2>
+        <span>SEGUIMIENTO DE PEDIDOS Y ENVIOS</span>
+    </div>
+
+    <header>
+        <div class="container header-wrap">
+            <a class="logo" href="index.html">
+                <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="LOGO F&B PARTS">
+            </a>
+
+            <nav>
+                <a href="index.html">Inicio</a>
+                <a href="tienda.html">Tienda</a>
+                <a href="mis-pedidos.html" style="color: #000; font-weight: bold;">Mis Pedidos</a>
+            </nav>
+
+            <div class="header-right">
+                <button class="btn-logout" id="btnLogout">CERRAR SESIÓN</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container-orders">
+        <div class="orders-header">
+            <h2><i class="fas fa-box"></i> Historial de Compras y Envíos</h2>
+            <span id="user-email-display" style="font-weight: bold; color: #555;">Cargando usuario...</span>
+        </div>
+
+        <div id="client-orders-list">
+            <div style="text-align: center; color: #777; padding: 40px;">Buscando tus pedidos en la nube...</div>
+        </div>
+    </div>
+
+    <!-- Lógica de Seguridad y Consulta de Historial del Cliente -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
+            authDomain: "fb-parts-app.firebaseapp.com",
+            projectId: "fb-parts-app",
+            storageBucket: "fb-parts-app.firebasestorage.app",
+            messagingSenderId: "21714159445",
+            appId: "1:21714159445:web:8f4946cd1c98d9b95dd1dc"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const emailDisplay = document.getElementById('user-email-display');
+        const ordersListContainer = document.getElementById('client-orders-list');
+
+        // Validar si el cliente está logueado
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                // Si no ha iniciado sesión, lo mandamos al login de la tienda
+                window.location.href = "login.html";
+            } else {
+                emailDisplay.innerText = user.email;
+                await cargarPedidosCliente(user.email);
+            }
+        });
+
+        // Botón para cerrar sesión
+        document.getElementById('btnLogout').addEventListener('click', () => {
+            signOut(auth).then(() => {
+                window.location.href = "login.html";
+            });
+        });
+
+        // Buscar solo los pedidos correspondientes a este correo
+        async function cargarPedidosCliente(userEmail) {
+            try {
+                const querySnapshot = await getDocs(collection(db, "pedidos"));
+                let misPedidos = [];
+
+                querySnapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    // Comparamos el correo registrado en el pedido con el usuario actual
+                    if (data.email && data.email.toLowerCase().trim() === userEmail.toLowerCase().trim()) {
+                        misPedidos.push(data);
+                    }
+                });
+
+                if (misPedidos.length === 0) {
+                    ordersListContainer.innerHTML = `
+                        <div style="text-align: center; color: #777; padding: 40px; background: white; border-radius: 8px; border: 1px solid #eee;">
+                            <i class="fas fa-shopping-cart" style="font-size: 40px; color: #ccc; margin-bottom: 10px;"></i>
+                            <p>Aún no tienes pedidos registrados con este correo (${userEmail}).</p>
+                            <a href="tienda.html" style="color: var(--green); font-weight: bold; text-decoration: underline;">Ir a la tienda a comprar repuestos</a>
+                        </div>`;
+                    return;
+                }
+
+                ordersListContainer.innerHTML = '';
+                
+                misPedidos.forEach((pedido) => {
+                    let productosHTML = '';
+                    if (pedido.productos && Array.isArray(pedido.productos)) {
+                        pedido.productos.forEach(p => {
+                            productosHTML += `
+                                <div class="order-item-row">
+                                    <span>${p.cantidad}x ${p.nombre}</span>
+                                    <span>$${(p.precio * p.cantidad).toFixed(2)}</span>
+                                </div>`;
+                        });
+                    }
+
+                    let envioMetodo = pedido.envio || "Motorizado Caracas";
+                    let trackingInfo = pedido.tracking || "En preparación";
+
+                    ordersListContainer.innerHTML += `
+                        <div class="order-card">
+                            <div class="order-card-header">
+                                <span><strong>Fecha:</strong> ${pedido.fecha || 'N/D'}</span>
+                                <span style="background: #e8f4fd; color: #1d6fa5; padding: 3px 8px; border-radius: 4px; font-weight: bold;">${pedido.estado || 'Procesando'}</span>
+                            </div>
+                            
+                            <div class="order-products">
+                                ${productosHTML}
+                            </div>
+
+                            <div class="order-shipping-box">
+                                <div><i class="fas fa-shipping-fast" style="color: var(--green);"></i> <strong>Método de Envío:</strong> ${envioMetodo}</div>
+                                <div style="margin-top: 4px; color: #333;"><i class="fas fa-info-circle"></i> <strong>Estatus / Nro. de Guía:</strong> ${trackingInfo}</div>
+                            </div>
+
+                            <div class="order-footer">
+                                <span style="font-size: 15px; color: #555;">Total pagado:</span>
+                                <span style="color: var(--green);">$${Number(pedido.total || 0).toFixed(2)}</span>
+                            </div>
+                        </div>`;
+                });
+
+            } catch (error) {
+                console.error("Error al cargar historial del cliente: ", error);
+                ordersListContainer.innerHTML = `<p style="text-align: center; color: red;">Error al sincronizar tus pedidos.</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

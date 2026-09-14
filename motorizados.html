@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Portal de Logística | F&B Parts</title>
+    <link rel="icon" type="image/png" href="img/favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        body { background-color: #f4f6f4; font-family: 'Helvetica Neue', sans-serif; }
+        .app-container { max-width: 480px; margin: 0 auto; background: white; min-height: 100vh; box-shadow: 0 0 20px rgba(0,0,0,0.05); position: relative; }
+        .header-mobile { background: #385723; color: white; padding: 20px; text-align: center; border-radius: 0 0 20px 20px; box-shadow: 0 4px 10px rgba(56,87,35,0.2); }
+        .ganancia-box { background: #e2f0d9; border: 1px solid #c3e6cb; border-radius: 12px; padding: 20px; text-align: center; margin: -20px 20px 20px 20px; position: relative; z-index: 10; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .timeline { border-left: 3px solid #1d6fa5; margin-left: 20px; padding-left: 20px; position: relative; }
+        .timeline-item { margin-bottom: 20px; position: relative; }
+        .timeline-item::before { content: ''; position: absolute; left: -28px; top: 0; width: 14px; height: 14px; background: #1d6fa5; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 0 2px #1d6fa5; }
+        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #385723; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
+        #login-box { background: white; padding: 30px; border-radius: 16px; width: 100%; max-width: 350px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .parada-box { background: #fff; border: 1px solid #eee; padding: 12px; border-radius: 8px; margin-top: 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+    </style>
+</head>
+<body>
+
+    <div id="login-screen">
+        <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png" alt="F&B Parts" style="width: 150px; margin-bottom: 30px; filter: brightness(0) invert(1);">
+        <div id="login-box">
+            <h2 style="color: #385723; font-size: 22px; font-weight: bold; margin-bottom: 5px;">Portal Operativo</h2>
+            <p style="color: #666; font-size: 13px; margin-bottom: 25px;">Ingresa tu código de acceso único.</p>
+            
+            <input type="password" id="login-pin" placeholder="****" style="width: 100%; padding: 15px; border: 2px solid #ccc; border-radius: 8px; margin-bottom: 20px; font-size: 24px; text-align: center; letter-spacing: 15px; outline: none; font-weight: bold;">
+            
+            <button onclick="entrarPortal()" style="width: 100%; background: #1d6fa5; color: white; border: none; padding: 14px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer;">
+                Ingresar al Portal
+            </button>
+        </div>
+    </div>
+
+    <div class="app-container" id="app-main" style="display: none;">
+        <div class="header-mobile">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png" alt="Logo" style="height: 35px; filter: brightness(0) invert(1);">
+                <button onclick="salirPortal()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px;"><i class="fas fa-sign-out-alt"></i> Salir</button>
+            </div>
+            <h1 style="font-size: 18px; margin: 0;">Hola, <span id="nombre-chofer" style="font-weight: bold;">---</span> 👋</h1>
+            <p style="font-size: 12px; opacity: 0.8; margin: 2px 0 20px 0;"><i class="fas fa-satellite-dish"></i> GPS Activo y Transmitiendo</p>
+        </div>
+
+        <!-- Solo visible para Jhon y Bryan -->
+        <div class="ganancia-box" id="caja-ganancias">
+            <span style="font-size: 12px; color: #385723; font-weight: bold; text-transform: uppercase;">Por Cobrar Esta Semana</span>
+            <div style="font-size: 38px; color: #155724; font-weight: bold; margin: 5px 0;">$<span id="total-pendiente">0.00</span></div>
+        </div>
+
+        <div style="padding: 0 20px; margin-bottom: 25px; margin-top: 20px;">
+            <h3 style="color: #333; font-size: 15px; font-weight: bold; margin-bottom: 10px;"><i class="fas fa-map-marked-alt" style="color:#1d6fa5;"></i> Mapa Radar</h3>
+            <div id="mapa-caracas" style="height: 250px; border-radius: 12px; border: 1px solid #ddd; z-index: 1;"></div>
+        </div>
+
+        <div style="padding: 0 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="color: #333; font-size: 15px; font-weight: bold; margin:0;"><i class="fas fa-clipboard-list" style="color:#28a745;"></i> Rutas y Paradas</h3>
+                <button onclick="cargarBitacora(currentUser)" style="background:none; border:none; color:#1d6fa5; font-size:12px; cursor:pointer; font-weight:bold;"><i class="fas fa-sync-alt"></i> Refrescar</button>
+            </div>
+            <div class="timeline" id="bitacora-lista"></div>
+        </div>
+
+        <div style="padding: 0 20px 30px 20px; border-top: 1px solid #eee; margin-top: 20px; padding-top: 20px;">
+            <h3 style="color: #333; font-size: 15px; font-weight: bold; margin-bottom: 15px;"><i class="fas fa-history" style="color:#6c757d;"></i> Historial Completado</h3>
+            <div id="historial-lista"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getFirestore, collection, getDocs, getDoc, query, where, doc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
+            authDomain: "fb-parts-app.firebaseapp.com",
+            projectId: "fb-parts-app",
+            storageBucket: "fb-parts-app.firebasestorage.app",
+            messagingSenderId: "21714159445",
+            appId: "1:21714159445:web:8f4946cd1c98d9b95dd1dc"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let mapa = null;
+        window.currentUser = null;
+        let watchIdGPS = null;
+        let marcadorPiloto = null;
+
+        // 🚀 PINES ÚNICOS Y SECRETOS (Nadie ve los nombres de los demás)
+        const USUARIOS_POR_PIN = { 
+            "1234": "Jhon", 
+            "5678": "Bryan", 
+            "1001": "Moto A", 
+            "1002": "Moto B", 
+            "1003": "Moto C" 
+        };
+
+        window.entrarPortal = function() {
+            const pin = document.getElementById('login-pin').value.trim();
+            const user = USUARIOS_POR_PIN[pin];
+
+            // Si el PIN no existe en la lista, lo rebotamos
+            if(!user) { 
+                alert("Código PIN incorrecto o no autorizado."); 
+                document.getElementById('login-pin').value = '';
+                return; 
+            }
+
+            window.currentUser = user;
+            document.getElementById('nombre-chofer').textContent = user;
+            
+            // Ocultar caja de dinero si es la flota Sub-Contratada (Moto A, B o C)
+            if(user === "Jhon" || user === "Bryan") {
+                document.getElementById('caja-ganancias').style.display = 'block';
+            } else {
+                document.getElementById('caja-ganancias').style.display = 'none';
+            }
+
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('app-main').style.display = 'block';
+
+            iniciarMapa();
+            iniciarTransmisionGPS(user);
+            window.cargarBitacora(user);
+        };
+
+        window.salirPortal = function() {
+            if(watchIdGPS) navigator.geolocation.clearWatch(watchIdGPS);
+            window.currentUser = null;
+            document.getElementById('app-main').style.display = 'none';
+            document.getElementById('login-screen').style.display = 'flex';
+            document.getElementById('login-pin').value = '';
+        };
+
+        function iniciarMapa() {
+            if(mapa !== null) return; 
+            mapa = L.map('mapa-caracas').setView([10.4806, -66.9036], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapa);
+        }
+
+        function iniciarTransmisionGPS(chofer) {
+            if ("geolocation" in navigator) {
+                watchIdGPS = navigator.geolocation.watchPosition(async (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+
+                    if (!marcadorPiloto) {
+                        const motoIcon = L.icon({ iconUrl: 'https://cdn-icons-png.flaticon.com/512/1048/1048314.png', iconSize: [36, 36], iconAnchor: [18, 36] });
+                        marcadorPiloto = L.marker([lat, lng], {icon: motoIcon}).addTo(mapa).bindPopup("Tu ubicación actual").openPopup();
+                        mapa.setView([lat, lng], 15);
+                    } else {
+                        marcadorPiloto.setLatLng([lat, lng]);
+                    }
+
+                    try {
+                        await setDoc(doc(db, "choferes_gps", chofer), {
+                            lat: lat, lng: lng, hora: new Date().toLocaleTimeString("es-VE"), timestamp: Date.now()
+                        });
+                    } catch(e) {}
+                }, (error) => {
+                    if (error.code === error.PERMISSION_DENIED) alert("⚠️ Debes permitir el uso del GPS en tu celular.");
+                }, { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 });
+            }
+        }
+
+        window.cargarBitacora = async function(chofer) {
+            const listaActivas = document.getElementById('bitacora-lista');
+            const listaHistorial = document.getElementById('historial-lista');
+            let totalPendiente = 0;
+            const coordenadasRuta = [];
+
+            try {
+                listaActivas.innerHTML = '<p style="font-size:13px; color:#666; text-align:center; padding:15px;"><i class="fas fa-spinner fa-spin"></i> Cargando entregas...</p>';
+
+                // Jerarquía: Jhon/Bryan buscan por 'motorizado', los Moto A/B/C buscan por 'subChofer'
+                const esJefe = (chofer === 'Jhon' || chofer === 'Bryan');
+                const campoFiltro = esJefe ? "motorizado" : "subChofer";
+                
+                // 1. Obtener pedidos asignados a este chofer
+                const qPedidos = query(collection(db, "pedidos"), where(campoFiltro, "==", chofer));
+                const snapPedidos = await getDocs(qPedidos);
+
+                // 2. Obtener puntos de ruta para sincronización y soporte de rutas históricas
+                const qRutas = query(collection(db, "rutas_puntos"), where(esJefe ? "chofer" : "subChofer", "==", chofer));
+                const snapRutas = await getDocs(qRutas);
+
+                mapa.eachLayer((layer) => { if (layer !== marcadorPiloto && layer.toGeoJSON) mapa.removeLayer(layer); });
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapa);
+
+                // Estructurar pedidos en memoria para una (1) sola tarjeta por entrega
+                const entregasMap = {};
+
+                snapPedidos.forEach(docSnap => {
+                    const p = docSnap.data();
+                    // Omitir posibles registros clones huérfanos del sistema antiguo
+                    if (p.cliente && p.cliente.includes("RUTA MAESTRA MULTIPARADA")) return;
+
+                    entregasMap[docSnap.id] = {
+                        id: docSnap.id,
+                        ...p,
+                        rutaPuntos: Array.isArray(p.rutaPuntos) ? [...p.rutaPuntos] : []
+                    };
+                });
+
+                // Integrar puntos de rutas_puntos (si el pedido no los tenía directamente en su doc)
+                snapRutas.forEach(docSnap => {
+                    const r = docSnap.data();
+                    const pedId = r.pedidoId;
+
+                    if (pedId && entregasMap[pedId]) {
+                        if (!entregasMap[pedId].rutaPuntos || entregasMap[pedId].rutaPuntos.length === 0) {
+                            entregasMap[pedId].rutaPuntos = entregasMap[pedId].rutaPuntos || [];
+                            entregasMap[pedId].rutaPuntos.push({
+                                orden: r.orden || (entregasMap[pedId].rutaPuntos.length + 1),
+                                tipo: r.rawTipo || r.tipo || "Parada",
+                                nota: r.rawNota || r.nota || "",
+                                tlf: r.rawTlf || r.tlf || "",
+                                pago: r.rawPago || r.pago || "",
+                                pagoDinero: r.pagoDinero || 0,
+                                lat: r.lat,
+                                lng: r.lng,
+                                estado: r.estado || "Activa",
+                                id: docSnap.id
+                            });
+                        }
+                        if (!entregasMap[pedId].rutaId && r.rutaId) {
+                            entregasMap[pedId].rutaId = r.rutaId;
+                        }
+                    } else if (!pedId) {
+                        // Compatibilidad con rutas creadas sin pedido asociado
+                        const legacyId = "legacy-" + (r.rutaId || docSnap.id);
+                        if (!entregasMap[legacyId]) {
+                            entregasMap[legacyId] = {
+                                id: legacyId,
+                                cliente: r.cliente || "📍 RUTA MAESTRA MULTIPARADA",
+                                tarifaMotorizado: r.rutaPagoTotal || r.pagoDinero || 0,
+                                rutaId: r.rutaId,
+                                rutaEstado: r.estado || "Activa",
+                                subChofer: r.subChofer || "",
+                                motorizado: r.chofer,
+                                rutaPuntos: [],
+                                esLegacy: true
+                            };
+                        }
+                        entregasMap[legacyId].rutaPuntos.push({
+                            orden: r.orden || (entregasMap[legacyId].rutaPuntos.length + 1),
+                            tipo: r.rawTipo || r.tipo || "Parada",
+                            nota: r.rawNota || r.nota || "",
+                            tlf: r.rawTlf || r.tlf || "",
+                            pago: r.rawPago || r.pago || "",
+                            pagoDinero: r.pagoDinero || 0,
+                            lat: r.lat,
+                            lng: r.lng,
+                            estado: r.estado || "Activa",
+                            id: docSnap.id
+                        });
+                    }
+                });
+
+                // Clasificar en Activas y Completadas
+                const activas = [];
+                const completadas = [];
+
+                Object.values(entregasMap).forEach(ped => {
+                    if (ped.rutaPuntos && ped.rutaPuntos.length > 0) {
+                        ped.rutaPuntos.sort((a, b) => (a.orden || 0) - (b.orden || 0));
+                    }
+                    const estaCompletado = (ped.estado === 'Entregado' || ped.rutaEstado === 'Completada');
+                    if (estaCompletado) {
+                        completadas.push(ped);
+                    } else {
+                        activas.push(ped);
+                    }
+                });
+
+                // --- 1. RENDERIZAR ENTREGAS ACTIVAS (1 TARJETA ÚNICA POR PEDIDO) ---
+                let tareasHTML = '';
+
+                activas.forEach((ped, idx) => {
+                    const subActual = ped.subChofer || '';
+                    let delegadorUI = '';
+                    let badgeDelegado = '';
+
+                    if (chofer === 'Jhon') {
+                        delegadorUI = `
+                            <div style="margin-top: 8px; background: #f0fdf4; padding: 8px; border-radius: 6px; border: 1px solid #bbf7d0;">
+                                <label style="display:block; font-size:10px; font-weight:bold; color:#166534; margin-bottom:3px; text-transform:uppercase;">
+                                    <i class="fas fa-people-arrows"></i> Delegar esta entrega:
+                                </label>
+                                <select onchange="delegarPedidoMaestro('${ped.id}', this.value)" style="width:100%; padding:5px 8px; border:1px solid #86efac; border-radius:4px; font-size:11px; background:white; color:#155724; font-weight:bold; outline:none;">
+                                    <option value="">🛵 (Yo haré esta entrega)</option>
+                                    <option value="Moto A" ${subActual==='Moto A'?'selected':''}>Delega a: Motorizado A</option>
+                                    <option value="Moto B" ${subActual==='Moto B'?'selected':''}>Delega a: Motorizado B</option>
+                                    <option value="Moto C" ${subActual==='Moto C'?'selected':''}>Delega a: Motorizado C</option>
+                                </select>
+                            </div>
+                        `;
+                    }
+
+                    if (esJefe && subActual !== '') {
+                        badgeDelegado = `<span style="background:#1d6fa5; color:white; padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold; margin-left:6px;"><i class="fas fa-user-tag"></i> Delegado a ${subActual}</span>`;
+                    }
+
+                    // Detalle del cliente y pedido
+                    const telefonoLimpio = ped.telefono ? ped.telefono.replace(/[^0-9]/g, '') : '';
+                    const botonesContacto = ped.telefono ? `
+                        <div style="display: flex; gap: 6px; margin-top: 6px;">
+                            <a href="tel:${ped.telefono}" style="background: #2563eb; color: white; padding: 4px 10px; border-radius: 5px; font-size: 11px; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                                <i class="fas fa-phone"></i> Llamar
+                            </a>
+                            <a href="https://wa.me/${telefonoLimpio}" target="_blank" style="background: #25D366; color: white; padding: 4px 10px; border-radius: 5px; font-size: 11px; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                                <i class="fab fa-whatsapp"></i> WhatsApp
+                            </a>
+                        </div>
+                    ` : '';
+
+                    const tarifaBadge = esJefe ? `
+                        <span style="background:#e2f0d9; color:#155724; border: 1px solid #c3e6cb; font-weight: bold; font-size: 13px; padding: 3px 8px; border-radius: 6px;">
+                            $${(parseFloat(ped.tarifaMotorizado) || 0).toFixed(2)}
+                        </span>
+                    ` : '';
+
+                    // Construir paradas de la ruta
+                    let paradasHTML = '';
+                    const paradas = ped.rutaPuntos || [];
+
+                    if (paradas.length > 0) {
+                        paradas.forEach((p, i) => {
+                            if (p.lat && p.lng) {
+                                coordenadasRuta.push([p.lat, p.lng]);
+                                L.marker([p.lat, p.lng]).addTo(mapa).bindPopup(`<b>${ped.cliente || 'Cliente'}</b><br>Parada ${i+1}: ${p.tipo || 'Punto'}<br>${p.nota || ''}`);
+                            }
+
+                            const isCompletada = p.estado === 'Completada';
+                            const costoParada = esJefe && parseFloat(p.pagoDinero) > 0 ? `<strong style="color:#28a745; font-size:11px;">$${parseFloat(p.pagoDinero).toFixed(2)}</strong>` : '';
+
+                            paradasHTML += `
+                                <div class="parada-box" id="parada-box-${ped.id}-${i}" data-point-id="${p.id || ''}" style="${isCompletada ? 'opacity: 0.55; background: #f8fafc;' : ''}">
+                                    <div style="flex:1; padding-right: 8px;">
+                                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                                            <strong style="color:#333; font-size:12px;">
+                                                <i class="fas ${p.tipo === 'Retiro' ? 'fa-arrow-circle-up' : 'fa-arrow-circle-down'}" style="color:${p.tipo === 'Retiro' ? '#0284c7' : '#16a34a'};"></i>
+                                                Parada ${i+1}: ${p.tipo || 'Detalle'}
+                                            </strong>
+                                            ${costoParada}
+                                        </div>
+                                        <div style="font-size:11px; color:#555; margin-top:2px;">${p.nota || ''}</div>
+                                        ${p.tlf ? `<div style="font-size:10px; color:#777; margin-top:1px;"><i class="fas fa-phone-alt"></i> ${p.tlf}</div>` : ''}
+                                    </div>
+                                    <div style="display:flex; gap:5px; flex-shrink:0;">
+                                        ${(p.lat && p.lng) ? `
+                                            <a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}" target="_blank" style="background:#28a745; color:white; border:none; padding:7px 9px; border-radius:4px; font-weight:bold; font-size:11px; cursor:pointer; text-decoration:none; display:flex; align-items:center; gap:4px;" title="Navegar por GPS">
+                                                <i class="fas fa-location-arrow"></i> Ir
+                                            </a>
+                                        ` : ''}
+                                        <button onclick="marcarParadaPedido(this, '${ped.id}', ${i})" style="background:${isCompletada ? '#28a745' : '#1d6fa5'}; color:white; border:none; padding:7px 9px; border-radius:4px; font-weight:bold; font-size:11px; cursor:pointer; display:flex; align-items:center; gap:4px;" ${isCompletada ? 'disabled' : ''}>
+                                            <i class="fas ${isCompletada ? 'fa-check-double' : 'fa-check'}"></i> ${isCompletada ? 'Listo' : 'Listo'}
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    } else if (ped.direccion) {
+                        // Si no tiene waypoints específicos pero sí dirección
+                        paradasHTML = `
+                            <div style="margin-top:8px; padding:8px; background:#f8fafc; border-radius:6px; font-size:11px; color:#475569;">
+                                <div style="margin-bottom:4px;"><i class="fas fa-map-marker-alt" style="color:#ef4444;"></i> <strong>Destino:</strong> ${ped.direccion}</div>
+                                <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ped.direccion)}" target="_blank" style="background:#28a745; color:white; padding:5px 10px; border-radius:4px; font-size:11px; font-weight:bold; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
+                                    <i class="fas fa-location-arrow"></i> Navegar hacia Dirección
+                                </a>
+                            </div>
+                        `;
+                    }
+
+                    tareasHTML += `
+                        <div class="timeline-item">
+                            <div style="background: white; padding: 14px; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                                <!-- Encabezado de la Tarjeta Unificada -->
+                                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; border-bottom:1px solid #f1f5f9; padding-bottom:8px;">
+                                    <div>
+                                        <div style="font-size: 14px; color: #1e293b; font-weight: 800; display:flex; align-items:center;">
+                                            <i class="fas fa-user-circle" style="color: #385723; margin-right: 6px; font-size: 16px;"></i>
+                                            ${ped.cliente || 'Cliente'}
+                                            ${badgeDelegado}
+                                        </div>
+                                        <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
+                                            <span style="background:#f1f5f9; padding:2px 6px; border-radius:4px; font-weight:600; color:#334155;">${ped.guia || ped.id.slice(0, 8)}</span>
+                                            ${ped.fecha ? `<span style="margin-left:6px;"><i class="far fa-calendar-alt"></i> ${ped.fecha}</span>` : ''}
+                                        </div>
+                                    </div>
+                                    ${tarifaBadge}
+                                </div>
+
+                                <!-- Resumen de Repuestos y Destino -->
+                                <div style="background: #f8fafc; border-radius: 6px; padding: 8px 10px; font-size: 11px; color: #334155; margin-bottom: 8px; border: 1px solid #e2e8f0;">
+                                    ${ped.repuestos ? `<div style="margin-bottom:3px;"><i class="fas fa-box" style="color:#0284c7;"></i> <strong>Items:</strong> ${ped.repuestos}</div>` : ''}
+                                    ${ped.direccion ? `<div style="margin-bottom:3px;"><i class="fas fa-map-pin" style="color:#dc2626;"></i> <strong>Dirección:</strong> ${ped.direccion}</div>` : ''}
+                                    ${botonesContacto}
+                                </div>
+
+                                ${delegadorUI}
+
+                                <!-- Sección de Paradas -->
+                                <div style="margin-top: 10px;">
+                                    <div style="font-size: 11px; font-weight: bold; color: #475569; text-transform: uppercase; margin-bottom: 6px; display:flex; justify-content:space-between; align-items:center;">
+                                        <span><i class="fas fa-route" style="color:#16a34a;"></i> Recorrido de la Entrega</span>
+                                        <span style="font-size:10px; color:#94a3b8;">${paradas.length} parada(s)</span>
+                                    </div>
+                                    ${paradasHTML}
+                                </div>
+
+                                <!-- Botón Finalizar Entrega -->
+                                <div style="margin-top: 12px; border-top: 1px solid #f1f5f9; padding-top: 10px;">
+                                    <button onclick="completarPedidoEntrega(this, '${ped.id}', '${ped.rutaId || ''}')" style="width: 100%; background: #15803d; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 4px rgba(21,128,61,0.2);">
+                                        <i class="fas fa-check-circle"></i> Finalizar y Marcar Entregado
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                if (coordenadasRuta.length > 0) {
+                    L.polyline(coordenadasRuta, { color: '#1d6fa5', weight: 4, opacity: 0.7, dashArray: '8, 8' }).addTo(mapa);
+                    if (!marcadorPiloto) mapa.fitBounds(L.polyline(coordenadasRuta).getBounds(), { padding: [25, 25] });
+                }
+
+                listaActivas.innerHTML = tareasHTML;
+                if (listaActivas.innerHTML === '') { 
+                    listaActivas.innerHTML = '<p style="font-size: 13px; color: #666; background:#f9f9f9; padding:15px; border-radius:6px; text-align:center;">No tienes entregas activas pendientes.</p>'; 
+                }
+
+                // --- 2. RENDERIZAR HISTORIAL COMPLETADO ---
+                let histHTML = '';
+                completadas.forEach(ped => {
+                    const costoHist = esJefe ? `<span style="color:#28a745; font-weight:bold; margin-right:8px; font-size:13px;">+$${(parseFloat(ped.tarifaMotorizado) || 0).toFixed(2)}</span>` : '';
+                    histHTML += `
+                        <div style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #eee; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                            <div>
+                                <strong style="font-size: 12px; color: #333;"><i class="fas fa-check-circle" style="color:#28a745;"></i> ${ped.cliente || 'Entrega'}</strong>
+                                <div style="font-size: 11px; color: #666; margin-top:2px;">
+                                    ${ped.guia ? `<span>Guía: ${ped.guia}</span> • ` : ''}${ped.repuestos ? `<span>${ped.repuestos.slice(0, 35)}...</span>` : 'Entregado al cliente'}
+                                </div>
+                            </div>
+                            <div style="text-align:right;">
+                                ${costoHist}
+                                <div style="font-size: 10px; color: #999;">${ped.fechaEntrega || ped.fecha || 'Listo'}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                listaHistorial.innerHTML = histHTML;
+                if (listaHistorial.innerHTML === '') { 
+                    listaHistorial.innerHTML = '<p style="font-size: 13px; color: #666; text-align: center; padding: 10px;">Aún no has completado entregas.</p>'; 
+                }
+
+                // --- 3. CALCULAR DINERO POR COBRAR (SOLO JEFES - 1 SOLO COBRO POR PEDIDO) ---
+                if (esJefe) {
+                    const qPedidosCobro = query(collection(db, "pedidos"), where("motorizado", "==", chofer));
+                    const snapPedidosCobro = await getDocs(qPedidosCobro);
+                    snapPedidosCobro.forEach(docSnap => {
+                        const v = docSnap.data();
+                        if (v.cliente && v.cliente.includes("RUTA MAESTRA MULTIPARADA")) return;
+                        if (v.pagoMotorizadoEstatus !== 'Pagado') {
+                            const tarifa = parseFloat(v.tarifaMotorizado) || 0;
+                            if (tarifa > 0) {
+                                totalPendiente += tarifa;
+                            }
+                        }
+                    });
+                    const elPendiente = document.getElementById('total-pendiente');
+                    if (elPendiente) elPendiente.innerText = totalPendiente.toFixed(2);
+                }
+
+            } catch (error) {
+                console.error("Error al cargar bitácora:", error);
+                listaActivas.innerHTML = '<p style="font-size: 13px; color: #d9534f; text-align:center; padding:15px;">Error de conexión con la base de datos.</p>';
+            }
+        };
+
+        // 🚀 DELEGAR ENTREGA DIRECTAMENTE DESDE EL PEDIDO
+        window.delegarPedidoMaestro = async function(pedidoId, subChoferAsignado) {
+            try {
+                if (pedidoId.startsWith('legacy-')) {
+                    const rutaId = pedidoId.replace('legacy-', '');
+                    await window.delegarRutaMaestra(rutaId, subChoferAsignado);
+                    return;
+                }
+
+                await updateDoc(doc(db, "pedidos", pedidoId), { subChofer: subChoferAsignado });
+
+                // Sincronizar en rutas_puntos si existen
+                const qPuntos = query(collection(db, "rutas_puntos"), where("pedidoId", "==", pedidoId));
+                const snapPuntos = await getDocs(qPuntos);
+                snapPuntos.forEach(async (docSnap) => {
+                    await updateDoc(docSnap.ref, { subChofer: subChoferAsignado });
+                });
+
+                alert(subChoferAsignado === '' ? "Entrega devuelta a tu bandeja personal." : `¡Entrega delegada a ${subChoferAsignado} exitosamente!`);
+                window.cargarBitacora(window.currentUser);
+            } catch (error) {
+                console.error("Error al delegar entrega:", error);
+                alert("Hubo un error al delegar la entrega.");
+            }
+        };
+
+        // 🚀 MARCAR UNA PARADA ESPECÍFICA DE LA RUTA DEL PEDIDO
+        window.marcarParadaPedido = async function(btnElement, pedidoId, index) {
+            btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btnElement.disabled = true;
+            try {
+                if (pedidoId.startsWith('legacy-')) {
+                    const box = document.getElementById(`parada-box-${pedidoId}-${index}`);
+                    const docId = box ? box.getAttribute('data-point-id') : null;
+                    if (docId) {
+                        await window.marcarCompletada(btnElement, docId);
+                        return;
+                    }
+                }
+
+                const pedRef = doc(db, "pedidos", pedidoId);
+                const pedDoc = await getDoc(pedRef);
+                if (pedDoc.exists()) {
+                    const data = pedDoc.data();
+                    const puntos = data.rutaPuntos || [];
+                    if (puntos[index]) {
+                        puntos[index].estado = "Completada";
+                        await updateDoc(pedRef, { rutaPuntos: puntos });
+                    }
+                    if (data.rutaId) {
+                        const qP = query(collection(db, "rutas_puntos"), where("rutaId", "==", data.rutaId), where("orden", "==", index + 1));
+                        const snapP = await getDocs(qP);
+                        snapP.forEach(async (d) => {
+                            await updateDoc(d.ref, { estado: "Completada" });
+                        });
+                    }
+                }
+
+                const box = document.getElementById(`parada-box-${pedidoId}-${index}`);
+                if (box) {
+                    box.style.opacity = '0.55';
+                    box.style.background = '#f8fafc';
+                }
+                btnElement.innerHTML = '<i class="fas fa-check-double"></i> Listo';
+                btnElement.style.background = '#28a745';
+            } catch (error) {
+                console.error("Error al marcar parada:", error);
+                alert("Error al marcar la parada. Intenta de nuevo.");
+                btnElement.innerHTML = '<i class="fas fa-check"></i> Listo';
+                btnElement.disabled = false;
+            }
+        };
+
+        // 🚀 FINALIZAR Y MARCAR PEDIDO COMO ENTREGADO
+        window.completarPedidoEntrega = async function(btnElement, pedidoId, rutaId) {
+            if (!confirm("¿Confirmas que has completado la entrega de este pedido al cliente?")) return;
+
+            btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Finalizando...';
+            btnElement.disabled = true;
+
+            try {
+                if (pedidoId.startsWith('legacy-')) {
+                    const rId = rutaId || pedidoId.replace('legacy-', '');
+                    const qPuntos = query(collection(db, "rutas_puntos"), where("rutaId", "==", rId));
+                    const snapP = await getDocs(qPuntos);
+                    snapP.forEach(async (d) => {
+                        await updateDoc(d.ref, { estado: "Completada" });
+                    });
+                } else {
+                    const pedRef = doc(db, "pedidos", pedidoId);
+                    const pedDoc = await getDoc(pedRef);
+                    let puntos = [];
+                    if (pedDoc.exists()) {
+                        puntos = pedDoc.data().rutaPuntos || [];
+                        puntos.forEach(p => p.estado = "Completada");
+                    }
+
+                    await updateDoc(pedRef, {
+                        estado: "Entregado",
+                        rutaEstado: "Completada",
+                        rutaPuntos: puntos,
+                        fechaEntrega: new Date().toLocaleDateString("es-VE"),
+                        horaEntrega: new Date().toLocaleTimeString("es-VE")
+                    });
+
+                    // Sincronizar en rutas_puntos
+                    const qR = rutaId ? 
+                        query(collection(db, "rutas_puntos"), where("rutaId", "==", rutaId)) :
+                        query(collection(db, "rutas_puntos"), where("pedidoId", "==", pedidoId));
+                    const snapR = await getDocs(qR);
+                    snapR.forEach(async (d) => {
+                        await updateDoc(d.ref, { estado: "Completada" });
+                    });
+                }
+
+                alert("✅ ¡Entrega completada exitosamente!");
+                window.cargarBitacora(window.currentUser);
+            } catch (error) {
+                console.error("Error al completar entrega:", error);
+                alert("Error al completar la entrega. Intenta de nuevo.");
+                btnElement.innerHTML = '<i class="fas fa-check-circle"></i> Finalizar y Marcar Entregado';
+                btnElement.disabled = false;
+            }
+        };
+
+        // 🚀 COMPATIBILIDAD CON FUNCIONES ANTERIORES
+        window.delegarRutaMaestra = async function(rutaId, subChoferAsignado) {
+            try {
+                const qPuntos = query(collection(db, "rutas_puntos"), where("rutaId", "==", rutaId));
+                const snapPuntos = await getDocs(qPuntos);
+                snapPuntos.forEach(async (docSnap) => {
+                    await updateDoc(docSnap.ref, { subChofer: subChoferAsignado });
+                });
+                alert(subChoferAsignado === '' ? "Ruta devuelta a tu bandeja personal." : `¡Ruta delegada a ${subChoferAsignado} exitosamente!`);
+                window.cargarBitacora(window.currentUser);
+            } catch (error) {
+                console.error(error); alert("Hubo un error al delegar la ruta.");
+            }
+        };
+
+        window.marcarCompletada = async function(btnElement, docId) {
+            btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btnElement.disabled = true;
+            try {
+                await updateDoc(doc(db, "rutas_puntos", docId), { estado: "Completada" });
+                const box = document.getElementById(`parada-box-${docId}`);
+                if (box) {
+                    box.style.opacity = '0.5';
+                    box.style.background = '#f1f1f1';
+                }
+                btnElement.innerHTML = '<i class="fas fa-check-double"></i>';
+                btnElement.style.background = '#28a745';
+                setTimeout(() => { window.cargarBitacora(window.currentUser); }, 1000);
+            } catch (error) {
+                alert("Error al marcar. Intenta de nuevo.");
+                btnElement.innerHTML = '<i class="fas fa-check"></i> Listo';
+                btnElement.disabled = false;
+            }
+        };
+    </script>
+</body>
+</html>

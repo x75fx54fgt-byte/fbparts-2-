@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Acceso Administrativo | F&B Parts</title>
+    <link rel="icon" type="image/png" href="img/favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- LIBRERÍA DE GOOGLE RECAPTCHA -->
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    
+    <link rel="stylesheet" href="styles.css">
+
+    <style>
+        body { background-color: #385723; display: flex; flex-direction: column; min-height: 100vh; justify-content: center; margin: 0; }
+        
+        .login-container { max-width: 400px; margin: auto; padding: 0 20px; width: 100%; box-sizing: border-box; }
+        .login-card { background: white; border: none; padding: 40px 30px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; }
+        
+        .logo-container { display: flex; justify-content: center; align-items: center; width: 100%; margin-bottom: 15px; }
+        .admin-logo { height: 65px; display: block; margin: 0 auto; }
+        
+        .login-card h3 { font-family: 'Oswald', sans-serif; color: #385723; font-size: 24px; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid #385723; padding-bottom: 10px; }
+        
+        .form-group { margin-bottom: 20px; text-align: left; position: relative; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 13px; color: #555; }
+        .form-group input { width: 100%; padding: 12px; padding-left: 40px; border: 1px solid #ccc; border-radius: 4px; font-size: 15px; outline: none; box-sizing: border-box; }
+        .form-group input:focus { border-color: #385723; }
+        
+        .input-icon { position: absolute; left: 15px; top: 38px; color: #999; }
+
+        .btn-action { background: #385723; color: white; border: none; padding: 12px; font-family: 'Oswald', sans-serif; font-size: 16px; cursor: pointer; border-radius: 4px; width: 100%; transition: background .2s; margin-top: 10px; letter-spacing: 1px; }
+        .btn-action:hover { background: #2c441b; }
+        .btn-action:disabled { background: #999; cursor: not-allowed; }
+        
+        .back-link { display: block; margin-top: 20px; color: #666; font-size: 13px; text-decoration: none; font-weight: bold; }
+        .back-link:hover { color: #385723; text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+    <div class="login-container">
+        <div class="login-card">
+            <div class="logo-container">
+                <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="F&B Parts Admin" class="admin-logo">
+            </div>
+            <h3>Control Interno</h3>
+            
+            <form id="admin-login-form">
+                <div class="form-group">
+                    <label for="email">Usuario (Correo Administrativo)</label>
+                    <i class="fas fa-envelope input-icon"></i>
+                    <input type="email" id="email" placeholder="admin@fybparts.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Contraseña Maestra</label>
+                    <i class="fas fa-lock input-icon"></i>
+                    <input type="password" id="password" placeholder="*********" required>
+                </div>
+
+                <!-- WIDGET DE GOOGLE RECAPTCHA V2 -->
+                <div style="display: flex; justify-content: center; margin-bottom: 15px;">
+                    <div class="g-recaptcha" data-sitekey="6LeWTHQtAAAAAKDkgQNi7lPWC9Otct-PC4pOj392"></div>
+                </div>
+
+                <button type="submit" class="btn-action" id="btnLoginAdmin">
+                    INGRESAR AL PANEL
+                </button>
+            </form>
+
+            <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> Volver a la página pública</a>
+
+            <p id="error-message" style="color: red; margin-top: 15px; font-size: 14px; font-weight: bold;"></p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, query, where, getDocs, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
+            authDomain: "fb-parts-app.firebaseapp.com",
+            projectId: "fb-parts-app",
+            storageBucket: "fb-parts-app.firebasestorage.app",
+            messagingSenderId: "21714159445",
+            appId: "1:21714159445:web:8f4946cd1c98d9b95dd1dc"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const adminLoginForm = document.getElementById('admin-login-form');
+        const errorMessage = document.getElementById('error-message');
+        const btnLoginAdmin = document.getElementById('btnLoginAdmin');
+
+        adminLoginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Validar Captcha
+            const recaptchaResponse = grecaptcha.getResponse();
+            if (recaptchaResponse.length === 0) {
+                errorMessage.innerText = "⚠️ Demuestra que no eres un robot marcando la casilla.";
+                errorMessage.style.color = "red";
+                return;
+            }
+
+            const email = document.getElementById('email').value.trim().toLowerCase();
+            const password = document.getElementById('password').value;
+
+            errorMessage.innerText = "Verificando privilegios de acceso...";
+            errorMessage.style.color = "green";
+            btnLoginAdmin.disabled = true;
+
+            try {
+                // 1. Iniciar sesión en Firebase Auth
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                // 2. FILTRO DE SEGURIDAD: Verificar si el correo está en la colección 'administradores'
+                const q = query(collection(db, "administradores"), where("email", "==", email));
+                const querySnapshot = await getDocs(q);
+
+                if (querySnapshot.empty) {
+                    await signOut(auth);
+                    errorMessage.style.color = "red";
+                    errorMessage.innerText = "⛔ Acceso denegado: Esta cuenta no tiene permisos administrativos.";
+                    btnLoginAdmin.disabled = false;
+                    grecaptcha.reset();
+                    return;
+                }
+
+                // 3. SINCRONIZACIÓN AUTOMÁTICA CON LA TIENDA:
+                // Copiamos/Actualizamos los datos del admin en la colección 'usuarios' para que la tienda los reconozca
+                const adminData = querySnapshot.docs[0].data();
+                const userRef = doc(db, "usuarios", user.uid);
+                const userSnap = await getDoc(userRef);
+
+                if (!userSnap.exists()) {
+                    await setDoc(userRef, {
+                        uid: user.uid,
+                        nombre: adminData.Nombre || "Administrador",
+                        apellido: "",
+                        cedula: "Personal Autorizado",
+                        telefono: "Principal",
+                        email: user.email,
+                        ubicacion: "F&B Parts - Central",
+                        fechaRegistro: new Date().toLocaleString("es-VE")
+                    });
+                } else {
+                    await updateDoc(userRef, {
+                        nombre: adminData.Nombre || "Administrador"
+                    });
+                }
+
+                // Si todo es correcto, entra al panel de administración
+                window.location.href = "admin.html";
+
+            } catch (error) {
+                console.error(error);
+                errorMessage.style.color = "red";
+                errorMessage.innerText = "Credenciales incorrectas o error de conexión.";
+                btnLoginAdmin.disabled = false;
+                grecaptcha.reset();
+            }
+        });
+    </script>
+</body>
+</html>

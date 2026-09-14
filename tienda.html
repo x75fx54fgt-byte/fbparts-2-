@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Parrillas, Repuestos y Autopartes Originales en Caracas | F&B Parts</title>
+    <meta name="description" content="Venta de repuestos automotrices, parrillas, parachoques y autopartes originales en Caracas, Venezuela. Encuentra piezas para Toyota, Ford, Dongfeng, Mazda y más. ¡Delivery gratis!">
+    <meta name="keywords" content="parrilla para carro Caracas, repuestos automotrices Venezuela, F&B Parts, repuestos Toyota Ford Dongfeng, autopartes Caracas">
+    <meta name="author" content="Inversiones FB Parts, C.A.">
+    
+    <link id="canonical-link" rel="canonical" href="https://www.fybparts.com/tienda.html">
+
+    <meta property="og:title" content="Catálogo de Repuestos y Parrillas Automotrices | F&B Parts">
+    <meta property="og:description" content="Encuentra repuestos originales y accesorios para tu vehículo en Caracas con envíos seguros y atención especializada.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.fybparts.com/tienda.html">
+    <meta property="og:image" content="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png">
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "AutoPartsStore",
+      "name": "F&B Parts - Inversiones FB Parts",
+      "image": "https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png",
+      "@id": "https://www.fybparts.com",
+      "url": "https://www.fybparts.com",
+      "telephone": "+584120161036",
+      "priceRange": "$",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Caracas",
+        "addressLocality": "Caracas",
+        "addressRegion": "Capital District",
+        "postalCode": "1010",
+        "addressCountry": "VE"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 10.4806,
+        "longitude": -66.9036
+      },
+      "openingHoursSpecification": {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": [ "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" ],
+        "opens": "08:00",
+        "closes": "18:00"
+      },
+      "sameAs": [ "https://www.fybparts.com" ]
+    }
+    </script>
+    
+    <link rel="icon" type="image/png" href="img/favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- 🚀 LIBRERÍA PUTER.JS (EL CEREBRO DEL MECÁNICO) -->
+    <script src="https://js.puter.com/v2/"></script>
+
+    <style>
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f8f8f8; display: flex; flex-direction: column; min-height: 100vh; margin: 0; overflow-x: hidden; }
+        .tienda-container { max-width: 1350px; margin: 40px auto; padding: 0 20px; display: grid; grid-template-columns: 240px 1fr 300px; gap: 25px; flex: 1; align-items: start; width: 100%; box-sizing: border-box; }
+        .mobile-search-filter-wrapper { display: none; }
+        
+        .sidebar { background: white; padding: 20px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,.05); position: sticky; top: 20px; }
+        .sidebar h3 { color: #385723; font-family: 'Oswald', sans-serif; font-size: 20px; margin-top: 0; margin-bottom: 15px; text-transform: uppercase; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .cat-list { list-style: none; padding: 0; margin: 0; }
+        .cat-list button { background: none; border: none; padding: 8px 12px; width: 100%; text-align: left; font-size: 15px; color: #555; cursor: pointer; border-radius: 4px; transition: all 0.2s; }
+        .cat-list button:hover, .cat-list button.active { background: #e2f0d9; color: #385723; font-weight: bold; }
+        
+        /* 🚀 BUSCADOR MÓVIL VERDE MARCA */
+        .ml-search-bar { background: #385723; padding: 12px 15px; display: flex; justify-content: center; align-items: center; width: 100%; box-sizing: border-box; }
+        .ml-search-inner { position: relative; width: 100%; max-width: 600px; }
+        .ml-search-inner input { width: 100%; padding: 10px 15px 10px 40px; border: none; border-radius: 20px; font-size: 15px; outline: none; box-shadow: 0 2px 5px rgba(0,0,0,0.1); background: #fff; }
+        .ml-search-inner i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #385723; }
+        
+        .ml-filter-btn { display: flex; justify-content: space-between; align-items: center; background: #fff; border-bottom: 1px solid #ddd; padding: 12px 18px; font-family: 'Oswald', sans-serif; font-size: 16px; color: #385723; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
+        .ml-dropdown-categorias { display: none; background: #fff; border-bottom: 1px solid #eee; padding: 10px 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .ml-dropdown-categorias.active { display: block; }
+        
+        .store-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
+        .store-header h1 { font-family: 'Oswald', sans-serif; color: #385723; margin: 0; font-size: 28px; text-transform: uppercase; }
+        .search-bar { flex: 1; max-width: 400px; position: relative; }
+        .search-bar input { width: 100%; padding: 12px 15px 12px 40px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; outline: none; }
+        .search-bar input:focus { border-color: #385723; }
+        .search-bar i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #999; }
+        
+        .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; width: 100%; }
+        .prod-card { background: white; border: 1px solid #eee; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,.05); transition: transform 0.2s; display: flex; flex-direction: column; }
+        .prod-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,.1); }
+        .prod-img-wrap { width: 100%; height: 180px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .prod-img-wrap img { width: 100%; height: 100%; object-fit: contain; }
+        .prod-info { padding: 12px; display: flex; flex-direction: column; flex: 1; }
+        .prod-cat { font-size: 10px; color: #888; text-transform: uppercase; margin-bottom: 4px; }
+        .prod-title { font-size: 13px; color: #333; margin: 0 0 8px 0; font-weight: bold; flex: 1; line-height: 1.3; }
+        .prod-price { font-size: 18px; color: #385723; font-weight: bold; font-family: 'Oswald', sans-serif; margin-bottom: 10px; }
+        .btn-add-cart { background: #385723; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 6px; transition: 0.2s; font-size: 13px; }
+        .btn-add-cart:hover { background: #2c441b; }
+        .btn-ml { background: #ffe600; color: #333; padding: 8px; border-radius: 4px; text-align: center; text-decoration: none; font-weight: bold; display: block; width: 100%; transition: 0.2s; box-sizing: border-box; font-size: 12px; }
+        #loading-msg { text-align: center; padding: 50px; color: #666; grid-column: 1 / -1; font-size: 18px; }
+        
+        .cart-sidebar { background: white; padding: 20px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,.05); position: sticky; top: 20px; display: flex; flex-direction: column; max-height: 85vh; width: 100%; box-sizing: border-box; }
+        .cart-sidebar h3 { color: #5b8743; font-family: 'Oswald', sans-serif; font-size: 20px; margin-top: 0; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .cart-items-container { flex: 1; overflow-y: auto; margin-bottom: 10px; padding-right: 5px; }
+        .cart-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 10px 0; font-size: 13px; }
+        .cart-item-info { flex: 1; padding-right: 10px; }
+        .cart-item-title { font-weight: bold; color: #333; margin-bottom: 3px; }
+        .cart-item-price { color: #666; }
+        .cart-item-controls { display: flex; align-items: center; gap: 8px; }
+        .btn-qty { background: #eee; border: none; width: 24px; height: 24px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-remove { background: #ff4d4d; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .cart-total-box { border-top: 2px solid #385723; padding-top: 10px; margin-bottom: 15px; text-align: right; }
+        .cart-total-amount { font-size: 24px; color: #385723; font-weight: bold; font-family: 'Oswald', sans-serif; }
+        .btn-checkout { background: #25D366; color: white; border: none; padding: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; width: 100%; transition: 0.2s; font-family: 'Oswald', sans-serif; }
+        .btn-checkout:hover { background: #1ebd5a; }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 100001; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
+        .modal-content { background: white; padding: 30px; border-radius: 8px; width: 100%; max-width: 450px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
+        .modal-content h3 { font-family: 'Oswald', sans-serif; color: #385723; margin-top: 0; font-size: 24px; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-weight: bold; font-size: 14px; margin-bottom: 5px; color: #333; }
+        .form-group select, .form-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; box-sizing: border-box; outline: none; }
+        .form-group select:focus, .form-group input:focus { border-color: #385723; }
+        .input-gps-group { display: flex; gap: 8px; }
+        .input-gps-group input { flex: 1; }
+        .btn-gps { background: #e2f0d9; color: #385723; border: 1px solid #385723; padding: 0 15px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+        .btn-gps:hover { background: #c5e1a5; }
+        .btn-confirm-order { background: #385723; color: white; padding: 12px; border: none; border-radius: 4px; width: 100%; font-weight: bold; cursor: pointer; font-size: 15px; margin-top: 10px; transition: background 0.2s; }
+        .btn-confirm-order:hover { background: #2c441b; }
+        .btn-cancel { background: #e0e0e0; color: #333; padding: 10px; border: none; border-radius: 4px; width: 100%; font-weight: bold; cursor: pointer; font-size: 14px; margin-top: 10px; transition: background 0.2s; }
+        .btn-cancel:hover { background: #ccc; }
+
+        /* ========================================== */
+        /* 🚀 REGLAS HEADER Y CARRITO MÓVIL (CORREGIDO) */
+        /* ========================================== */
+        @media (max-width: 1100px) { .tienda-container { grid-template-columns: 240px 1fr; } .cart-sidebar { grid-column: 1 / -1; } }
+        @media (max-width: 900px) { 
+            .tienda-container { display: flex; flex-direction: column; padding: 0 10px; margin: 15px auto; } 
+            .sidebar, .store-header { display: none !important; } 
+            .mobile-search-filter-wrapper { display: block; width: 100%; margin-bottom: 15px; } 
+            .products-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+            
+            header { position: relative; width: 100%; }
+            header .header-wrap { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: space-between !important; align-items: center !important; padding: 10px 15px !important; width: 100% !important; box-sizing: border-box !important; }
+            header .header-right { display: none !important; }
+            header .logo { flex: 0 0 auto; display: flex; align-items: center; }
+            header .logo img { height: 45px !important; width: auto; max-width: 200px; }
+            
+            .mobile-menu { display: flex !important; align-items: center; justify-content: center; background: #385723 !important; color: white !important; border: none; padding: 10px 14px; border-radius: 6px; font-size: 22px; cursor: pointer; margin-left: auto !important; }
+            header nav { display: none; flex-direction: column; position: absolute; top: 100%; left: 0; width: 100%; background: white; box-shadow: 0 10px 15px rgba(0,0,0,0.1); border-top: 1px solid #eee; z-index: 9999; }
+            header nav.menu-activo { display: flex !important; }
+            header nav a { padding: 15px 20px !important; border-bottom: 1px solid #f0f0f0; width: 100%; text-align: left; box-sizing: border-box; color: #385723 !important; font-weight: bold; }
+            header nav a i { color: #385723 !important; }
+
+            /* 🚀 CARRO FLOTANTE MÓVIL (Lado Izquierdo) */
+            #btn-carrito-flotante { display: flex !important; position: fixed; bottom: 25px; left: 25px; z-index: 99998; background: #385723; color: white; border: none; width: 60px; height: 60px; border-radius: 50%; cursor: pointer; font-size: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); align-items: center; justify-content: center; transition: transform 0.2s; }
+            #cart-badge { position: absolute; top: -5px; right: -5px; background: #ff4d4d; color: white; font-size: 12px; font-weight: bold; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; }
+            
+            /* Panel Completo del Carrito Móvil */
+            .cart-sidebar { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; max-height: 100vh; background: white; z-index: 100000; border-radius: 0; padding: 20px; box-sizing: border-box; flex-direction: column; }
+            .cart-sidebar.active { display: flex !important; }
+            .close-cart-btn { display: block !important; }
+        }
+        @media (min-width: 901px) {
+            #btn-carrito-flotante { display: none !important; }
+            .close-cart-btn { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="topbar">
+        <p style="margin:0; font-weight: bold; font-size: 14px; letter-spacing: 1px;">DELIVERY GRATIS EN CARACAS</p><span>(CIERTAS CONDICIONES APLICAN)</span>
+    </div>
+
+    <!-- 🚀 HEADER ESTANDARIZADO MÓVIL -->
+    <header style="background: white; border-bottom: 1px solid #eee;">
+        <div class="container header-wrap" style="padding: 15px 20px; max-width: 1350px; display: flex; justify-content: space-between; align-items: center;">
+            <a class="logo" href="index.html">
+                <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logotipo F&B PARTS" decoding="async" style="height: 60px;">
+            </a>
+            
+            <nav id="nav-principal">
+                <a href="index.html" onclick="toggleMenuMobile()">Inicio</a>
+                <a href="tienda.html" onclick="toggleMenuMobile()" style="color: #385723; font-weight: bold; border-bottom: 2px solid #385723; padding-bottom: 5px;">Tienda</a>
+                <a href="index.html#nosotros" onclick="toggleMenuMobile()">Quienes somos</a>
+                <a href="index.html#mercadolibre" onclick="toggleMenuMobile()">Mercado Libre</a>
+                <a href="index.html#contacto" onclick="toggleMenuMobile()">Contacto</a>
+                <a href="login.html" id="nav-cuenta-btn" style="color: var(--green); font-weight: bold;"><i class="fas fa-user"></i> Mi Cuenta</a>
+            </nav>
+
+            <button class="mobile-menu" aria-label="Menú" onclick="toggleMenuMobile()" style="display: none;">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </header>
+
+    <div class="mobile-search-filter-wrapper">
+        <div class="ml-search-bar">
+            <div class="ml-search-inner">
+                <i class="fas fa-search"></i>
+                <input type="text" id="buscador-tienda-movil" placeholder="Buscar repuestos..." onkeyup="sincronizarBusqueda(this.value)">
+            </div>
+        </div>
+        <div class="ml-filter-btn" onclick="toggleFiltrosMovil()">
+            <span id="texto-filtro-activo"><i class="fas fa-filter"></i> Filtrar Categorías</span>
+            <i class="fas fa-chevron-down" id="icono-chevron-filtro"></i>
+        </div>
+        <div class="ml-dropdown-categorias" id="menu-categorias-movil">
+            <ul class="cat-list" id="categorias-list-movil">
+                <li><button class="active" onclick="filtrarPorCategoriaMovil('todos', this)">Todos los Repuestos</button></li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="tienda-container">
+        <aside class="sidebar">
+            <h3><i class="fas fa-filter"></i> Categorías</h3>
+            <ul class="cat-list" id="categorias-list">
+                <li><button class="active" onclick="filtrarPorCategoria('todos', this)">Todos los Repuestos</button></li>
+            </ul>
+        </aside>
+
+        <main style="width: 100%;">
+            <div class="store-header">
+                <h1>Catálogo de Repuestos</h1>
+                <div class="search-bar">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="buscador-tienda" placeholder="Buscar repuesto..." onkeyup="sincronizarBusqueda(this.value)">
+                </div>
+            </div>
+            <div class="products-grid" id="productos-grid">
+                <div id="loading-msg"><i class="fas fa-spinner fa-spin"></i> Cargando inventario...</div>
+            </div>
+        </main>
+
+        <aside class="cart-sidebar" id="tu-pedido">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">
+                <h3 style="margin: 0; border: none; padding: 0; color: #5b8743;"><i class="fas fa-shopping-cart"></i> TU PEDIDO</h3>
+                <button class="close-cart-btn" onclick="toggleCartMobile()" style="background: none; border: none; font-size: 24px; color: #333; cursor: pointer; display: none;"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div class="cart-items-container" id="cart-items"></div>
+            
+            <div class="cart-total-box">
+                <span style="font-size: 16px; font-weight: bold;">Total: </span>
+                <span class="cart-total-amount" id="cart-total-amount">$0.00</span>
+            </div>
+            
+            <button class="btn-checkout" onclick="iniciarCheckout()">
+                <i class="fas fa-check-circle"></i> PROCESAR PEDIDO
+            </button>
+
+            <!-- 🏢 BANNER B2B: SERVICIO DE PROCURA Y REVENTA -->
+            <div style="margin-top: 25px; background: #f4f6f4; border: 1px solid #c3e6cb; border-left: 4px solid #1d6fa5; border-radius: 6px; padding: 15px;">
+                <h4 style="color: #1d6fa5; font-family: 'Oswald', sans-serif; margin: 0 0 5px 0; font-size: 15px;"><i class="fas fa-building"></i> SERVICIO DE PROCURA</h4>
+                <p style="font-size: 12px; color: #555; margin: 0 0 10px 0; line-height: 1.4;">¿Tu aseguradora o taller requiere piezas adicionales que no visualizas en catálogo? <strong>Nos encargamos de ubicarlas.</strong> Consolidamos tu lista completa.</p>
+                
+                <div style="display: flex; gap: 10px; width: 100%;">
+                    <a href="https://wa.me/584120161036?text=Hola%20F%26B%20Parts,%20represento%20a%20una%20empresa/taller%20y%20necesito%20que%20me%20cotice%20una%20lista%20de%20repuestos%20por%20encargo." target="_blank" style="flex: 1; justify-content: center; background: #25D366; color: white; padding: 8px 5px; text-decoration: none; font-size: 12px; font-weight: bold; border-radius: 4px; display: inline-flex; align-items: center; gap: 5px; transition: 0.2s; box-shadow: 0 2px 4px rgba(37,211,102,0.2); text-align: center;">
+                        <i class="fab fa-whatsapp" style="font-size: 14px;"></i> WhatsApp
+                    </a>
+                    <a href="mailto:fybinversiones.ccs@gmail.com?subject=Solicitud%20de%20Cotizaci%C3%B3n%20Corporativa%20-%20F%26B%20Parts&body=Hola%20equipo%20de%20F%26B%20Parts,%0D%0A%0D%0AAdjunto%20la%20lista%20de%20repuestos%20requeridos%20para%20su%20cotizaci%C3%B3n%20formal.%0D%0A%0D%0AAtentamente," style="flex: 1; justify-content: center; background: #EA4335; color: white; padding: 8px 5px; text-decoration: none; font-size: 12px; font-weight: bold; border-radius: 4px; display: inline-flex; align-items: center; gap: 5px; transition: 0.2s; box-shadow: 0 2px 4px rgba(234,67,53,0.2); text-align: center;">
+                        <i class="fas fa-envelope" style="font-size: 14px;"></i> Correo
+                    </a>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- 🚀 BOTÓN CARRITO FLOTANTE (Solo visible en Móvil) -->
+    <button id="btn-carrito-flotante" onclick="toggleCartMobile()">
+        <i class="fas fa-shopping-cart"></i>
+        <span id="cart-badge" style="display: none;">0</span>
+    </button>
+
+    <div class="modal-overlay" id="modal-pago">
+        <div class="modal-content">
+            <h3>Confirmar Pedido</h3>
+            <p style="font-size: 14px; color: #555; margin-bottom: 20px;">Indícanos cómo deseas pagar y recibir tu pedido. Serás redirigido a WhatsApp para coordinar el envío.</p>
+            
+            <div class="form-group">
+                <label>Nombre del Cliente (Para la orden)</label>
+                <input type="text" id="nombre-checkout" placeholder="Ej: Juan Pérez" required>
+            </div>
+            <div class="form-group">
+                <label>Método de Envío o Retiro</label>
+                <select id="metodo-envio" onchange="verificarCamposEnvio()">
+                    <option value="Retiro en persona (Sede Principal)">Retiro en persona (Sede Principal)</option>
+                    <option value="Delivery (Caracas - Costo a verificar)">Delivery en Caracas (Verificaremos si aplica gratis)</option>
+                    <option value="Encomienda Nacional (MRW, Tealca, Zoom)">Envío Nacional (MRW, Tealca, Zoom)</option>
+                </select>
+            </div>
+            <div class="form-group" id="grupo-direccion" style="display: none;">
+                <label>Dirección exacta de entrega (Escribe o usa el GPS)</label>
+                <div class="input-gps-group">
+                    <input type="text" id="direccion-pedido" placeholder="Ej: Chacao, Calle Elice... o pega un link de Maps">
+                    <button type="button" id="btn-gps" class="btn-gps" onclick="obtenerUbicacionGPS()" title="Generar link automático con mi ubicación actual">
+                        <i class="fas fa-map-marker-alt"></i> GPS
+                    </button>
+                </div>
+                <small style="color: #666; font-size: 11px; display: block; margin-top: 5px;">Presiona "GPS" para adjuntar tu enlace exacto de Google Maps automáticamente.</small>
+            </div>
+            <div class="form-group">
+                <label>Método de Pago Preferido</label>
+                <select id="metodo-pago">
+                    <option value="Pago Móvil">Pago Móvil en bolívares</option>
+                    <option value="Efectivo Divisas">Efectivo en divisas</option>
+                    <option value="Transferencia Banesco">Transferencia - Banesco</option>
+                    <option value="Transferencia Banco Nacional de Credito">Transferencia - Banco Nacional de Crédito</option>
+                    <option value="Transferencia Banco Venezolano de Credito">Transferencia - Banco Venezolano de Crédito</option>
+                    <option value="Transferencia Bancamiga">Transferencia - Bancamiga</option>
+                    <option value="Binance">Binance</option>
+                </select>
+            </div>
+            <button class="btn-confirm-order" id="btn-enviar-final" onclick="finalizarPedidoBaseDatos()">
+                <i class="fab fa-whatsapp"></i> Confirmar y Enviar WhatsApp
+            </button>
+            <button class="btn-cancel" onclick="cerrarModalCheckout()">Cancelar</button>
+        </div>
+    </div>
+
+    <footer style="background-color: #000; color: #fff; text-align: center; padding: 25px 0; margin-top: auto;">
+        <p class="oswald" style="margin: 0; font-size: 16px; letter-spacing: 1px;">&copy;<span id="year-footer">2026</span> por F&B PARTS.</p>
+        <script> document.getElementById('year-footer').textContent = new Date().getFullYear(); </script>
+    </footer>
+
+    <!-- ========================================== -->
+    <!-- 🤖 WIDGET FLOTANTE: MECÁNICO VIRTUAL IA & WHATSAPP -->
+    <!-- ========================================== -->
+    <div id="ai-chat-widget" style="position: fixed; bottom: 25px; right: 25px; z-index: 99999; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+        
+        <!-- Ventana del Chatbot -->
+        <div id="ai-chat-box" style="display: none; position: absolute; bottom: 75px; right: 0; width: 340px; max-width: calc(100vw - 50px); background: #fff; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); overflow: hidden; border: 1px solid #eee; flex-direction: column;">
+            
+            <!-- Encabezado -->
+            <div style="background: var(--green, #5b8743); color: white; padding: 15px; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="position: relative;">
+                        <div style="width: 38px; height: 38px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; color: var(--green, #5b8743); font-size: 20px;">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <span style="position: absolute; bottom: 0; right: 0; width: 10px; height: 10px; background: #25D366; border: 2px solid white; border-radius: 50%;"></span>
+                    </div>
+                    <div>
+                        <h4 style="margin: 0; font-size: 15px; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px; color: #fff;">Mecánico Virtual IA</h4>
+                        <span style="font-size: 11px; opacity: 0.9;">F&B Parts - Soporte en línea</span>
+                    </div>
+                </div>
+                <button onclick="toggleAiChat()" style="background: none; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0;" aria-label="Cerrar chat"><i class="fas fa-times"></i></button>
+            </div>
+
+            <!-- Área de Mensajes -->
+            <div id="ai-chat-messages" style="height: 320px; overflow-y: auto; padding: 15px; background: #f4f6f4; display: flex; flex-direction: column; gap: 10px; font-size: 13px;">
+                <div style="align-self: flex-start; background: white; padding: 10px 14px; border-radius: 0 12px 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; border-left: 3px solid var(--green, #5b8743);">
+                    <p style="margin: 0 0 5px 0;">¡Hola! 👋 Soy el <strong>Mecánico Inteligente</strong> de F&B Parts.</p>
+                    <p style="margin: 0;">¿Tienes alguna falla en tu vehículo o buscas un repuesto en específico? Cuéntame y te asesoro.</p>
+                </div>
+            </div>
+
+            <!-- Botón de Escape hacia WhatsApp -->
+            <div style="padding: 10px 15px; background: white; border-top: 1px solid #eee; text-align: center;">
+                <a href="https://wa.me/584120161036?text=Hola%20F%26B%20Parts,%20vengo%20del%20asistente%20virtual%20de%20su%20página%20y%20deseo%20cotizar." target="_blank" style="background: #25D366; color: white; text-decoration: none; display: flex; align-items: center; justify-content: center; padding: 10px; border-radius: 6px; font-weight: bold; font-family: 'Oswald', sans-serif; font-size: 14px; transition: background 0.2s; box-shadow: 0 2px 5px rgba(37, 211, 102, 0.3);">
+                    <i class="fab fa-whatsapp" style="margin-right: 8px; font-size: 18px;"></i> HABLAR CON UN ASESOR REAL
+                </a>
+            </div>
+
+            <!-- Input del usuario -->
+            <div style="padding: 10px 15px; background: #fafafa; border-top: 1px solid #eee; display: flex; gap: 8px; align-items: center;">
+                <input type="text" id="ai-chat-input" placeholder="Ej: Mi Yaris 2008 bota agua por debajo..." style="flex: 1; padding: 10px 15px; border: 1px solid #ddd; border-radius: 20px; outline: none; font-size: 13px;" onkeypress="handleAiChatKey(event)">
+                <button id="ai-chat-send-btn" onclick="enviarMensajeAi()" style="background: var(--green, #5b8743); color: white; border: none; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; flex-shrink: 0;">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Botón Flotante -->
+        <button onclick="toggleAiChat()" id="ai-chat-fab" style="background: var(--green, #5b8743); color: white; border: none; width: 65px; height: 65px; border-radius: 50%; cursor: pointer; font-size: 28px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; transition: transform 0.2s;" aria-label="Abrir Asistencia">
+            <i class="fas fa-headset" id="ai-icon-toggle"></i>
+        </button>
+    </div>
+
+    <!-- Script del Mecánico -->
+    <script>
+        function toggleAiChat() {
+            const box = document.getElementById('ai-chat-box');
+            const icon = document.getElementById('ai-icon-toggle');
+            const fab = document.getElementById('ai-chat-fab');
+            
+            if (box.style.display === 'none' || box.style.display === '') {
+                box.style.display = 'flex';
+                icon.className = 'fas fa-times';
+                fab.style.background = '#d9534f'; 
+                document.getElementById('ai-chat-input').focus();
+            } else {
+                box.style.display = 'none';
+                icon.className = 'fas fa-headset';
+                fab.style.background = 'var(--green, #5b8743)'; 
+            }
+        }
+
+        function handleAiChatKey(e) {
+            if (e.key === 'Enter') {
+                enviarMensajeAi();
+            }
+        }
+
+        let conversacionIA = [];
+
+        async function enviarMensajeAi() {
+            const input = document.getElementById('ai-chat-input');
+            const mensaje = input.value.trim();
+            if (!mensaje) return;
+
+            const chatArea = document.getElementById('ai-chat-messages');
+            const btn = document.getElementById('ai-chat-send-btn');
+
+            const userMsgHtml = `
+                <div style="align-self: flex-end; background: #f0f7f2; padding: 10px 14px; border-radius: 12px 0 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; color: #333; border-right: 3px solid var(--green, #5b8743);">
+                    <p style="margin: 0;">${mensaje}</p>
+                </div>
+            `;
+            chatArea.insertAdjacentHTML('beforeend', userMsgHtml);
+            input.value = '';
+            chatArea.scrollTop = chatArea.scrollHeight;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            const typingId = 'typing-' + Date.now();
+            const typingHtml = `
+                <div id="${typingId}" style="align-self: flex-start; background: white; padding: 10px 14px; border-radius: 0 12px 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; border-left: 3px solid #ccc; color: #888; font-style: italic;">
+                    <i class="fas fa-circle-notch fa-spin"></i> Analizando falla...
+                </div>
+            `;
+            chatArea.insertAdjacentHTML('beforeend', typingHtml);
+            chatArea.scrollTop = chatArea.scrollHeight;
+
+            let promptBase = `Actúa como el "Mecánico Asesor" experto de la tienda automotriz 'F&B Parts' en Caracas, Venezuela.
+            Eres empático, usas un lenguaje técnico pero fácil de entender.
+            TU OBJETIVO ES:
+            1. Diagnosticar brevemente la falla que describe el cliente.
+            2. Sugerir sutilmente qué repuestos podría necesitar (enfatizando que venden repuestos para Toyota, Ford, Dongfeng, Mazda y Honda).
+            3. SIEMPRE concluir invitando al cliente a pulsar el botón verde gigante de "HABLAR CON UN ASESOR REAL" que está en su pantalla para consultar disponibilidad y precios reales.
+            REGLA VITAL: Da respuestas CORTAS y concisas (máximo 2 párrafos). Evita formatos raros o asteriscos.`;
+
+            let historialContext = conversacionIA.map(msg => `Cliente: ${msg.user}\nMecánico: ${msg.ai}`).join("\n\n");
+            let promptFinal = promptBase + "\n\n" + (historialContext ? `HISTORIAL DE LA CHARLA:\n${historialContext}\n\n` : "") + `MENSAJE ACTUAL DEL CLIENTE: "${mensaje}"`;
+
+            try {
+                let respuestaFinal = "";
+                if (typeof puter !== 'undefined') {
+                    const respuesta = await puter.ai.chat(promptFinal);
+                    respuestaFinal = typeof respuesta === 'string' ? respuesta : respuesta.message.content;
+                } else {
+                    respuestaFinal = "Ups, tengo un pequeño problema de conexión con el taller. Por favor, pulsa el botón verde de abajo para que mis compañeros te atiendan por WhatsApp.";
+                }
+
+                document.getElementById(typingId).remove();
+
+                conversacionIA.push({ user: mensaje, ai: respuestaFinal });
+                if(conversacionIA.length > 3) conversacionIA.shift(); 
+
+                const aiMsgHtml = `
+                    <div style="align-self: flex-start; background: white; padding: 10px 14px; border-radius: 0 12px 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; border-left: 3px solid var(--green, #5b8743); color: #333;">
+                        <p style="margin: 0; white-space: pre-wrap; line-height: 1.5;">${respuestaFinal.replace(/\*\*/g, '')}</p>
+                    </div>
+                `;
+                chatArea.insertAdjacentHTML('beforeend', aiMsgHtml);
+                
+            } catch (e) {
+                console.error("Error Puter:", e);
+                document.getElementById(typingId).remove();
+                const errorHtml = `
+                    <div style="align-self: flex-start; background: #f8d7da; padding: 10px 14px; border-radius: 0 12px 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; border-left: 3px solid #d9534f; color: #721c24;">
+                        <p style="margin: 0;">Lo siento, mi internet falló. Por favor, usa el botón de WhatsApp abajo para hablar con un asesor.</p>
+                    </div>
+                `;
+                chatArea.insertAdjacentHTML('beforeend', errorHtml);
+            }
+
+            chatArea.scrollTop = chatArea.scrollHeight;
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+            input.focus();
+        }
+    </script>
+    <!-- ========================================== -->
+
+    <!-- SCRIPT DE INTERACCIÓN MÓVIL Y CARRITO -->
+    <script>
+        function toggleMenuMobile() {
+            const nav = document.getElementById('nav-principal');
+            nav.classList.toggle('menu-activo');
+        }
+
+        function toggleWaChat() {
+            const box = document.getElementById('wa-chat-box');
+            const icon = document.getElementById('wa-icon-toggle');
+            if (box.style.display === 'none' || box.style.display === '') {
+                box.style.display = 'block';
+                icon.className = 'fas fa-times';
+            } else {
+                box.style.display = 'none';
+                icon.className = 'fab fa-whatsapp';
+            }
+        }
+
+        // 🚀 ABRIR/CERRAR PANEL DEL CARRITO MÓVIL
+        function toggleCartMobile() {
+            const cart = document.getElementById('tu-pedido');
+            cart.classList.toggle('active');
+        }
+    </script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, getDocs, query, where, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
+            authDomain: "fb-parts-app.firebaseapp.com",
+            projectId: "fb-parts-app",
+            storageBucket: "fb-parts-app.firebasestorage.app",
+            messagingSenderId: "21714159445",
+            appId: "1:21714159445:web:8f4946cd1c98d9b95dd1dc"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let todosLosProductos = [];
+        let mapaCategorias = {};
+        let usuarioAutenticado = null; 
+
+        window.carrito = JSON.parse(localStorage.getItem('carritoFB')) || [];
+
+        onAuthStateChanged(auth, (user) => {
+            const navBtn = document.getElementById('nav-cuenta-btn');
+            if (user) {
+                usuarioAutenticado = user; 
+                navBtn.href = "mi-cuenta.html";
+                navBtn.innerHTML = `<i class="fas fa-user-check"></i> Mi Cuenta`;
+            } else {
+                usuarioAutenticado = null;
+                navBtn.href = "login.html";
+                navBtn.innerHTML = `<i class="fas fa-user"></i> Iniciar Sesión`;
+            }
+        });
+
+        async function cargarCategorias() {
+            const listaCat = document.getElementById('categorias-list');
+            const listaCatMovil = document.getElementById('categorias-list-movil');
+            
+            const snap = await getDocs(collection(db, "categorias"));
+            snap.forEach(docSnap => {
+                const cat = docSnap.data();
+                mapaCategorias[cat.id] = cat.nombre;
+                
+                listaCat.innerHTML += `<li><button data-cat="${cat.id}" onclick="filtrarPorCategoria('${cat.id}', this)">${cat.nombre}</button></li>`;
+                listaCatMovil.innerHTML += `<li><button data-cat="${cat.id}" onclick="filtrarPorCategoriaMovil('${cat.id}', this, '${cat.nombre}')">${cat.nombre}</button></li>`;
+            });
+        }
+
+        async function cargarInventario() {
+            const grid = document.getElementById('productos-grid');
+            const q = query(collection(db, "productos"), where("estado", "==", "activo"));
+            const snap = await getDocs(q);
+            snap.forEach(docSnap => todosLosProductos.push({ id: docSnap.id, ...docSnap.data() }));
+            
+            const params = new URLSearchParams(window.location.search);
+            const catUrl = params.get('cat');
+            if (catUrl && catUrl !== 'todos') {
+                const filtrados = todosLosProductos.filter(p => p.categoria === catUrl);
+                renderizarProductos(filtrados);
+                const btnSidebar = document.querySelector(`.sidebar button[data-cat="${catUrl}"]`);
+                if (btnSidebar) {
+                    document.querySelectorAll('.sidebar .cat-list button').forEach(b => b.classList.remove('active'));
+                    btnSidebar.classList.add('active');
+                }
+            } else {
+                renderizarProductos(todosLosProductos);
+            }
+        }
+
+        function renderizarProductos(productosArray) {
+            const grid = document.getElementById('productos-grid');
+            grid.innerHTML = '';
+            
+            if(productosArray.length === 0) {
+                grid.innerHTML = '<div style="text-align:center; padding: 40px; color:#666; grid-column: 1/-1;">No se encontraron repuestos.</div>';
+                return;
+            }
+
+            productosArray.forEach(prod => {
+                const nombreCat = mapaCategorias[prod.categoria] || 'General';
+                const safeName = prod.nombre.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                
+                const slug = prod.nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '-').replace(/(^-|-$)/g, '');
+                const urlProducto = `producto.html?id=${prod.id}&pieza=${slug}`;
+
+                let botonML = "";
+                if(prod.ml_id && prod.ml_id.trim() !== "") {
+                    let idML = prod.ml_id.trim();
+                    if (idML.startsWith("MLV") && !idML.startsWith("MLV-")) idML = idML.replace("MLV", "MLV-");
+                    botonML = `<a href="https://articulo.mercadolibre.com.ve/${idML}" target="_blank" class="btn-ml"><i class="fas fa-handshake"></i> Ver en Mercado Libre</a>`;
+                }
+
+                grid.innerHTML += `
+                    <div class="prod-card">
+                        <a href="${urlProducto}" style="text-decoration: none; color: inherit; display: contents;">
+                            <div class="prod-img-wrap">
+                                <img src="${prod.imagen}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png'">
+                            </div>
+                            <div class="prod-info">
+                                <div class="prod-cat">${nombreCat}</div>
+                                <h4 class="prod-title">${prod.nombre}</h4>
+                        </a>
+                                <div class="prod-price">$${Number(prod.precio).toFixed(2)}</div>
+                                <div style="margin-top: auto;">
+                                    <button type="button" class="btn-add-cart" onclick="agregarAlCarrito('${prod.id}', '${safeName}', ${prod.precio})"><i class="fas fa-cart-plus"></i> Añadir</button>
+                                    ${botonML}
+                                </div>
+                            </div>
+                    </div>`;
+            });
+        }
+
+        window.toggleFiltrosMovil = function() {
+            const dropdown = document.getElementById('menu-categorias-movil');
+            const icono = document.getElementById('icono-chevron-filtro');
+            if (dropdown.classList.contains('active')) {
+                dropdown.classList.remove('active');
+                icono.style.transform = 'rotate(0deg)';
+            } else {
+                dropdown.classList.add('active');
+                icono.style.transform = 'rotate(180deg)';
+            }
+        };
+
+        window.sincronizarBusqueda = function(valor) {
+            document.getElementById('buscador-tienda').value = valor;
+            document.getElementById('buscador-tienda-movil').value = valor;
+            const texto = valor.toLowerCase();
+            const f = todosLosProductos.filter(p => p.nombre.toLowerCase().includes(texto));
+            renderizarProductos(f);
+        };
+
+        window.filtrarPorCategoriaMovil = function(categoriaId, btnElement, nombreCat = "Todos los Repuestos") {
+            document.querySelectorAll('#categorias-list-movil button').forEach(b => b.classList.remove('active'));
+            btnElement.classList.add('active');
+            document.getElementById('texto-filtro-activo').innerHTML = `<i class="fas fa-filter"></i> ${nombreCat}`;
+            toggleFiltrosMovil(); 
+
+            actualizarCanonicalYUrl(categoriaId);
+            const f = categoriaId === 'todos' ? todosLosProductos : todosLosProductos.filter(p => p.categoria === categoriaId);
+            renderizarProductos(f);
+        };
+
+        window.filtrarPorCategoria = function(categoriaId, btnElement) {
+            document.querySelectorAll('.sidebar .cat-list button').forEach(btn => btn.classList.remove('active'));
+            if(btnElement) btnElement.classList.add('active');
+            
+            actualizarCanonicalYUrl(categoriaId);
+            const f = categoriaId === 'todos' ? todosLosProductos : todosLosProductos.filter(p => p.categoria === categoriaId);
+            renderizarProductos(f);
+        };
+
+        function actualizarCanonicalYUrl(categoriaId) {
+            const canonicalEl = document.getElementById('canonical-link');
+            if (categoriaId === 'todos') {
+                history.pushState({}, '', 'tienda.html');
+                canonicalEl.href = 'https://www.fybparts.com/tienda.html';
+            } else {
+                history.pushState({}, '', `tienda.html?cat=${categoriaId}`);
+                canonicalEl.href = `https://www.fybparts.com/tienda.html?cat=${categoriaId}`;
+            }
+        }
+
+        window.agregarAlCarrito = function(id, nombre, precio) {
+            const item = window.carrito.find(i => i.id === id);
+            if(item) item.cantidad++;
+            else window.carrito.push({ id, nombre, precio, cantidad: 1 });
+            actualizarUICarrito();
+            alert("¡Repuesto añadido a tu pedido!");
+        };
+
+        window.cambiarCantidad = function(id, delta) {
+            const item = window.carrito.find(i => i.id === id);
+            if(item) {
+                item.cantidad += delta;
+                if(item.cantidad <= 0) window.carrito = window.carrito.filter(i => i.id !== id);
+                actualizarUICarrito();
+            }
+        };
+
+        window.eliminarDelCarrito = function(id) {
+            window.carrito = window.carrito.filter(i => i.id !== id);
+            actualizarUICarrito();
+        };
+
+        function actualizarUICarrito() {
+            localStorage.setItem('carritoFB', JSON.stringify(window.carrito));
+            const container = document.getElementById('cart-items');
+            const totalDisplay = document.getElementById('cart-total-amount');
+            container.innerHTML = '';
+            
+            let total = 0;
+            let cantidadArticulos = 0; // 🚀 NÚMERO PARA EL BADGE DEL CARRO MÓVIL
+
+            if(window.carrito.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:#999; padding:20px;">Vacío</div>';
+                totalDisplay.innerText = '$0.00';
+            } else {
+                window.carrito.forEach(item => {
+                    total += item.precio * item.cantidad;
+                    cantidadArticulos += item.cantidad;
+                    container.innerHTML += `
+                        <div class="cart-item">
+                            <div class="cart-item-info">
+                                <div class="cart-item-title">${item.nombre}</div>
+                                <div class="cart-item-price">${item.cantidad} x $${item.precio.toFixed(2)}</div>
+                            </div>
+                            <div class="cart-item-controls">
+                                <button class="btn-qty" onclick="cambiarCantidad('${item.id}', -1)">-</button>
+                                <span>${item.cantidad}</span>
+                                <button class="btn-qty" onclick="cambiarCantidad('${item.id}', 1)">+</button>
+                                <button class="btn-remove" onclick="eliminarDelCarrito('${item.id}')"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>`;
+                });
+                totalDisplay.innerText = `$${total.toFixed(2)}`;
+            }
+
+            // 🚀 ACTUALIZAR NÚMERO DEL BOTÓN FLOTANTE MÓVIL
+            const badge = document.getElementById('cart-badge');
+            if(badge) {
+                badge.innerText = cantidadArticulos;
+                badge.style.display = cantidadArticulos > 0 ? 'flex' : 'none';
+            }
+        }
+
+        window.iniciarCheckout = function() {
+            if(window.carrito.length === 0) {
+                alert("Añade repuestos a tu pedido primero.");
+                return;
+            }
+            if (!usuarioAutenticado) {
+                alert("Para procesar tu pedido, por favor Inicia Sesión o Regístrate.");
+                window.location.href = "login.html"; 
+                return;
+            }
+
+            // 🚀 Cerrar el panel del carrito móvil antes de abrir el modal de pago
+            const cart = document.getElementById('tu-pedido');
+            if(cart) cart.classList.remove('active');
+
+            document.getElementById('modal-pago').style.display = 'flex';
+        };
+
+        window.cerrarModalCheckout = function() {
+            document.getElementById('modal-pago').style.display = 'none';
+        };
+
+        window.verificarCamposEnvio = function() {
+            const envio = document.getElementById('metodo-envio').value;
+            const grupoDireccion = document.getElementById('grupo-direccion');
+            
+            if(envio !== "Retiro en persona (Sede Principal)") {
+                grupoDireccion.style.display = 'block';
+            } else {
+                grupoDireccion.style.display = 'none';
+                document.getElementById('direccion-pedido').value = ''; 
+            }
+        };
+
+        window.obtenerUbicacionGPS = function() {
+            const inputDireccion = document.getElementById('direccion-pedido');
+            const btnGps = document.getElementById('btn-gps');
+
+            if (!navigator.geolocation) {
+                alert("Tu navegador no soporta la geolocalización.");
+                return;
+            }
+
+            btnGps.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btnGps.disabled = true;
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    const linkMaps = `https://www.google.com/maps?q=${lat},${lng}`;
+                    
+                    if (inputDireccion.value.trim() !== "") {
+                        inputDireccion.value = inputDireccion.value + " - Link GPS: " + linkMaps;
+                    } else {
+                        inputDireccion.value = linkMaps;
+                    }
+                    
+                    btnGps.innerHTML = '<i class="fas fa-check"></i> Listo';
+                    setTimeout(() => {
+                        btnGps.innerHTML = '<i class="fas fa-map-marker-alt"></i> GPS';
+                        btnGps.disabled = false;
+                    }, 3000);
+                },
+                (error) => {
+                    console.error("Error GPS: ", error);
+                    alert("No pudimos acceder a tu ubicación.");
+                    btnGps.innerHTML = '<i class="fas fa-map-marker-alt"></i> GPS';
+                    btnGps.disabled = false;
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        };
+
+        window.finalizarPedidoBaseDatos = async function() {
+            const nombreCliente = document.getElementById('nombre-checkout').value.trim();
+            const metodoEnvio = document.getElementById('metodo-envio').value;
+            const direccion = document.getElementById('direccion-pedido').value.trim();
+            const metodoPago = document.getElementById('metodo-pago').value;
+            
+            if(nombreCliente === "") {
+                alert("Indícanos tu nombre para la orden.");
+                return;
+            }
+
+            if(metodoEnvio !== "Retiro en persona (Sede Principal)" && direccion === "") {
+                alert("Por favor, indícanos tu dirección.");
+                return;
+            }
+
+            const btn = document.getElementById('btn-enviar-final');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando orden...';
+            btn.disabled = true;
+
+            let mensajeWA = `Hola F&B Parts, soy ${nombreCliente}.\nYa estoy registrado en su web y deseo realizar el siguiente pedido pagando por *${metodoPago}*:\n\n`;
+            
+            mensajeWA += `📦 *Método de entrega:* ${metodoEnvio}\n`;
+            if (metodoEnvio !== "Retiro en persona (Sede Principal)") {
+                mensajeWA += `📍 *Dirección/GPS:* ${direccion}\n\n`;
+            } else {
+                mensajeWA += `\n`;
+            }
+
+            let totalGeneral = 0;
+            let productosParaBaseDeDatos = [];
+
+            window.carrito.forEach(item => {
+                const subtotal = item.precio * item.cantidad;
+                totalGeneral += subtotal;
+                mensajeWA += `✅ ${item.cantidad}x ${item.nombre} ($${subtotal.toFixed(2)})\n`;
+                productosParaBaseDeDatos.push({ nombre: item.nombre, cantidad: item.cantidad, precio: item.precio });
+            });
+
+            mensajeWA += `\n*TOTAL DEL PEDIDO: $${totalGeneral.toFixed(2)}*\n\nPor favor, confirmarme la viabilidad del envío y los datos para el pago.`;
+
+            const objetoPedidoNuevo = {
+                usuario_uid: usuarioAutenticado ? usuarioAutenticado.uid : "Sin ID", 
+                cliente: nombreCliente,
+                email: usuarioAutenticado ? usuarioAutenticado.email : "Usuario sin sesión",
+                envio: metodoEnvio !== "Retiro en persona (Sede Principal)" ? `${metodoEnvio} - ${direccion}` : metodoEnvio,
+                tracking: `Pago por: ${metodoPago}`,
+                estado: "Pendiente",
+                fecha: new Date().toLocaleDateString("es-VE"),
+                total: totalGeneral,
+                productos: productosParaBaseDeDatos
+            };
+
+            try {
+                await addDoc(collection(db, "pedidos"), objetoPedidoNuevo);
+                window.carrito = [];
+                actualizarUICarrito();
+                localStorage.removeItem('carritoFB'); 
+                cerrarModalCheckout();
+
+                const link = `https://wa.me/584120161036?text=${encodeURIComponent(mensajeWA)}`;
+                window.open(link, '_blank');
+            } catch (error) {
+                console.error("Error:", error);
+                alert("Hubo un error de conexión.");
+            }
+            btn.innerHTML = '<i class="fab fa-whatsapp"></i> Confirmar y Enviar WhatsApp';
+            btn.disabled = false;
+        };
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            actualizarUICarrito(); 
+            await cargarCategorias();
+            await cargarInventario();
+        });
+    </script>
+</body>
+</html>

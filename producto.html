@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- 🚀 ETIQUETAS SEO DINÁMICAS -->
+    <title>Cargando repuesto... | F&B Parts</title>
+    <meta name="description" content="Encuentra los mejores repuestos automotrices al mejor precio en F&B Parts, Caracas." id="meta-desc">
+    
+    <!-- Etiquetas Open Graph (Para la vista previa bonita en WhatsApp, Facebook, etc) -->
+    <meta property="og:type" content="product">
+    <meta property="og:title" content="F&B Parts - Repuestos Automotrices" id="og-title">
+    <meta property="og:description" content="Catálogo de repuestos con envío a nivel nacional." id="og-desc">
+    <meta property="og:image" content="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png" id="og-image">
+    <meta property="og:url" content="https://www.fybparts.com/producto.html" id="og-url">
+
+    <link rel="icon" type="image/png" href="img/favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- 🚀 LIBRERÍA PUTER.JS (EL CEREBRO DEL MECÁNICO) -->
+    <script src="https://js.puter.com/v2/"></script>
+
+    <style>
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f8f8f8; display: flex; flex-direction: column; min-height: 100vh; margin: 0; }
+        .breadcrumb-nav { max-width: 1100px; margin: 20px auto 0 auto; padding: 0 20px; width: 100%; box-sizing: border-box; font-size: 14px; color: #666; }
+        .breadcrumb-nav a { color: #385723; text-decoration: none; font-weight: bold; }
+        .breadcrumb-nav a:hover { text-decoration: underline; }
+        .breadcrumb-nav span { color: #555; }
+        .product-container { max-width: 1100px; margin: 20px auto; padding: 0 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; width: 100%; box-sizing: border-box; background: white; padding: 40px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,.05); }
+        .product-img-box { width: 100%; height: 400px; background: #fff; display: flex; align-items: center; justify-content: center; border: 1px solid #eee; border-radius: 6px; overflow: hidden; }
+        .product-img-box img { width: 100%; height: 100%; object-fit: contain; }
+        .product-details h1 { font-family: 'Oswald', sans-serif; color: #385723; font-size: 28px; margin-top: 0; margin-bottom: 15px; }
+        .product-price { font-size: 26px; color: #385723; font-weight: bold; font-family: 'Oswald', sans-serif; margin-bottom: 20px; }
+        .product-meta { font-size: 14px; color: #555; margin-bottom: 15px; line-height: 1.6; border-top: 1px solid #eee; border-bottom: 1px solid #eee; padding: 15px 0; }
+        .btn-add-cart-large { background: #385723; color: white; border: none; padding: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; width: 100%; transition: background 0.2s; font-family: 'Oswald', sans-serif; text-transform: uppercase; margin-top: 20px; }
+        .btn-add-cart-large:hover { background: #2c441b; }
+        .btn-ml-large { background: #ffe600; color: #333; padding: 12px; border-radius: 6px; text-align: center; text-decoration: none; font-weight: bold; display: block; width: 100%; transition: 0.2s; box-sizing: border-box; font-size: 15px; font-family: 'Oswald', sans-serif; margin-top: 10px; }
+        .related-section { max-width: 1100px; margin: 0 auto 50px auto; padding: 0 20px; width: 100%; box-sizing: border-box; }
+        .related-section h3 { font-family: 'Oswald', sans-serif; color: #385723; font-size: 22px; text-transform: uppercase; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+        .related-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+        
+        @media (max-width: 900px) { .product-container { grid-template-columns: 1fr; padding: 20px; } .product-img-box { height: 280px; } .related-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } }
+
+        /* ========================================== */
+        /* 🚀 REGLAS DE CORRECCIÓN PARA EL HEADER MÓVIL */
+        /* ========================================== */
+        @media (max-width: 900px) {
+            header { position: relative; width: 100%; }
+            header .header-wrap {
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: nowrap !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                padding: 10px 15px !important;
+                width: 100% !important; 
+                box-sizing: border-box !important;
+            }
+            header .header-right { display: none !important; }
+            header .logo { flex: 0 0 auto; display: flex; align-items: center; }
+            header .logo img { height: 45px !important; width: auto; max-width: 200px; }
+            
+            .mobile-menu {
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+                background: #385723 !important;
+                color: white !important;
+                border: none;
+                padding: 10px 14px;
+                border-radius: 6px;
+                font-size: 22px;
+                cursor: pointer;
+                margin-left: auto !important;
+            }
+            header nav {
+                display: none; 
+                flex-direction: column;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                width: 100%;
+                background: white;
+                box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+                border-top: 1px solid #eee;
+                z-index: 9999;
+            }
+            header nav.menu-activo { display: flex !important; }
+            header nav a {
+                padding: 15px 20px !important;
+                border-bottom: 1px solid #f0f0f0;
+                width: 100%;
+                text-align: left;
+                box-sizing: border-box;
+                color: #385723 !important; 
+                font-weight: bold;
+            }
+            header nav a i { color: #385723 !important; }
+        }
+
+                /* ========================================== */
+        /* 🛒 PANEL LATERAL DEL CARRITO EN PRODUCTO   */
+        /* ========================================== */
+        .cart-panel-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100000; justify-content: flex-end; transition: opacity 0.3s; }
+        .cart-panel-overlay.active { display: flex; }
+        .cart-sidebar-panel { background: white; width: 100%; max-width: 350px; height: 100%; padding: 20px; box-shadow: -4px 0 15px rgba(0,0,0,.1); display: flex; flex-direction: column; box-sizing: border-box; animation: slideIn 0.3s forwards; }
+        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        .cart-sidebar-panel h3 { color: #5b8743; font-family: 'Oswald', sans-serif; font-size: 20px; margin-top: 0; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .cart-items-container { flex: 1; overflow-y: auto; margin-bottom: 10px; padding-right: 5px; }
+        .cart-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 10px 0; font-size: 13px; }
+        .cart-item-info { flex: 1; padding-right: 10px; }
+        .cart-item-title { font-weight: bold; color: #333; margin-bottom: 3px; line-height: 1.2; }
+        .cart-item-price { color: #666; }
+        .cart-item-controls { display: flex; align-items: center; gap: 8px; }
+        .btn-qty { background: #eee; border: none; width: 24px; height: 24px; border-radius: 4px; cursor: pointer; font-weight: bold; color: #333; }
+        .btn-remove { background: #ff4d4d; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .cart-total-box { border-top: 2px solid #385723; padding-top: 10px; margin-bottom: 15px; text-align: right; }
+        .cart-total-amount { font-size: 24px; color: #385723; font-weight: bold; font-family: 'Oswald', sans-serif; }
+        .btn-checkout-panel { background: #25D366; color: white; border: none; padding: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; width: 100%; transition: 0.2s; font-family: 'Oswald', sans-serif; text-align: center; text-decoration: none; display: block; }
+        .btn-checkout-panel:hover { background: #1ebd5a; }
+
+    </style>
+</head>
+<body>
+
+    <div class="topbar">
+        <p style="margin:0; font-weight: bold; font-size: 14px; letter-spacing: 1px;">DELIVERY GRATIS EN CARACAS</p><span>(CIERTAS CONDICIONES APLICAN)</span>
+    </div>
+
+    <!-- 🚀 HEADER MÓVIL CORREGIDO -->
+    <header style="background: white; border-bottom: 1px solid #eee;">
+        <div class="container header-wrap" style="padding: 15px 20px; max-width: 1350px; display: flex; justify-content: space-between; align-items: center;">
+            <a class="logo" href="index.html">
+                <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logotipo F&B PARTS" decoding="async" style="height: 60px;">
+            </a>
+            
+            <nav id="nav-principal">
+                <a href="index.html" onclick="toggleMenuMobile()">Inicio</a>
+                <a href="tienda.html" onclick="toggleMenuMobile()" style="color: #385723; font-weight: bold;">Tienda</a>
+                <a href="index.html#nosotros" onclick="toggleMenuMobile()">Quienes somos</a>
+                <a href="index.html#mercadolibre" onclick="toggleMenuMobile()">Mercado Libre</a>
+                <a href="index.html#contacto" onclick="toggleMenuMobile()">Contacto</a>
+                <a href="login.html" id="nav-cuenta-btn" style="color: var(--green); font-weight: bold;"><i class="fas fa-user"></i> Mi Cuenta</a>
+            </nav>
+
+            <button class="mobile-menu" aria-label="Menú" onclick="toggleMenuMobile()" style="display: none;">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </header>
+
+    <nav class="breadcrumb-nav" aria-label="Breadcrumb">
+        <a href="index.html">Inicio</a> › 
+        <a href="tienda.html">Tienda</a> › 
+        <span id="breadcrumb-current">Cargando...</span>
+    </nav>
+
+    <div class="product-container" id="product-details-container">
+        <div style="text-align: center; grid-column: 1/-1; padding: 50px; color: #666;">
+            <i class="fas fa-spinner fa-spin" style="font-size: 30px;"></i><br>Cargando información del repuesto...
+        </div>
+    </div>
+
+    <section class="related-section">
+        <h3>También te puede interesar</h3>
+        <div class="related-grid" id="related-products-grid"></div>
+    </section>
+
+    <footer style="background-color: #000; color: #fff; text-align: center; padding: 25px 0; margin-top: auto;">
+        <p class="oswald" style="margin: 0; font-size: 16px; letter-spacing: 1px;">&copy;<span id="year-footer">2026</span> por F&B PARTS.</p>
+        <script> document.getElementById('year-footer').textContent = new Date().getFullYear(); </script>
+    </footer>
+
+        <!-- Botón Flotante del Carrito (CORREGIDO) -->
+    <div onclick="toggleCartPanel()" style="position: fixed; bottom: 100px; right: 25px; z-index: 99998; cursor: pointer; width: 60px; height: 60px; transition: transform 0.2s;" aria-label="Ver mi pedido">
+        <div style="background: #fff; color: #385723; border: 2px solid #385723; width: 100%; height: 100%; border-radius: 50%; font-size: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center;">
+            <i class="fas fa-shopping-cart"></i>
+        </div>
+        <span id="cart-badge-producto" style="position: absolute; top: -5px; right: -5px; background: #ff4d4d; color: white; font-size: 13px; font-weight: bold; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; display: none; pointer-events: none;">0</span>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 🤖 WIDGET FLOTANTE: MECÁNICO VIRTUAL IA & WHATSAPP -->
+    <!-- ========================================== -->
+    <div id="ai-chat-widget" style="position: fixed; bottom: 25px; right: 25px; z-index: 99999; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+        
+        <!-- Ventana del Chatbot -->
+        <div id="ai-chat-box" style="display: none; position: absolute; bottom: 75px; right: 0; width: 340px; max-width: calc(100vw - 50px); background: #fff; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); overflow: hidden; border: 1px solid #eee; flex-direction: column;">
+            
+            <!-- Encabezado -->
+            <div style="background: var(--green, #5b8743); color: white; padding: 15px; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="position: relative;">
+                        <div style="width: 38px; height: 38px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; color: var(--green, #5b8743); font-size: 20px;">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <span style="position: absolute; bottom: 0; right: 0; width: 10px; height: 10px; background: #25D366; border: 2px solid white; border-radius: 50%;"></span>
+                    </div>
+                    <div>
+                        <h4 style="margin: 0; font-size: 15px; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px; color: #fff;">Mecánico Virtual IA</h4>
+                        <span style="font-size: 11px; opacity: 0.9;">F&B Parts - Soporte en línea</span>
+                    </div>
+                </div>
+                <button onclick="toggleAiChat()" style="background: none; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0;" aria-label="Cerrar chat"><i class="fas fa-times"></i></button>
+            </div>
+
+            <!-- Área de Mensajes -->
+            <div id="ai-chat-messages" style="height: 320px; overflow-y: auto; padding: 15px; background: #f4f6f4; display: flex; flex-direction: column; gap: 10px; font-size: 13px;">
+                <div style="align-self: flex-start; background: white; padding: 10px 14px; border-radius: 0 12px 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; border-left: 3px solid var(--green, #5b8743);">
+                    <p style="margin: 0 0 5px 0;">¡Hola! 👋 Soy el <strong>Mecánico Inteligente</strong> de F&B Parts.</p>
+                    <p style="margin: 0;">¿Tienes alguna falla en tu vehículo o buscas un repuesto en específico? Cuéntame y te asesoro.</p>
+                </div>
+            </div>
+
+            <!-- Botón de Escape hacia WhatsApp -->
+            <div style="padding: 10px 15px; background: white; border-top: 1px solid #eee; text-align: center;">
+                <a href="https://wa.me/584120161036?text=Hola%20F%26B%20Parts,%20vengo%20del%20asistente%20virtual%20de%20su%20página%20y%20deseo%20cotizar." target="_blank" style="background: #25D366; color: white; text-decoration: none; display: flex; align-items: center; justify-content: center; padding: 10px; border-radius: 6px; font-weight: bold; font-family: 'Oswald', sans-serif; font-size: 14px; transition: background 0.2s; box-shadow: 0 2px 5px rgba(37, 211, 102, 0.3);">
+                    <i class="fab fa-whatsapp" style="margin-right: 8px; font-size: 18px;"></i> HABLAR CON UN ASESOR REAL
+                </a>
+            </div>
+
+            <!-- Input del usuario -->
+            <div style="padding: 10px 15px; background: #fafafa; border-top: 1px solid #eee; display: flex; gap: 8px; align-items: center;">
+                <input type="text" id="ai-chat-input" placeholder="Ej: Mi Yaris 2008 bota agua por debajo..." style="flex: 1; padding: 10px 15px; border: 1px solid #ddd; border-radius: 20px; outline: none; font-size: 13px;" onkeypress="handleAiChatKey(event)">
+                <button id="ai-chat-send-btn" onclick="enviarMensajeAi()" style="background: var(--green, #5b8743); color: white; border: none; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; flex-shrink: 0;">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Botón Flotante -->
+        <button onclick="toggleAiChat()" id="ai-chat-fab" style="background: var(--green, #5b8743); color: white; border: none; width: 65px; height: 65px; border-radius: 50%; cursor: pointer; font-size: 28px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; transition: transform 0.2s;" aria-label="Abrir Asistencia">
+            <i class="fas fa-headset" id="ai-icon-toggle"></i>
+        </button>
+    </div>
+
+    <!-- Script del Mecánico -->
+    <script>
+        function toggleAiChat() {
+            const box = document.getElementById('ai-chat-box');
+            const icon = document.getElementById('ai-icon-toggle');
+            const fab = document.getElementById('ai-chat-fab');
+            
+            if (box.style.display === 'none' || box.style.display === '') {
+                box.style.display = 'flex';
+                icon.className = 'fas fa-times';
+                fab.style.background = '#d9534f'; 
+                document.getElementById('ai-chat-input').focus();
+            } else {
+                box.style.display = 'none';
+                icon.className = 'fas fa-headset';
+                fab.style.background = 'var(--green, #5b8743)'; 
+            }
+        }
+
+        function handleAiChatKey(e) {
+            if (e.key === 'Enter') {
+                enviarMensajeAi();
+            }
+        }
+
+        let conversacionIA = [];
+
+        async function enviarMensajeAi() {
+            const input = document.getElementById('ai-chat-input');
+            const mensaje = input.value.trim();
+            if (!mensaje) return;
+
+            const chatArea = document.getElementById('ai-chat-messages');
+            const btn = document.getElementById('ai-chat-send-btn');
+
+            const userMsgHtml = `
+                <div style="align-self: flex-end; background: #f0f7f2; padding: 10px 14px; border-radius: 12px 0 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; color: #333; border-right: 3px solid var(--green, #5b8743);">
+                    <p style="margin: 0;">${mensaje}</p>
+                </div>
+            `;
+            chatArea.insertAdjacentHTML('beforeend', userMsgHtml);
+            input.value = '';
+            chatArea.scrollTop = chatArea.scrollHeight;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            const typingId = 'typing-' + Date.now();
+            const typingHtml = `
+                <div id="${typingId}" style="align-self: flex-start; background: white; padding: 10px 14px; border-radius: 0 12px 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; border-left: 3px solid #ccc; color: #888; font-style: italic;">
+                    <i class="fas fa-circle-notch fa-spin"></i> Analizando falla...
+                </div>
+            `;
+            chatArea.insertAdjacentHTML('beforeend', typingHtml);
+            chatArea.scrollTop = chatArea.scrollHeight;
+
+            let promptBase = `Actúa como el "Mecánico Asesor" experto de la tienda automotriz 'F&B Parts' en Caracas, Venezuela.
+            Eres empático, usas un lenguaje técnico pero fácil de entender.
+            TU OBJETIVO ES:
+            1. Diagnosticar brevemente la falla que describe el cliente.
+            2. Sugerir sutilmente qué repuestos podría necesitar (enfatizando que venden repuestos para Toyota, Ford, Dongfeng, Mazda y Honda).
+            3. SIEMPRE concluir invitando al cliente a pulsar el botón verde gigante de "HABLAR CON UN ASESOR REAL" que está en su pantalla para consultar disponibilidad y precios reales.
+            REGLA VITAL: Da respuestas CORTAS y concisas (máximo 2 párrafos). Evita formatos raros o asteriscos.`;
+
+            let historialContext = conversacionIA.map(msg => `Cliente: ${msg.user}\nMecánico: ${msg.ai}`).join("\n\n");
+            let promptFinal = promptBase + "\n\n" + (historialContext ? `HISTORIAL DE LA CHARLA:\n${historialContext}\n\n` : "") + `MENSAJE ACTUAL DEL CLIENTE: "${mensaje}"`;
+
+            try {
+                let respuestaFinal = "";
+                if (typeof puter !== 'undefined') {
+                    const respuesta = await puter.ai.chat(promptFinal);
+                    respuestaFinal = typeof respuesta === 'string' ? respuesta : respuesta.message.content;
+                } else {
+                    respuestaFinal = "Ups, tengo un pequeño problema de conexión con el taller. Por favor, pulsa el botón verde de abajo para que mis compañeros te atiendan por WhatsApp.";
+                }
+
+                document.getElementById(typingId).remove();
+
+                conversacionIA.push({ user: mensaje, ai: respuestaFinal });
+                if(conversacionIA.length > 3) conversacionIA.shift(); 
+
+                const aiMsgHtml = `
+                    <div style="align-self: flex-start; background: white; padding: 10px 14px; border-radius: 0 12px 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; border-left: 3px solid var(--green, #5b8743); color: #333;">
+                        <p style="margin: 0; white-space: pre-wrap; line-height: 1.5;">${respuestaFinal.replace(/\*\*/g, '')}</p>
+                    </div>
+                `;
+                chatArea.insertAdjacentHTML('beforeend', aiMsgHtml);
+                
+            } catch (e) {
+                console.error("Error Puter:", e);
+                document.getElementById(typingId).remove();
+                const errorHtml = `
+                    <div style="align-self: flex-start; background: #f8d7da; padding: 10px 14px; border-radius: 0 12px 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; border-left: 3px solid #d9534f; color: #721c24;">
+                        <p style="margin: 0;">Lo siento, mi internet falló. Por favor, usa el botón de WhatsApp abajo para hablar con un asesor.</p>
+                    </div>
+                `;
+                chatArea.insertAdjacentHTML('beforeend', errorHtml);
+            }
+
+            chatArea.scrollTop = chatArea.scrollHeight;
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+            input.focus();
+        }
+    </script>
+
+    <!-- ========================================== -->
+    <!-- 🛒 PANEL LATERAL DEL CARRITO Y BOTÓN       -->
+    <!-- ========================================== -->
+    <div class="cart-panel-overlay" id="cart-panel-overlay" onclick="cerrarPanelCarrito(event)">
+        <aside class="cart-sidebar-panel" id="tu-pedido-panel" onclick="event.stopPropagation()">
+            <h3>
+                <span><i class="fas fa-shopping-cart"></i> TU PEDIDO</span>
+                <button onclick="toggleCartPanel()" style="background: none; border: none; font-size: 20px; color: #333; cursor: pointer;"><i class="fas fa-times"></i></button>
+            </h3>
+            <div class="cart-items-container" id="cart-items-producto">
+                <!-- Se inyectan los repuestos aquí -->
+            </div>
+            <div class="cart-total-box">
+                <span style="font-size: 16px; font-weight: bold;">Total: </span>
+                <span class="cart-total-amount" id="cart-total-amount-producto">$0.00</span>
+            </div>
+            <button class="btn-checkout-panel" onclick="window.location.href='tienda.html'">
+                <i class="fas fa-check-circle"></i> PROCESAR PEDIDO
+            </button>
+        </aside>
+
+            <!-- Botón Flotante del Carrito (CORREGIDO) -->
+        <div onclick="toggleCartPanel()" style="position: fixed; bottom: 100px; right: 25px; z-index: 99998; cursor: pointer; width: 60px; height: 60px; transition: transform 0.2s;" aria-label="Ver mi pedido">
+            <div style="background: #fff; color: #385723; border: 2px solid #385723; width: 100%; height: 100%; border-radius: 50%; font-size: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-shopping-cart"></i>
+            </div>
+            <span id="cart-badge-producto" style="position: absolute; top: -5px; right: -5px; background: #ff4d4d; color: white; font-size: 13px; font-weight: bold; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; display: none; pointer-events: none;">0</span>
+         </div>
+
+    </div>
+
+    <!-- ========================================== -->
+
+    <!-- Script para Abrir/Cerrar Menú Móvil y Chat WhatsApp -->
+    <script>
+        function toggleMenuMobile() {
+            const nav = document.getElementById('nav-principal');
+            nav.classList.toggle('menu-activo');
+        }
+
+        function toggleWaChat() {
+            const box = document.getElementById('wa-chat-box');
+            const icon = document.getElementById('wa-icon-toggle');
+            if (box.style.display === 'none' || box.style.display === '') {
+                box.style.display = 'block';
+                icon.className = 'fas fa-times';
+            } else {
+                box.style.display = 'none';
+                icon.className = 'fab fa-whatsapp';
+            }
+        }
+    </script>
+    <!-- ========================================== -->
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, doc, getDoc, collection, getDocs, query, where, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
+            authDomain: "fb-parts-app.firebaseapp.com",
+            projectId: "fb-parts-app",
+            storageBucket: "fb-parts-app.firebasestorage.app",
+            messagingSenderId: "21714159445",
+            appId: "1:21714159445:web:8f4946cd1c98d9b95dd1dc"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        onAuthStateChanged(auth, (user) => {
+            const navBtn = document.getElementById('nav-cuenta-btn');
+            if (user) {
+                navBtn.href = "mi-cuenta.html";
+                navBtn.innerHTML = `<i class="fas fa-user-check"></i> Mi Cuenta`;
+            } else {
+                navBtn.href = "login.html";
+                navBtn.innerHTML = `<i class="fas fa-user"></i> Iniciar Sesión`;
+            }
+        });
+
+        async function cargarDetalleProducto() {
+            const params = new URLSearchParams(window.location.search);
+            const productId = params.get('id');
+            const container = document.getElementById('product-details-container');
+
+            if (!productId) {
+                container.innerHTML = '<div style="text-align:center; grid-column: 1/-1; padding: 40px;">Repuesto no especificado. <a href="tienda.html" style="color:#385723; font-weight:bold;">Volver a la tienda</a></div>';
+                return;
+            }
+
+            try {
+                const docRef = doc(db, "productos", productId);
+                const docSnap = await getDoc(docRef);
+
+                if (!docSnap.exists()) {
+                    container.innerHTML = '<div style="text-align:center; grid-column: 1/-1; padding: 40px;">El repuesto solicitado no existe o fue retirado. <a href="tienda.html" style="color:#385723; font-weight:bold;">Ir a la tienda</a></div>';
+                    return;
+                }
+
+                const prod = docSnap.data();
+                
+                document.getElementById('breadcrumb-current').textContent = prod.nombre;
+
+                const tituloSEO = `${prod.nombre} | F&B Parts Caracas`;
+                const descripcionSEO = `Compra ${prod.nombre} original en Caracas. Precio: $${Number(prod.precio).toFixed(2)}. Envíos a toda Venezuela.`;
+
+                // 🚀 INYECCIÓN DINÁMICA DE SEO PARA GOOGLE Y WHATSAPP
+                document.title = tituloSEO;
+                if(document.getElementById('meta-desc')) document.getElementById('meta-desc').setAttribute("content", descripcionSEO);
+                if(document.getElementById('og-title')) document.getElementById('og-title').setAttribute("content", tituloSEO);
+                if(document.getElementById('og-desc')) document.getElementById('og-desc').setAttribute("content", descripcionSEO);
+                if(document.getElementById('og-image')) document.getElementById('og-image').setAttribute("content", prod.imagen);
+                if(document.getElementById('og-url')) document.getElementById('og-url').setAttribute("content", window.location.href);
+
+                const productSchema = {
+                    "@context": "https://schema.org/",
+                    "@type": "Product",
+                    "name": prod.nombre,
+                    "image": prod.imagen,
+                    "description": prod.descripcion || `Repuesto automotriz ${prod.nombre} disponible en F&B Parts Caracas.`,
+                    "sku": prod.numero_parte || productId,
+                    "mpn": prod.numero_parte || "",
+                    "brand": { "@type": "Brand", "name": "F&B Parts" },
+                    "offers": {
+                        "@type": "Offer",
+                        "url": window.location.href,
+                        "priceCurrency": "USD",
+                        "price": Number(prod.precio).toFixed(2),
+                        "availability": (prod.stock > 0) ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+                        "seller": { "@type": "Organization", "name": "Inversiones FB Parts, C.A." }
+                    }
+                };
+
+                const scriptProduct = document.createElement('script');
+                scriptProduct.type = "application/ld+json";
+                scriptProduct.text = JSON.stringify(productSchema);
+                document.head.appendChild(scriptProduct);
+
+                const breadcrumbSchema = {
+                    "@context": "https://schema.org",
+                    "@type": "BreadcrumbList",
+                    "itemListElement": [
+                        { "@type": "ListItem", "position": 1, "name": "Inicio", "item": "https://www.fybparts.com/index.html" },
+                        { "@type": "ListItem", "position": 2, "name": "Tienda", "item": "https://www.fybparts.com/tienda.html" },
+                        { "@type": "ListItem", "position": 3, "name": prod.nombre, "item": window.location.href }
+                    ]
+                };
+
+                const scriptBreadcrumb = document.createElement('script');
+                scriptBreadcrumb.type = "application/ld+json";
+                scriptBreadcrumb.text = JSON.stringify(breadcrumbSchema);
+                document.head.appendChild(scriptBreadcrumb);
+
+                let botonML = "";
+                if(prod.ml_id && prod.ml_id.trim() !== "") {
+                    let idML = prod.ml_id.trim();
+                    if (idML.startsWith("MLV") && !idML.startsWith("MLV-")) idML = idML.replace("MLV", "MLV-");
+                    botonML = `<a href="https://articulo.mercadolibre.com.ve/${idML}" target="_blank" class="btn-ml-large"><i class="fas fa-handshake"></i> Ver esta pieza en Mercado Libre</a>`;
+                }
+
+                const safeName = prod.nombre.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                const stockTxt = prod.stock > 0 ? `<span style="color: #27ae60; font-weight: bold;">En Stock (${prod.stock} disponibles)</span>` : `<span style="color: #c0392b; font-weight: bold;">Agotado</span>`;
+                const numParteTxt = prod.numero_parte ? `<p style="margin: 5px 0;"><strong>Número de Parte / OEM:</strong> ${prod.numero_parte}</p>` : '';
+                const descTxt = prod.descripcion ? `<div style="margin: 15px 0; color: #444; font-size: 14px; line-height: 1.6; white-space: pre-wrap; font-family: inherit;">${prod.descripcion}</div>` : '<p style="margin: 10px 0; color: #888; font-size: 13px;">Sin descripción detallada para este repuesto. Contáctanos para mayor información de compatibilidad.</p>';
+
+
+                container.innerHTML = `
+                    <div class="product-img-box">
+                        <img src="${prod.imagen}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png'">
+                    </div>
+                    <div class="product-details">
+                        <span style="font-size: 12px; color: #888; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">F&B Parts • Autopartes Originales</span>
+                        <h1>${prod.nombre}</h1>
+                        <div class="product-price">$${Number(prod.precio).toFixed(2)}</div>
+                        
+                        <div class="product-meta">
+                            <p style="margin: 5px 0;"><strong>Disponibilidad:</strong> ${stockTxt}</p>
+                            ${numParteTxt}
+                            ${descTxt}
+                        </div>
+
+                        <div>
+                            <button type="button" class="btn-add-cart-large" onclick="agregarAlCarrito('${productId}', '${safeName}', ${prod.precio})">
+                                <i class="fas fa-cart-plus"></i> Añadir al Pedido
+                            </button>
+                            ${botonML}
+                        </div>
+
+                    
+                        <div style="margin-top: 25px; background: #f4f6f4; border: 1px solid #c3e6cb; border-left: 4px solid #1d6fa5; border-radius: 6px; padding: 15px;">
+                            <h4 style="color: #1d6fa5; font-family: 'Oswald', sans-serif; margin: 0 0 5px 0; font-size: 15px;"><i class="fas fa-building"></i> SERVICIO DE PROCURA </h4>
+                            <p style="font-size: 12px; color: #555; margin: 0 0 10px 0; line-height: 1.4;">¿Tu aseguradora o taller requiere piezas adicionales que no visualizas en catálogo? <strong>Nos encargamos de ubicarlas.</strong> Consolidamos tu lista completa.</p>
+                            
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                <a href="https://wa.me/584120161036?text=Hola%20F%26B%20Parts,%20represento%20a%20una%20empresa/taller%20y%20necesito%20que%20me%20cotice%20una%20lista%20de%20repuestos%20por%20encargo." target="_blank" style="background: #25D366; color: white; padding: 8px 12px; text-decoration: none; font-size: 12px; font-weight: bold; border-radius: 4px; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s; box-shadow: 0 2px 4px rgba(37,211,102,0.2);">
+                                    <i class="fab fa-whatsapp" style="font-size: 14px;"></i> Por WhatsApp
+                                </a>
+                                <a href="mailto:fybinversiones.ccs@gmail.com?subject=Solicitud%20de%20Cotizaci%C3%B3n%20Corporativa%20-%20F%26B%20Parts&body=Hola%20equipo%20de%20F%26B%20Parts,%0D%0A%0D%0AAdjunto%20la%20lista%20de%20repuestos%20requeridos%20para%20su%20cotizaci%C3%B3n%20formal.%0D%0A%0D%0AAtentamente," style="background: #EA4335; color: white; padding: 8px 12px; text-decoration: none; font-size: 12px; font-weight: bold; border-radius: 4px; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s; box-shadow: 0 2px 4px rgba(234,67,53,0.2);">
+                                    <i class="fas fa-envelope" style="font-size: 14px;"></i> Por Correo
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                await cargarProductosRelacionadosPorOEMyNombre(productId, prod.categoria, prod.nombre, prod.numero_parte || "");
+
+            } catch (error) {
+                console.error("Error al cargar producto:", error);
+                container.innerHTML = '<div style="text-align:center; grid-column: 1/-1; color: red; padding: 40px;">Error al cargar los datos del repuesto.</div>';
+            }
+        }
+
+        async function cargarProductosRelacionadosPorOEMyNombre(currentId, categoriaActual, nombreActual, numeroParteActual) {
+            const relatedGrid = document.getElementById('related-products-grid');
+            if (!relatedGrid) return;
+            
+            try {
+                const q = query(collection(db, "productos"), where("estado", "==", "activo"), limit(35));
+                const snap = await getDocs(q);
+                
+                let poolProductos = [];
+                snap.forEach(docSnap => {
+                    if (docSnap.id !== currentId) {
+                        poolProductos.push({ id: docSnap.id, ...docSnap.data() });
+                    }
+                });
+
+                const palabrasIgnoradas = ["de", "para", "el", "la", "los", "las", "y", "con", "en", "un", "una", "del", "al"];
+                const palabrasNombre = nombreActual.toLowerCase().replace(/[^a-záéíóúñ0-9]/g, " ").split(/\s+/).filter(w => w.length > 2 && !palabrasIgnoradas.includes(w));
+                const tokensOEM = numeroParteActual ? numeroParteActual.toLowerCase().replace(/[^a-záéíóúñ0-9]/g, " ").split(/\s+/).filter(w => w.length > 1 && !palabrasIgnoradas.includes(w)) : [];
+
+                let puntuados = poolProductos.map(prod => {
+                    let score = 0;
+                    const nombreProd = prod.nombre.toLowerCase();
+                    const oemProd = prod.numero_parte ? prod.numero_parte.toLowerCase() : "";
+
+                    if (prod.categoria === categoriaActual) score += 5;
+                    palabrasNombre.forEach(palabra => { if (nombreProd.includes(palabra)) score += 10; });
+                    tokensOEM.forEach(token => { if (oemProd.includes(token) || nombreProd.includes(token)) score += 30; });
+
+                    return { producto: prod, score: score };
+                });
+
+                puntuados.sort((a, b) => b.score - a.score);
+                let seleccionados = puntuados.map(item => item.producto).slice(0, 4);
+
+                if (seleccionados.length < 4) {
+                    const idsSeleccionados = new Set(seleccionados.map(p => p.id));
+                    for (let p of poolProductos) {
+                        if (!idsSeleccionados.has(p.id) && seleccionados.length < 4) seleccionados.push(p);
+                    }
+                }
+
+                if (seleccionados.length === 0) {
+                    relatedGrid.innerHTML = '<p style="text-align:center; color:#666; grid-column: 1/-1;">No hay otros repuestos disponibles por el momento.</p>';
+                    return;
+                }
+                
+                relatedGrid.innerHTML = '';
+                seleccionados.forEach(prod => {
+                    const slug = prod.nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '-').replace(/(^-|-$)/g, '');
+                    const productUrl = `producto.html?id=${prod.id}&pieza=${slug}`;
+                    
+                    relatedGrid.innerHTML += `
+                        <div style="background: white; border: 1px solid #eee; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,.05); display: flex; flex-direction: column; transition: transform 0.2s;">
+                            <a href="${productUrl}" style="text-decoration: none; color: inherit; display: contents;">
+                                <div style="width: 100%; height: 160px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                                    <img src="${prod.imagen}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: contain;">
+                                </div>
+                                <div style="padding: 12px; display: flex; flex-direction: column; flex: 1;">
+                                    <h4 style="font-size: 13px; color: #333; margin: 0 0 8px 0; font-weight: bold; flex: 1; line-height: 1.3;">${prod.nombre}</h4>
+                            </a>
+                                    <div style="font-size: 16px; color: #385723; font-weight: bold; font-family: 'Oswald', sans-serif; margin-bottom: 10px;">$${Number(prod.precio).toFixed(2)}</div>
+                                    <div style="margin-top: auto;">
+                                        <button type="button" onclick="window.location.href='${productUrl}'" style="background: #385723; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; font-size: 12px; transition: 0.2s;"><i class="fas fa-eye"></i> Ver Detalles</button>
+                                    </div>
+                                </div>
+                        </div>
+                    `;
+                });
+            } catch (e) {
+                console.error("Error cargando relacionados:", e);
+                relatedGrid.innerHTML = '';
+            }
+        }
+
+               // ==========================================
+        // 🚀 LÓGICA DE MEMORIA DEL CARRITO Y PANEL
+        // ==========================================
+        window.toggleCartPanel = function() {
+            const panel = document.getElementById('cart-panel-overlay');
+            panel.classList.toggle('active');
+            if (panel.classList.contains('active')) {
+                actualizarUICarritoProducto();
+            }
+        };
+
+        window.cerrarPanelCarrito = function(e) {
+            if (e.target.id === 'cart-panel-overlay') {
+                toggleCartPanel();
+            }
+        };
+
+        window.actualizarBadgeCarrito = function() {
+            let carrito = JSON.parse(localStorage.getItem('carritoFB')) || [];
+            let cantidadArticulos = 0;
+            carrito.forEach(item => cantidadArticulos += item.cantidad);
+            
+            const badge = document.getElementById('cart-badge-producto');
+            if(badge) {
+                badge.innerText = cantidadArticulos;
+                badge.style.display = cantidadArticulos > 0 ? 'flex' : 'none';
+            }
+        };
+
+        window.actualizarUICarritoProducto = function() {
+            let carrito = JSON.parse(localStorage.getItem('carritoFB')) || [];
+            const container = document.getElementById('cart-items-producto');
+            const totalDisplay = document.getElementById('cart-total-amount-producto');
+            
+            if (!container || !totalDisplay) return;
+
+            container.innerHTML = '';
+            let total = 0;
+
+            if(carrito.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:#999; padding:20px;">Tu carrito está vacío</div>';
+                totalDisplay.innerText = '$0.00';
+            } else {
+                carrito.forEach(item => {
+                    total += item.precio * item.cantidad;
+                    container.innerHTML += `
+                        <div class="cart-item">
+                            <div class="cart-item-info">
+                                <div class="cart-item-title">${item.nombre}</div>
+                                <div class="cart-item-price">${item.cantidad} x $${item.precio.toFixed(2)}</div>
+                            </div>
+                            <div class="cart-item-controls">
+                                <button class="btn-qty" onclick="cambiarCantidadProducto('${item.id}', -1)">-</button>
+                                <span>${item.cantidad}</span>
+                                <button class="btn-qty" onclick="cambiarCantidadProducto('${item.id}', 1)">+</button>
+                                <button class="btn-remove" onclick="eliminarDelCarritoProducto('${item.id}')"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>`;
+                });
+                totalDisplay.innerText = `$${total.toFixed(2)}`;
+            }
+            window.actualizarBadgeCarrito();
+        };
+
+        window.cambiarCantidadProducto = function(id, delta) {
+            let carrito = JSON.parse(localStorage.getItem('carritoFB')) || [];
+            const item = carrito.find(i => i.id === id);
+            if(item) {
+                item.cantidad += delta;
+                if(item.cantidad <= 0) carrito = carrito.filter(i => i.id !== id);
+                localStorage.setItem('carritoFB', JSON.stringify(carrito));
+                actualizarUICarritoProducto(); // Actualiza el panel lateral
+            }
+        };
+
+        window.eliminarDelCarritoProducto = function(id) {
+            let carrito = JSON.parse(localStorage.getItem('carritoFB')) || [];
+            carrito = carrito.filter(i => i.id !== id);
+            localStorage.setItem('carritoFB', JSON.stringify(carrito));
+            actualizarUICarritoProducto();
+        };
+
+        window.agregarAlCarrito = function(id, nombre, precio) {
+            // Guardamos en memoria
+            let carrito = JSON.parse(localStorage.getItem('carritoFB')) || [];
+            const item = carrito.find(i => i.id === id);
+            if(item) item.cantidad++;
+            else carrito.push({ id, nombre, precio, cantidad: 1 });
+            localStorage.setItem('carritoFB', JSON.stringify(carrito));
+            
+            // Actualizamos la UI
+            window.actualizarBadgeCarrito();
+            window.actualizarUICarritoProducto();
+
+            // Transformamos el botón para guiar al cliente
+            const btn = document.querySelector('.btn-add-cart-large');
+            if(btn) {
+                btn.innerHTML = '<i class="fas fa-check-circle"></i> ¡Añadido! Ver mi Pedido';
+                btn.style.background = '#25D366';
+                btn.onclick = () => window.toggleCartPanel(); // Ahora abre el panel
+            }
+            
+            // Abrimos el panel lateral automáticamente
+            document.getElementById('cart-panel-overlay').classList.add('active');
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            cargarDetalleProducto();
+            window.actualizarBadgeCarrito();
+        });
+
+        window.addEventListener('DOMContentLoaded', cargarDetalleProducto);
+    </script>
+</body>
+</html>

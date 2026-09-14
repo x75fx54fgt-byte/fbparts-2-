@@ -1,0 +1,25 @@
+{
+  "name": "fb-parts-cobranza-bot",
+  "version": "1.0.0",
+  "description": "Microservicio en segundo plano para monitoreo diario de facturas vencidas y envío de reportes de cobranza para F&B Parts",
+  "main": "cobranza-bot.js",
+  "scripts": {
+    "start": "node cobranza-bot.js",
+    "test-run": "node cobranza-bot.js --run-now"
+  },
+  "keywords": [
+    "firebase",
+    "firestore",
+    "cron",
+    "cobranza",
+    "fb-parts"
+  ],
+  "author": "F&B Parts",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "firebase-admin": "^12.1.0",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.13"
+  }
+}
