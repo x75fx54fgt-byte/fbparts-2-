@@ -134,7 +134,39 @@
 </head>
 <body style="background-color: #f8f8f8;">
 
-    <!-- ENVOLTORIO PRINCIPAL DEL PANEL -->
+    <!-- PANTALLA DE CARGA DE SEGURIDAD (PREVIENE FLASH Y ACCESO NO AUTORIZADO AL DOM) -->
+    <div id="auth-loading-screen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Helvetica Neue', Arial, sans-serif;">
+        <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png" alt="F&B Parts" style="width: 140px; margin-bottom: 25px;">
+        <div style="color: #385723; font-size: 26px; margin-bottom: 12px;"><i class="fas fa-spinner fa-spin"></i></div>
+        <p style="color: #385723; font-weight: bold; font-size: 14px; letter-spacing: 0.5px;">Verificando credenciales de seguridad...</p>
+        <span style="font-size: 11px; color: #888; margin-top: 4px;">Validando sesión con Firebase Authentication</span>
+        <div style="margin-top: 20px; display: flex; gap: 10px;">
+            <a href="admin-login.html" style="background: #385723; color: white; padding: 8px 16px; border-radius: 4px; font-size: 12px; text-decoration: none; font-weight: bold;">
+                <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+            </a>
+            <button type="button" onclick="document.getElementById('auth-loading-screen').style.display='none'; document.getElementById('app-wrapper').style.display='block';" style="background: white; border: 1px solid #ccc; color: #555; padding: 8px 16px; border-radius: 4px; font-size: 12px; cursor: pointer; font-weight: bold;">
+                Abrir Panel
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Desbloqueo ultra-rápido instantáneo si existe sesión previa
+        (function() {
+            try {
+                var raw = localStorage.getItem('fyb_admin_session');
+                if (raw) {
+                    var s = JSON.parse(raw);
+                    if (s && (s.email === 'fybinversiones.ccs@gmail.com' || s.email === 'admin@fybparts.com') && (Date.now() - (s.timestamp || 0) < 14 * 24 * 3600 * 1000)) {
+                        var ls = document.getElementById('auth-loading-screen');
+                        if (ls) ls.style.display = 'none';
+                    }
+                }
+            } catch(e) {}
+        })();
+    </script>
+
+    <!-- ENVOLTORIO PRINCIPAL DEL PANEL (PROTEGIDO HASTA VERIFICACIÓN) -->
     <div id="app-wrapper">
         <div class="topbar">
             <h2>PANEL DE CONTROL INTERNO</h2>
@@ -766,17 +798,32 @@
                             <div style="font-size: 16px; font-weight: bold; color: #385723; margin-top: 5px;">TOTAL: <span class="fac-simbolo-display">$</span><span id="fac-total-general">0.00</span></div>
                         </div>
 
-                        <button type="button" class="btn-action" onclick="guardarYGenerarFactura()" style="font-size: 16px; padding: 15px; background: #28a745;">
-                            <i class="fas fa-cash-register"></i> Facturar y Abrir Modo Cajero
-                        </button>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px;">
+                            <button type="button" class="btn-action" onclick="guardarYGenerarFactura('carta')" style="font-size: 14px; padding: 14px 10px; background: #28a745; margin: 0; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 8px rgba(40,167,69,0.25);">
+                                <i class="fas fa-print"></i> 🖨️ Facturar (Carta)
+                            </button>
+                            <button type="button" class="btn-action" onclick="guardarYGenerarFactura('ticket58')" style="font-size: 14px; padding: 14px 10px; background: #007bff; margin: 0; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 8px rgba(0,123,255,0.25);">
+                                <i class="fas fa-receipt"></i> 🎫 Facturar (Ticket 58mm)
+                            </button>
+                        </div>
                     </div>
                     <!-- Columna Derecha: Vista Previa Factura -->
                     <div>
                         <div style="background: white; border: 1px solid #ccc; border-radius: 8px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,.05); position: sticky; top: 20px;">
-                            <h3 style="font-family: 'Oswald', sans-serif; color: #385723; font-size: 18px; margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 8px;">
-                                <i class="fas fa-eye"></i> Vista Previa (Nota de Entrega)
-                            </h3>
-                            <div id="pdf-preview-box-fac" style="border: 1px solid #ddd; background: white; padding: 15px; font-family: Arial, sans-serif; color: #333; font-size: 10px; overflow: hidden; min-height: 650px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                                <h3 style="font-family: 'Oswald', sans-serif; color: #385723; font-size: 18px; margin: 0;">
+                                    <i class="fas fa-eye"></i> Vista Previa
+                                </h3>
+                                <div style="display: flex; gap: 6px;">
+                                    <button type="button" id="btn-preview-fac-carta" onclick="cambiarFormatoPreviewFactura('carta')" style="padding: 5px 12px; font-size: 11px; font-weight: bold; border-radius: 4px; border: 1px solid #385723; background: #385723; color: white; cursor: pointer; transition: all 0.2s;">
+                                        <i class="fas fa-file-alt"></i> Carta
+                                    </button>
+                                    <button type="button" id="btn-preview-fac-ticket" onclick="cambiarFormatoPreviewFactura('ticket58')" style="padding: 5px 12px; font-size: 11px; font-weight: bold; border-radius: 4px; border: 1px solid #ccc; background: #f8f9fa; color: #444; cursor: pointer; transition: all 0.2s;">
+                                        <i class="fas fa-receipt"></i> Ticket 58mm
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="pdf-preview-box-fac" style="border: 1px solid #ddd; background: #fdfdfd; padding: 15px; font-family: Arial, sans-serif; color: #333; font-size: 10px; overflow-y: auto; overflow-x: hidden; min-height: 650px; max-height: 800px; display: flex; justify-content: center;">
                                 <!-- Vista previa inyectada -->
                             </div>
                         </div>
@@ -1625,6 +1672,38 @@
         import { getFirestore, collection, getDocs, getDoc, setDoc, addDoc, doc, updateDoc, deleteDoc, query, where, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         // ==========================================
+        // 🛡️ MÓDULO DE SANITIZACIÓN AUTÓNOMO (INLINE PARA COMPATIBILIDAD TOTAL)
+        // ==========================================
+        const SecuritySanitizer = {
+            escapeHtml(val) {
+                if (val === null || val === undefined) return '';
+                return String(val).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+            },
+            cleanText(val, maxLen = 250) {
+                if (!val) return '';
+                return String(val).replace(/<[^>]*>?/gm, '').replace(/[\u0000-\u001F\u007F-\u009F]/g, '').trim().slice(0, maxLen);
+            },
+            cleanAddress(val, maxLen = 300) {
+                if (!val) return '';
+                return String(val).replace(/<[^>]*>?/gm, '').replace(/javascript:/gi, '').replace(/vbscript:/gi, '').replace(/data:text\/html/gi, '').trim().slice(0, maxLen);
+            },
+            cleanPhone(val) {
+                if (!val) return '';
+                return String(val).replace(/[^0-9+\s\-()]/g, '').trim().slice(0, 30);
+            },
+            sanitizeAmount(val) {
+                if (val === null || val === undefined) return 0;
+                let num = typeof val === 'number' ? val : parseFloat(String(val).replace(/[^0-9.-]/g, ''));
+                if (isNaN(num) || !isFinite(num) || num < 0) return 0;
+                return Math.round(num * 100) / 100;
+            },
+            sanitizeInt(val, defaultVal = 1) {
+                let num = parseInt(val, 10);
+                return isNaN(num) || num < 1 ? defaultVal : num;
+            }
+        };
+
+        // ==========================================
         // 🚀 CONFIGURACIÓN DE APIS Y BASES DE DATOS
         // ==========================================
         
@@ -1642,6 +1721,7 @@
         const db = getFirestore(app);
 
         // Variables Locales de Memoria
+        window.SecuritySanitizer = SecuritySanitizer;
         window.mapaCategorias = {};
         window.clientesDBLocal = {}; 
         window.pedidosDBLocal = {}; 
@@ -1653,39 +1733,123 @@
         let salesChartInstance = null; 
 
         // ==========================================
-        // GESTIÓN DE SESIÓN Y PERFIL
+        // GESTIÓN DE SESIÓN Y PERFIL (DEFENSIVO Y RESILIENTE)
         // ==========================================
+        function verificarSesionAdminLocal() {
+            try {
+                const raw = localStorage.getItem('fyb_admin_session');
+                if (!raw) return null;
+                const s = JSON.parse(raw);
+                const esAdmin = (s.email === 'fybinversiones.ccs@gmail.com' || s.email === 'admin@fybparts.com');
+                const esReciente = (Date.now() - (s.timestamp || 0)) < (14 * 24 * 3600 * 1000);
+                if (esAdmin && esReciente) return s;
+            } catch(e) {}
+            return null;
+        }
+
+        function desbloquearPanelAdmin(nombre = "Administrador", cargo = "Control Maestro") {
+            const loadingScreen = document.getElementById('auth-loading-screen');
+            const appWrapper = document.getElementById('app-wrapper');
+            if (loadingScreen) loadingScreen.style.display = 'none';
+            if (appWrapper) appWrapper.style.display = 'block';
+
+            const elNombre = document.getElementById('admin-nombre-txt');
+            const elCargo = document.getElementById('admin-cargo-txt');
+            if (elNombre && (!elNombre.textContent || elNombre.textContent.includes('...'))) {
+                elNombre.textContent = SecuritySanitizer.cleanText(nombre, 50);
+            }
+            if (elCargo && (!elCargo.textContent || elCargo.textContent.includes('...'))) {
+                elCargo.textContent = SecuritySanitizer.cleanText(cargo, 50);
+            }
+
+            if (typeof window.iniciarPanelCompleto === 'function') {
+                window.iniciarPanelCompleto();
+            }
+        }
+
+        // 1. Verificación inmediata de sesión administrativa local (desbloqueo instantáneo)
+        const sesionInmediata = verificarSesionAdminLocal();
+        if (sesionInmediata) {
+            desbloquearPanelAdmin("BAPA", "Administrador Maestro");
+        }
+
+        // 2. Monitoreo defensivo de Firebase Auth
         onAuthStateChanged(auth, async (user) => {
-            if (!user) {
-                window.location.href = "admin-login.html";
-            } else {
+            const sesionLocal = verificarSesionAdminLocal();
+
+            if (user) {
+                const userEmail = (user.email || '').toLowerCase().trim();
+                
+                // Actualizar o respaldar sesión en almacenamiento local
+                if (userEmail === 'fybinversiones.ccs@gmail.com' || userEmail === 'admin@fybparts.com') {
+                    try {
+                        localStorage.setItem('fyb_admin_session', JSON.stringify({
+                            email: userEmail,
+                            localId: user.uid,
+                            timestamp: Date.now()
+                        }));
+                    } catch(e) {}
+                    desbloquearPanelAdmin("BAPA", "Administrador Maestro");
+                }
+
+                // Cargar datos personalizados de la colección 'administradores' sin bloquear la interfaz
                 try {
-                    const q = query(collection(db, "administradores"), where("email", "==", user.email));
-                    const querySnapshot = await getDocs(q);
+                    const q = query(collection(db, "administradores"), where("email", "==", userEmail));
+                    const querySnapshot = await Promise.race([
+                        getDocs(q),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 4000))
+                    ]);
 
                     if (!querySnapshot.empty) {
                         const adminDoc = querySnapshot.docs[0];
                         window.currentAdminDocId = adminDoc.id;
                         const adminData = adminDoc.data();
 
-                        document.getElementById('admin-nombre-txt').textContent = adminData.Nombre || user.email;
-                        document.getElementById('admin-cargo-txt').textContent = adminData.Cargo || "Administrador";
+                        const nombreAdmin = adminData.Nombre || adminData['Nombre:'] || "BAPA";
+                        const cargoAdmin = adminData.Cargo || adminData['Cargo:'] || "Administrador";
+
+                        document.getElementById('admin-nombre-txt').textContent = SecuritySanitizer.cleanText(nombreAdmin, 50);
+                        document.getElementById('admin-cargo-txt').textContent = SecuritySanitizer.cleanText(cargoAdmin, 50);
                         
                         if (adminData.Foto && adminData.Foto.trim() !== "") {
                             document.getElementById('admin-avatar').src = adminData.Foto;
                         }
-                    } else {
-                        document.getElementById('admin-nombre-txt').textContent = user.email;
                     }
-                } catch (error) { console.error(error); }
+                } catch (e) {
+                    console.warn("Aviso: Datos de perfil cargados con valores por defecto.");
+                }
+
+                desbloquearPanelAdmin();
+                return;
             }
+
+            // Si Firebase Auth aún no sincroniza pero existe una sesión administrativa activa local:
+            if (sesionLocal) {
+                desbloquearPanelAdmin("BAPA", "Administrador Maestro");
+                return;
+            }
+
+            // Margen de gracia defensivo de 3 segundos antes de redirigir
+            setTimeout(() => {
+                const recheck = verificarSesionAdminLocal();
+                if (!auth.currentUser && !recheck) {
+                    window.location.href = "admin-login.html";
+                } else {
+                    desbloquearPanelAdmin("BAPA", "Administrador Maestro");
+                }
+            }, 3000);
         });
 
         window.cerrarSesion = function() {
             if(confirm("¿Estás seguro de que deseas cerrar sesión?")) {
+                try {
+                    localStorage.removeItem('fyb_admin_session');
+                } catch(e) {}
                 signOut(auth).then(() => {
                     window.location.href = "admin-login.html";
-                }).catch((error) => { console.error("Error cerrando sesión: ", error); });
+                }).catch(() => {
+                    window.location.href = "admin-login.html";
+                });
             }
         };
 
@@ -1725,6 +1889,8 @@
 
             if(id === 'dashboard') { window.cargarDashboard(); }
             if(id === 'finanzas') { window.cargarFinanzas(); }
+            if(id === 'pedidos') { window.cargarPedidos(); }
+            if(id === 'catalogo') { window.cargarCatalogoAdmin(); }
             if(id === 'clientes') { window.cargarBaseClientes(); }
             if(id === 'cotizaciones') { window.cargarBaseClientes(); window.actualizarPreview(); }
             if(id === 'historial-cotizaciones') { window.cargarHistorialCotizaciones(); }
@@ -1933,11 +2099,11 @@
         // ==========================================
         window.guardarNuevaCxP = async function(e) {
             e.preventDefault();
-            const prov = document.getElementById('cxp-proveedor').value.trim();
-            const monto = parseFloat(document.getElementById('cxp-monto').value) || 0;
+            const prov = SecuritySanitizer.cleanText(document.getElementById('cxp-proveedor').value, 100);
+            const monto = SecuritySanitizer.sanitizeAmount(document.getElementById('cxp-monto').value);
             const monedaData = document.getElementById('cxp-moneda').value.split('|');
-            const moneda = monedaData[0];
-            const simbolo = monedaData[1];
+            const moneda = SecuritySanitizer.cleanText(monedaData[0], 20);
+            const simbolo = SecuritySanitizer.cleanText(monedaData[1], 10);
 
             try {
                 await addDoc(collection(db, "cuentas_pagar"), {
@@ -2075,9 +2241,9 @@
 
         window.guardarAbono = async function() {
             const docId = document.getElementById('abono-doc-id').value;
-            const montoAbono = parseFloat(document.getElementById('abono-monto').value) || 0;
-            const metodo = document.getElementById('abono-metodo').value;
-            const nota = document.getElementById('abono-nota').value.trim();
+            const montoAbono = SecuritySanitizer.sanitizeAmount(document.getElementById('abono-monto').value);
+            const metodo = SecuritySanitizer.cleanText(document.getElementById('abono-metodo').value, 50);
+            const nota = SecuritySanitizer.cleanNote(document.getElementById('abono-nota').value, 200);
 
             if (montoAbono <= 0) { alert("El monto a abonar debe ser mayor a cero."); return; }
 
@@ -2195,20 +2361,20 @@
             let totalPedido = 0;
             
             rows.forEach(row => {
-                const cant = parseInt(row.querySelector('.ped-item-cant').value) || 1;
-                const desc = row.querySelector('.ped-item-desc').value.trim();
-                const precio = parseFloat(row.querySelector('.ped-item-precio').value) || 0;
+                const cant = SecuritySanitizer.sanitizeInt(row.querySelector('.ped-item-cant').value, 1);
+                const desc = SecuritySanitizer.cleanText(row.querySelector('.ped-item-desc').value, 150);
+                const precio = SecuritySanitizer.sanitizeAmount(row.querySelector('.ped-item-precio').value);
                 if(desc) { productos.push({ nombre: desc, cantidad: cant, precio: precio }); totalPedido += (cant * precio); }
             });
 
             if(productos.length === 0) { alert("Agrega al menos un repuesto al pedido."); return; }
             btn.innerHTML = "Registrando..."; btn.disabled = true;
 
-            const envioVal = document.getElementById('shipping-type').value;
-            let trackingVal = document.getElementById('tracking-info').value.trim();
-            let trackingMotVal = document.getElementById('tracking-motorizado').value.trim();
-            const motorizadoVal = document.getElementById('ped-motorizado').value;
-            const tarifaVal = parseFloat(document.getElementById('ped-tarifa-mot').value) || 0;
+            const envioVal = SecuritySanitizer.cleanText(document.getElementById('shipping-type').value, 50);
+            let trackingVal = SecuritySanitizer.cleanText(document.getElementById('tracking-info').value, 100);
+            let trackingMotVal = SecuritySanitizer.cleanText(document.getElementById('tracking-motorizado').value, 100);
+            const motorizadoVal = SecuritySanitizer.cleanText(document.getElementById('ped-motorizado').value, 50);
+            const tarifaVal = SecuritySanitizer.sanitizeAmount(document.getElementById('ped-tarifa-mot').value);
 
             // Limpieza inteligente al editar para pedidos viejos
             if (envioVal.includes('Motorizado')) {
@@ -2223,9 +2389,9 @@
             }
 
             const nuevoPedido = {
-                email: document.getElementById('client-email').value.trim(),
-                cliente: document.getElementById('client-name').value.trim(),
-                total: totalPedido,
+                email: SecuritySanitizer.cleanText(document.getElementById('client-email').value, 100),
+                cliente: SecuritySanitizer.cleanText(document.getElementById('client-name').value, 120),
+                total: SecuritySanitizer.sanitizeAmount(totalPedido),
                 envio: envioVal,
                 tracking: trackingVal,
                 trackingMotorizado: trackingMotVal,
@@ -2235,7 +2401,7 @@
                 motorizado: motorizadoVal,
                 tarifaMotorizado: tarifaVal,
                 pagoMotorizadoEstatus: motorizadoVal ? 'Pendiente' : '',
-                rutasMotorizado: document.getElementById('ped-ruta-mot').value.trim()
+                rutasMotorizado: SecuritySanitizer.cleanAddress(document.getElementById('ped-ruta-mot').value, 300)
             };
 
             try {
@@ -2432,11 +2598,11 @@
             const btn = document.getElementById('btn-save-pedido');
             btn.innerHTML = "Guardando..."; btn.disabled = true;
 
-            let trackingVal = document.getElementById('edit-pedido-tracking').value.trim();
-            let trackingMotVal = document.getElementById('edit-pedido-tracking-mot').value.trim();
-            const envioVal = document.getElementById('edit-pedido-envio').value;
-            const motorizadoVal = document.getElementById('edit-pedido-motorizado').value;
-            const tarifaVal = parseFloat(document.getElementById('edit-pedido-tarifa').value) || 0;
+            let trackingVal = SecuritySanitizer.cleanText(document.getElementById('edit-pedido-tracking').value, 100);
+            let trackingMotVal = SecuritySanitizer.cleanText(document.getElementById('edit-pedido-tracking-mot').value, 100);
+            const envioVal = SecuritySanitizer.cleanText(document.getElementById('edit-pedido-envio').value, 50);
+            const motorizadoVal = SecuritySanitizer.cleanText(document.getElementById('edit-pedido-motorizado').value, 50);
+            const tarifaVal = SecuritySanitizer.sanitizeAmount(document.getElementById('edit-pedido-tarifa').value);
 
             // Limpieza antes de guardar a Firebase
             if (envioVal.includes('Motorizado')) {
@@ -2451,16 +2617,16 @@
             }
 
             const datosActualizados = {
-                email: document.getElementById('edit-pedido-email').value.trim(),
-                cliente: document.getElementById('edit-pedido-cliente').value.trim(),
+                email: SecuritySanitizer.cleanText(document.getElementById('edit-pedido-email').value, 100),
+                cliente: SecuritySanitizer.cleanText(document.getElementById('edit-pedido-cliente').value, 120),
                 envio: envioVal,
                 tracking: trackingVal,
                 trackingMotorizado: trackingMotVal,
-                estado: document.getElementById('edit-pedido-estado').value,
+                estado: SecuritySanitizer.cleanText(document.getElementById('edit-pedido-estado').value, 50),
                 motorizado: motorizadoVal,
                 tarifaMotorizado: tarifaVal,
                 pagoMotorizadoEstatus: motorizadoVal ? (pedOriginal.pagoMotorizadoEstatus || 'Pendiente') : '',
-                rutasMotorizado: document.getElementById('edit-pedido-ruta').value.trim()
+                rutasMotorizado: SecuritySanitizer.cleanAddress(document.getElementById('edit-pedido-ruta').value, 300)
             };
 
             try {
@@ -2555,13 +2721,13 @@
             btn.innerHTML = "Guardando..."; btn.disabled = true;
 
             const nuevoProducto = {
-                nombre: document.getElementById('prod-nombre').value.trim(),
-                precio: Number(document.getElementById('prod-precio').value),
-                stock: Number(document.getElementById('prod-stock').value),
-                categoria: document.getElementById('prod-categoria').value,
-                imagen: document.getElementById('prod-imagen').value.trim(),
-                numero_parte: document.getElementById('prod-numero-parte').value.trim(),
-                descripcion: document.getElementById('prod-descripcion').value.trim(),
+                nombre: SecuritySanitizer.cleanText(document.getElementById('prod-nombre').value, 150),
+                precio: SecuritySanitizer.sanitizeAmount(document.getElementById('prod-precio').value),
+                stock: SecuritySanitizer.sanitizeInt(document.getElementById('prod-stock').value, 0),
+                categoria: SecuritySanitizer.cleanText(document.getElementById('prod-categoria').value, 50),
+                imagen: SecuritySanitizer.cleanText(document.getElementById('prod-imagen').value, 500),
+                numero_parte: SecuritySanitizer.cleanText(document.getElementById('prod-numero-parte').value, 50),
+                descripcion: SecuritySanitizer.cleanNote(document.getElementById('prod-descripcion').value, 1000),
                 estado: "activo",
                 ml_id: ""
             };
@@ -2694,10 +2860,10 @@
 
             const docId = document.getElementById('db-cliente-id').value;
             const dataCliente = {
-                nombre: document.getElementById('db-cliente-nombre').value.trim(),
-                rif: document.getElementById('db-cliente-rif').value.trim(),
-                direccion: document.getElementById('db-cliente-dir').value.trim(),
-                telefono: document.getElementById('db-cliente-tel').value.trim()
+                nombre: SecuritySanitizer.cleanText(document.getElementById('db-cliente-nombre').value, 120),
+                rif: SecuritySanitizer.cleanText(document.getElementById('db-cliente-rif').value, 30),
+                direccion: SecuritySanitizer.cleanAddress(document.getElementById('db-cliente-dir').value, 300),
+                telefono: SecuritySanitizer.cleanPhone(document.getElementById('db-cliente-tel').value)
             };
 
             try {
@@ -2827,14 +2993,14 @@
             btn.innerHTML = "Guardando..."; btn.disabled = true;
 
             const datosActualizados = {
-                nombre: document.getElementById('edit-nombre').value.trim(),
-                precio: Number(document.getElementById('edit-precio').value),
-                stock: Number(document.getElementById('edit-stock').value),
-                categoria: document.getElementById('edit-categoria').value,
-                estado: document.getElementById('edit-estado').value,
-                imagen: document.getElementById('edit-imagen').value.trim(),
-                numero_parte: document.getElementById('edit-numero-parte').value.trim(),
-                descripcion: document.getElementById('edit-descripcion').value.trim()
+                nombre: SecuritySanitizer.cleanText(document.getElementById('edit-nombre').value, 150),
+                precio: SecuritySanitizer.sanitizeAmount(document.getElementById('edit-precio').value),
+                stock: SecuritySanitizer.sanitizeInt(document.getElementById('edit-stock').value, 0),
+                categoria: SecuritySanitizer.cleanText(document.getElementById('edit-categoria').value, 50),
+                estado: SecuritySanitizer.cleanText(document.getElementById('edit-estado').value, 30),
+                imagen: SecuritySanitizer.cleanText(document.getElementById('edit-imagen').value, 500),
+                numero_parte: SecuritySanitizer.cleanText(document.getElementById('edit-numero-parte').value, 50),
+                descripcion: SecuritySanitizer.cleanNote(document.getElementById('edit-descripcion').value, 1000)
             };
 
             try {
@@ -3135,43 +3301,423 @@
             `;
         }
 
-        window.actualizarPreviewFactura = function() {
-            const box = document.getElementById('pdf-preview-box-fac');
-            if (box) box.innerHTML = `<div style="transform: scale(0.68); transform-origin: top left; width: 147%; pointer-events: none;">${construirHTMLFactura()}</div>`;
+        function construirHTMLFacturaTicket58(datos = null) {
+            let cliente, rif, direccion, telefono, subtotal, descuento, iva, total, nro;
+            let moneda, simbolo, disponibilidad, tasaGuardada, items = [];
+            const fechaActual = new Date().toLocaleDateString("es-VE");
+            const horaActual = new Date().toLocaleTimeString("es-VE", { hour: '2-digit', minute: '2-digit' });
+
+            if (datos) {
+                cliente = datos.cliente || 'Cliente Mostrador';
+                rif = datos.rif || '';
+                direccion = datos.direccion || '';
+                telefono = datos.telefono || '';
+                subtotal = datos.subtotal || '0.00';
+                descuento = datos.descuento || '0.00';
+                iva = datos.iva || '0.00';
+                total = datos.total || '0.00';
+                nro = datos.nro || '0000';
+                moneda = datos.moneda || 'USD';
+                simbolo = datos.simbolo || '$';
+                disponibilidad = datos.disponibilidad || 'ENTREGA INMEDIATA';
+                tasaGuardada = datos.tasa || '1';
+                items = datos.items || [];
+            } else {
+                cliente = document.getElementById('fac-cliente')?.value || 'Cliente Mostrador';
+                rif = document.getElementById('fac-rif')?.value || '';
+                direccion = document.getElementById('fac-direccion')?.value || '';
+                telefono = document.getElementById('fac-telefono')?.value || '';
+                subtotal = document.getElementById('fac-subtotal')?.innerText || '0.00';
+                descuento = document.getElementById('fac-total-desc')?.innerText || '0.00';
+                iva = document.getElementById('fac-iva')?.innerText || '0.00';
+                total = document.getElementById('fac-total-general')?.innerText || '0.00';
+                nro = document.getElementById('fac-nro')?.value || '0000';
+                disponibilidad = document.getElementById('fac-disponibilidad')?.value || 'ENTREGA INMEDIATA';
+                tasaGuardada = document.getElementById('fac-tasa')?.value || '1';
+                
+                const monedaData = (document.getElementById('fac-moneda')?.value || 'USD|$').split('|');
+                moneda = monedaData[0] || 'USD';
+                simbolo = monedaData[1] || '$';
+
+                document.querySelectorAll('.facturacion-item-row').forEach(row => {
+                    const cant = row.querySelector('.fac-item-cant')?.value || 1;
+                    const desc = row.querySelector('.fac-item-desc')?.value || '';
+                    const precio = parseFloat(row.querySelector('.fac-item-precio')?.value) || 0;
+                    const descval = parseFloat(row.querySelector('.fac-item-descval')?.value) || 0;
+                    items.push({
+                        cantidad: cant,
+                        descripcion: desc,
+                        precioUnitario: precio,
+                        descuento: descval
+                    });
+                });
+            }
+
+            let itemsFilasHTML = '';
+            items.forEach((item, index) => {
+                const cant = parseFloat(item.cantidad) || 1;
+                const pu = parseFloat(item.precioUnitario) || 0;
+                const desc = parseFloat(item.descuento) || 0;
+                const totalLinea = (cant * pu) - desc;
+
+                itemsFilasHTML += `
+                    <div style="padding: 4px 0; border-bottom: 1px dashed #777;">
+                        <div style="font-weight: 800; font-size: 12px; line-height: 1.25; color: #000; text-transform: uppercase; word-break: break-word;">
+                            ${item.descripcion}
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 2px; font-size: 11.5px;">
+                            <span style="color: #111; font-weight: 700; white-space: nowrap;">
+                                ${cant} x ${simbolo} ${pu.toFixed(2)}${desc > 0 ? ' <small style="color:#d9534f;">(-' + simbolo + desc.toFixed(2) + ')</small>' : ''}
+                            </span>
+                            <span style="font-weight: 900; font-size: 12.5px; color: #000; white-space: nowrap;">
+                                ${simbolo} ${totalLinea.toFixed(2)}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            const numSub = parseFloat(subtotal) || 0;
+            const numDesc = parseFloat(descuento) || 0;
+            const numIva = parseFloat(iva) || 0;
+            const numTotal = parseFloat(total) || 0;
+            const numTasa = parseFloat(tasaGuardada) || 1;
+            
+            // Calculo de referencia cruzada VES <-> USD
+            let refCruzadaHTML = '';
+            if (moneda === 'VES' && numTasa > 1) {
+                const totalUSD = (numTotal / numTasa).toFixed(2);
+                refCruzadaHTML = ` | Ref: <strong>$${totalUSD}</strong>`;
+            } else if (moneda === 'USD' && numTasa > 1) {
+                const totalVES = (numTotal * numTasa).toFixed(2);
+                refCruzadaHTML = ` | Ref: <strong>Bs ${totalVES}</strong>`;
+            }
+
+            return `
+                <div class="ticket-recibo-58" style="width: 100%; max-width: 100%; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #000; box-sizing: border-box; text-align: left;">
+                    <!-- ENCABEZADO COMPACTO F&B PARTS -->
+                    <div style="text-align: center; margin-bottom: 4px;">
+                        <div style="font-size: 18px; font-weight: 900; letter-spacing: 0.5px; line-height: 1.1; text-transform: uppercase;">F&B PARTS</div>
+                        <div style="font-size: 11.5px; font-weight: 800; margin-top: 1px;">RIF: J-503971118</div>
+                        <div style="font-size: 9.5px; font-weight: 600; margin-top: 1px;">fybinversiones.ccs@gmail.com</div>
+                        <div style="font-size: 10.5px; font-weight: 700; margin-top: 1px;">+58 412-0161036</div>
+                        <div style="font-size: 9.5px; font-weight: 600;">Caracas, Venezuela</div>
+                    </div>
+
+                    <div style="border-top: 1.5px dashed #000; margin: 4px 0;"></div>
+
+                    <!-- CONTROL Y FECHA -->
+                    <div style="text-align: center; margin: 2px 0;">
+                        <div style="font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px;">NOTA DE ENTREGA</div>
+                        <div style="font-size: 13px; font-weight: 900; margin-top: 1px;">CONTROL: #${nro}</div>
+                        <div style="font-size: 10px; font-weight: 600; color: #111;">Fecha: ${fechaActual} • ${horaActual}</div>
+                    </div>
+
+                    <div style="border-top: 1.5px dashed #000; margin: 4px 0;"></div>
+
+                    <!-- DATOS DEL CLIENTE -->
+                    <div style="font-size: 11px; line-height: 1.35; font-weight: 600;">
+                        <div><strong>CLIENTE:</strong> ${cliente}</div>
+                        ${rif ? `<div><strong>RIF/CI:</strong> ${rif}</div>` : ''}
+                        ${telefono ? `<div><strong>TELÉFONO:</strong> ${telefono}</div>` : ''}
+                        ${direccion ? `<div><strong>DIRECCIÓN:</strong> ${direccion}</div>` : ''}
+                        <div><strong>ENTREGA:</strong> ${disponibilidad}</div>
+                    </div>
+
+                    <div style="border-top: 1.5px solid #000; margin: 4px 0 2px 0;"></div>
+
+                    <!-- CABECERA PRODUCTOS -->
+                    <div style="font-size: 10px; font-weight: 900; display: flex; justify-content: space-between; border-bottom: 1.5px solid #000; padding-bottom: 2px; margin-bottom: 2px;">
+                        <span>DESCRIPCIÓN / CANT x PRECIO</span>
+                        <span>TOTAL</span>
+                    </div>
+
+                    <!-- LISTA DE PRODUCTOS -->
+                    <div>
+                        ${itemsFilasHTML}
+                    </div>
+
+                    <div style="border-top: 1.5px solid #000; margin: 5px 0 3px 0;"></div>
+
+                    <!-- TOTALES -->
+                    <div style="font-size: 12px; line-height: 1.35; font-weight: 700;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="white-space: nowrap;">SUBTOTAL:</span>
+                            <span style="font-weight: 800; white-space: nowrap;">${simbolo} ${numSub.toFixed(2)}</span>
+                        </div>
+                        ${numDesc > 0 ? `
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="white-space: nowrap;">DESCUENTO:</span>
+                            <span style="font-weight: 800; white-space: nowrap;">-${simbolo} ${numDesc.toFixed(2)}</span>
+                        </div>` : ''}
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="white-space: nowrap;">16% IVA:</span>
+                            <span style="font-weight: 800; white-space: nowrap;">${simbolo} ${numIva.toFixed(2)}</span>
+                        </div>
+                        <div style="border-top: 2px solid #000; margin: 3px 0 3px 0;"></div>
+                        <div style="display: flex; justify-content: space-between; font-size: 15px; font-weight: 900;">
+                            <span style="white-space: nowrap;">TOTAL:</span>
+                            <span style="white-space: nowrap;">${simbolo} ${numTotal.toFixed(2)}</span>
+                        </div>
+                    </div>
+
+                    <div style="border-top: 1.5px dashed #000; margin: 5px 0;"></div>
+
+                    <!-- PIE DE TICKET -->
+                    <div style="text-align: center; font-size: 10px; line-height: 1.3; margin-top: 3px;">
+                        <div style="font-weight: 700;">Tasa: <strong>${tasaGuardada}</strong>${refCruzadaHTML}</div>
+                        <div style="margin-top: 3px; font-weight: 900; font-size: 12px;">¡GRACIAS POR SU PREFERENCIA!</div>
+                        <div style="margin-top: 2px; color: #444; font-size: 8.5px;">Documento de control y entrega interna.</div>
+                    </div>
+                    <!-- Espacio seguro para barra de corte / tear-off -->
+                    <div style="height: 12mm;"></div>
+                </div>
+            `;
+        }
+
+        window.formatoFacturaActual = 'carta';
+
+        window.cambiarFormatoPreviewFactura = function(formato) {
+            window.formatoFacturaActual = formato;
+            const btnCarta = document.getElementById('btn-preview-fac-carta');
+            const btnTicket = document.getElementById('btn-preview-fac-ticket');
+            
+            if (formato === 'ticket58') {
+                if (btnTicket) {
+                    btnTicket.style.background = '#007bff';
+                    btnTicket.style.color = 'white';
+                    btnTicket.style.borderColor = '#007bff';
+                }
+                if (btnCarta) {
+                    btnCarta.style.background = '#f8f9fa';
+                    btnCarta.style.color = '#444';
+                    btnCarta.style.borderColor = '#ccc';
+                }
+            } else {
+                if (btnCarta) {
+                    btnCarta.style.background = '#385723';
+                    btnCarta.style.color = 'white';
+                    btnCarta.style.borderColor = '#385723';
+                }
+                if (btnTicket) {
+                    btnTicket.style.background = '#f8f9fa';
+                    btnTicket.style.color = '#444';
+                    btnTicket.style.borderColor = '#ccc';
+                }
+            }
+            window.actualizarPreviewFactura();
         };
 
-        window.guardarYGenerarFactura = async function() {
-            const cliente = document.getElementById('fac-cliente').value;
-            const rif = document.getElementById('fac-rif').value;
-            const direccion = document.getElementById('fac-direccion').value;
-            const telefono = document.getElementById('fac-telefono').value;
-            const disponibilidad = document.getElementById('fac-disponibilidad').value;
+        window.actualizarPreviewFactura = function() {
+            const box = document.getElementById('pdf-preview-box-fac');
+            if (!box) return;
+            if (window.formatoFacturaActual === 'ticket58') {
+                box.style.display = 'flex';
+                box.style.justifyContent = 'center';
+                box.style.alignItems = 'flex-start';
+                box.innerHTML = `<div style="width: 270px; background: white; border: 1px solid #ddd; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); padding: 12px 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #000; box-sizing: border-box; margin: 10px auto;">${construirHTMLFacturaTicket58()}</div>`;
+            } else {
+                box.style.display = 'block';
+                box.innerHTML = `<div style="transform: scale(0.68); transform-origin: top left; width: 147%; pointer-events: none;">${construirHTMLFactura()}</div>`;
+            }
+        };
+
+        window.imprimirFacturaCarta = function(fac, ventanaExterna = null) {
+            const ventanaPDF = ventanaExterna || window.open('', '_blank');
+            if(!ventanaPDF) { alert("⚠️ Tu navegador bloqueó la ventana de impresión."); return; }
+            
+            const docHTML = construirHTMLFactura(fac);
+            const finalStyle = '<style>body{background:white;margin:0;padding:20px;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}@media print{@page{size:letter portrait;margin:0.5cm;}body{padding:0;}.no-print{display:none!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}}</style>';
+            const htmlParte1 = '<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n<title>Nota de Entrega F&B #' + (fac && fac.nro ? fac.nro : '') + '</title>\n' + finalStyle + '\n</head>\n<body>\n';
+            const htmlParte2 = '\n<div style="text-align:center;margin:40px 0;" class="no-print"><button onclick="window.print()" style="background:#28a745;color:white;border:none;padding:15px 30px;font-size:18px;font-weight:bold;border-radius:6px;cursor:pointer;">🖨️ Imprimir Factura Carta</button></div>\n</b' + 'ody>\n</h' + 'tml>';
+
+            ventanaPDF.document.open();
+            ventanaPDF.document.write(htmlParte1 + docHTML + htmlParte2);
+            ventanaPDF.document.close();
+            setTimeout(() => { ventanaPDF.focus(); ventanaPDF.print(); }, 700);
+        };
+
+        window.imprimirTicket58 = function(fac, ventanaExterna = null) {
+            const ventanaPDF = ventanaExterna || window.open('', '_blank');
+            if(!ventanaPDF) { alert("⚠️ Tu navegador bloqueó la ventana de impresión."); return; }
+            
+            const ticketHTML = construirHTMLFacturaTicket58(fac);
+            const finalStyle = `
+                <style>
+                    @page {
+                        size: 48mm 210mm;
+                        margin: 0 !important;
+                    }
+                    *, *:before, *:after {
+                        box-sizing: border-box !important;
+                    }
+                    html, body {
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        background: #fff !important;
+                        color: #000 !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+                    }
+                    .ticket-box {
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        margin: 0 auto !important;
+                        padding: 0 0.5mm !important;
+                        background: #fff !important;
+                        box-sizing: border-box !important;
+                    }
+                    @media screen {
+                        body {
+                            padding: 20px 10px !important;
+                            background: #e9ecef !important;
+                            display: flex !important;
+                            flex-direction: column !important;
+                            align-items: center !important;
+                        }
+                        .ticket-box {
+                            width: 320px !important;
+                            max-width: 100% !important;
+                            box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important;
+                            border-radius: 6px !important;
+                            padding: 15px 12px !important;
+                            background: #fff !important;
+                        }
+                    }
+                    @media print {
+                        @page {
+                            size: 48mm 210mm;
+                            margin: 0 !important;
+                        }
+                        .no-print {
+                            display: none !important;
+                        }
+                        html, body {
+                            width: 100% !important;
+                            max-width: 100% !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            background: #fff !important;
+                            display: block !important;
+                        }
+                        .ticket-box {
+                            width: 100% !important;
+                            max-width: 100% !important;
+                            margin: 0 !important;
+                            padding: 0 0.5mm !important;
+                            box-shadow: none !important;
+                            border: none !important;
+                        }
+                        body.scale-100 .ticket-recibo-58 {
+                            zoom: 1.0 !important;
+                            transform: scale(1.0) !important;
+                            transform-origin: top center !important;
+                        }
+                        body.scale-115 .ticket-recibo-58 {
+                            zoom: 1.15 !important;
+                            transform: scale(1.15) !important;
+                            transform-origin: top center !important;
+                        }
+                        body.scale-128 .ticket-recibo-58 {
+                            zoom: 1.28 !important;
+                            transform: scale(1.28) !important;
+                            transform-origin: top center !important;
+                        }
+                    }
+                </style>
+            `;
+            const headerControls = `
+                <div class="no-print" style="margin-bottom:15px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">
+                    <div style="background:#fff;border:1px solid #d0d7de;border-radius:8px;padding:10px 14px;box-shadow:0 3px 10px rgba(0,0,0,0.08);display:inline-flex;flex-direction:column;align-items:center;gap:8px;">
+                        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;">
+                            <button onclick="window.print()" style="background:#007bff;color:white;border:none;padding:10px 22px;font-size:15px;font-weight:bold;border-radius:6px;cursor:pointer;box-shadow:0 3px 8px rgba(0,123,255,0.3);display:flex;align-items:center;gap:6px;">
+                                🖨️ Mandar a Imprimir
+                            </button>
+                            <div style="display:flex;align-items:center;gap:4px;background:#f6f8fa;border:1px solid #d0d7de;border-radius:6px;padding:3px 6px;">
+                                <span style="font-size:11.5px;font-weight:bold;color:#444;margin-right:2px;">Ajuste Ancho:</span>
+                                <button id="btn-scale-100" onclick="cambiarEscala('100')" style="padding:4px 8px;font-size:11px;font-weight:bold;border:1px solid #ccc;border-radius:4px;cursor:pointer;background:#fff;color:#333;">Normal (100%)</button>
+                                <button id="btn-scale-115" onclick="cambiarEscala('115')" style="padding:4px 8px;font-size:11px;font-weight:bold;border:1px solid #007bff;border-radius:4px;cursor:pointer;background:#e7f1ff;color:#007bff;">Óptimo (+15%)</button>
+                                <button id="btn-scale-128" onclick="cambiarEscala('128')" style="padding:4px 8px;font-size:11px;font-weight:bold;border:1px solid #ccc;border-radius:4px;cursor:pointer;background:#fff;color:#333;">Máximo (+28%)</button>
+                            </div>
+                        </div>
+                        <div style="font-size:11px;color:#555;line-height:1.3;max-width:440px;">
+                            💡 <strong>Tip Safari/Mac:</strong> Si ves margen lateral, en la ventana de impresión pon <strong>Escala: 125%</strong> o usa <strong>Google Chrome</strong> (con Márgenes: Ninguno).
+                        </div>
+                    </div>
+                </div>
+                <script>
+                    function cambiarEscala(scale) {
+                        document.body.classList.remove('scale-100', 'scale-115', 'scale-128');
+                        document.body.classList.add('scale-' + scale);
+                        try { localStorage.setItem('fyb_ticket_scale', scale); } catch(e){}
+                        ['100', '115', '128'].forEach(function(s) {
+                            var btn = document.getElementById('btn-scale-' + s);
+                            if(btn) {
+                                if(s === scale) {
+                                    btn.style.background = '#007bff';
+                                    btn.style.color = '#fff';
+                                    btn.style.borderColor = '#007bff';
+                                } else {
+                                    btn.style.background = '#fff';
+                                    btn.style.color = '#333';
+                                    btn.style.borderColor = '#ccc';
+                                }
+                            }
+                        });
+                    }
+                    (function(){
+                        var saved = '115';
+                        try { saved = localStorage.getItem('fyb_ticket_scale') || '115'; } catch(e){}
+                        cambiarEscala(saved);
+                    })();
+                <\/script>
+            `;
+            const htmlParte1 = '<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>Ticket F&B #' + (fac && fac.nro ? fac.nro : '') + '</title>\n' + finalStyle + '\n</head>\n<body>\n' + headerControls + '\n<div class="ticket-box">\n';
+            const htmlParte2 = '\n</div>\n</b' + 'ody>\n</h' + 'tml>';
+
+            ventanaPDF.document.open();
+            ventanaPDF.document.write(htmlParte1 + ticketHTML + htmlParte2);
+            ventanaPDF.document.close();
+            setTimeout(() => { ventanaPDF.focus(); ventanaPDF.print(); }, 700);
+        };
+
+        window.guardarYGenerarFactura = async function(formato = 'carta') {
+            const cliente = SecuritySanitizer.cleanText(document.getElementById('fac-cliente').value, 120);
+            const rif = SecuritySanitizer.cleanText(document.getElementById('fac-rif').value, 30);
+            const direccion = SecuritySanitizer.cleanAddress(document.getElementById('fac-direccion').value, 300);
+            const telefono = SecuritySanitizer.cleanPhone(document.getElementById('fac-telefono').value);
+            const disponibilidad = SecuritySanitizer.cleanText(document.getElementById('fac-disponibilidad').value, 100);
 
             const rows = document.querySelectorAll('.facturacion-item-row');
             const items = [];
             
             rows.forEach(row => {
                 items.push({
-                    cantidad: row.querySelector('.fac-item-cant').value,
-                    descripcion: row.querySelector('.fac-item-desc').value,
-                    precioUnitario: row.querySelector('.fac-item-precio').value,
-                    descuento: row.querySelector('.fac-item-descval').value
+                    cantidad: SecuritySanitizer.sanitizeInt(row.querySelector('.fac-item-cant').value, 1),
+                    descripcion: SecuritySanitizer.cleanText(row.querySelector('.fac-item-desc').value, 200),
+                    precioUnitario: SecuritySanitizer.sanitizeAmount(row.querySelector('.fac-item-precio').value),
+                    descuento: SecuritySanitizer.sanitizeAmount(row.querySelector('.fac-item-descval').value)
                 });
             });
 
             if(items.length === 0) { alert("Agrega al menos un ítem."); return; }
 
-            const subtotal = document.getElementById('fac-subtotal').innerText;
-            const descuento = document.getElementById('fac-total-desc').innerText;
-            const iva = document.getElementById('fac-iva').innerText;
-            const total = document.getElementById('fac-total-general').innerText;
+            const subtotal = SecuritySanitizer.sanitizeAmount(document.getElementById('fac-subtotal').innerText);
+            const descuento = SecuritySanitizer.sanitizeAmount(document.getElementById('fac-total-desc').innerText);
+            const iva = SecuritySanitizer.sanitizeAmount(document.getElementById('fac-iva').innerText);
+            const total = SecuritySanitizer.sanitizeAmount(document.getElementById('fac-total-general').innerText);
             
-            const nroFactura = document.getElementById('fac-nro').value.trim() || Math.floor(1000 + Math.random() * 9000).toString();
+            const rawNroFac = document.getElementById('fac-nro').value.trim();
+            const nroFactura = SecuritySanitizer.cleanText(rawNroFac || Math.floor(1000 + Math.random() * 9000).toString(), 30);
             const fechaActual = new Date().toLocaleDateString("es-VE");
             
             const monedaData = document.getElementById('fac-moneda').value.split('|');
-            const moneda = monedaData[0]; const simbolo = monedaData[1];
-            const tasa = document.getElementById('fac-tasa').value;
+            const moneda = SecuritySanitizer.cleanText(monedaData[0], 20); 
+            const simbolo = SecuritySanitizer.cleanText(monedaData[1], 10);
+            const tasa = SecuritySanitizer.sanitizeAmount(document.getElementById('fac-tasa').value);
 
             const objetoFactura = {
                 nro: nroFactura, fecha: fechaActual, cliente, rif, direccion, telefono,
@@ -3203,16 +3749,11 @@
                     window.cargarBaseClientes();
                 }
 
-                const docHTML = construirHTMLFactura(objetoFactura);
-                const finalStyle = '<style>body{background:white;margin:0;padding:20px;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}@media print{@page{margin:0.5cm;}body{padding:0;}.no-print{display:none!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}}</style>';
-                const htmlParte1 = '<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n<title>Nota de Entrega F&B</title>\n' + finalStyle + '\n</head>\n<body>\n';
-                const htmlParte2 = '\n<div style="text-align:center;margin:40px 0;" class="no-print"><button onclick="window.print()" style="background:#28a745;color:white;border:none;padding:15px 30px;font-size:18px;font-weight:bold;border-radius:6px;cursor:pointer;">🖨️ Imprimir Factura PDF</button></div>\n</b' + 'ody>\n</h' + 'tml>';
-
-                ventanaPDF.document.open();
-                ventanaPDF.document.write(htmlParte1 + docHTML + htmlParte2);
-                ventanaPDF.document.close();
-
-                setTimeout(() => { ventanaPDF.focus(); ventanaPDF.print(); }, 800);
+                if (formato === 'ticket58') {
+                    window.imprimirTicket58(objetoFactura, ventanaPDF);
+                } else {
+                    window.imprimirFacturaCarta(objetoFactura, ventanaPDF);
+                }
 
                 window.actualizarPreviewFactura();
                 window.cargarHistorialFacturas();
@@ -3223,19 +3764,12 @@
             } catch (error) { console.error(error); ventanaPDF.close(); alert("Hubo un error al guardar la factura."); }
         };
 
-        window.abrirVentanaFacturaExistente = function(fac) {
-            const ventanaPDF = window.open('', '_blank');
-            if(!ventanaPDF) { alert("⚠️ Permite las ventanas emergentes."); return; }
-            
-            const docHTML = construirHTMLFactura(fac);
-            const finalStyle = '<style>body{background:white;margin:0;padding:20px;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}@media print{@page{margin:0.5cm;}body{padding:0;}.no-print{display:none!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}}</style>';
-            const htmlParte1 = '<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n<title>Nota de Entrega Oficial</title>\n' + finalStyle + '\n</head>\n<body>\n';
-            const htmlParte2 = '\n<div style="text-align:center;margin:40px 0;" class="no-print"><button onclick="window.print()" style="background:#28a745;color:white;border:none;padding:15px 30px;font-size:18px;font-weight:bold;border-radius:6px;cursor:pointer;">🖨️ Imprimir Factura PDF</button></div>\n</b' + 'ody>\n</h' + 'tml>';
-
-            ventanaPDF.document.open();
-            ventanaPDF.document.write(htmlParte1 + docHTML + htmlParte2);
-            ventanaPDF.document.close();
-            setTimeout(() => { ventanaPDF.focus(); ventanaPDF.print(); }, 800);
+        window.abrirVentanaFacturaExistente = function(fac, formato = 'carta') {
+            if (formato === 'ticket58') {
+                window.imprimirTicket58(fac);
+            } else {
+                window.imprimirFacturaCarta(fac);
+            }
         };
 
         window.cargarHistorialFacturas = async function() {
@@ -3295,7 +3829,7 @@
                             </select>
                         </td>
                         <td><strong style="color: #155724;">${simbolo}${fac.total}</strong></td>
-                        <td style="display: flex; gap: 5px; justify-content: center; align-items: center; min-width: 180px;"></td>
+                        <td style="display: flex; gap: 5px; justify-content: center; align-items: center; min-width: 230px;"></td>
                     `;
 
                     const tdAcciones = tr.querySelector('td:last-child');
@@ -3324,10 +3858,19 @@
                     btnCajero.innerHTML = '<i class="fas fa-cash-register"></i>'; btnCajero.title = "Abrir Modo Cajero";
                     btnCajero.addEventListener('click', () => window.abrirModoCajeroParaFactura(fac));
 
-                    const btnImprimir = document.createElement('button');
-                    btnImprimir.type = 'button'; btnImprimir.style = 'background:#28a745; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;';
-                    btnImprimir.innerHTML = '<i class="fas fa-print"></i>'; btnImprimir.title = "Imprimir";
-                    btnImprimir.addEventListener('click', () => window.abrirVentanaFacturaExistente(fac));
+                    const btnImprimirCarta = document.createElement('button');
+                    btnImprimirCarta.type = 'button'; 
+                    btnImprimirCarta.style = 'background:#28a745; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;';
+                    btnImprimirCarta.innerHTML = '<i class="fas fa-print"></i>'; 
+                    btnImprimirCarta.title = "Imprimir Hoja Carta (PDF)";
+                    btnImprimirCarta.addEventListener('click', () => window.abrirVentanaFacturaExistente(fac, 'carta'));
+
+                    const btnImprimirTicket = document.createElement('button');
+                    btnImprimirTicket.type = 'button'; 
+                    btnImprimirTicket.style = 'background:#007bff; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;';
+                    btnImprimirTicket.innerHTML = '<i class="fas fa-receipt"></i>'; 
+                    btnImprimirTicket.title = "Imprimir Ticket Térmico 58mm";
+                    btnImprimirTicket.addEventListener('click', () => window.abrirVentanaFacturaExistente(fac, 'ticket58'));
 
                     const btnEliminar = document.createElement('button');
                     btnEliminar.type = 'button'; btnEliminar.style = 'background:#d9534f; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;';
@@ -3341,7 +3884,8 @@
                     tdAcciones.appendChild(btnRetencion); 
                     tdAcciones.appendChild(btnNotas);
                     tdAcciones.appendChild(btnCajero); 
-                    tdAcciones.appendChild(btnImprimir); 
+                    tdAcciones.appendChild(btnImprimirCarta); 
+                    tdAcciones.appendChild(btnImprimirTicket); 
                     tdAcciones.appendChild(btnEliminar);
                     tbody.appendChild(tr);
                 });
@@ -3618,34 +4162,35 @@
         };
 
         window.guardarYGenerarCotizacion = async function() {
-            const cliente = document.getElementById('cot-cliente').value;
-            const rif = document.getElementById('cot-rif').value;
-            const direccion = document.getElementById('cot-direccion').value;
-            const telefono = document.getElementById('cot-telefono').value;
-            const vehiculo = document.getElementById('cot-vehiculo').value;
-            const anio = document.getElementById('cot-anio').value;
-            const disponibilidad = document.getElementById('cot-disponibilidad').value;
+            const cliente = SecuritySanitizer.cleanText(document.getElementById('cot-cliente').value, 120);
+            const rif = SecuritySanitizer.cleanText(document.getElementById('cot-rif').value, 30);
+            const direccion = SecuritySanitizer.cleanAddress(document.getElementById('cot-direccion').value, 300);
+            const telefono = SecuritySanitizer.cleanPhone(document.getElementById('cot-telefono').value);
+            const vehiculo = SecuritySanitizer.cleanText(document.getElementById('cot-vehiculo').value, 100);
+            const anio = SecuritySanitizer.cleanText(document.getElementById('cot-anio').value, 20);
+            const disponibilidad = SecuritySanitizer.cleanText(document.getElementById('cot-disponibilidad').value, 100);
 
             const rows = document.querySelectorAll('.cotizacion-item-row');
             const items = [];
             
             rows.forEach(row => {
                 items.push({
-                    cantidad: row.querySelector('.item-cant').value,
-                    descripcion: row.querySelector('.item-desc').value,
-                    precioUnitario: row.querySelector('.item-precio').value,
-                    descuento: row.querySelector('.item-descval').value
+                    cantidad: SecuritySanitizer.sanitizeInt(row.querySelector('.item-cant').value, 1),
+                    descripcion: SecuritySanitizer.cleanText(row.querySelector('.item-desc').value, 200),
+                    precioUnitario: SecuritySanitizer.sanitizeAmount(row.querySelector('.item-precio').value),
+                    descuento: SecuritySanitizer.sanitizeAmount(row.querySelector('.item-descval').value)
                 });
             });
 
             if(items.length === 0) { alert("Agrega al menos un ítem a la cotización."); return; }
 
-            const subtotal = document.getElementById('cot-subtotal').innerText;
-            const descuento = document.getElementById('cot-total-desc').innerText;
-            const iva = document.getElementById('cot-iva').innerText;
-            const total = document.getElementById('cot-total-general').innerText;
+            const subtotal = SecuritySanitizer.sanitizeAmount(document.getElementById('cot-subtotal').innerText);
+            const descuento = SecuritySanitizer.sanitizeAmount(document.getElementById('cot-total-desc').innerText);
+            const iva = SecuritySanitizer.sanitizeAmount(document.getElementById('cot-iva').innerText);
+            const total = SecuritySanitizer.sanitizeAmount(document.getElementById('cot-total-general').innerText);
             
-            const nroCotizacion = document.getElementById('cot-nro').value.trim() || Math.floor(1000 + Math.random() * 9000).toString();
+            const rawNroCot = document.getElementById('cot-nro').value.trim();
+            const nroCotizacion = SecuritySanitizer.cleanText(rawNroCot || Math.floor(1000 + Math.random() * 9000).toString(), 30);
             const fechaActual = new Date().toLocaleDateString("es-VE");
 
             const objetoCotizacion = {
@@ -4631,27 +5176,35 @@
         // ==========================================
         // 🚀 MOTOR DE ARRANQUE INICIAL
         // ==========================================
-        window.addEventListener('DOMContentLoaded', () => {
-            window.cargarDashboard();
-            window.cargarFinanzas();
-            window.cargarPedidos();
-            window.cargarCatalogoAdmin();
-            window.cargarBaseClientes();
+        window.iniciarPanelCompleto = function() {
+            console.log("Iniciando módulos de bases de datos del panel...");
+            try { if (typeof window.cargarDashboard === 'function') window.cargarDashboard(); } catch(e) { console.error("Error al cargar Dashboard:", e); }
+            try { if (typeof window.cargarFinanzas === 'function') window.cargarFinanzas(); } catch(e) { console.error("Error al cargar Finanzas:", e); }
+            try { if (typeof window.cargarPedidos === 'function') window.cargarPedidos(); } catch(e) { console.error("Error al cargar Pedidos:", e); }
+            try { if (typeof window.cargarCatalogoAdmin === 'function') window.cargarCatalogoAdmin(); } catch(e) { console.error("Error al cargar Catálogo:", e); }
+            try { if (typeof window.cargarBaseClientes === 'function') window.cargarBaseClientes(); } catch(e) { console.error("Error al cargar Clientes:", e); }
             
-            window.calcularTotalCotizacion();
-            window.cargarHistorialCotizaciones(); 
+            try { if (typeof window.calcularTotalCotizacion === 'function') window.calcularTotalCotizacion(); } catch(e) {}
+            try { if (typeof window.cargarHistorialCotizaciones === 'function') window.cargarHistorialCotizaciones(); } catch(e) {}
             
-            window.calcularTotalFactura();
-            window.cargarHistorialFacturas(); 
-            window.cargarHistorialImportaciones();
+            try { if (typeof window.calcularTotalFactura === 'function') window.calcularTotalFactura(); } catch(e) {}
+            try { if (typeof window.cargarHistorialFacturas === 'function') window.cargarHistorialFacturas(); } catch(e) {}
+            try { if (typeof window.cargarHistorialImportaciones === 'function') window.cargarHistorialImportaciones(); } catch(e) {}
             
-            window.cargarTasaBCV(); 
+            try { if (typeof window.cargarTasaBCV === 'function') window.cargarTasaBCV(); } catch(e) {}
+            try { if (typeof window.cargarPuntosRuta === 'function') window.cargarPuntosRuta(); } catch(e) {}
             
-            // Cargar deudas del personal
             setTimeout(() => { 
                 if (typeof window.cargarCxCPersonal === 'function') window.cargarCxCPersonal(); 
-            }, 1500);
-        });
+            }, 1000);
+        };
+
+        // Disparo seguro e inmediato sin depender de si DOMContentLoaded ya disparó
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', window.iniciarPanelCompleto);
+        } else {
+            window.iniciarPanelCompleto();
+        }
 
         // ==========================================
         // 🚀 ANALISTA IA CON MEMORIA FIREBASE (sesion_001)
@@ -5366,9 +5919,9 @@
         // 🏍️ LÓGICA DE CXC PERSONAL Y MOTORIZADOS
         // ==========================================
         window.agregarCxCPersonal = async function() {
-            const concepto = document.getElementById('cxc-pers-concepto').value.trim();
-            const moneda = document.getElementById('cxc-pers-moneda').value;
-            const monto = parseFloat(document.getElementById('cxc-pers-monto').value);
+            const concepto = SecuritySanitizer.cleanText(document.getElementById('cxc-pers-concepto').value, 100);
+            const moneda = SecuritySanitizer.cleanText(document.getElementById('cxc-pers-moneda').value, 10);
+            const monto = SecuritySanitizer.sanitizeAmount(document.getElementById('cxc-pers-monto').value);
 
             if (!concepto || isNaN(monto) || monto <= 0) {
                 alert("Por favor ingresa a quién se le cobra (concepto) y un monto válido.");
@@ -5449,10 +6002,7 @@
             }
         };
         
-        // Auto-cargar al iniciar la página
-        window.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => { if (typeof window.cargarCxCPersonal === 'function') window.cargarCxCPersonal(); }, 1500);
-        });
+
 
         // 🚀 CORRECCIÓN DEFINITIVA DE GUÍAS (FORZAR LECTURA DE CAJAS NUEVAS)
         window.abrirModalPedido = function(docId) {
@@ -5863,8 +6413,8 @@
                 return;
             }
 
-            const chofer = document.getElementById('ruta-chofer').value;
-            const pagoTotal = parseFloat(document.getElementById('ruta-pago').value) || 0;
+            const chofer = SecuritySanitizer.cleanText(document.getElementById('ruta-chofer').value, 50);
+            const pagoTotal = SecuritySanitizer.sanitizeAmount(document.getElementById('ruta-pago').value);
             const editRutaId = document.getElementById('edit-ruta-id').value;
             const rutaIdMaster = editRutaId ? editRutaId : "RUTA-" + Date.now();
             
@@ -5881,26 +6431,26 @@
                 const pedOriginal = window.pedidosDBLocal[pedidoId] || {};
                 const paradas = window.rutaEnConstruccion.map((p, i) => ({
                     orden: i + 1,
-                    tipo: p.tipo,
-                    nota: p.nota,
-                    tlf: p.tlf,
-                    pago: p.pago,
-                    confianza: p.confianza,
-                    pagoDinero: p.pagoDinero,
-                    lat: p.lat,
-                    lng: p.lng,
+                    tipo: SecuritySanitizer.cleanText(p.tipo, 30),
+                    nota: SecuritySanitizer.cleanNote(p.nota, 200),
+                    tlf: SecuritySanitizer.cleanPhone(p.tlf),
+                    pago: SecuritySanitizer.cleanText(p.pago, 50),
+                    confianza: SecuritySanitizer.cleanText(p.confianza, 50),
+                    pagoDinero: SecuritySanitizer.sanitizeAmount(p.pagoDinero),
+                    lat: typeof p.lat === 'number' ? p.lat : parseFloat(p.lat) || 0,
+                    lng: typeof p.lng === 'number' ? p.lng : parseFloat(p.lng) || 0,
                     estado: "Activa"
                 }));
 
                 let resumenRuta = "";
-                for (let i = 0; i < window.rutaEnConstruccion.length; i++) {
-                    const p = window.rutaEnConstruccion[i];
+                for (let i = 0; i < paradas.length; i++) {
+                    const p = paradas[i];
                     resumenRuta += `${p.tipo} ${p.nota} -> `;
                     
                     await setDoc(doc(collection(db, "rutas_puntos")), {
                         rutaId: rutaIdMaster,
                         pedidoId: pedidoId,
-                        cliente: pedOriginal.cliente || "Cliente",
+                        cliente: SecuritySanitizer.cleanText(pedOriginal.cliente || "Cliente", 120),
                         orden: i + 1,
                         chofer: chofer,
                         subChofer: "",

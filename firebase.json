@@ -1,4 +1,7 @@
 {
+  "firestore": {
+    "rules": "firestore.rules"
+  },
   "functions": [
     {
       "source": "functions",
@@ -12,5 +15,19 @@
         "*.local"
       ]
     }
-  ]
+  ],
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "firestore.rules",
+      "**/.*",
+      "**/node_modules/**",
+      "functions/**",
+      "serviceAccountKey.json",
+      ".env*",
+      "cobranza-bot.js",
+      "package*.json"
+    ]
+  }
 }

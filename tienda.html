@@ -516,6 +516,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, collection, getDocs, query, where, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { SecuritySanitizer } from "./security-utils.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
@@ -816,18 +817,19 @@
         };
 
         window.finalizarPedidoBaseDatos = async function() {
-            const nombreCliente = document.getElementById('nombre-checkout').value.trim();
-            const metodoEnvio = document.getElementById('metodo-envio').value;
-            const direccion = document.getElementById('direccion-pedido').value.trim();
-            const metodoPago = document.getElementById('metodo-pago').value;
+            const rawNombre = document.getElementById('nombre-checkout').value;
+            const nombreCliente = SecuritySanitizer.cleanText(rawNombre, 120);
+            const metodoEnvio = SecuritySanitizer.cleanText(document.getElementById('metodo-envio').value, 50);
+            const direccion = SecuritySanitizer.cleanAddress(document.getElementById('direccion-pedido').value, 300);
+            const metodoPago = SecuritySanitizer.cleanText(document.getElementById('metodo-pago').value, 50);
             
-            if(nombreCliente === "") {
+            if(!nombreCliente) {
                 alert("Indícanos tu nombre para la orden.");
                 return;
             }
 
-            if(metodoEnvio !== "Retiro en persona (Sede Principal)" && direccion === "") {
-                alert("Por favor, indícanos tu dirección.");
+            if(metodoEnvio !== "Retiro en persona (Sede Principal)" && !direccion) {
+                alert("Por favor, indícanos tu dirección de entrega.");
                 return;
             }
 
@@ -848,18 +850,25 @@
             let productosParaBaseDeDatos = [];
 
             window.carrito.forEach(item => {
-                const subtotal = item.precio * item.cantidad;
+                const subtotal = SecuritySanitizer.sanitizeAmount(item.precio * item.cantidad);
                 totalGeneral += subtotal;
-                mensajeWA += `✅ ${item.cantidad}x ${item.nombre} ($${subtotal.toFixed(2)})\n`;
-                productosParaBaseDeDatos.push({ nombre: item.nombre, cantidad: item.cantidad, precio: item.precio });
+                const nomLimpio = SecuritySanitizer.cleanText(item.nombre, 100);
+                const cantLimpia = SecuritySanitizer.sanitizeInt(item.cantidad, 1);
+                mensajeWA += `✅ ${cantLimpia}x ${nomLimpio} ($${subtotal.toFixed(2)})\n`;
+                productosParaBaseDeDatos.push({ 
+                    nombre: nomLimpio, 
+                    cantidad: cantLimpia, 
+                    precio: SecuritySanitizer.sanitizeAmount(item.precio) 
+                });
             });
 
+            totalGeneral = SecuritySanitizer.sanitizeAmount(totalGeneral);
             mensajeWA += `\n*TOTAL DEL PEDIDO: $${totalGeneral.toFixed(2)}*\n\nPor favor, confirmarme la viabilidad del envío y los datos para el pago.`;
 
             const objetoPedidoNuevo = {
                 usuario_uid: usuarioAutenticado ? usuarioAutenticado.uid : "Sin ID", 
                 cliente: nombreCliente,
-                email: usuarioAutenticado ? usuarioAutenticado.email : "Usuario sin sesión",
+                email: usuarioAutenticado ? (usuarioAutenticado.email || '').toLowerCase().trim() : "Usuario sin sesión",
                 envio: metodoEnvio !== "Retiro en persona (Sede Principal)" ? `${metodoEnvio} - ${direccion}` : metodoEnvio,
                 tracking: `Pago por: ${metodoPago}`,
                 estado: "Pendiente",

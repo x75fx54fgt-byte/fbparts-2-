@@ -68,7 +68,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { SecuritySanitizer } from "./security-utils.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
@@ -92,7 +93,7 @@
                 // Si no ha iniciado sesión, lo mandamos al login de la tienda
                 window.location.href = "login.html";
             } else {
-                emailDisplay.innerText = user.email;
+                emailDisplay.innerText = SecuritySanitizer.escapeHtml(user.email || '');
                 await cargarPedidosCliente(user.email);
             }
         });
@@ -107,22 +108,20 @@
         // Buscar solo los pedidos correspondientes a este correo
         async function cargarPedidosCliente(userEmail) {
             try {
-                const querySnapshot = await getDocs(collection(db, "pedidos"));
+                const cleanEmail = (userEmail || '').toLowerCase().trim();
+                const q = query(collection(db, "pedidos"), where("email", "==", cleanEmail));
+                const querySnapshot = await getDocs(q);
                 let misPedidos = [];
 
                 querySnapshot.forEach((docSnap) => {
-                    const data = docSnap.data();
-                    // Comparamos el correo registrado en el pedido con el usuario actual
-                    if (data.email && data.email.toLowerCase().trim() === userEmail.toLowerCase().trim()) {
-                        misPedidos.push(data);
-                    }
+                    misPedidos.push(docSnap.data());
                 });
 
                 if (misPedidos.length === 0) {
                     ordersListContainer.innerHTML = `
                         <div style="text-align: center; color: #777; padding: 40px; background: white; border-radius: 8px; border: 1px solid #eee;">
                             <i class="fas fa-shopping-cart" style="font-size: 40px; color: #ccc; margin-bottom: 10px;"></i>
-                            <p>Aún no tienes pedidos registrados con este correo (${userEmail}).</p>
+                            <p>Aún no tienes pedidos registrados con este correo (${SecuritySanitizer.escapeHtml(userEmail)}).</p>
                             <a href="tienda.html" style="color: var(--green); font-weight: bold; text-decoration: underline;">Ir a la tienda a comprar repuestos</a>
                         </div>`;
                     return;
@@ -134,22 +133,28 @@
                     let productosHTML = '';
                     if (pedido.productos && Array.isArray(pedido.productos)) {
                         pedido.productos.forEach(p => {
+                            const cant = SecuritySanitizer.sanitizeInt(p.cantidad, 1);
+                            const nom = SecuritySanitizer.escapeHtml(p.nombre || 'Producto');
+                            const pr = SecuritySanitizer.sanitizeAmount(p.precio);
                             productosHTML += `
                                 <div class="order-item-row">
-                                    <span>${p.cantidad}x ${p.nombre}</span>
-                                    <span>$${(p.precio * p.cantidad).toFixed(2)}</span>
+                                    <span>${cant}x ${nom}</span>
+                                    <span>$${(pr * cant).toFixed(2)}</span>
                                 </div>`;
                         });
                     }
 
-                    let envioMetodo = pedido.envio || "Motorizado Caracas";
-                    let trackingInfo = pedido.tracking || "En preparación";
+                    let envioMetodo = SecuritySanitizer.escapeHtml(pedido.envio || "Motorizado Caracas");
+                    let trackingInfo = SecuritySanitizer.escapeHtml(pedido.tracking || "En preparación");
+                    let estado = SecuritySanitizer.escapeHtml(pedido.estado || "Procesando");
+                    let fecha = SecuritySanitizer.escapeHtml(pedido.fecha || "N/D");
+                    let total = SecuritySanitizer.sanitizeAmount(pedido.total);
 
                     ordersListContainer.innerHTML += `
                         <div class="order-card">
                             <div class="order-card-header">
-                                <span><strong>Fecha:</strong> ${pedido.fecha || 'N/D'}</span>
-                                <span style="background: #e8f4fd; color: #1d6fa5; padding: 3px 8px; border-radius: 4px; font-weight: bold;">${pedido.estado || 'Procesando'}</span>
+                                <span><strong>Fecha:</strong> ${fecha}</span>
+                                <span style="background: #e8f4fd; color: #1d6fa5; padding: 3px 8px; border-radius: 4px; font-weight: bold;">${estado}</span>
                             </div>
                             
                             <div class="order-products">
@@ -163,7 +168,7 @@
 
                             <div class="order-footer">
                                 <span style="font-size: 15px; color: #555;">Total pagado:</span>
-                                <span style="color: var(--green);">$${Number(pedido.total || 0).toFixed(2)}</span>
+                                <span style="color: var(--green);">$${total.toFixed(2)}</span>
                             </div>
                         </div>`;
                 });

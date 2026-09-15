@@ -1,0 +1,119 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==========================================
+    // FUNCIONES AUXILIARES DE SEGURIDAD
+    // ==========================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // ==========================================
+    // 1. CATÁLOGO PÚBLICO DE LA TIENDA
+    // ==========================================
+    // Los productos y categorías son visibles para cualquier visitante (SEO y navegación),
+    // pero su creación, actualización y eliminación requiere autenticación administrativa.
+    match /productos/{productoId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated() 
+        && request.resource.data.nombre is string 
+        && request.resource.data.precio is number;
+      allow delete: if isAuthenticated();
+    }
+
+    match /categorias/{categoriaId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // Configuración general de la tienda (tasas oficiales BCV / EUR para conversión de precios)
+    match /configuracion/{docId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // ==========================================
+    // 2. COLECCIONES CRÍTICAS PROTEGIDAS
+    // ==========================================
+    // Facturación, Notas de entrega y Ventas: Autenticación obligatoria
+    match /facturas/{facturaId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() 
+        && request.resource.data.nro is string 
+        && (request.resource.data.total is number || request.resource.data.total is string);
+      allow delete: if isAuthenticated();
+    }
+
+    // Pedidos de compra y envíos:
+    // Lectura, creación y actualización habilitadas para compras web y operación de motorizados vía PIN
+    match /pedidos/{pedidoId} {
+      allow read, create, update: if true;
+      allow delete: if isAuthenticated();
+    }
+
+    // Registro específico de envíos y paquetería
+    match /envios/{envioId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // ==========================================
+    // 3. LOGÍSTICA Y CONTROL GPS DE MOTORIZADOS
+    // ==========================================
+    // Permite a la flota de choferes (vía PIN rápido) transmitir GPS y actualizar paradas
+    match /rutas_puntos/{puntoId} {
+      allow read, write: if true;
+    }
+
+    match /choferes_gps/{choferId} {
+      allow read, write: if true;
+    }
+
+    // ==========================================
+    // 4. GESTIÓN FINANCIERA Y ADMINISTRATIVA
+    // ==========================================
+    match /cotizaciones/{cotizacionId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /cuentas_pagar/{cxpId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /cxc_personal/{cxcId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /importaciones/{impId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /clientes/{clienteId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /retenciones/{retencionId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /administradores/{adminId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /usuarios/{userId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /ai_copilot_sessions/{sessionId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // ==========================================
+    // 5. BLOQUEO POR DEFECTO (REGLA RESIDUAL)
+    // ==========================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

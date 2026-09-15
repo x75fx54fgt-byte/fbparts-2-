@@ -73,14 +73,19 @@
 
             <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> Volver a la página pública</a>
 
+            <div style="margin-top: 12px;">
+                <button type="button" onclick="recuperarContrasenaAdmin()" style="background: none; border: none; color: #555; font-size: 12px; cursor: pointer; text-decoration: underline; transition: color 0.2s;" onmouseover="this.style.color='#385723'" onmouseout="this.style.color='#555'">
+                    <i class="fas fa-key"></i> ¿Olvidaste tu contraseña maestra?
+                </button>
+            </div>
+
             <p id="error-message" style="color: red; margin-top: 15px; font-size: 14px; font-weight: bold;"></p>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, query, where, getDocs, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
@@ -93,82 +98,167 @@
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const db = getFirestore(app);
 
         const adminLoginForm = document.getElementById('admin-login-form');
         const errorMessage = document.getElementById('error-message');
         const btnLoginAdmin = document.getElementById('btnLoginAdmin');
 
+        // Función para validar si una sesión administrativa guardada es válida
+        function verificarSesionAdminLocal() {
+            try {
+                const raw = localStorage.getItem('fyb_admin_session');
+                if (!raw) return null;
+                const s = JSON.parse(raw);
+                const esAdmin = (s.email === 'fybinversiones.ccs@gmail.com' || s.email === 'admin@fybparts.com');
+                const esReciente = (Date.now() - (s.timestamp || 0)) < (14 * 24 * 3600 * 1000);
+                if (esAdmin && esReciente) return s;
+            } catch(e) {}
+            return null;
+        }
+
+        // 1. Detección inmediata de sesión administrativa local
+        const sesionGuardada = verificarSesionAdminLocal();
+        if (sesionGuardada) {
+            errorMessage.innerText = "Sesión activa detectada. Entrando al panel...";
+            errorMessage.style.color = "#385723";
+            setTimeout(() => { window.location.href = "admin.html"; }, 300);
+        }
+
+        // 2. Detección de sesión activa en Firebase Auth SDK
+        onAuthStateChanged(auth, (user) => {
+            if (user && (user.email === 'fybinversiones.ccs@gmail.com' || user.email === 'admin@fybparts.com')) {
+                try {
+                    localStorage.setItem('fyb_admin_session', JSON.stringify({
+                        email: user.email,
+                        localId: user.uid,
+                        timestamp: Date.now()
+                    }));
+                } catch(e) {}
+                errorMessage.innerText = "Sesión autorizada detectada. Entrando al panel...";
+                errorMessage.style.color = "#385723";
+                setTimeout(() => { window.location.href = "admin.html"; }, 300);
+            }
+        });
+
         adminLoginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            // Validar Captcha
-            const recaptchaResponse = grecaptcha.getResponse();
-            if (recaptchaResponse.length === 0) {
-                errorMessage.innerText = "⚠️ Demuestra que no eres un robot marcando la casilla.";
-                errorMessage.style.color = "red";
-                return;
+            // Validar Captcha si está activo
+            if (typeof grecaptcha !== 'undefined') {
+                const recaptchaResponse = grecaptcha.getResponse();
+                if (recaptchaResponse.length === 0) {
+                    errorMessage.innerText = "⚠️ Demuestra que no eres un robot marcando la casilla.";
+                    errorMessage.style.color = "red";
+                    return;
+                }
             }
 
             const email = document.getElementById('email').value.trim().toLowerCase();
             const password = document.getElementById('password').value;
 
-            errorMessage.innerText = "Verificando privilegios de acceso...";
-            errorMessage.style.color = "green";
+            errorMessage.innerText = "Verificando credenciales...";
+            errorMessage.style.color = "#385723";
             btnLoginAdmin.disabled = true;
+            btnLoginAdmin.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Conectando...';
 
             try {
-                // 1. Iniciar sesión en Firebase Auth
-                const userCredential = await signInWithEmailAndPassword(auth, email, password);
-                const user = userCredential.user;
+                // =========================================================================
+                // ⚡ AUTENTICACIÓN DIRECTA VÍA REST (GOOGLE IDENTITY TOOLKIT)
+                // Inmune a bloqueos de iframes, partición de cookies y latencia de SDK
+                // =========================================================================
+                const restUrl = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${firebaseConfig.apiKey}`;
+                
+                const abortCtrl = new AbortController();
+                const timeoutId = setTimeout(() => abortCtrl.abort(), 9000);
 
-                // 2. FILTRO DE SEGURIDAD: Verificar si el correo está en la colección 'administradores'
-                const q = query(collection(db, "administradores"), where("email", "==", email));
-                const querySnapshot = await getDocs(q);
+                const resp = await fetch(restUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password,
+                        returnSecureToken: true
+                    }),
+                    signal: abortCtrl.signal
+                });
+                clearTimeout(timeoutId);
 
-                if (querySnapshot.empty) {
-                    await signOut(auth);
-                    errorMessage.style.color = "red";
-                    errorMessage.innerText = "⛔ Acceso denegado: Esta cuenta no tiene permisos administrativos.";
-                    btnLoginAdmin.disabled = false;
-                    grecaptcha.reset();
-                    return;
+                const data = await resp.json();
+
+                if (!resp.ok) {
+                    const errCode = data?.error?.message || '';
+                    console.warn("Respuesta de autenticación:", errCode);
+                    if (errCode.includes('INVALID_PASSWORD') || errCode.includes('INVALID_LOGIN_CREDENTIALS') || errCode.includes('EMAIL_NOT_FOUND')) {
+                        throw new Error("⚠️ Correo o contraseña maestra incorrectos.");
+                    } else if (errCode.includes('TOO_MANY_ATTEMPTS_TRY_LATER')) {
+                        throw new Error("⚠️ Demasiados intentos fallidos. Espera unos minutos antes de reintentar.");
+                    } else if (errCode.includes('USER_DISABLED')) {
+                        throw new Error("⛔ Esta cuenta administrativa ha sido inhabilitada.");
+                    } else {
+                        throw new Error("⚠️ Error al autenticar credenciales (" + (errCode || "Respuesta inválida") + ").");
+                    }
                 }
 
-                // 3. SINCRONIZACIÓN AUTOMÁTICA CON LA TIENDA:
-                // Copiamos/Actualizamos los datos del admin en la colección 'usuarios' para que la tienda los reconozca
-                const adminData = querySnapshot.docs[0].data();
-                const userRef = doc(db, "usuarios", user.uid);
-                const userSnap = await getDoc(userRef);
-
-                if (!userSnap.exists()) {
-                    await setDoc(userRef, {
-                        uid: user.uid,
-                        nombre: adminData.Nombre || "Administrador",
-                        apellido: "",
-                        cedula: "Personal Autorizado",
-                        telefono: "Principal",
-                        email: user.email,
-                        ubicacion: "F&B Parts - Central",
-                        fechaRegistro: new Date().toLocaleString("es-VE")
-                    });
-                } else {
-                    await updateDoc(userRef, {
-                        nombre: adminData.Nombre || "Administrador"
-                    });
+                // Verificar autorización de administrador
+                const emailAutenticado = (data.email || email).toLowerCase().trim();
+                if (emailAutenticado !== 'fybinversiones.ccs@gmail.com' && emailAutenticado !== 'admin@fybparts.com') {
+                    throw new Error("⛔ Acceso denegado: Esta cuenta no posee permisos de administrador.");
                 }
 
-                // Si todo es correcto, entra al panel de administración
-                window.location.href = "admin.html";
+                // Guardar credenciales de sesión administrativa en localStorage (permanente y confiable)
+                localStorage.setItem('fyb_admin_session', JSON.stringify({
+                    email: emailAutenticado,
+                    localId: data.localId,
+                    idToken: data.idToken,
+                    refreshToken: data.refreshToken,
+                    timestamp: Date.now()
+                }));
+
+                // Sincronizar el SDK de Firebase Auth para que Firestore reconozca la sesión del usuario
+                try {
+                    await Promise.race([
+                        signInWithEmailAndPassword(auth, email, password),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('SDK_SYNC_TIMEOUT')), 3500))
+                    ]);
+                } catch (sdkErr) {
+                    console.warn("Sincronización SDK diferida:", sdkErr.message);
+                }
+
+                errorMessage.innerText = "✅ ¡Acceso autorizado! Entrando al panel...";
+                errorMessage.style.color = "#28a745";
+                btnLoginAdmin.innerHTML = '<i class="fas fa-check"></i> Redirigiendo...';
+
+                setTimeout(() => {
+                    window.location.href = "admin.html";
+                }, 400);
 
             } catch (error) {
-                console.error(error);
+                console.error("Error en login administrativo:", error);
+                let msg = error.message || "Error de conexión con el servicio de autenticación.";
+                if (error.name === 'AbortError') {
+                    msg = "⚠️ Tiempo de espera agotado. Revisa tu conexión a internet e intenta de nuevo.";
+                }
+                
                 errorMessage.style.color = "red";
-                errorMessage.innerText = "Credenciales incorrectas o error de conexión.";
+                errorMessage.innerText = msg;
                 btnLoginAdmin.disabled = false;
-                grecaptcha.reset();
+                btnLoginAdmin.innerHTML = 'INGRESAR AL PANEL';
+                if (typeof grecaptcha !== 'undefined') grecaptcha.reset();
             }
         });
+
+        // Función auxiliar para recuperación de contraseña administrativa
+        window.recuperarContrasenaAdmin = async function() {
+            const email = document.getElementById('email').value.trim().toLowerCase() || 'fybinversiones.ccs@gmail.com';
+            if (!confirm(`¿Deseas enviar un enlace de restablecimiento de contraseña a: ${email}?`)) return;
+
+            try {
+                await sendPasswordResetEmail(auth, email);
+                alert(`✅ Se ha enviado un correo a ${email} con las instrucciones para restablecer tu contraseña maestra.`);
+            } catch (err) {
+                alert(`Error al enviar correo de recuperación: ${err.message}`);
+            }
+        };
     </script>
 </body>
 </html>

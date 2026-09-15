@@ -27,16 +27,22 @@
 <body>
 
     <div id="login-screen">
-        <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png" alt="F&B Parts" style="width: 150px; margin-bottom: 30px; filter: brightness(0) invert(1);">
+        <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png" alt="F&B Parts" style="width: 150px; margin-bottom: 25px; filter: brightness(0) invert(1);">
         <div id="login-box">
-            <h2 style="color: #385723; font-size: 22px; font-weight: bold; margin-bottom: 5px;">Portal Operativo</h2>
-            <p style="color: #666; font-size: 13px; margin-bottom: 25px;">Ingresa tu código de acceso único.</p>
+            <div style="width: 60px; height: 60px; background: #e8f5e9; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px auto;">
+                <i class="fas fa-motorcycle" style="font-size: 28px; color: #28a745;"></i>
+            </div>
+            <h2 style="color: #385723; font-size: 22px; font-weight: bold; margin-bottom: 5px;">Portal Motorizados</h2>
+            <p style="color: #666; font-size: 13px; margin-bottom: 20px;">Ingresa tu código PIN de 4 dígitos para activar tu ruta y GPS</p>
             
-            <input type="password" id="login-pin" placeholder="****" style="width: 100%; padding: 15px; border: 2px solid #ccc; border-radius: 8px; margin-bottom: 20px; font-size: 24px; text-align: center; letter-spacing: 15px; outline: none; font-weight: bold;">
-            
-            <button onclick="entrarPortal()" style="width: 100%; background: #1d6fa5; color: white; border: none; padding: 14px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer;">
-                Ingresar al Portal
-            </button>
+            <form id="driver-login-form" onsubmit="event.preventDefault(); window.entrarPortal();">
+                <input type="password" id="login-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" required autofocus
+                    style="width: 100%; padding: 14px; text-align: center; font-size: 28px; letter-spacing: 12px; font-weight: bold; border: 2px solid #ccc; border-radius: 10px; margin-bottom: 15px; box-sizing: border-box; outline: none;">
+                <div id="login-error" style="color: #dc2626; font-size: 13px; margin-bottom: 12px; display: none; background: #fef2f2; padding: 10px; border-radius: 8px; border: 1px solid #fecaca; font-weight: 500;"></div>
+                <button type="submit" id="btn-login-driver" style="width: 100%; background: #28a745; color: white; border: none; padding: 14px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 10px rgba(40,167,69,0.3);">
+                    <i class="fas fa-route"></i> Ingresar a la Ruta
+                </button>
+            </form>
         </div>
     </div>
 
@@ -44,7 +50,7 @@
         <div class="header-mobile">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png" alt="Logo" style="height: 35px; filter: brightness(0) invert(1);">
-                <button onclick="salirPortal()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px;"><i class="fas fa-sign-out-alt"></i> Salir</button>
+                <button onclick="salirPortal()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer;"><i class="fas fa-sign-out-alt"></i> Salir</button>
             </div>
             <h1 style="font-size: 18px; margin: 0;">Hola, <span id="nombre-chofer" style="font-weight: bold;">---</span> 👋</h1>
             <p style="font-size: 12px; opacity: 0.8; margin: 2px 0 20px 0;"><i class="fas fa-satellite-dish"></i> GPS Activo y Transmitiendo</p>
@@ -77,7 +83,38 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, collection, getDocs, getDoc, query, where, doc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // Módulo de sanitización inline para evitar errores de CORS en file:// o dominios locales
+        const SecuritySanitizer = {
+            escapeHtml(val) {
+                if (val === null || val === undefined) return '';
+                return String(val).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+            },
+            cleanText(val, maxLen = 250) {
+                if (!val) return '';
+                return String(val).replace(/<[^>]*>?/gm, '').replace(/[\u0000-\u001F\u007F-\u009F]/g, '').trim().slice(0, maxLen);
+            },
+            cleanAddress(val, maxLen = 300) {
+                if (!val) return '';
+                return String(val).replace(/<[^>]*>?/gm, '').replace(/javascript:/gi, '').replace(/vbscript:/gi, '').trim().slice(0, maxLen);
+            },
+            cleanPhone(val) {
+                if (!val) return '';
+                return String(val).replace(/[^0-9+\s\-()]/g, '').trim().slice(0, 30);
+            },
+            sanitizeAmount(val) {
+                if (val === null || val === undefined) return 0;
+                let num = typeof val === 'number' ? val : parseFloat(String(val).replace(/[^0-9.-]/g, ''));
+                if (isNaN(num) || !isFinite(num) || num < 0) return 0;
+                return Math.round(num * 100) / 100;
+            },
+            sanitizeInt(val, defaultVal = 1) {
+                let num = parseInt(val, 10);
+                return isNaN(num) || num < 1 ? defaultVal : num;
+            }
+        };
 
         const firebaseConfig = {
             apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
@@ -89,6 +126,7 @@
         };
 
         const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
         const db = getFirestore(app);
 
         let mapa = null;
@@ -96,7 +134,7 @@
         let watchIdGPS = null;
         let marcadorPiloto = null;
 
-        // 🚀 PINES ÚNICOS Y SECRETOS (Nadie ve los nombres de los demás)
+        // 🚀 PINES DIRECTOS Y RÁPIDOS (Como siempre funcionó: Bryan 5678, Jhon 1234, etc.)
         const USUARIOS_POR_PIN = { 
             "1234": "Jhon", 
             "5678": "Bryan", 
@@ -108,16 +146,35 @@
         window.entrarPortal = function() {
             const pin = document.getElementById('login-pin').value.trim();
             const user = USUARIOS_POR_PIN[pin];
+            const errDiv = document.getElementById('login-error');
+            const btn = document.getElementById('btn-login-driver');
 
-            // Si el PIN no existe en la lista, lo rebotamos
             if(!user) { 
-                alert("Código PIN incorrecto o no autorizado."); 
+                if (errDiv) {
+                    errDiv.style.display = 'block';
+                    errDiv.innerText = "Código PIN incorrecto o no autorizado.";
+                } else {
+                    alert("Código PIN incorrecto o no autorizado."); 
+                }
                 document.getElementById('login-pin').value = '';
+                document.getElementById('login-pin').focus();
                 return; 
             }
 
+            if (errDiv) errDiv.style.display = 'none';
+
+            // Guardar PIN en localStorage para que el chofer no tenga que reescribirlo si recarga la página
+            try {
+                localStorage.setItem('fyb_chofer_pin', pin);
+                localStorage.setItem('fyb_chofer_nombre', user);
+            } catch(e) {}
+
+            activarSesionChofer(user);
+        };
+
+        function activarSesionChofer(user) {
             window.currentUser = user;
-            document.getElementById('nombre-chofer').textContent = user;
+            document.getElementById('nombre-chofer').textContent = SecuritySanitizer.cleanText(user, 40);
             
             // Ocultar caja de dinero si es la flota Sub-Contratada (Moto A, B o C)
             if(user === "Jhon" || user === "Bryan") {
@@ -132,15 +189,37 @@
             iniciarMapa();
             iniciarTransmisionGPS(user);
             window.cargarBitacora(user);
+        }
+
+        window.salirPortal = async function() {
+            if(confirm("¿Deseas cerrar tu sesión del portal de motorizados?")) {
+                if(watchIdGPS) navigator.geolocation.clearWatch(watchIdGPS);
+                window.currentUser = null;
+                try {
+                    localStorage.removeItem('fyb_chofer_pin');
+                    localStorage.removeItem('fyb_chofer_nombre');
+                    await signOut(auth);
+                } catch(e) {}
+                document.getElementById('app-main').style.display = 'none';
+                document.getElementById('login-screen').style.display = 'flex';
+                document.getElementById('login-pin').value = '';
+                const errDiv = document.getElementById('login-error');
+                if (errDiv) errDiv.style.display = 'none';
+            }
         };
 
-        window.salirPortal = function() {
-            if(watchIdGPS) navigator.geolocation.clearWatch(watchIdGPS);
-            window.currentUser = null;
-            document.getElementById('app-main').style.display = 'none';
-            document.getElementById('login-screen').style.display = 'flex';
-            document.getElementById('login-pin').value = '';
-        };
+        // Restaurar sesión activa automáticamente si ya ingresó su PIN
+        try {
+            const pinGuardado = localStorage.getItem('fyb_chofer_pin');
+            if (pinGuardado && CREDENCIALES_CHOFERES[pinGuardado]) {
+                const cd = CREDENCIALES_CHOFERES[pinGuardado];
+                autenticarChoferFirebase(cd.email, cd.pass).then(() => {
+                    activarSesionChofer(cd.nombre);
+                }).catch(() => {
+                    activarSesionChofer(cd.nombre);
+                });
+            }
+        } catch(e) {}
 
         function iniciarMapa() {
             if(mapa !== null) return; 
@@ -484,7 +563,16 @@
 
             } catch (error) {
                 console.error("Error al cargar bitácora:", error);
-                listaActivas.innerHTML = '<p style="font-size: 13px; color: #d9534f; text-align:center; padding:15px;">Error de conexión con la base de datos.</p>';
+                const desc = error.code ? `(${error.code}) ${error.message}` : (error.message || error.toString());
+                listaActivas.innerHTML = `
+                    <div style="background: #fff5f5; border: 1px solid #fed7d7; border-radius: 10px; padding: 16px; margin: 15px 0; text-align: center;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 24px; color: #e53e3e; margin-bottom: 8px;"></i>
+                        <p style="font-size: 14px; font-weight: bold; color: #9b2c2c; margin: 0 0 6px 0;">Error de conexión con la base de datos</p>
+                        <p style="font-size: 11px; color: #742a2a; margin: 0 0 12px 0; font-family: monospace;">${desc}</p>
+                        <button onclick="cargarBitacora(window.currentUser)" style="background: #e53e3e; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-sync-alt"></i> Reintentar Carga
+                        </button>
+                    </div>`;
             }
         };
 
