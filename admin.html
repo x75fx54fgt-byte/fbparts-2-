@@ -1834,18 +1834,16 @@
             // Si Firebase Auth aún no sincroniza pero existe una sesión administrativa activa local:
             if (sesionLocal) {
                 desbloquearPanelAdmin("BAPA", "Administrador Maestro");
-                return;
             }
 
-            // Margen de gracia defensivo de 3 segundos antes de redirigir
+            // Margen de gracia defensivo de 4 segundos para que Firebase Auth reaccione
             setTimeout(() => {
-                const recheck = verificarSesionAdminLocal();
-                if (!auth.currentUser && !recheck) {
+                if (!auth.currentUser) {
+                    console.error("Sesión de Firebase expirada o no válida. Forzando cierre de sesión.");
+                    try { localStorage.removeItem('fyb_admin_session'); } catch(e){}
                     window.location.href = "admin-login.html";
-                } else {
-                    desbloquearPanelAdmin("BAPA", "Administrador Maestro");
                 }
-            }, 3000);
+            }, 4000);
         });
 
         window.cerrarSesion = function() {
@@ -5192,7 +5190,21 @@
         // ==========================================
         // 🚀 MOTOR DE ARRANQUE INICIAL
         // ==========================================
+        window.panelIniciado = false;
         window.iniciarPanelCompleto = async function() {
+            if (window.panelIniciado) return;
+            window.panelIniciado = true;
+            
+            // Esperar activamente hasta que Firebase Auth reconozca el token (máximo 4 seg)
+            // Esto evita errores de permisos (Missing or insufficient permissions)
+            if (!auth.currentUser) {
+                console.log("Firebase Auth no está listo aún. Esperando token para cargar bases de datos...");
+                for(let i=0; i<40; i++){
+                    if(auth.currentUser) break;
+                    await new Promise(r => setTimeout(r, 100));
+                }
+            }
+
             console.log("Iniciando módulos de bases de datos de forma secuencial para evitar saturación...");
             
             const runSafe = async (fnName) => {
