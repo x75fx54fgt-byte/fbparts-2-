@@ -26,7 +26,22 @@
         
         .btn-logout { background: #d9534f; color: white; border: none; padding: 8px 15px; border-radius: 4px; font-family: 'Oswald', sans-serif; cursor: pointer; font-size: 14px; }
         .btn-logout:hover { background: #c9302c; }
-    </style>
+    
+        /* =========================================================
+           🚀 RESPONSIVE DESIGN TOTAL: MODALS & GENERAL GRIDS
+           ========================================================= */
+        @media (max-width: 768px) {
+            .modal-content { width: 95% !important; padding: 15px !important; margin: 10px auto !important; }
+            div[style*="display: grid"] { grid-template-columns: 1fr !important; }
+        }
+
+        /* =========================================================
+           🚀 RESPONSIVE DESIGN TOTAL: TABLAS
+           ========================================================= */
+        @media (max-width: 768px) {
+            .data-table, table { display: block !important; overflow-x: auto !important; white-space: nowrap !important; width: 100% !important; -webkit-overflow-scrolling: touch; }
+        }
+</style>
 </head>
 <body>
 

@@ -6,6 +6,18 @@
     <title>Panel de Administración | F&B Parts</title>
     <link rel="icon" type="image/png" href="img/favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: '#5B8266',
+              brandDark: '#385723',
+            }
+          }
+        }
+      }
+    </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <!-- 🚀 LIBRERÍA PUTER.JS -->
@@ -40,10 +52,6 @@
 
         .admin-container { max-width: 1250px; margin: 40px auto; padding: 0 20px; }
         
-        .admin-tabs { display: flex; gap: 10px; margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 10px; flex-wrap: wrap; }
-        .tab-btn { background: #f8f8f8; color: #555; border: 1px solid #ddd; padding: 10px 20px; border-radius: 6px; font-family: 'Oswald', sans-serif; font-size: 16px; cursor: pointer; transition: all .2s; }
-        .tab-btn:hover { background: #eee; }
-        .tab-btn.active { background: #385723; color: white; border-color: #385723; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
@@ -130,6 +138,53 @@
         #admin-ai-messages p {
             white-space: pre-wrap !important;
         }
+
+        /* =========================================================
+           🚀 RESPONSIVE DESIGN TOTAL (MOBILE & TABLET)
+           ========================================================= */
+        @media (max-width: 768px) {
+            /* 1. Grids múltiples a 1 sola columna */
+            .admin-grid { grid-template-columns: 1fr !important; gap: 15px !important; }
+            div[style*="display: grid"] { grid-template-columns: 1fr !important; }
+            .cotizacion-item-row, .facturacion-item-row, .pedido-item-row { grid-template-columns: 1fr !important; gap: 10px !important; background: #fafafa; padding: 10px; border-radius: 6px; border: 1px solid #eee; }
+
+            /* 2. Tablas deslizables */
+            .data-table { display: block !important; overflow-x: auto !important; white-space: nowrap !important; width: 100% !important; -webkit-overflow-scrolling: touch; }
+            
+            /* 3. Reducción de tamaños y paddings */
+            .card-form { padding: 15px !important; margin-bottom: 15px !important; }
+            .card-form h3 { font-size: 18px !important; }
+            .table-toolbar { flex-direction: column !important; align-items: stretch !important; padding: 12px !important; }
+            .filter-controls { justify-content: stretch !important; flex-direction: column !important; }
+            .filter-controls input, .filter-controls select { max-width: 100% !important; }
+
+            /* 4. Modales y Chat IA al 95% */
+            .modal-content { width: 95% !important; padding: 20px !important; margin: 10px auto !important; }
+            #admin-ai-box { width: 95% !important; max-width: none !important; bottom: 10px !important; right: 2.5% !important; left: 2.5% !important; z-index: 99999 !important; }
+
+            /* 5. Ajustes del Header */
+            header { padding-left: 1rem !important; padding-right: 1rem !important; }
+            header h1 { font-size: 14px !important; }
+            header span { font-size: 9px !important; }
+            header .gap-6 { gap: 12px !important; }
+            header .fa-globe, header .fa-shopping-cart { display: none !important; } /* Ocultar íconos para ahorrar espacio, o el texto */
+            header a { font-size: 11px !important; }
+            header button { padding: 6px 10px !important; font-size: 12px !important; }
+            
+            /* 6. Sidebar en móvil: Se oculta por defecto y flota por encima al abrirse */
+            #main-sidebar { position: absolute; z-index: 50; height: 100%; box-shadow: 4px 0 15px rgba(0,0,0,0.1); }
+            main { padding: 15px !important; }
+        }
+
+        @media (min-width: 769px) and (max-width: 1024px) {
+            /* Tablets: Grids a 2 columnas */
+            .admin-grid { grid-template-columns: 1fr 1fr !important; }
+            /* Evitar que tablas muy anchas rompan la vista de tablet */
+            .data-table { display: block !important; overflow-x: auto !important; white-space: nowrap !important; width: 100% !important; }
+            /* Chat IA no tan ancho */
+            #admin-ai-box { width: 400px !important; }
+            main { padding: 20px !important; }
+        }
     </style>
 </head>
 <body style="background-color: #f8f8f8;">
@@ -144,7 +199,7 @@
             <a href="admin-login.html" style="background: #385723; color: white; padding: 8px 16px; border-radius: 4px; font-size: 12px; text-decoration: none; font-weight: bold;">
                 <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
             </a>
-            <button type="button" onclick="document.getElementById('auth-loading-screen').style.display='none'; document.getElementById('app-wrapper').style.display='block';" style="background: white; border: 1px solid #ccc; color: #555; padding: 8px 16px; border-radius: 4px; font-size: 12px; cursor: pointer; font-weight: bold;">
+            <button type="button" onclick="document.getElementById('auth-loading-screen').style.display='none'; document.getElementById('app-wrapper').style.display='flex';" style="background: white; border: 1px solid #ccc; color: #555; padding: 8px 16px; border-radius: 4px; font-size: 12px; cursor: pointer; font-weight: bold;">
                 Abrir Panel
             </button>
         </div>
@@ -167,97 +222,168 @@
     </script>
 
     <!-- ENVOLTORIO PRINCIPAL DEL PANEL (PROTEGIDO HASTA VERIFICACIÓN) -->
-    <div id="app-wrapper">
-        <div class="topbar">
-            <h2>PANEL DE CONTROL INTERNO</h2>
-            <span>LOGÍSTICA, CLIENTES Y COTIZACIONES</span>
-        </div>
-
-        <header>
-            <div class="container header-wrap" style="display: flex; justify-content: space-between; align-items: center;">
-                <a class="logo" href="index.html">
-                    <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="LOGO F&B PARTS">
+    <div id="app-wrapper" class="flex h-screen bg-[#f8fafc] overflow-hidden font-sans">
+        
+        <!-- SIDEBAR (NUEVO DISEÑO) -->
+        <aside id="main-sidebar" class="w-[280px] bg-white border-r border-gray-200 flex flex-col shrink-0 shadow-sm z-20 transition-all duration-300 ease-in-out overflow-hidden">
+            <!-- Logo -->
+            <div class="h-[80px] flex items-center justify-center border-b border-gray-100 shrink-0 bg-brand/5">
+                <a href="index.html">
+                    <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="LOGO F&B PARTS" class="h-10 object-contain">
                 </a>
+            </div>
 
-                <div style="display: flex; align-items: center; gap: 20px;">
-                    <nav>
-                        <a href="index.html">Sitio Web</a>
-                        <a href="tienda.html">Tienda</a>
-                        <a href="admin.html" style="color: #000; font-weight:bold;">Administración</a>
-                        <a href="#" onclick="cerrarSesion()" style="color: #d9534f; font-weight:bold; margin-left:15px;"><i class="fas fa-sign-out-alt"></i> Salir</a>
-                    </nav>
+            <!-- Navegación -->
+            <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-2 admin-tabs-sidebar flex flex-col">
+                <style>
+                    /* Estilos para los nuevos botones del sidebar */
+                    .tab-btn { color: #64748b; background: transparent; transition: all 0.2s ease; border: 1px solid transparent; white-space: nowrap; }
+                    .tab-btn:hover { background: #f1f5f9; color: #0f172a; border-color: #e2e8f0; }
+                    .tab-btn.active { background: #e2f0d9; color: #385723; font-weight: 700; border-color: #c3e6cb; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+                    .tab-btn.active i { color: #385723; }
+                </style>
+                <button class="tab-btn active w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium" onclick="mostrarPestana('dashboard', this)"><i class="fas fa-chart-pie w-5 text-gray-400"></i> Dashboard</button>
+                <button class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium" onclick="mostrarPestana('finanzas', this)"><i class="fas fa-wallet w-5 text-gray-400"></i> CxC y CxP</button>
+                <button class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium" onclick="mostrarPestana('pedidos', this)"><i class="fas fa-box w-5 text-gray-400"></i> Gestión de Pedidos</button>
+                <button class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium" onclick="mostrarPestana('rutas', this)"><i class="fas fa-map-marked-alt w-5 text-gray-400"></i> Control de Rutas GPS</button>
+                <button class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium" onclick="mostrarPestana('catalogo', this)"><i class="fas fa-tags w-5 text-gray-400"></i> Catálogo y Stock</button>
+                <button class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium" onclick="mostrarPestana('clientes', this)"><i class="fas fa-address-book w-5 text-gray-400"></i> Base de Clientes</button>
+                <button class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium" onclick="mostrarPestana('facturacion', this)"><i class="fas fa-cash-register w-5 text-gray-400"></i> Facturación / POS</button>
+                <button class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium" onclick="mostrarPestana('historial-facturas', this)"><i class="fas fa-receipt w-5 text-gray-400"></i> Base de Facturas</button>
+                <button class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium" onclick="mostrarPestana('cotizaciones', this)"><i class="fas fa-file-invoice-dollar w-5 text-gray-400"></i> Crear Cotización</button>
+                <button class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium" onclick="mostrarPestana('historial-cotizaciones', this)"><i class="fas fa-folder-open w-5 text-gray-400"></i> Base de Cotizaciones</button>
+                <button class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium" onclick="mostrarPestana('importacion', this)"><i class="fas fa-calculator w-5 text-gray-400"></i> Landed Cost</button>
+            </nav>
 
-                    <div id="admin-perfil-header" onclick="abrirModalPerfil()" style="display: flex; align-items: center; gap: 10px; background: #e2f0d9; padding: 6px 14px; border-radius: 6px; border: 1px solid #c3e6cb; cursor: pointer; transition: all 0.2s;" title="Haz clic para editar tu foto y nombre">
-                        <img id="admin-avatar" src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png" alt="Avatar" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid #385723; background: #fff;">
-                        <div style="text-align: left; line-height: 1.1;">
-                            <span id="admin-nombre-txt" style="display: block; color: #385723; font-weight: bold; font-size: 13px; font-family: 'Oswald', sans-serif;">Cargando...</span>
-                            <span id="admin-cargo-txt" style="display: block; color: #555; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Administrador</span>
-                        </div>
-                        <i class="fas fa-pen-to-square" style="color: #385723; font-size: 12px; margin-left: 4px;" title="Editar perfil"></i>
+            <!-- Perfil (Fijo abajo) -->
+            <div class="p-4 border-t border-gray-100 bg-gray-50/50 shrink-0">
+                <div id="admin-perfil-header" onclick="abrirModalPerfil()" class="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-200 transition cursor-pointer border border-transparent hover:border-gray-300">
+                    <img id="admin-avatar" src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png" alt="Avatar" class="w-10 h-10 rounded-full object-cover border-2 border-brand shadow-sm bg-white">
+                    <div class="flex-1 text-left min-w-0">
+                        <span id="admin-nombre-txt" class="block text-brandDark font-bold text-sm truncate">Cargando...</span>
+                        <span id="admin-cargo-txt" class="block text-gray-500 text-[11px] uppercase tracking-wider font-semibold truncate">Administrador</span>
                     </div>
+                    <i class="fas fa-cog text-gray-400 shrink-0"></i>
                 </div>
             </div>
-        </header>
+        </aside>
 
-        <div class="admin-container">
+        <!-- CONTENIDO PRINCIPAL -->
+        <div class="flex-1 flex flex-col h-full overflow-hidden">
             
-            <div class="admin-tabs">
-                <button class="tab-btn active" onclick="mostrarPestana('dashboard', this)"><i class="fas fa-chart-pie"></i> Dashboard</button>
-                <button class="tab-btn" onclick="mostrarPestana('finanzas', this)"><i class="fas fa-wallet"></i> CxC y CxP</button>
-                <button class="tab-btn" onclick="mostrarPestana('pedidos', this)"><i class="fas fa-box"></i> Gestión de Pedidos</button>
-                <button class="tab-btn" onclick="mostrarPestana('rutas', this)"><i class="fas fa-map-marked-alt"></i> Control de Rutas GPS</button>
-                <button class="tab-btn" onclick="mostrarPestana('catalogo', this)"><i class="fas fa-tags"></i> Catálogo y Stock</button>
-                <button class="tab-btn" onclick="mostrarPestana('clientes', this)"><i class="fas fa-address-book"></i> Base de Clientes</button>
-                <button class="tab-btn" onclick="mostrarPestana('facturacion', this)"><i class="fas fa-cash-register"></i> Facturación / POS</button>
-                <button class="tab-btn" onclick="mostrarPestana('historial-facturas', this)"><i class="fas fa-receipt"></i> Base de Facturas</button>
-                <button class="tab-btn" onclick="mostrarPestana('cotizaciones', this)"><i class="fas fa-file-invoice-dollar"></i> Crear Cotización</button>
-                <button class="tab-btn" onclick="mostrarPestana('historial-cotizaciones', this)"><i class="fas fa-folder-open"></i> Base de Cotizaciones</button>
-                <button class="tab-btn" onclick="mostrarPestana('importacion', this)"><i class="fas fa-calculator"></i> Landed Cost</button>
-            </div>
+            <!-- HEADER SUPERIOR LIMPIO -->
+            <header class="h-[80px] bg-brand text-white flex items-center justify-between px-8 shadow-md shrink-0 z-10 transition-all duration-300">
+                <div class="flex items-center gap-4">
+                    <button onclick="toggleSidebar()" class="text-white hover:bg-white/20 w-10 h-10 flex items-center justify-center rounded-lg transition" title="Ocultar/Mostrar Menú">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                    <div>
+                        <h1 class="text-xl font-bold tracking-widest uppercase">Panel de Control Interno</h1>
+                        <span class="text-xs text-green-100 opacity-90 uppercase tracking-widest font-semibold">Logística, Clientes y Cotizaciones</span>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-6">
+                    <a href="index.html" class="text-sm font-medium opacity-90 hover:opacity-100 hover:underline transition"><i class="fas fa-globe mr-1"></i> Sitio Web</a>
+                    <a href="tienda.html" class="text-sm font-medium opacity-90 hover:opacity-100 hover:underline transition"><i class="fas fa-shopping-cart mr-1"></i> Tienda</a>
+                    <button onclick="cerrarSesion()" class="flex items-center gap-2 bg-red-500/20 text-red-50 hover:bg-red-500 hover:text-white px-4 py-2 rounded-lg font-bold transition border border-red-500/30 shadow-sm">
+                        <i class="fas fa-sign-out-alt"></i> Salir
+                    </button>
+                </div>
+            </header>
+
+            <!-- ÁREA DE PESTAÑAS (SCROLL) -->
+            <main class="flex-1 overflow-y-auto p-8 relative">
+                <div class="max-w-[1400px] mx-auto w-full">
 
             <!-- PESTAÑA DASHBOARD MULTIMONEDA -->
                         <div id="tab-dashboard" class="tab-content active">
-                <div class="admin-header">
-                    <h2>Panel de Métricas y Finanzas</h2>
-                    <button class="refresh-btn" onclick="cargarDashboard()"><i class="fas fa-sync-alt"></i> Actualizar Gráficas</button>
+                <div class="flex items-center justify-between mb-8 flex-wrap gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">Métricas y Finanzas</h2>
+                        <p class="text-sm text-gray-500 mt-1">Resumen general del mes en curso y saldos pendientes.</p>
+                    </div>
+                    <button class="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm flex items-center gap-2" onclick="cargarDashboard()">
+                        <i class="fas fa-sync-alt text-brand"></i> Actualizar Gráficas
+                    </button>
                 </div>
                 
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px;">
-                    <div class="dash-card">
-                        <i class="fas fa-money-bill-wave" style="color: #28a745;"></i>
-                        <h4>Ventas del Mes (Unificado)</h4>
-                        <div style="font-size:24px; font-weight:bold; color:#28a745;">$<span id="dash-v-total">0.00</span> <span style="font-size:11px; font-weight:normal; color:#666;">(Ref)</span></div>
-                        <div style="font-size:13px; color:#555; border-top:1px solid #eee; margin-top:5px; padding-top:5px; display:flex; justify-content:space-between;">
-                            <span>$: <b id="dash-v-usd">0.00</b></span>
-                            <span>Bs: <b id="dash-v-ves">0.00</b></span>
-                            <span>€: <b id="dash-v-eur">0.00</b></span>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <!-- TARJETA 1: VENTAS -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center">
+                                <i class="fas fa-money-bill-wave text-green-600 text-xl"></i>
+                            </div>
+                            <span class="text-xs font-semibold px-2 py-1 bg-gray-100 text-gray-500 rounded-md">Mes Actual</span>
+                        </div>
+                        <div>
+                            <h4 class="text-gray-500 text-sm font-medium mb-1">Ventas Unificadas</h4>
+                            <div class="text-3xl font-bold text-gray-900 mb-1">$<span id="dash-v-total">0.00</span> <span class="text-sm font-normal text-gray-400">(Ref)</span></div>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-gray-50 flex justify-between text-xs text-gray-500 font-medium">
+                            <span class="flex flex-col"><span>USD</span> <b id="dash-v-usd" class="text-gray-800 mt-0.5">0.00</b></span>
+                            <span class="flex flex-col"><span>VES</span> <b id="dash-v-ves" class="text-gray-800 mt-0.5">0.00</b></span>
+                            <span class="flex flex-col"><span>EUR</span> <b id="dash-v-eur" class="text-gray-800 mt-0.5">0.00</b></span>
                         </div>
                     </div>
-                    <div class="dash-card" style="border-left: 4px solid #f0ad4e;">
-                        <i class="fas fa-hand-holding-usd" style="color: #f0ad4e;"></i>
-                        <h4>Por Cobrar (CxC)</h4>
-                        <div style="font-size:24px; font-weight:bold; color:#f0ad4e;">$<span id="dash-cxc-total">0.00</span> <span style="font-size:11px; font-weight:normal; color:#666;">(Ref)</span></div>
-                        <div style="font-size:13px; color:#555; border-top:1px solid #eee; margin-top:5px; padding-top:5px; display:flex; justify-content:space-between;">
-                            <span>$: <b id="dash-cxc-usd">0.00</b></span>
-                            <span>Bs: <b id="dash-cxc-ves">0.00</b></span>
-                            <span>€: <b id="dash-cxc-eur">0.00</b></span>
+
+                    <!-- TARJETA 2: CxC -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-orange-400"></div>
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center">
+                                <i class="fas fa-hand-holding-usd text-orange-500 text-xl"></i>
+                            </div>
+                            <span class="text-xs font-semibold px-2 py-1 bg-orange-50 text-orange-600 rounded-md">Pendiente</span>
+                        </div>
+                        <div>
+                            <h4 class="text-gray-500 text-sm font-medium mb-1">Cuentas por Cobrar</h4>
+                            <div class="text-3xl font-bold text-gray-900 mb-1">$<span id="dash-cxc-total">0.00</span> <span class="text-sm font-normal text-gray-400">(Ref)</span></div>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-gray-50 flex justify-between text-xs text-gray-500 font-medium">
+                            <span class="flex flex-col"><span>USD</span> <b id="dash-cxc-usd" class="text-gray-800 mt-0.5">0.00</b></span>
+                            <span class="flex flex-col"><span>VES</span> <b id="dash-cxc-ves" class="text-gray-800 mt-0.5">0.00</b></span>
+                            <span class="flex flex-col"><span>EUR</span> <b id="dash-cxc-eur" class="text-gray-800 mt-0.5">0.00</b></span>
                         </div>
                     </div>
-                    <div class="dash-card" style="border-left: 4px solid #d9534f;">
-                        <i class="fas fa-file-invoice-dollar" style="color: #d9534f;"></i>
-                        <h4>Por Pagar (CxP)</h4>
-                        <div style="font-size:24px; font-weight:bold; color:#d9534f;">$<span id="dash-cxp-total">0.00</span> <span style="font-size:11px; font-weight:normal; color:#666;">(Ref)</span></div>
-                        <div style="font-size:13px; color:#555; border-top:1px solid #eee; margin-top:5px; padding-top:5px; display:flex; justify-content:space-between;">
-                            <span>$: <b id="dash-cxp-usd">0.00</b></span>
-                            <span>Bs: <b id="dash-cxp-ves">0.00</b></span>
-                            <span>€: <b id="dash-cxp-eur">0.00</b></span>
+
+                    <!-- TARJETA 3: CxP -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
+                                <i class="fas fa-file-invoice-dollar text-red-500 text-xl"></i>
+                            </div>
+                            <span class="text-xs font-semibold px-2 py-1 bg-red-50 text-red-600 rounded-md">Deudas</span>
+                        </div>
+                        <div>
+                            <h4 class="text-gray-500 text-sm font-medium mb-1">Cuentas por Pagar</h4>
+                            <div class="text-3xl font-bold text-gray-900 mb-1">$<span id="dash-cxp-total">0.00</span> <span class="text-sm font-normal text-gray-400">(Ref)</span></div>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-gray-50 flex justify-between text-xs text-gray-500 font-medium">
+                            <span class="flex flex-col"><span>USD</span> <b id="dash-cxp-usd" class="text-gray-800 mt-0.5">0.00</b></span>
+                            <span class="flex flex-col"><span>VES</span> <b id="dash-cxp-ves" class="text-gray-800 mt-0.5">0.00</b></span>
+                            <span class="flex flex-col"><span>EUR</span> <b id="dash-cxp-eur" class="text-gray-800 mt-0.5">0.00</b></span>
                         </div>
                     </div>
-                    <div class="dash-card">
-                        <i class="fas fa-boxes" style="color: #17a2b8;"></i>
-                        <h4>Valor Inventario</h4>
-                        <div class="value" id="dash-inventario" style="font-size: 24px; color: #17a2b8;">$0.00</div>
-                        <div style="font-size:11px; color:#666; margin-top:5px;">(Stock único real)</div>
+
+                    <!-- TARJETA 4: INVENTARIO -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-cyan-500"></div>
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="w-12 h-12 rounded-full bg-cyan-50 flex items-center justify-center">
+                                <i class="fas fa-boxes text-cyan-600 text-xl"></i>
+                            </div>
+                            <span class="text-xs font-semibold px-2 py-1 bg-cyan-50 text-cyan-600 rounded-md">Activo</span>
+                        </div>
+                        <div>
+                            <h4 class="text-gray-500 text-sm font-medium mb-1">Valor de Inventario</h4>
+                            <div class="text-3xl font-bold text-gray-900 mb-1" id="dash-inventario">$0.00</div>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-gray-50 flex justify-start text-xs text-gray-400 font-medium">
+                            Calculado sobre stock disponible
+                        </div>
                     </div>
                 </div>
 
@@ -1639,7 +1765,10 @@
                     <button type="button" class="btn-cancel" onclick="document.getElementById('modal-upselling-ia').style.display='none';" style="background: #eee;">Cerrar Asesor</button>
                 </div>
             </div>
-        </div>            
+                </div> <!-- end max-w-[1400px] -->
+            </main> <!-- end main scroll -->
+        </div> <!-- end flex col -->
+    </div> <!-- end app-wrapper -->
         
         <!-- 🚀 MODAL PARA EDITAR DATOS DE FACTURA -->
     <div id="modal-editar-factura" class="modal-overlay">
@@ -1759,7 +1888,7 @@
             const loadingScreen = document.getElementById('auth-loading-screen');
             const appWrapper = document.getElementById('app-wrapper');
             if (loadingScreen) loadingScreen.style.display = 'none';
-            if (appWrapper) appWrapper.style.display = 'block';
+            if (appWrapper) appWrapper.style.display = 'flex'; // <--- FIX: Usar flex en lugar de block
 
             const elNombre = document.getElementById('admin-nombre-txt');
             const elCargo = document.getElementById('admin-cargo-txt');
@@ -6730,6 +6859,20 @@
                 window.cargarPuntosRuta(); 
                 if (typeof window.cargarPedidos === 'function') await window.cargarPedidos(); 
             } catch(e) { console.error(e); alert("Error borrando la ruta."); }
+        };
+
+        // 🚀 LÓGICA PARA OCULTAR/MOSTRAR EL SIDEBAR
+        window.toggleSidebar = function() {
+            const sidebar = document.getElementById('main-sidebar');
+            if (sidebar.classList.contains('w-[280px]')) {
+                sidebar.classList.remove('w-[280px]');
+                sidebar.classList.add('w-0');
+                sidebar.classList.remove('border-r');
+            } else {
+                sidebar.classList.remove('w-0');
+                sidebar.classList.add('w-[280px]');
+                sidebar.classList.add('border-r');
+            }
         };
 
     </script>

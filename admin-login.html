@@ -37,7 +37,22 @@
         
         .back-link { display: block; margin-top: 20px; color: #666; font-size: 13px; text-decoration: none; font-weight: bold; }
         .back-link:hover { color: #385723; text-decoration: underline; }
-    </style>
+    
+        /* =========================================================
+           🚀 RESPONSIVE DESIGN TOTAL: MODALS & GENERAL GRIDS
+           ========================================================= */
+        @media (max-width: 768px) {
+            .modal-content { width: 95% !important; padding: 15px !important; margin: 10px auto !important; }
+            div[style*="display: grid"] { grid-template-columns: 1fr !important; }
+        }
+
+        /* =========================================================
+           🚀 RESPONSIVE DESIGN TOTAL: TABLAS
+           ========================================================= */
+        @media (max-width: 768px) {
+            .data-table, table { display: block !important; overflow-x: auto !important; white-space: nowrap !important; width: 100% !important; -webkit-overflow-scrolling: touch; }
+        }
+</style>
 </head>
 <body>
 

@@ -165,7 +165,29 @@
             #btn-carrito-flotante { display: none !important; }
             .close-cart-btn { display: none !important; }
         }
-    </style>
+    
+        /* =========================================================
+           🚀 RESPONSIVE DESIGN: GRID & IMAGES (USER REQUIREMENT)
+           ========================================================= */
+        img { max-width: 100%; object-fit: cover; }
+        
+        @media (max-width: 768px) {
+            header .header-wrap, header nav { flex-wrap: wrap !important; }
+            .products-grid-home, .products-grid, .related-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+            .product-container { grid-template-columns: 1fr !important; padding: 20px !important; }
+        }
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .products-grid-home, .products-grid, .related-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 15px !important; }
+        }
+
+        /* =========================================================
+           🚀 RESPONSIVE DESIGN TOTAL: MODALS & GENERAL GRIDS
+           ========================================================= */
+        @media (max-width: 768px) {
+            .modal-content { width: 95% !important; padding: 15px !important; margin: 10px auto !important; }
+            div[style*="display: grid"] { grid-template-columns: 1fr !important; }
+        }
+</style>
 </head>
 <body>
 
@@ -229,7 +251,7 @@
                     <input type="text" id="buscador-tienda" placeholder="Buscar repuesto..." onkeyup="sincronizarBusqueda(this.value)">
                 </div>
             </div>
-            <div class="products-grid" id="productos-grid">
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 w-full" id="productos-grid">
                 <div id="loading-msg"><i class="fas fa-spinner fa-spin"></i> Cargando inventario...</div>
             </div>
         </main>

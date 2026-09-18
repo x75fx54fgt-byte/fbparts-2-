@@ -44,7 +44,22 @@
         .btn-google i { color: #DB4437; font-size: 18px; }
 
         @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
-    </style>
+    
+        /* =========================================================
+           🚀 RESPONSIVE DESIGN TOTAL: MODALS & GENERAL GRIDS
+           ========================================================= */
+        @media (max-width: 768px) {
+            .modal-content { width: 95% !important; padding: 15px !important; margin: 10px auto !important; }
+            div[style*="display: grid"] { grid-template-columns: 1fr !important; }
+        }
+
+        /* =========================================================
+           🚀 RESPONSIVE DESIGN TOTAL: TABLAS
+           ========================================================= */
+        @media (max-width: 768px) {
+            .data-table, table { display: block !important; overflow-x: auto !important; white-space: nowrap !important; width: 100% !important; -webkit-overflow-scrolling: touch; }
+        }
+</style>
 </head>
 <body>
 
