@@ -2972,7 +2972,10 @@
                             </tr>`;
                     }
                 });
-            } catch (error) { console.error(error); }
+            } catch (error) { 
+                console.error(error); 
+                if(tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: red;">Error al cargar: ${error.message}</td></tr>`;
+            }
         };
 
         window.eliminarClienteDB = async function(docId) {
@@ -3597,15 +3600,15 @@
                     }
                     @media print {
                         @page {
-                            size: 48mm 210mm;
+                            size: 58mm 180mm;
                             margin: 0 !important;
                         }
                         .no-print {
                             display: none !important;
                         }
                         html, body {
-                            width: 100% !important;
-                            max-width: 100% !important;
+                            width: 48mm !important;
+                            max-width: 48mm !important;
                             margin: 0 !important;
                             padding: 0 !important;
                             background: #fff !important;
@@ -3618,6 +3621,11 @@
                             padding: 0 0.5mm !important;
                             box-shadow: none !important;
                             border: none !important;
+                        }
+                        * {
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                            color-adjust: exact !important;
                         }
                         body.scale-100 .ticket-recibo-58 {
                             zoom: 1.0 !important;
