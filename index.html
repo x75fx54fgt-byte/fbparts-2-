@@ -209,12 +209,47 @@
         </div>
     </section>
 
-    <section class="benefits">
-        <div class="benefits-inner">
-            <div class="benefit"><i class="fas fa-box-open"></i> GARANTIA</div>
-            <div class="benefit"><i class="fas fa-truck"></i> ENVIO GRATIS</div>
-            <div class="benefit"><i class="fas fa-headset"></i> ASESORIAS</div>
-            <div class="benefit"><i class="fas fa-circle-arrow-down"></i> BAJO COSTO</div>
+    <section class="benefits" style="overflow: hidden;">
+        <style>
+            @keyframes scrollMarquee {
+                0% { transform: translateX(0); }
+                100% { transform: translateX(-50%); }
+            }
+            .marquee-track {
+                display: flex !important;
+                width: max-content !important;
+                min-height: 84px !important;
+                animation: scrollMarquee 20s linear infinite;
+            }
+            .marquee-track:hover {
+                animation-play-state: paused;
+            }
+            .marquee-track .benefit {
+                white-space: nowrap !important;
+                padding: 0 40px !important;
+                font-size: 20px !important;
+                justify-content: flex-start !important;
+            }
+            @media (max-width: 768px) {
+                .marquee-track .benefit {
+                    font-size: 18px !important;
+                    padding: 0 25px !important;
+                }
+            }
+        </style>
+        <div class="benefits-inner" style="display: block !important; overflow: hidden !important; white-space: nowrap !important;">
+            <div class="marquee-track">
+                <!-- Set 1 -->
+                <div class="benefit"><i class="fas fa-box-open"></i> GARANTIA</div>
+                <div class="benefit"><i class="fas fa-truck"></i> ENVIO GRATIS</div>
+                <div class="benefit"><i class="fas fa-headset"></i> ASESORIAS</div>
+                <div class="benefit"><i class="fas fa-circle-arrow-down"></i> BAJO COSTO</div>
+                <!-- Set 2 (Duplicado para el bucle infinito) -->
+                <div class="benefit"><i class="fas fa-box-open"></i> GARANTIA</div>
+                <div class="benefit"><i class="fas fa-truck"></i> ENVIO GRATIS</div>
+                <div class="benefit"><i class="fas fa-headset"></i> ASESORIAS</div>
+                <div class="benefit"><i class="fas fa-circle-arrow-down"></i> BAJO COSTO</div>
+            </div>
         </div>
     </section>
 
