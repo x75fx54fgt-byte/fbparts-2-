@@ -246,6 +246,39 @@
                     .tab-btn:hover { background: #f1f5f9; color: #0f172a; border-color: #e2e8f0; }
                     .tab-btn.active { background: #e2f0d9; color: #385723; font-weight: 700; border-color: #c3e6cb; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
                     .tab-btn.active i { color: #385723; }
+                    
+                    /* Modo Mini-Sidebar en Desktop (cuando está oculto, muestra solo iconos) */
+                    @media (min-width: 1024px) {
+                        #main-sidebar.w-0 {
+                            width: 80px !important;
+                            border-right-width: 1px !important;
+                        }
+                        #main-sidebar.w-0 .tab-btn {
+                            width: 48px !important;
+                            height: 48px !important;
+                            margin: 0 auto !important;
+                            padding: 0 !important;
+                            position: relative !important;
+                            color: transparent !important;
+                            overflow: hidden !important;
+                        }
+                        #main-sidebar.w-0 .tab-btn i {
+                            position: absolute !important;
+                            left: 50% !important;
+                            top: 50% !important;
+                            transform: translate(-50%, -50%) !important;
+                            margin: 0 !important;
+                            font-size: 1.25rem !important;
+                            color: #64748b;
+                        }
+                        #main-sidebar.w-0 .tab-btn.active i {
+                            color: #385723 !important;
+                        }
+                        #main-sidebar.w-0 img {
+                            opacity: 0 !important;
+                            pointer-events: none !important;
+                        }
+                    }
                 </style>
                 <button class="tab-btn active w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium" onclick="mostrarPestana('dashboard', this)"><i class="fas fa-chart-pie w-5 text-gray-400"></i> Dashboard</button>
                 <button class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium" onclick="mostrarPestana('finanzas', this)"><i class="fas fa-wallet w-5 text-gray-400"></i> CxC y CxP</button>
