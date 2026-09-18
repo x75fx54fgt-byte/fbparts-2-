@@ -5192,26 +5192,38 @@
         // ==========================================
         // 🚀 MOTOR DE ARRANQUE INICIAL
         // ==========================================
-        window.iniciarPanelCompleto = function() {
-            console.log("Iniciando módulos de bases de datos del panel...");
-            try { if (typeof window.cargarDashboard === 'function') window.cargarDashboard(); } catch(e) { console.error("Error al cargar Dashboard:", e); }
-            try { if (typeof window.cargarFinanzas === 'function') window.cargarFinanzas(); } catch(e) { console.error("Error al cargar Finanzas:", e); }
-            try { if (typeof window.cargarPedidos === 'function') window.cargarPedidos(); } catch(e) { console.error("Error al cargar Pedidos:", e); }
-            try { if (typeof window.cargarCatalogoAdmin === 'function') window.cargarCatalogoAdmin(); } catch(e) { console.error("Error al cargar Catálogo:", e); }
-            try { if (typeof window.cargarBaseClientes === 'function') window.cargarBaseClientes(); } catch(e) { console.error("Error al cargar Clientes:", e); }
+        window.iniciarPanelCompleto = async function() {
+            console.log("Iniciando módulos de bases de datos de forma secuencial para evitar saturación...");
             
-            try { if (typeof window.calcularTotalCotizacion === 'function') window.calcularTotalCotizacion(); } catch(e) {}
-            try { if (typeof window.cargarHistorialCotizaciones === 'function') window.cargarHistorialCotizaciones(); } catch(e) {}
+            const runSafe = async (fnName) => {
+                try {
+                    if (typeof window[fnName] === 'function') {
+                        await window[fnName]();
+                        await new Promise(r => setTimeout(r, 150)); // Breve respiro para el navegador
+                    }
+                } catch(e) {
+                    console.error("Error al ejecutar " + fnName + ":", e);
+                }
+            };
+
+            await runSafe('cargarDashboard');
+            await runSafe('cargarFinanzas');
+            await runSafe('cargarPedidos');
+            await runSafe('cargarCatalogoAdmin');
+            await runSafe('cargarBaseClientes');
             
-            try { if (typeof window.calcularTotalFactura === 'function') window.calcularTotalFactura(); } catch(e) {}
-            try { if (typeof window.cargarHistorialFacturas === 'function') window.cargarHistorialFacturas(); } catch(e) {}
-            try { if (typeof window.cargarHistorialImportaciones === 'function') window.cargarHistorialImportaciones(); } catch(e) {}
+            await runSafe('calcularTotalCotizacion');
+            await runSafe('cargarHistorialCotizaciones');
             
-            try { if (typeof window.cargarTasaBCV === 'function') window.cargarTasaBCV(); } catch(e) {}
-            try { if (typeof window.cargarPuntosRuta === 'function') window.cargarPuntosRuta(); } catch(e) {}
+            await runSafe('calcularTotalFactura');
+            await runSafe('cargarHistorialFacturas');
+            await runSafe('cargarHistorialImportaciones');
+            
+            await runSafe('cargarTasaBCV');
+            await runSafe('cargarPuntosRuta');
             
             setTimeout(() => { 
-                if (typeof window.cargarCxCPersonal === 'function') window.cargarCxCPersonal(); 
+                runSafe('cargarCxCPersonal');
             }, 1000);
         };
 
