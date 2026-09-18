@@ -129,7 +129,7 @@
         img { max-width: 100%; object-fit: cover; }
         
         @media (max-width: 768px) {
-            header .header-wrap, header nav { flex-wrap: wrap !important; }
+            header .header-wrap { flex-direction: row !important; justify-content: space-between !important; align-items: center !important; flex-wrap: nowrap !important; } .header-right { display: none !important; } .mobile-menu { margin: 0 !important; margin-left: auto !important; }
             .products-grid-home, .products-grid, .related-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
             .product-container { grid-template-columns: 1fr !important; padding: 20px !important; }
         }

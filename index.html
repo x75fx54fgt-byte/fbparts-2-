@@ -98,9 +98,14 @@
         img { max-width: 100%; object-fit: cover; }
         
         @media (max-width: 768px) {
-            header .header-wrap, header nav { flex-wrap: wrap !important; }
+            header .header-wrap { flex-direction: row !important; justify-content: space-between !important; align-items: center !important; flex-wrap: nowrap !important; }
+            .header-right { display: none !important; }
+            .mobile-menu { margin: 0 !important; margin-left: auto !important; }
             .products-grid-home, .products-grid, .related-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
             .product-container { grid-template-columns: 1fr !important; padding: 20px !important; }
+            header nav { display: none; flex-direction: column; position: absolute; top: 100%; left: 0; width: 100%; background: white; box-shadow: 0 10px 15px rgba(0,0,0,0.1); border-top: 1px solid #eee; z-index: 9999; padding-bottom: 20px; }
+            header nav.menu-activo { display: flex !important; }
+            header nav a { padding: 15px 20px !important; border-bottom: 1px solid #f0f0f0; width: 100%; text-align: left; display: block; }
         }
         @media (min-width: 769px) and (max-width: 1024px) {
             .products-grid-home, .products-grid, .related-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 15px !important; }
@@ -128,12 +133,12 @@
                 <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logotipo Oficial F&B PARTS" decoding="async">
             </a>
 
-            <nav>
-                <a href="#inicio">Inicio</a>
-                <a href="tienda.html">Repuestos</a>
-                <a href="#nosotros">Quienes somos</a>
-                <a href="#mercadolibre">Mercado Libre</a>
-                <a href="#contacto">Contacto</a>
+            <nav id="nav-principal">
+                <a href="#inicio" onclick="toggleMenuMobile()">Inicio</a>
+                <a href="tienda.html" onclick="toggleMenuMobile()">Repuestos</a>
+                <a href="#nosotros" onclick="toggleMenuMobile()">Quienes somos</a>
+                <a href="#mercadolibre" onclick="toggleMenuMobile()">Mercado Libre</a>
+                <a href="#contacto" onclick="toggleMenuMobile()">Contacto</a>
                 <a href="login.html" id="nav-cuenta-btn" style="color: var(--green); font-weight: bold;"><i class="fas fa-user"></i> Mi Cuenta</a>
             </nav>
 
@@ -148,7 +153,7 @@
                 </div>
             </div>
 
-            <button class="mobile-menu" aria-label="Menú">
+            <button class="mobile-menu" aria-label="Menú" onclick="toggleMenuMobile()">
                 <i class="fas fa-bars"></i>
             </button>
         </div>
@@ -719,5 +724,13 @@
             }
         })();
     </script>
+
+    <script>
+        function toggleMenuMobile() {
+            const nav = document.getElementById('nav-principal');
+            if(nav) nav.classList.toggle('menu-activo');
+        }
+    </script>
+
 </body>
 </html>

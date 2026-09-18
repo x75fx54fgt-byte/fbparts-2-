@@ -225,7 +225,12 @@
     <div id="app-wrapper" class="flex h-screen bg-[#f8fafc] overflow-hidden font-sans">
         
         <!-- SIDEBAR (NUEVO DISEÑO) -->
-        <aside id="main-sidebar" class="w-[280px] bg-white border-r border-gray-200 flex flex-col shrink-0 shadow-sm z-20 transition-all duration-300 ease-in-out overflow-hidden">
+        <aside id="main-sidebar" class="w-[280px] bg-white border-r border-gray-200 flex flex-col shrink-0 shadow-sm z-20 transition-all duration-300 ease-in-out overflow-hidden relative">
+            
+            <!-- Botón de cierre interno (Solo visible en Móvil cuando estorba) -->
+            <button onclick="toggleSidebar()" class="md:hidden absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-2 z-50">
+                <i class="fas fa-times text-xl"></i>
+            </button>
             <!-- Logo -->
             <div class="h-[80px] flex items-center justify-center border-b border-gray-100 shrink-0 bg-brand/5">
                 <a href="index.html">
