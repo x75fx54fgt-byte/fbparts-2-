@@ -768,3 +768,13 @@ footer{
         padding: 8px;
     }
 }
+/* Corrección de bordes y padding para diseño nativo en móviles */
+@media (max-width: 768px) {
+    .container {
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+    }
+    .about-box {
+        border-radius: 8px !important;
+    }
+}

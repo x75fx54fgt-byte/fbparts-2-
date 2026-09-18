@@ -116,7 +116,8 @@
            ========================================================= */
         @media (max-width: 768px) {
             .modal-content { width: 95% !important; padding: 15px !important; margin: 10px auto !important; }
-            div[style*="display: grid"] { grid-template-columns: 1fr !important; }
+            div[style*="display: grid"] { grid-template-columns: 1fr !important; gap: 20px !important; }
+            .faq-grid, .contact-grid, .testimonials-grid { display: flex !important; flex-direction: column !important; gap: 20px !important; }
         }
 </style>
 </head>
@@ -128,7 +129,7 @@
     </div>
 
     <header>
-        <div class="container header-wrap">
+        <div class="container px-4 md:px-8 header-wrap">
             <a class="logo" href="#inicio">
                 <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logotipo Oficial F&B PARTS" decoding="async">
             </a>
@@ -212,7 +213,7 @@
     </section>
 
     <section id="destacados" class="block" style="background-color: #f8f8f8; padding-top: 50px;">
-        <div class="container">
+        <div class="container px-4 md:px-8">
             <h2 class="section-title" style="text-align: center; margin-bottom: 5px;">REPUESTOS DESTACADOS</h2>
             <p style="text-align: center; color: #666; margin-bottom: 25px; font-size: 14px;">Las piezas más solicitadas para tu vehículo.</p>
             
@@ -231,7 +232,7 @@
     </section>
 
     <section id="categorias" class="block categories">
-        <div class="container">
+        <div class="container px-4 md:px-8">
             <h2 class="section-title" style="text-align: center;">CATEGORÍAS DE REPUESTOS</h2>
             <div class="category-grid">
                 <a class="category-card" href="tienda.html?cat=frenos">
@@ -275,7 +276,7 @@
     </section>
 
     <section id="nosotros" class="block">
-        <div class="container">
+        <div class="container px-4 md:px-8">
             <h2 class="section-title" style="text-align: center;">QUIENES SOMOS</h2>
             <div class="about-box">
                 <p>Bienvenido a nuestra tienda de repuestos. En FB PARTS nos enorgullece ofrecer una amplia variedad de repuestos para todo tipo de vehículos. Ya sea que necesites repuestos para tu automóvil o camión, estamos aquí para ayudarte.</p>
@@ -292,7 +293,7 @@
     </section>
 
     <section class="block" style="background-color: #fdfdfd; padding: 40px 0;">
-        <div class="container">
+        <div class="container px-4 md:px-8">
             <h2 class="section-title" style="text-align: center; margin-bottom: 5px;">RESEÑAS DE CLIENTES</h2>
             <p style="text-align: center; color: #666; margin-bottom: 25px; font-size: 14px;">Lo que opinan quienes confían en nuestros repuestos.</p>
             
@@ -325,7 +326,7 @@
     </section>
 
     <section class="block" style="background-color: #f4f6f3; padding: 40px 0;">
-        <div class="container">
+        <div class="container px-4 md:px-8">
             <h2 class="section-title" style="text-align: center; margin-bottom: 5px;">PREGUNTAS FRECUENTES</h2>
             <p style="text-align: center; color: #666; margin-bottom: 25px; font-size: 14px;">Todo lo que necesitas saber sobre nuestras compras y envíos.</p>
             
@@ -351,7 +352,7 @@
     </section>
 
     <section id="mercadolibre" class="block categories">
-        <div class="container">
+        <div class="container px-4 md:px-8">
             <h2 class="section-title" style="text-align: center;">CATÁLOGO MERCADO LIBRE</h2>
 
             <div class="about-box" style="max-width: 800px; margin: 0 auto; text-align: center;">
@@ -366,7 +367,7 @@
     </section>
 
     <section id="contacto" class="block categories">
-        <div class="container">
+        <div class="container px-4 md:px-8">
             <h2 class="section-title" style="text-align: center;">CONTACTOS</h2>
 
             <div class="contact-grid">
