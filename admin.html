@@ -1687,6 +1687,14 @@
                 if (!val) return '';
                 return String(val).replace(/<[^>]*>?/gm, '').replace(/javascript:/gi, '').replace(/vbscript:/gi, '').replace(/data:text\/html/gi, '').trim().slice(0, maxLen);
             },
+            cleanNote(val, maxLen = 600) {
+                if (!val) return '';
+                let cleaned = String(val)
+                    .replace(/<[^>]*>?/gm, '')
+                    .replace(/javascript:/gi, '')
+                    .trim();
+                return cleaned.slice(0, maxLen);
+            },
             cleanPhone(val) {
                 if (!val) return '';
                 return String(val).replace(/[^0-9+\s\-()]/g, '').trim().slice(0, 30);
