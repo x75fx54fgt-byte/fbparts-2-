@@ -274,9 +274,36 @@
                         #main-sidebar.w-0 .tab-btn.active i {
                             color: #385723 !important;
                         }
-                        #main-sidebar.w-0 img {
-                            opacity: 0 !important;
-                            pointer-events: none !important;
+                        /* Ajustar Logo: no ocultarlo, hacerlo encajar */
+                        #main-sidebar.w-0 a[href="index.html"] img {
+                            width: 50px !important;
+                            height: auto !important;
+                            object-fit: contain;
+                        }
+                        /* Ajustar Perfil Abajo: centrar avatar y ocultar texto/engranaje */
+                        #main-sidebar.w-0 > div:last-child {
+                            padding: 16px 0 !important;
+                        }
+                        #main-sidebar.w-0 #admin-perfil-header {
+                            flex-direction: column !important;
+                            justify-content: center !important;
+                            padding: 10px 4px !important;
+                            gap: 6px !important;
+                        }
+                        #main-sidebar.w-0 #admin-perfil-header .flex-1 {
+                            display: block !important;
+                            text-align: center !important;
+                            width: 100% !important;
+                        }
+                        #main-sidebar.w-0 #admin-nombre-txt {
+                            font-size: 10px !important;
+                            white-space: normal !important;
+                            line-height: 1.2 !important;
+                            text-align: center !important;
+                        }
+                        #main-sidebar.w-0 #admin-cargo-txt,
+                        #main-sidebar.w-0 #admin-perfil-header .fa-cog {
+                            display: none !important;
                         }
                     }
                 </style>
