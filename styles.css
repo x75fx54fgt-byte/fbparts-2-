@@ -298,8 +298,8 @@ nav a:hover{ color: #000; transform: translateY(-1px); }
 }
 
 .benefits-inner{
-    width: min(1540px, calc(100% - 46px));
-    margin: 0 auto;
+    width: 100%;
+    margin: 0;
     background: linear-gradient(90deg, #8f9ea8 0%, #7fa090 34%, #a6a6a6 100%);
     color: #fff;
     display: grid;
@@ -776,5 +776,15 @@ footer{
     }
     .about-box {
         border-radius: 8px !important;
+    }
+    .arrow {
+        font-size: 32px !important;
+        padding: 0 5px !important;
+    }
+    .arrow.left {
+        left: 5px !important;
+    }
+    .arrow.right {
+        right: 5px !important;
     }
 }
