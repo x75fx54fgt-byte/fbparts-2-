@@ -165,329 +165,87 @@
             </button>
         </div>
     </header>
-
-    <section id="inicio" class="hero">
-        <div class="hero-carousel" id="heroCarousel">
-            <div class="hero-track">
-                <div class="hero-slide active" style="background-image: linear-gradient(rgba(0,0,0,.32), rgba(0,0,0,.32)), url('img/fotoportada.png');" role="img" aria-label="Almacén de repuestos automotrices originales en Caracas">
-                    <div class="hero-overlay">
-                        <h1 style="margin: 0 0 10px 0; color: var(--title); font-size: 24px; font-weight: 700; letter-spacing: .08em; line-height: 1.1; font-family: 'Oswald', sans-serif;">
-                            REPUESTOS Y AUTOPARTES ORIGINALES EN CARACAS
-                        </h1>
-                        <h2 class="sub" style="margin: 8px 0 24px; color: var(--title); font-family: 'Oswald', sans-serif; font-size: 18px; font-weight: 400; letter-spacing: .04em; line-height: 1.2;">
-                            Especialistas en Toyota, Ford, Dongfeng, Mazda y Honda. Envíos Nacionales.
-                        </h2>
-                        <a class="cta" href="tienda.html">VER CATÁLOGO COMPLETO</a>
-                    </div>
-                </div>
-
-                <div class="hero-slide" style="background-image: linear-gradient(rgba(0,0,0,.32), rgba(0,0,0,.32)), url('img/fotoportada2.png');" role="img" aria-label="Servicio de delivery rápido de repuestos de carros">
-                    <div class="hero-overlay">
-                        <h3>ENVÍO RÁPIDO Y SEGURO</h3>
-                        <div class="sub">ATENCIÓN Y DESPACHO EFICIENTE A TODA VENEZUELA</div>
-                        <a class="cta" href="#contacto">CONTÁCTANOS</a>
-                    </div>
-                </div>
-
-                <div class="hero-slide" style="background-image: linear-gradient(rgba(0,0,0,.32), rgba(0,0,0,.32)), url('img/fotoportada3.png');" role="img" aria-label="Variedad de partes de motor y frenos">
-                    <div class="hero-overlay">
-                        <h3>VARIEDAD DE REPUESTOS</h3>
-                        <div class="sub">MOTOR, FRENOS, CARROCERÍA Y MÁS</div>
-                        <a class="cta" href="#mercadolibre">VER PRODUCTOS</a>
-                    </div>
-                </div>
-            </div>
-
-            <a class="arrow left" href="#" aria-label="Anterior"><i class="fas fa-chevron-left"></i></a>
-            <a class="arrow right" href="#" aria-label="Siguiente"><i class="fas fa-chevron-right"></i></a>
-
-            <div class="dots hero-dots">
-                <span class="active"></span>
-                <span></span>
-                <span></span>
-            </div>
-        </div>
-    </section>
-
-    <section class="benefits" style="overflow: hidden;">
-        <style>
-            @keyframes scrollMarquee {
-                0% { transform: translateX(0); }
-                100% { transform: translateX(-50%); }
-            }
-            .marquee-track {
-                display: flex !important;
-                width: max-content !important;
-                min-height: 84px !important;
-                animation: scrollMarquee 20s linear infinite;
-            }
-            .marquee-track:hover {
-                animation-play-state: paused;
-            }
-            .marquee-track .benefit {
-                white-space: nowrap !important;
-                padding: 0 40px !important;
-                font-size: 20px !important;
-                justify-content: flex-start !important;
-            }
-            @media (max-width: 768px) {
-                .marquee-track .benefit {
-                    font-size: 18px !important;
-                    padding: 0 25px !important;
-                }
-            }
-        </style>
-        <div class="benefits-inner" style="display: block !important; overflow: hidden !important; white-space: nowrap !important;">
-            <div class="marquee-track">
-                <!-- Set 1 -->
-                <div class="benefit"><i class="fas fa-box-open"></i> GARANTIA</div>
-                <div class="benefit"><i class="fas fa-truck"></i> ENVIO GRATIS</div>
-                <div class="benefit"><i class="fas fa-headset"></i> ASESORIAS</div>
-                <div class="benefit"><i class="fas fa-circle-arrow-down"></i> BAJO COSTO</div>
-                <!-- Set 2 (Duplicado para el bucle infinito) -->
-                <div class="benefit"><i class="fas fa-box-open"></i> GARANTIA</div>
-                <div class="benefit"><i class="fas fa-truck"></i> ENVIO GRATIS</div>
-                <div class="benefit"><i class="fas fa-headset"></i> ASESORIAS</div>
-                <div class="benefit"><i class="fas fa-circle-arrow-down"></i> BAJO COSTO</div>
-            </div>
-        </div>
-    </section>
-
-    <section id="destacados" class="block" style="background-color: #f8f8f8; padding-top: 50px;">
-        <div class="container px-4 md:px-8">
-            <h2 class="section-title" style="text-align: center; margin-bottom: 5px;">REPUESTOS DESTACADOS</h2>
-            <p style="text-align: center; color: #666; margin-bottom: 25px; font-size: 14px;">Las piezas más solicitadas para tu vehículo.</p>
-            
-            <div class="products-grid-home" id="destacados-grid">
-                <div style="text-align:center; padding: 40px; color:#666; grid-column: 1/-1;">
-                    <i class="fas fa-spinner fa-spin" style="font-size: 24px;"></i><br>Cargando inventario...
-                </div>
-            </div>
-            
-            <div style="text-align: center; margin-top: 35px;">
-                <a href="tienda.html" style="background: #5B8266; color: white; padding: 12px 25px; text-decoration: none; font-family: 'Oswald', sans-serif; letter-spacing: 1px; border-radius: 4px; display: inline-block; transition: 0.2s;">
-                    VER TODO EL INVENTARIO <i class="fas fa-arrow-right" style="margin-left: 5px;"></i>
-                </a>
-            </div>
-        </div>
-    </section>
-
-    <section id="categorias" class="block categories">
-        <div class="container px-4 md:px-8">
-            <h2 class="section-title" style="text-align: center;">CATEGORÍAS DE REPUESTOS</h2>
-            <div class="category-grid">
-                <a class="category-card" href="tienda.html?cat=frenos">
-                    <div class="category-img-wrap"><img src="img/freno.jpg" alt="Venta de repuestos para sistema de frenos automotrices" loading="lazy"></div>
-                    <span>SISTEMA DE FRENO</span>
-                </a>
-                <a class="category-card" href="tienda.html?cat=bombas">
-                    <div class="category-img-wrap"><img src="img/bomba-gasolina.jpg" alt="Bombas de gasolina para vehículos en Caracas" loading="lazy"></div>
-                    <span>BOMBAS DE GASOLINA</span>
-                </a>
-                <a class="category-card" href="tienda.html?cat=filtros">
-                    <div class="category-img-wrap"><img src="img/filtro-aire.jpg" alt="Filtros de aire para todo tipo de carros" loading="lazy"></div>
-                    <span>FILTROS DE AIRES</span>
-                </a>
-                <a class="category-card" href="tienda.html?cat=faros">
-                    <div class="category-img-wrap"><img src="img/faros.jpg" alt="Faros, micas e iluminación automotriz" loading="lazy"></div>
-                    <span>FAROS Y MICAS</span>
-                </a>
-                <a class="category-card" href="tienda.html?cat=bombas">
-                    <div class="category-img-wrap"><img src="img/bomba-agua.jpg" alt="Bombas de agua y sistema de enfriamiento" loading="lazy"></div>
-                    <span>BOMBAS DE AGUA</span>
-                </a>
-                <a class="category-card" href="tienda.html?cat=todos">
-                    <div class="category-img-wrap"><img src="img/bomba-aceite.jpg" alt="Bombas de aceite para motor" loading="lazy"></div>
-                    <span>BOMBAS DE ACEITE</span>
-                </a>
-                <a class="category-card" href="tienda.html?cat=todos">
-                    <div class="category-img-wrap"><img src="img/multiple-admision.jpg" alt="Múltiple de admisión de motor" loading="lazy"></div>
-                    <span>MULTIPLE ADMISION</span>
-                </a>
-                <a class="category-card" href="tienda.html?cat=todos">
-                    <div class="category-img-wrap"><img src="img/carroceria.jpg" alt="Repuestos de carrocería, parachoques y latonería" loading="lazy"></div>
-                    <span>CARROCERIA</span>
-                </a>
-                <a class="category-card" href="tienda.html?cat=todos">
-                    <div class="category-img-wrap"><img src="img/otras-categorias.jpg" alt="Catálogo completo de repuestos de automóviles" loading="lazy"></div>
-                    <span>OTRAS CATEGORIAS</span>
-                </a>
-            </div>
-        </div>
-    </section>
-
-    <section id="nosotros" class="max-w-7xl mx-auto px-4 py-12">
-        <div class="text-center mb-12">
-            <h2 class="text-3xl md:text-4xl font-bold text-[#5B8266] mb-4 tracking-wide" style="font-family: 'Oswald', sans-serif;">
-                NUESTRAS ESPECIALIDADES
-            </h2>
-            <p class="text-gray-600 max-w-2xl mx-auto text-base md:text-lg">
-                En <strong>F&B PARTS</strong> te ofrecemos soluciones exactas y repuestos de alta calidad para que tu vehículo personal o flota de carga nunca se detenga.
+    <!-- HERO SECCIÓN NOSOTROS -->
+    <section class="bg-[#5B8266] py-20 px-4 text-center mt-4">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-4xl md:text-5xl font-bold text-white mb-4 tracking-wider" style="font-family: 'Oswald', sans-serif;">
+                NUESTRA IDENTIDAD
+            </h1>
+            <p class="text-green-100 text-lg md:text-xl font-light">
+                Conoce a <strong class="font-bold text-white">F&B PARTS</strong>, tu aliado estratégico en repuestos y autopartes originales en Venezuela.
             </p>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:-translate-y-2 hover:shadow-xl transition-all duration-300 cursor-pointer group">
-                <div class="w-14 h-14 rounded-full bg-[#eef3f0] flex items-center justify-center mb-4 group-hover:bg-[#5B8266] transition-colors duration-300">
-                    <i class="fas fa-cogs text-2xl text-[#5B8266] group-hover:text-white transition-colors duration-300"></i>
-                </div>
-                <h3 class="text-xl font-bold text-gray-800 mb-2">Motor y Rendimiento</h3>
-                <p class="text-gray-500 text-sm leading-relaxed">El corazón de tu vehículo al 100%. Contamos con filtros, bujías, correas y componentes vitales para un funcionamiento sin fallas.</p>
+    </section>
+
+    <!-- HISTORIA Y MISIÓN -->
+    <section class="max-w-7xl mx-auto px-4 py-16 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+        <div>
+            <h2 class="text-3xl font-bold text-[#5B8266] mb-6" style="font-family: 'Oswald', sans-serif;">QUIÉNES SOMOS</h2>
+            <p class="text-gray-600 mb-4 leading-relaxed text-lg">
+                En <strong>F&B PARTS</strong> nos especializamos en la importación, distribución y comercialización de repuestos de alta calidad. Nacimos con el objetivo de brindar soluciones automotrices rápidas, seguras y confiables para todo tipo de vehículos.
+            </p>
+            <p class="text-gray-600 mb-6 leading-relaxed text-lg">
+                Entendemos que un vehículo detenido representa tiempo y dinero perdido, por eso garantizamos un inventario actualizado y asesoría técnica de primer nivel para clientes particulares y <strong>flotas corporativas</strong>.
+            </p>
+            <div class="bg-gray-50 border-l-4 border-[#5B8266] p-6 rounded-r-lg shadow-sm">
+                <h3 class="font-bold text-gray-800 text-xl mb-2">Nuestra Misión</h3>
+                <p class="text-gray-600 italic">"Mantener el país en movimiento proporcionando las mejores autopartes del mercado con una atención al cliente inigualable y logística de entrega inmediata."</p>
             </div>
-            <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:-translate-y-2 hover:shadow-xl transition-all duration-300 cursor-pointer group">
-                <div class="w-14 h-14 rounded-full bg-[#eef3f0] flex items-center justify-center mb-4 group-hover:bg-[#5B8266] transition-colors duration-300">
-                    <i class="fas fa-car-side text-2xl text-[#5B8266] group-hover:text-white transition-colors duration-300"></i>
-                </div>
-                <h3 class="text-xl font-bold text-gray-800 mb-2">Carrocería Perfecta</h3>
-                <p class="text-gray-500 text-sm leading-relaxed">Paneles, guardabarros y parachoques de ajuste exacto. Diseñados para devolverle la estética original a tu automóvil.</p>
-            </div>
-            <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:-translate-y-2 hover:shadow-xl transition-all duration-300 cursor-pointer group">
-                <div class="w-14 h-14 rounded-full bg-[#eef3f0] flex items-center justify-center mb-4 group-hover:bg-[#5B8266] transition-colors duration-300">
-                    <i class="fas fa-compress-alt text-2xl text-[#5B8266] group-hover:text-white transition-colors duration-300"></i>
-                </div>
-                <h3 class="text-xl font-bold text-gray-800 mb-2">Suspensión y Dirección</h3>
-                <p class="text-gray-500 text-sm leading-relaxed">Domina cualquier terreno. Amortiguadores, bases y resortes que garantizan una experiencia de conducción suave y estable.</p>
-            </div>
-            <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:-translate-y-2 hover:shadow-xl transition-all duration-300 cursor-pointer group">
-                <div class="w-14 h-14 rounded-full bg-[#eef3f0] flex items-center justify-center mb-4 group-hover:bg-[#5B8266] transition-colors duration-300">
-                    <i class="fas fa-shield-alt text-2xl text-[#5B8266] group-hover:text-white transition-colors duration-300"></i>
-                </div>
-                <h3 class="text-xl font-bold text-gray-800 mb-2">Frenos y Seguridad</h3>
-                <p class="text-gray-500 text-sm leading-relaxed">Tu seguridad es innegociable. Pastillas, discos, bandas y fluidos de la más alta exigencia para un frenado preciso.</p>
-            </div>
-            <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:-translate-y-2 hover:shadow-xl transition-all duration-300 cursor-pointer group">
-                <div class="w-14 h-14 rounded-full bg-[#eef3f0] flex items-center justify-center mb-4 group-hover:bg-[#5B8266] transition-colors duration-300">
-                    <i class="fas fa-oil-can text-2xl text-[#5B8266] group-hover:text-white transition-colors duration-300"></i>
-                </div>
-                <h3 class="text-xl font-bold text-gray-800 mb-2">Fluidos y Accesorios</h3>
-                <p class="text-gray-500 text-sm leading-relaxed">El mantenimiento preventivo que prolonga la vida de tu motor. Lubricantes, aceites, químicos y herramientas esenciales.</p>
-            </div>
-            <div class="bg-[#5B8266] rounded-xl p-6 shadow-md flex flex-col justify-center items-center text-center hover:bg-[#4a6b54] transition-colors duration-300">
-                <i class="fab fa-whatsapp text-4xl text-white mb-3"></i>
-                <h3 class="text-xl font-bold text-white mb-2">¿No encuentras tu repuesto?</h3>
-                <p class="text-green-100 text-sm mb-4">Nuestro equipo de expertos te asesora de inmediato.</p>
-                <a href="https://wa.me/584120161036" target="_blank" class="bg-white text-[#5B8266] font-bold py-2 px-6 rounded-full text-sm hover:scale-105 transition-transform">
-                    Escríbenos Ahora
-                </a>
-            </div>
+        </div>
+        <div class="rounded-xl overflow-hidden shadow-2xl h-[400px]">
+            <img src="img/otras-categorias.jpg" alt="Equipo F&B Parts" class="w-full h-full object-cover">
         </div>
     </section>
 
-    <section class="block" style="background-color: #fdfdfd; padding: 40px 0;">
-        <div class="container px-4 md:px-8">
-            <h2 class="section-title" style="text-align: center; margin-bottom: 5px;">RESEÑAS DE CLIENTES</h2>
-            <p style="text-align: center; color: #666; margin-bottom: 25px; font-size: 14px;">Lo que opinan quienes confían en nuestros repuestos.</p>
-            
-            <div class="testimonials-grid">
-                <div class="testimonial-card">
-                    <div>
-                        <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
-                        <p class="testimonial-text">“Servicio muy rápido, excelentes precios, atención profesional y amplia gama de repuestos originales.”</p>
+    <!-- PROPUESTA CORPORATIVA (B2B) -->
+    <section class="bg-[#f8fafc] py-16">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4" style="font-family: 'Oswald', sans-serif;">
+                SOLUCIONES CORPORATIVAS
+            </h2>
+            <p class="text-gray-600 max-w-2xl mx-auto mb-12 text-lg">
+                Generamos confianza y respaldamos las operaciones de tu empresa. Si manejas una flota de vehículos de carga o corporativos, somos tu socio ideal.
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-8">
+                <div class="bg-white p-8 rounded-xl shadow-sm border border-gray-100 hover:-translate-y-2 transition-transform duration-300">
+                    <div class="w-16 h-16 rounded-full bg-[#E8F0EA] flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-handshake text-3xl text-[#5B8266]"></i>
                     </div>
-                    <div class="testimonial-author">Lux Motors, Caracas VE</div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-3">Atención Prioritaria B2B</h3>
+                    <p class="text-gray-500">Un ejecutivo de cuentas dedicado exclusivamente a las necesidades de tu empresa y respuestas inmediatas a cotizaciones.</p>
                 </div>
-
-                <div class="testimonial-card">
-                    <div>
-                        <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
-                        <p class="testimonial-text">“Excelente atención, buenos precios, personal calificado para dar la mejor asesoría y muy puntuales con las entregas.”</p>
+                <div class="bg-white p-8 rounded-xl shadow-sm border border-gray-100 hover:-translate-y-2 transition-transform duration-300">
+                    <div class="w-16 h-16 rounded-full bg-[#E8F0EA] flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-box-open text-3xl text-[#5B8266]"></i>
                     </div>
-                    <div class="testimonial-author">Maria Romero, Caracas VE</div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-3">Ventas al Mayor</h3>
+                    <p class="text-gray-500">Descuentos especiales por volumen y acuerdos comerciales a largo plazo para asegurar el mantenimiento de tus flotas.</p>
                 </div>
-
-                <div class="testimonial-card">
-                    <div>
-                        <div class="testimonial-stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
-                        <p class="testimonial-text">“Buena atención, personas responsables y puntuales. Me vendieron exactamente el repuesto que solicité sin demoras.”</p>
+                <div class="bg-white p-8 rounded-xl shadow-sm border border-gray-100 hover:-translate-y-2 transition-transform duration-300">
+                    <div class="w-16 h-16 rounded-full bg-[#E8F0EA] flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-truck-fast text-3xl text-[#5B8266]"></i>
                     </div>
-                    <div class="testimonial-author">Luisa Ruiz, Caracas VE</div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-3">Logística y Entregas</h3>
+                    <p class="text-gray-500">Despachos programados, envíos nacionales seguros y delivery gratis en Caracas para clientes corporativos aliados.</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <section class="block" style="background-color: #f4f6f3; padding: 40px 0;">
-        <div class="container px-4 md:px-8">
-            <h2 class="section-title" style="text-align: center; margin-bottom: 5px;">PREGUNTAS FRECUENTES</h2>
-            <p style="text-align: center; color: #666; margin-bottom: 25px; font-size: 14px;">Todo lo que necesitas saber sobre nuestras compras y envíos.</p>
-            
-            <div class="faq-grid">
-                <div class="faq-item">
-                    <h4>¿Ofrecen delivery de repuestos en Caracas?</h4>
-                    <p>Sí, contamos con servicio de delivery rápido en la Gran Caracas. (Ciertas condiciones aplican según la zona).</p>
-                </div>
-                <div class="faq-item">
-                    <h4>¿Hacen envíos a toda Venezuela?</h4>
-                    <p>Sí, realizamos envíos nacionales seguros a través de empresas de encomienda confiables como Tealca, MRW y Zoom.</p>
-                </div>
-                <div class="faq-item">
-                    <h4>¿Qué métodos de pago aceptan?</h4>
-                    <p>Aceptamos múltiples métodos de pago: Pago Móvil, efectivo en divisas, transferencias bancarias (Banesco, BNC, BVC, Bancamiga) y Binance.</p>
-                </div>
-                <div class="faq-item">
-                    <h4>¿Los repuestos y autopartes son originales?</h4>
-                    <p>Sí, somos especialistas en la comercialización y optimización de repuestos y autopartes originales y de alta calidad para marcas como Toyota, Ford, Dongfeng, Mazda y Honda.</p>
-                </div>
-            </div>
+    <!-- CALL TO ACTION -->
+    <section class="max-w-4xl mx-auto px-4 py-16 text-center">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6" style="font-family: 'Oswald', sans-serif;">
+            ¿Listo para trabajar con los expertos?
+        </h2>
+        <div class="flex flex-col sm:flex-row justify-center gap-4">
+            <a href="tienda.html" class="bg-[#5B8266] text-white font-bold py-3 px-8 rounded-full hover:bg-[#4A6B53] transition-colors shadow-lg">
+                <i class="fas fa-store mr-2"></i> Ver Catálogo
+            </a>
+            <a href="https://wa.me/584120161036" target="_blank" class="bg-white text-[#5B8266] border-2 border-[#5B8266] font-bold py-3 px-8 rounded-full hover:bg-gray-50 transition-colors shadow-sm">
+                <i class="fab fa-whatsapp text-lg mr-2"></i> Asesoría Corporativa
+            </a>
         </div>
     </section>
-
-    <section id="mercadolibre" class="block categories">
-        <div class="container px-4 md:px-8">
-            <h2 class="section-title" style="text-align: center;">CATÁLOGO MERCADO LIBRE</h2>
-
-            <div class="about-box" style="max-width: 800px; margin: 0 auto; text-align: center;">
-                <p>Explora todas nuestras publicaciones activas y repuestos disponibles directamente en nuestra tienda oficial de Mercado Libre.</p>
-                <p style="margin-top: 20px;">
-                    <a href="https://listado.mercadolibre.com.ve/_CustId_1156015281_NoIndex_True" target="_blank" style="display:inline-block; background:#ffe600; color:#333; padding:14px 25px; text-decoration:none; font-family:'Oswald', sans-serif; font-size: 16px; font-weight: bold; letter-spacing:.05em; border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.08);">
-                        <i class="fas fa-handshake" style="margin-right: 8px;"></i> IR A NUESTRA TIENDA DE MERCADO LIBRE
-                    </a>
-                </p>
-            </div>
-        </div>
-    </section>
-
-    <section id="contacto" class="block categories">
-        <div class="container px-4 md:px-8">
-            <h2 class="section-title" style="text-align: center;">CONTACTOS</h2>
-
-            <div class="contact-grid">
-                <div class="contact-box">
-                    <h3>CONTACTOS</h3>
-                    <p style="margin-bottom: 25px;">
-                        <strong style="font-size: 18px;">Sede Principal</strong><br>
-                        Gran Caracas, Distrito Capital, Venezuela<br>
-                        <span style="font-size: 13px; color: #777;">(Operamos con envíos y entregas personales acordadas)</span>
-                    </p>
-                    <p style="font-size: 18px; margin: 15px 0;">0212 - 551 - 3003</p>
-                    <p style="font-size: 18px; margin: 15px 0;">0412 - 016 - 1036</p>
-                    <p style="font-size: 18px; margin: 15px 0;">0424 - 200 - 4842</p>
-                    
-                    <p style="margin-top: 25px;">
-                        <strong style="font-size: 18px;">Horarios de Atención</strong><br>
-                        Lunes - viernes: 9:00 am – 4:00 pm<br>
-                        Sábados: 9:00 am – 1:00 pm
-                    </p>
-                    
-                    <p style="margin-top: auto; padding-top: 15px;">
-                        <a href="mailto:fybinversiones.ccs@gmail.com" style="color: #5b8743; text-decoration: none; font-size: 18px;">fybinversiones.ccs@gmail.com</a>
-                    </p>
-                </div>
-
-                <div class="contact-box">
-                    <h3>UBICACIÓN</h3>
-                    <div class="map-wrap">
-                        <iframe
-                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d125531.06646580665!2d-66.99346618174488!3d10.468698801869894!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c2a58adcd824807%3A0x93dd2eae0a998483!2sCaracas%2C%20Distrito%20Capital!5e0!3m2!1ses-419!2sve!4v1700000000000!5m2!1ses-419!2sve"
-                            allowfullscreen=""
-                            loading="lazy"
-                            referrerpolicy="no-referrer-when-downgrade">
-                        </iframe>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
     <!-- FOOTER GLOBAL -->
     <footer style="background-color: #000; color: #fff; text-align: center; padding: 25px 0; position: relative; margin-top: 50px;">
         <p class="oswald" style="margin: 0; font-size: 16px; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 5px;">
