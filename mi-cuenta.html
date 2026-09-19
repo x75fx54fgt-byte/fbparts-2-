@@ -77,23 +77,24 @@
         <span>TUS DATOS Y SEGUIMIENTO DE ENVIOS</span>
     </div>
 
-    <header>
-        <div class="container header-wrap">
-            <a class="logo" href="index.html">
-                <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="LOGO F&B PARTS">
+        <header style="background: white; border-bottom: 1px solid #eee; position: relative;">
+        <div class="container header-wrap" style="padding: 15px 20px; max-width: 1350px; display: flex; justify-content: space-between; align-items: center;">
+            <a class="logo" href="index.html" style="display: flex; align-items: center;">
+                <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logotipo F&B PARTS" decoding="async" style="height: 60px;">
             </a>
-
-            <nav>
-                <a href="index.html">Inicio</a>
-                <a href="tienda.html">Tienda</a>
-                <a href="mi-cuenta.html" style="color: #000; font-weight: bold;">Mi Cuenta</a>
+            
+            <nav id="nav-principal">
+                <a href="index.html" onclick="toggleMenuMobile()">Inicio</a>
+                <a href="tienda.html" onclick="toggleMenuMobile()">Repuestos</a>
+                <a href="quienes-somos.html" onclick="toggleMenuMobile()">Quienes somos</a>
+                <a href="index.html#mercadolibre" onclick="toggleMenuMobile()">Mercado Libre</a>
+                <a href="index.html#contacto" onclick="toggleMenuMobile()">Contacto</a>
+                <a href="login.html" id="nav-cuenta-btn" style="color: var(--green); font-weight: bold; border-bottom: 2px solid var(--green); padding-bottom: 5px;"><i class="fas fa-user"></i> Mi Cuenta</a>
             </nav>
 
-            <div class="header-right">
-                <a class="call-btn" href="tienda.html">
-                    <i class="fas fa-shopping-cart"></i> COMPRAR 
-                </a>
-            </div>
+            <button class="mobile-menu" aria-label="Menú" onclick="toggleMenuMobile()" style="margin: 0; margin-left: auto;">
+                <i class="fas fa-bars"></i>
+            </button>
         </div>
     </header>
 
@@ -149,7 +150,7 @@
     <!-- 🛒 BOTÓN CARRITO FLOTANTE (Oculto si está vacío) -->
     <!-- ========================================== -->
     <div id="btn-flotante-carrito-micuenta" style="position: fixed; bottom: 100px; right: 25px; z-index: 99998; width: 60px; height: 60px; display: none;">
-        <button onclick="window.location.href='tienda.html'" style="background: #fff; color: #385723; border: 2px solid #385723; width: 100%; height: 100%; border-radius: 50%; cursor: pointer; font-size: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; padding: 0; margin: 0; position: relative;" title="Ir a Pagar">
+        <button onclick="window.location.href='tienda.html'" style="background: #fff; color: #5e8877; border: 2px solid #5e8877; width: 100%; height: 100%; border-radius: 50%; cursor: pointer; font-size: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; padding: 0; margin: 0; position: relative;" title="Ir a Pagar">
             <i class="fas fa-shopping-cart"></i>
         </button>
         <span id="cart-badge-micuenta" style="position: absolute; top: -6px; right: -6px; background: #ff4d4d; color: white; font-size: 13px; font-weight: bold; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; pointer-events: none; z-index: 99999; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">0</span>

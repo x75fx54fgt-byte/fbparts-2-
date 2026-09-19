@@ -26,20 +26,20 @@
     <style>
         body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f8f8f8; display: flex; flex-direction: column; min-height: 100vh; margin: 0; }
         .breadcrumb-nav { max-width: 1100px; margin: 20px auto 0 auto; padding: 0 20px; width: 100%; box-sizing: border-box; font-size: 14px; color: #666; }
-        .breadcrumb-nav a { color: #385723; text-decoration: none; font-weight: bold; }
+        .breadcrumb-nav a { color: #5e8877; text-decoration: none; font-weight: bold; }
         .breadcrumb-nav a:hover { text-decoration: underline; }
         .breadcrumb-nav span { color: #555; }
         .product-container { max-width: 1100px; margin: 20px auto; padding: 0 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; width: 100%; box-sizing: border-box; background: white; padding: 40px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,.05); }
         .product-img-box { width: 100%; height: 400px; background: #fff; display: flex; align-items: center; justify-content: center; border: 1px solid #eee; border-radius: 6px; overflow: hidden; }
         .product-img-box img { width: 100%; height: 100%; object-fit: contain; }
-        .product-details h1 { font-family: 'Oswald', sans-serif; color: #385723; font-size: 28px; margin-top: 0; margin-bottom: 15px; }
-        .product-price { font-size: 26px; color: #385723; font-weight: bold; font-family: 'Oswald', sans-serif; margin-bottom: 20px; }
+        .product-details h1 { font-family: 'Oswald', sans-serif; color: #5e8877; font-size: 28px; margin-top: 0; margin-bottom: 15px; }
+        .product-price { font-size: 26px; color: #5e8877; font-weight: bold; font-family: 'Oswald', sans-serif; margin-bottom: 20px; }
         .product-meta { font-size: 14px; color: #555; margin-bottom: 15px; line-height: 1.6; border-top: 1px solid #eee; border-bottom: 1px solid #eee; padding: 15px 0; }
-        .btn-add-cart-large { background: #385723; color: white; border: none; padding: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; width: 100%; transition: background 0.2s; font-family: 'Oswald', sans-serif; text-transform: uppercase; margin-top: 20px; }
-        .btn-add-cart-large:hover { background: #2c441b; }
+        .btn-add-cart-large { background: #5e8877; color: white; border: none; padding: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; width: 100%; transition: background 0.2s; font-family: 'Oswald', sans-serif; text-transform: uppercase; margin-top: 20px; }
+        .btn-add-cart-large:hover { background: #4d7162; }
         .btn-ml-large { background: #ffe600; color: #333; padding: 12px; border-radius: 6px; text-align: center; text-decoration: none; font-weight: bold; display: block; width: 100%; transition: 0.2s; box-sizing: border-box; font-size: 15px; font-family: 'Oswald', sans-serif; margin-top: 10px; }
         .related-section { max-width: 1100px; margin: 0 auto 50px auto; padding: 0 20px; width: 100%; box-sizing: border-box; }
-        .related-section h3 { font-family: 'Oswald', sans-serif; color: #385723; font-size: 22px; text-transform: uppercase; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+        .related-section h3 { font-family: 'Oswald', sans-serif; color: #5e8877; font-size: 22px; text-transform: uppercase; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
         .related-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
         
         @media (max-width: 900px) { .product-container { grid-template-columns: 1fr; padding: 20px; } .product-img-box { height: 280px; } .related-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } }
@@ -67,7 +67,7 @@
                 display: flex !important;
                 align-items: center;
                 justify-content: center;
-                background: #385723 !important;
+                background: #5e8877 !important;
                 color: white !important;
                 border: none;
                 padding: 10px 14px;
@@ -95,10 +95,10 @@
                 width: 100%;
                 text-align: left;
                 box-sizing: border-box;
-                color: #385723 !important; 
+                color: #5e8877 !important; 
                 font-weight: bold;
             }
-            header nav a i { color: #385723 !important; }
+            header nav a i { color: #5e8877 !important; }
         }
 
                 /* ========================================== */
@@ -117,8 +117,8 @@
         .cart-item-controls { display: flex; align-items: center; gap: 8px; }
         .btn-qty { background: #eee; border: none; width: 24px; height: 24px; border-radius: 4px; cursor: pointer; font-weight: bold; color: #333; }
         .btn-remove { background: #ff4d4d; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; }
-        .cart-total-box { border-top: 2px solid #385723; padding-top: 10px; margin-bottom: 15px; text-align: right; }
-        .cart-total-amount { font-size: 24px; color: #385723; font-weight: bold; font-family: 'Oswald', sans-serif; }
+        .cart-total-box { border-top: 2px solid #5e8877; padding-top: 10px; margin-bottom: 15px; text-align: right; }
+        .cart-total-amount { font-size: 24px; color: #5e8877; font-weight: bold; font-family: 'Oswald', sans-serif; }
         .btn-checkout-panel { background: #25D366; color: white; border: none; padding: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; width: 100%; transition: 0.2s; font-family: 'Oswald', sans-serif; text-align: center; text-decoration: none; display: block; }
         .btn-checkout-panel:hover { background: #1ebd5a; }
 
@@ -161,7 +161,7 @@
             
             <nav id="nav-principal">
                 <a href="index.html" onclick="toggleMenuMobile()">Inicio</a>
-                <a href="tienda.html" onclick="toggleMenuMobile()" style="color: #385723; font-weight: bold;">Tienda</a>
+                <a href="tienda.html" onclick="toggleMenuMobile()" style="color: #5e8877; font-weight: bold;">Tienda</a>
                 <a href="quienes-somos.html" onclick="toggleMenuMobile()">Quienes somos</a>
                 <a href="index.html#mercadolibre" onclick="toggleMenuMobile()">Mercado Libre</a>
                 <a href="index.html#contacto" onclick="toggleMenuMobile()">Contacto</a>
@@ -177,6 +177,7 @@
     <nav class="breadcrumb-nav" aria-label="Breadcrumb">
         <a href="index.html">Inicio</a> › 
         <a href="tienda.html">Tienda</a> › 
+        <a href="#" id="breadcrumb-category" style="display:none;"></a> <span id="breadcrumb-category-separator" style="display:none;">›</span> 
         <span id="breadcrumb-current">Cargando...</span>
     </nav>
 
@@ -198,7 +199,7 @@
 
         <!-- Botón Flotante del Carrito (CORREGIDO) -->
     <div onclick="toggleCartPanel()" style="position: fixed; bottom: 100px; right: 25px; z-index: 99998; cursor: pointer; width: 60px; height: 60px; transition: transform 0.2s;" aria-label="Ver mi pedido">
-        <div style="background: #fff; color: #385723; border: 2px solid #385723; width: 100%; height: 100%; border-radius: 50%; font-size: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center;">
+        <div style="background: #fff; color: #5e8877; border: 2px solid #5e8877; width: 100%; height: 100%; border-radius: 50%; font-size: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center;">
             <i class="fas fa-shopping-cart"></i>
         </div>
         <span id="cart-badge-producto" style="position: absolute; top: -5px; right: -5px; background: #ff4d4d; color: white; font-size: 13px; font-weight: bold; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; display: none; pointer-events: none;">0</span>
@@ -387,7 +388,7 @@
 
             <!-- Botón Flotante del Carrito (CORREGIDO) -->
         <div onclick="toggleCartPanel()" style="position: fixed; bottom: 100px; right: 25px; z-index: 99998; cursor: pointer; width: 60px; height: 60px; transition: transform 0.2s;" aria-label="Ver mi pedido">
-            <div style="background: #fff; color: #385723; border: 2px solid #385723; width: 100%; height: 100%; border-radius: 50%; font-size: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center;">
+            <div style="background: #fff; color: #5e8877; border: 2px solid #5e8877; width: 100%; height: 100%; border-radius: 50%; font-size: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center;">
                 <i class="fas fa-shopping-cart"></i>
             </div>
             <span id="cart-badge-producto" style="position: absolute; top: -5px; right: -5px; background: #ff4d4d; color: white; font-size: 13px; font-weight: bold; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; display: none; pointer-events: none;">0</span>
@@ -453,7 +454,7 @@
             const container = document.getElementById('product-details-container');
 
             if (!productId) {
-                container.innerHTML = '<div style="text-align:center; grid-column: 1/-1; padding: 40px;">Repuesto no especificado. <a href="tienda.html" style="color:#385723; font-weight:bold;">Volver a la tienda</a></div>';
+                container.innerHTML = '<div style="text-align:center; grid-column: 1/-1; padding: 40px;">Repuesto no especificado. <a href="tienda.html" style="color:#5e8877; font-weight:bold;">Volver a la tienda</a></div>';
                 return;
             }
 
@@ -462,11 +463,19 @@
                 const docSnap = await getDoc(docRef);
 
                 if (!docSnap.exists()) {
-                    container.innerHTML = '<div style="text-align:center; grid-column: 1/-1; padding: 40px;">El repuesto solicitado no existe o fue retirado. <a href="tienda.html" style="color:#385723; font-weight:bold;">Ir a la tienda</a></div>';
+                    container.innerHTML = '<div style="text-align:center; grid-column: 1/-1; padding: 40px;">El repuesto solicitado no existe o fue retirado. <a href="tienda.html" style="color:#5e8877; font-weight:bold;">Ir a la tienda</a></div>';
                     return;
                 }
 
                 const prod = docSnap.data();
+                
+                if (prod.categoria) {
+                    const catLink = document.getElementById('breadcrumb-category');
+                    catLink.textContent = prod.categoria;
+                    catLink.href = `tienda.html?cat=${encodeURIComponent(prod.categoria)}`;
+                    catLink.style.display = 'inline';
+                    document.getElementById('breadcrumb-category-separator').style.display = 'inline';
+                }
                 
                 document.getElementById('breadcrumb-current').textContent = prod.nombre;
 
@@ -510,10 +519,31 @@
                     "@type": "BreadcrumbList",
                     "itemListElement": [
                         { "@type": "ListItem", "position": 1, "name": "Inicio", "item": "https://www.fybparts.com/index.html" },
-                        { "@type": "ListItem", "position": 2, "name": "Tienda", "item": "https://www.fybparts.com/tienda.html" },
-                        { "@type": "ListItem", "position": 3, "name": prod.nombre, "item": window.location.href }
+                        { "@type": "ListItem", "position": 2, "name": "Tienda", "item": "https://www.fybparts.com/tienda.html" }
                     ]
                 };
+                
+                if (prod.categoria) {
+                    breadcrumbSchema.itemListElement.push({
+                        "@type": "ListItem",
+                        "position": 3,
+                        "name": prod.categoria,
+                        "item": `https://www.fybparts.com/tienda.html?cat=${encodeURIComponent(prod.categoria)}`
+                    });
+                    breadcrumbSchema.itemListElement.push({
+                        "@type": "ListItem",
+                        "position": 4,
+                        "name": prod.nombre,
+                        "item": window.location.href
+                    });
+                } else {
+                    breadcrumbSchema.itemListElement.push({
+                        "@type": "ListItem",
+                        "position": 3,
+                        "name": prod.nombre,
+                        "item": window.location.href
+                    });
+                }
 
                 const scriptBreadcrumb = document.createElement('script');
                 scriptBreadcrumb.type = "application/ld+json";
@@ -527,8 +557,18 @@
                     botonML = `<a href="https://articulo.mercadolibre.com.ve/${idML}" target="_blank" class="btn-ml-large"><i class="fas fa-handshake"></i> Ver esta pieza en Mercado Libre</a>`;
                 }
 
-                const safeName = prod.nombre.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                                const safeName = prod.nombre.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                 const stockTxt = prod.stock > 0 ? `<span style="color: #27ae60; font-weight: bold;">En Stock (${prod.stock} disponibles)</span>` : `<span style="color: #c0392b; font-weight: bold;">Agotado</span>`;
+                const numParteTxt = prod.numero_parte ? `<p style="margin: 5px 0;"><strong>Número de Parte / OEM:</strong> ${prod.numero_parte}</p>` : '';
+                const descTxt = prod.descripcion ? `<div style="margin: 15px 0; color: #444; font-size: 14px; line-height: 1.6; white-space: pre-wrap; font-family: inherit;">${prod.descripcion}</div>` : '<p style="margin: 10px 0; color: #888; font-size: 13px;">Sin descripción detallada para este repuesto. Contáctanos para mayor información de compatibilidad.</p>';
+                const catSubtitle = prod.categoria ? `F&B PARTS • ${prod.categoria.toUpperCase()}` : `F&B PARTS • AUTOPARTES ORIGINALES`;
+
+                container.innerHTML = `
+                    <div class="product-img-box">
+                        <img src="${prod.imagen}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png'">
+                    </div>
+                    <div class="product-details">
+                        <span style="font-size: 12px; color: #888; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">${catSubtitle}</span>` : `<span style="color: #c0392b; font-weight: bold;">Agotado</span>`;
                 const numParteTxt = prod.numero_parte ? `<p style="margin: 5px 0;"><strong>Número de Parte / OEM:</strong> ${prod.numero_parte}</p>` : '';
                 const descTxt = prod.descripcion ? `<div style="margin: 15px 0; color: #444; font-size: 14px; line-height: 1.6; white-space: pre-wrap; font-family: inherit;">${prod.descripcion}</div>` : '<p style="margin: 10px 0; color: #888; font-size: 13px;">Sin descripción detallada para este repuesto. Contáctanos para mayor información de compatibilidad.</p>';
 
@@ -640,9 +680,9 @@
                                 <div style="padding: 12px; display: flex; flex-direction: column; flex: 1;">
                                     <h4 style="font-size: 13px; color: #333; margin: 0 0 8px 0; font-weight: bold; flex: 1; line-height: 1.3;">${prod.nombre}</h4>
                             </a>
-                                    <div style="font-size: 16px; color: #385723; font-weight: bold; font-family: 'Oswald', sans-serif; margin-bottom: 10px;">$${Number(prod.precio).toFixed(2)}</div>
+                                    <div style="font-size: 16px; color: #5e8877; font-weight: bold; font-family: 'Oswald', sans-serif; margin-bottom: 10px;">$${Number(prod.precio).toFixed(2)}</div>
                                     <div style="margin-top: auto;">
-                                        <button type="button" onclick="window.location.href='${productUrl}'" style="background: #385723; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; font-size: 12px; transition: 0.2s;"><i class="fas fa-eye"></i> Ver Detalles</button>
+                                        <button type="button" onclick="window.location.href='${productUrl}'" style="background: #5e8877; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; font-size: 12px; transition: 0.2s;"><i class="fas fa-eye"></i> Ver Detalles</button>
                                     </div>
                                 </div>
                         </div>
