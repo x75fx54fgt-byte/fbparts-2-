@@ -108,7 +108,7 @@
         .cart-panel-overlay.active { display: flex; }
         .cart-sidebar-panel { background: white; width: 100%; max-width: 350px; height: 100%; padding: 20px; box-shadow: -4px 0 15px rgba(0,0,0,.1); display: flex; flex-direction: column; box-sizing: border-box; animation: slideIn 0.3s forwards; }
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
-        .cart-sidebar-panel h3 { color: #5b8743; font-family: 'Oswald', sans-serif; font-size: 20px; margin-top: 0; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .cart-sidebar-panel h3 { color: #5e8877; font-family: 'Oswald', sans-serif; font-size: 20px; margin-top: 0; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
         .cart-items-container { flex: 1; overflow-y: auto; margin-bottom: 10px; padding-right: 5px; }
         .cart-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 10px 0; font-size: 13px; }
         .cart-item-info { flex: 1; padding-right: 10px; }
@@ -213,10 +213,10 @@
         <div id="ai-chat-box" style="display: none; position: absolute; bottom: 75px; right: 0; width: 340px; max-width: calc(100vw - 50px); background: #fff; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); overflow: hidden; border: 1px solid #eee; flex-direction: column;">
             
             <!-- Encabezado -->
-            <div style="background: var(--green, #5b8743); color: white; padding: 15px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="background: var(--green, #5e8877); color: white; padding: 15px; display: flex; align-items: center; justify-content: space-between;">
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <div style="position: relative;">
-                        <div style="width: 38px; height: 38px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; color: var(--green, #5b8743); font-size: 20px;">
+                        <div style="width: 38px; height: 38px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; color: var(--green, #5e8877); font-size: 20px;">
                             <i class="fas fa-robot"></i>
                         </div>
                         <span style="position: absolute; bottom: 0; right: 0; width: 10px; height: 10px; background: #25D366; border: 2px solid white; border-radius: 50%;"></span>
@@ -231,7 +231,7 @@
 
             <!-- Área de Mensajes -->
             <div id="ai-chat-messages" style="height: 320px; overflow-y: auto; padding: 15px; background: #f4f6f4; display: flex; flex-direction: column; gap: 10px; font-size: 13px;">
-                <div style="align-self: flex-start; background: white; padding: 10px 14px; border-radius: 0 12px 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; border-left: 3px solid var(--green, #5b8743);">
+                <div style="align-self: flex-start; background: white; padding: 10px 14px; border-radius: 0 12px 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; border-left: 3px solid var(--green, #5e8877);">
                     <p style="margin: 0 0 5px 0;">¡Hola! 👋 Soy el <strong>Mecánico Inteligente</strong> de F&B Parts.</p>
                     <p style="margin: 0;">¿Tienes alguna falla en tu vehículo o buscas un repuesto en específico? Cuéntame y te asesoro.</p>
                 </div>
@@ -247,14 +247,14 @@
             <!-- Input del usuario -->
             <div style="padding: 10px 15px; background: #fafafa; border-top: 1px solid #eee; display: flex; gap: 8px; align-items: center;">
                 <input type="text" id="ai-chat-input" placeholder="Ej: Mi Yaris 2008 bota agua por debajo..." style="flex: 1; padding: 10px 15px; border: 1px solid #ddd; border-radius: 20px; outline: none; font-size: 13px;" onkeypress="handleAiChatKey(event)">
-                <button id="ai-chat-send-btn" onclick="enviarMensajeAi()" style="background: var(--green, #5b8743); color: white; border: none; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; flex-shrink: 0;">
+                <button id="ai-chat-send-btn" onclick="enviarMensajeAi()" style="background: var(--green, #5e8877); color: white; border: none; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; flex-shrink: 0;">
                     <i class="fas fa-paper-plane"></i>
                 </button>
             </div>
         </div>
 
         <!-- Botón Flotante -->
-        <button onclick="toggleAiChat()" id="ai-chat-fab" style="background: var(--green, #5b8743); color: white; border: none; width: 65px; height: 65px; border-radius: 50%; cursor: pointer; font-size: 28px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; transition: transform 0.2s;" aria-label="Abrir Asistencia">
+        <button onclick="toggleAiChat()" id="ai-chat-fab" style="background: var(--green, #5e8877); color: white; border: none; width: 65px; height: 65px; border-radius: 50%; cursor: pointer; font-size: 28px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; transition: transform 0.2s;" aria-label="Abrir Asistencia">
             <i class="fas fa-headset" id="ai-icon-toggle"></i>
         </button>
     </div>
@@ -274,7 +274,7 @@
             } else {
                 box.style.display = 'none';
                 icon.className = 'fas fa-headset';
-                fab.style.background = 'var(--green, #5b8743)'; 
+                fab.style.background = 'var(--green, #5e8877)'; 
             }
         }
 
@@ -295,7 +295,7 @@
             const btn = document.getElementById('ai-chat-send-btn');
 
             const userMsgHtml = `
-                <div style="align-self: flex-end; background: #f0f7f2; padding: 10px 14px; border-radius: 12px 0 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; color: #333; border-right: 3px solid var(--green, #5b8743);">
+                <div style="align-self: flex-end; background: #f0f7f2; padding: 10px 14px; border-radius: 12px 0 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; color: #333; border-right: 3px solid var(--green, #5e8877);">
                     <p style="margin: 0;">${mensaje}</p>
                 </div>
             `;
@@ -340,7 +340,7 @@
                 if(conversacionIA.length > 3) conversacionIA.shift(); 
 
                 const aiMsgHtml = `
-                    <div style="align-self: flex-start; background: white; padding: 10px 14px; border-radius: 0 12px 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; border-left: 3px solid var(--green, #5b8743); color: #333;">
+                    <div style="align-self: flex-start; background: white; padding: 10px 14px; border-radius: 0 12px 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; border-left: 3px solid var(--green, #5e8877); color: #333;">
                         <p style="margin: 0; white-space: pre-wrap; line-height: 1.5;">${respuestaFinal.replace(/\*\*/g, '')}</p>
                     </div>
                 `;
