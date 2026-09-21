@@ -1027,7 +1027,14 @@
             <div id="tab-historial-facturas" class="tab-content">
                 <div class="admin-header">
                     <h2>Historial y Base de Datos de Facturas</h2>
-                    <button class="refresh-btn" onclick="cargarHistorialFacturas()"><i class="fas fa-sync-alt"></i> Actualizar</button>
+                    <div>
+                        <select id="filtro-tipo-factura" onchange="filtrarTipoFactura()" style="padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; outline: none; cursor: pointer; margin-right: 10px; font-family: 'Oswald', sans-serif;">
+                            <option value="todas">Mostrar Todos los Documentos</option>
+                            <option value="fiscales">Solo Facturas Fiscales (Sin N)</option>
+                            <option value="nofiscales">Solo Notas de Entrega (Terminan en N)</option>
+                        </select>
+                        <button class="refresh-btn" onclick="cargarHistorialFacturas()"><i class="fas fa-sync-alt"></i> Actualizar</button>
+                    </div>
                 </div>
 
                 <div style="overflow-x: auto;">
@@ -4102,6 +4109,8 @@
                 document.getElementById('fac-nro').value = String(nextNro).padStart(4, '0');
                 window.actualizarPreviewFactura();
                 
+                if (typeof window.filtrarTipoFactura === 'function') window.filtrarTipoFactura();
+                
             } catch (error) { console.error(error); }
         };
 
@@ -6940,6 +6949,31 @@
             }
         };
 
+        window.filtrarTipoFactura = function() {
+            const filtro = document.getElementById('filtro-tipo-factura').value;
+            const filas = document.querySelectorAll('#facturas-table-body tr');
+            
+            filas.forEach(fila => {
+                // Evitar filtrar la fila de "Cargando..."
+                if (fila.cells.length < 2) return; 
+                
+                const tdNro = fila.querySelector('td:first-child');
+                if (!tdNro) return;
+                
+                const textoNro = tdNro.textContent.trim().toUpperCase();
+                const tieneN = textoNro.includes('N');
+                
+                if (filtro === 'todas') {
+                    fila.style.display = 'table-row';
+                } else if (filtro === 'fiscales') {
+                    // Mostrar si NO tiene N
+                    fila.style.display = tieneN ? 'none' : 'table-row';
+                } else if (filtro === 'nofiscales') {
+                    // Mostrar si SÍ tiene N
+                    fila.style.display = tieneN ? 'table-row' : 'none';
+                }
+            });
+        };
     </script>
 </body>
 </html>
