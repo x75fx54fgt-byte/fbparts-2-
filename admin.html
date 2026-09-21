@@ -1030,8 +1030,9 @@
                     <div>
                         <select id="filtro-tipo-factura" onchange="filtrarTipoFactura()" style="padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; outline: none; cursor: pointer; margin-right: 10px; font-family: 'Oswald', sans-serif;">
                             <option value="todas">Mostrar Todos los Documentos</option>
-                            <option value="fiscales">Solo Facturas Fiscales (Sin N)</option>
-                            <option value="nofiscales">Solo Notas de Entrega (Terminan en N)</option>
+                            <option value="fiscales">Facturas Fiscales (Activas)</option>
+                            <option value="nofiscales">Notas de Entrega (No Fiscales)</option>
+                            <option value="anuladas">Anuladas / Notas de Crédito</option>
                         </select>
                         <button class="refresh-btn" onclick="cargarHistorialFacturas()"><i class="fas fa-sync-alt"></i> Actualizar</button>
                     </div>
@@ -6950,30 +6951,45 @@
         };
 
         window.filtrarTipoFactura = function() {
-            const filtro = document.getElementById('filtro-tipo-factura').value;
-            const filas = document.querySelectorAll('#facturas-table-body tr');
-            
-            filas.forEach(fila => {
-                // Evitar filtrar la fila de "Cargando..."
-                if (fila.cells.length < 2) return; 
-                
-                const tdNro = fila.querySelector('td:first-child');
-                if (!tdNro) return;
-                
-                const textoNro = tdNro.textContent.trim().toUpperCase();
-                const tieneN = textoNro.includes('N');
-                
-                if (filtro === 'todas') {
-                    fila.style.display = 'table-row';
-                } else if (filtro === 'fiscales') {
-                    // Mostrar si NO tiene N
-                    fila.style.display = tieneN ? 'none' : 'table-row';
-                } else if (filtro === 'nofiscales') {
-                    // Mostrar si SÍ tiene N
-                    fila.style.display = tieneN ? 'table-row' : 'none';
-                }
-            });
-        };
+    const filtro = document.getElementById('filtro-tipo-factura').value;
+    const filas = document.querySelectorAll('#facturas-table-body tr');
+    
+    filas.forEach(fila => {
+        // Evitar filtrar la fila vacía o de carga
+        if (fila.cells.length < 2) return; 
+        
+        const tdNro = fila.querySelector('td:first-child');
+        if (!tdNro) return;
+        
+        const textoCeldaNro = tdNro.textContent.toUpperCase();
+        const textoFilaCompleta = fila.textContent.toUpperCase();
+        
+        // Aislar SOLO el número (Ej: #00000625N o #00000615) usando Regex
+        const coincidencia = textoCeldaNro.match(/#[0-9]+[A-Z]?/);
+        const numeroPrincipal = coincidencia ? coincidencia[0] : "";
+        
+        // Lógica estricta
+        const esNotaEntrega = numeroPrincipal.endsWith('N');
+        const esAnuladaONC = textoFilaCompleta.includes('N/C') || textoFilaCompleta.includes('ANULADA');
+        
+        let mostrar = false;
+        
+        if (filtro === 'todas') {
+            mostrar = true;
+        } else if (filtro === 'fiscales') {
+            // Es fiscal activa si NO es nota de entrega y NO está anulada ni tiene N/C
+            mostrar = !esNotaEntrega && !esAnuladaONC;
+        } else if (filtro === 'nofiscales') {
+            // Solo notas de entrega puras
+            mostrar = esNotaEntrega;
+        } else if (filtro === 'anuladas') {
+            // Solo anuladas o con Nota de Crédito
+            mostrar = esAnuladaONC;
+        }
+        
+        fila.style.display = mostrar ? 'table-row' : 'none';
+    });
+};
     </script>
 </body>
 </html>
