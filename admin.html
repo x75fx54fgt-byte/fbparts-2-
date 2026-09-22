@@ -5591,11 +5591,9 @@
         if (fila.cells.length < 5) return; // Omitir filas de carga o vacías
 
         // 1. Obtener número y cliente limpiando saltos de línea
-        const nroFila = fila.cells[0].textContent.trim().split('
-')[0];
+        const nroFila = fila.cells[0].textContent.trim().split('\n')[0];
         const fechaStr = fila.cells[1].textContent.trim();
-        const clienteStr = fila.cells[2].textContent.trim().split('
-')[0];
+        const clienteStr = fila.cells[2].textContent.trim().split('\n')[0];
 
         // 2. Obtener el valor REAL seleccionado en el menú desplegable (NO el textContent de la celda)
         const selectEstatus = fila.querySelector('td:nth-child(4) select');
