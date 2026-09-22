@@ -1526,8 +1526,8 @@
                             </div>
                         </div>
 
-                        <div style="background: #eef4f8; border: 1px solid #b8daff; border-radius: 6px; padding: 15px; margin-top: 15px;">
-                            <h4 style="margin-top: 0; color: #1d6fa5; font-family: 'Oswald', sans-serif;"><i class="fas fa-chart-line"></i> Resumen de Ganancias</h4>
+                        <div style="background: #f4f8f5; border: 1px solid #e2f0d9; border-radius: 6px; padding: 15px; margin-top: 15px;">
+                            <h4 style="margin-top: 0; color: #385723; font-family: 'Oswald', sans-serif;"><i class="fas fa-chart-line"></i> Resumen de Ganancias</h4>
                             
                             <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-bottom: 5px;">
                                 <strong>Ganancia Bruta:</strong>
@@ -1538,8 +1538,8 @@
                                 <span id="rev-res-tercero" style="color: #d9534f;">$0.00 | Bs.0.00 | €0.00</span>
                             </div>
                             <div style="display: flex; justify-content: space-between; font-size: 16px;">
-                                <strong style="color: #28a745;">Neta Empresa:</strong>
-                                <strong id="rev-res-neta" style="color: #28a745;">$0.00 | Bs.0.00 | €0.00</strong>
+                                <strong style="color: #385723;">Neta Empresa:</strong>
+                                <strong id="rev-res-neta" style="color: #385723;">$0.00 | Bs.0.00 | €0.00</strong>
                             </div>
                         </div>
 
@@ -7341,7 +7341,7 @@
                             <td>$${(rev.ventaUSD || 0).toFixed(2)}<br><span style="font-size:10px; color:#666;">Bs.${ventaVES}</span></td>
                             <td>$${costoTotal.toFixed(2)}</td>
                             <td>${rev.intermediario || 'N/A'}<br><span style="color: #d9534f; font-weight: bold;">$${(rev.comisionTerceroUSD || 0).toFixed(2)}</span></td>
-                            <td><span style="color: #28a745; font-weight: bold;">$${(rev.gananciaNetaUSD || 0).toFixed(2)}</span><br><span style="font-size:10px; color:#666;">Bs.${netaVES}</span></td>
+                            <td><span style="color: #385723; font-weight: bold;">$${(rev.gananciaNetaUSD || 0).toFixed(2)}</span><br><span style="font-size:10px; color:#666;">Bs.${netaVES}</span></td>
                             <td style="text-align: center; vertical-align: middle;">
                                 <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
                                     <button type="button" onclick="editarReventa('${rev.id}')" style="background:#1d6fa5; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;" title="Editar"><i class="fas fa-edit"></i></button>
@@ -7354,9 +7354,9 @@
                 
                 // Añadir fila de totales
                 html += `
-                    <tr style="background: #eef4f8; font-weight: bold; border-top: 2px solid #b8daff;">
-                        <td colspan="5" style="text-align: right;">TOTAL GANANCIA NETA GLOBAL:</td>
-                        <td colspan="2" style="color: #28a745; font-size: 16px;">$${totalNeta.toFixed(2)}</td>
+                    <tr style="background: #f4f8f5; font-weight: bold; border-top: 2px solid #385723;">
+                        <td colspan="5" style="text-align: right; color: #385723;">TOTAL GANANCIA NETA GLOBAL:</td>
+                        <td colspan="2" style="color: #385723; font-size: 16px;">$${totalNeta.toFixed(2)}</td>
                     </tr>
                 `;
                 
