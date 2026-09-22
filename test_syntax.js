@@ -129,6 +129,12 @@
                             timestamp: Date.now()
                         }));
                     } catch(e) {}
+                    
+                    if (!sessionStorage.getItem('audit_login_done')) {
+                        sessionStorage.setItem('audit_login_done', 'true');
+                        setTimeout(() => { if(window.registrarAuditoria) window.registrarAuditoria("LOGIN", "El usuario inició sesión en el panel."); }, 2000);
+                    }
+                    
                     desbloquearPanelAdmin("BAPA", "Administrador Maestro");
                 }
 
@@ -180,6 +186,7 @@
 
         window.cerrarSesion = function() {
             if(confirm("¿Estás seguro de que deseas cerrar sesión?")) {
+                if(window.registrarAuditoria) window.registrarAuditoria("LOGOUT", "El usuario cerró sesión en el panel.");
                 try {
                     localStorage.removeItem('fyb_admin_session');
                 } catch(e) {}
@@ -1248,9 +1255,11 @@
             try {
                 if(docId) {
                     await updateDoc(doc(db, "clientes", docId), dataCliente);
+                    if(window.registrarAuditoria) window.registrarAuditoria("EDITAR CLIENTE", "Se modificó el cliente: " + dataCliente.nombre + " (" + dataCliente.rif + ")");
                     alert("¡Cliente actualizado con éxito!");
                 } else {
                     await addDoc(collection(db, "clientes"), dataCliente);
+                    if(window.registrarAuditoria) window.registrarAuditoria("CREAR CLIENTE", "Se registró el cliente: " + dataCliente.nombre + " (" + dataCliente.rif + ")");
                     alert("¡Cliente registrado en la base de datos con éxito!");
                 }
                 window.cancelarEdicionCliente();
@@ -1351,7 +1360,13 @@
 
         window.eliminarClienteDB = async function(docId) {
             if(!confirm("¿Eliminar este cliente de la base de datos?")) return;
-            try { await deleteDoc(doc(db, "clientes", docId)); window.cargarBaseClientes(); } catch (error) { console.error(error); }
+            try { 
+                let c = window.clientesDBLocal ? window.clientesDBLocal[docId] : null;
+                let cname = c ? c.nombre : docId;
+                await deleteDoc(doc(db, "clientes", docId)); 
+                if(window.registrarAuditoria) window.registrarAuditoria("ELIMINAR CLIENTE", "Se eliminó el cliente: " + cname);
+                window.cargarBaseClientes(); 
+            } catch (error) { console.error(error); }
         };
 
         window.abrirEdicion = function(id, nombre, precio, stock, categoria, estado, imagen, numero_parte, descripcion) {
@@ -1387,6 +1402,7 @@
 
             try {
                 await updateDoc(doc(db, "productos", docId), datosActualizados);
+                if(window.registrarAuditoria) window.registrarAuditoria("EDITAR PRODUCTO", "Se modificó el producto: " + datosActualizados.nombre);
                 window.cerrarModalEdicion(); 
                 window.cargarCatalogoAdmin();
                 window.cargarDashboard();
@@ -1396,9 +1412,11 @@
 
         window.eliminarProducto = async function() {
             const docId = document.getElementById('edit-id').value;
+            const nombreProd = document.getElementById('edit-nombre').value;
             if(!confirm("¿Estás seguro de eliminar permanentemente este repuesto?")) return;
             try {
                 await deleteDoc(doc(db, "productos", docId));
+                if(window.registrarAuditoria) window.registrarAuditoria("ELIMINAR PRODUCTO", "Se eliminó el producto: " + nombreProd);
                 window.cerrarModalEdicion(); 
                 window.cargarCatalogoAdmin(); 
                 window.cargarDashboard();
@@ -2264,7 +2282,11 @@
                     btnEliminar.innerHTML = '<i class="fas fa-trash"></i>';
                     btnEliminar.addEventListener('click', async () => {
                         if(!confirm("¿Eliminar esta factura del historial?")) return;
-                        try { await deleteDoc(doc(db, "facturas", docId)); window.cargarHistorialFacturas(); window.cargarDashboard(); window.cargarFinanzas(); } catch (e) { alert("Error al eliminar."); }
+                        try { 
+                            await deleteDoc(doc(db, "facturas", docId)); 
+                            if(window.registrarAuditoria) window.registrarAuditoria("ELIMINAR FACTURA", "Se eliminó la factura número: " + fac.nro);
+                            window.cargarHistorialFacturas(); window.cargarDashboard(); window.cargarFinanzas(); 
+                        } catch (e) { alert("Error al eliminar."); }
                     });
 
                     tdAcciones.appendChild(btnEditar);
@@ -3428,6 +3450,15 @@
 
             try {
                 await updateDoc(doc(db, tipoDocumento, docId), dataUpdate);
+                if(window.registrarAuditoria) {
+                    if (tipoDocumento === 'facturas') {
+                        let fac = window.facturasDBLocal ? window.facturasDBLocal[docId] : null;
+                        let nro = fac ? fac.nro : docId;
+                        window.registrarAuditoria("CAMBIO DE ESTATUS FACTURA", "Factura #" + nro + " cambiada a: " + nuevoEstatus);
+                    } else if (tipoDocumento === 'cotizaciones') {
+                        window.registrarAuditoria("CAMBIO ESTATUS COTIZACIÓN", "Cotización ID " + docId + " cambiada a: " + nuevoEstatus);
+                    }
+                }
                 if (tipoDocumento === 'facturas') {
                     window.cargarHistorialFacturas(); 
                     window.cargarDashboard();
@@ -5395,9 +5426,10 @@ window.cargarHistorialFacturas = async function() {
                 let html = '';
                 logs.forEach(log => {
                     let colorAccion = "color: #333;";
-                    if (log.accion.includes("CREAR")) colorAccion = "color: #28a745;";
-                    if (log.accion.includes("EDITAR") || log.accion.includes("ACTUALIZAR")) colorAccion = "color: #1d6fa5;";
-                    if (log.accion.includes("ELIMINAR") || log.accion.includes("BORRAR")) colorAccion = "color: #d9534f;";
+                    let accionTexto = log.accion || "";
+                    if (accionTexto.includes("CREAR")) colorAccion = "color: #28a745;";
+                    if (accionTexto.includes("EDITAR") || accionTexto.includes("ACTUALIZAR")) colorAccion = "color: #1d6fa5;";
+                    if (accionTexto.includes("ELIMINAR") || accionTexto.includes("BORRAR")) colorAccion = "color: #d9534f;";
                     
                     html += `
                         <tr>
@@ -5412,7 +5444,7 @@ window.cargarHistorialFacturas = async function() {
                 
             } catch (error) {
                 console.error("Error al cargar auditoría:", error);
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: red;">Error cargando registros.</td></tr>';
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: red;">Error cargando registros: ${error.message}</td></tr>`;
             }
         };
 
@@ -5479,6 +5511,16 @@ window.cargarHistorialFacturas = async function() {
                 console.error(e);
                 alert("Error al guardar la operación.");
             }
+        };
+
+        window.eliminarReventa = async function(docId) {
+            if(!confirm("¿Eliminar esta operación de reventa?")) return;
+            try {
+                await deleteDoc(doc(db, "reventas_gastos", docId));
+                if(window.registrarAuditoria) window.registrarAuditoria("ELIMINAR REVENTA", "Se eliminó la reventa con ID: " + docId);
+                window.cargarHistorialReventas();
+                if(window.cargarDashboard) window.cargarDashboard();
+            } catch (error) { console.error(error); alert("Error al eliminar la reventa."); }
         };
 
         window.cargarHistorialReventas = async function() {
