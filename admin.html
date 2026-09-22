@@ -352,6 +352,23 @@
                 <div class="flex items-center gap-6">
                     <a href="index.html" class="text-sm font-medium opacity-90 hover:opacity-100 hover:underline transition"><i class="fas fa-globe mr-1"></i> Sitio Web</a>
                     <a href="tienda.html" class="text-sm font-medium opacity-90 hover:opacity-100 hover:underline transition"><i class="fas fa-shopping-cart mr-1"></i> Tienda</a>
+                    
+                    <!-- 🔔 Notificaciones de Cobranza -->
+                    <div class="relative" id="bell-container">
+                        <button id="btn-campana" class="relative hover:opacity-80 transition-opacity p-2 text-white" onclick="toggleNotificaciones()">
+                            <i class="fas fa-bell text-xl"></i>
+                            <span id="badge-notificaciones" class="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full hidden" style="transform: translate(20%, -10%);">0</span>
+                        </button>
+                        <div id="dropdown-notificaciones" class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl z-50 hidden text-gray-800 border border-gray-100">
+                            <div class="p-3 border-b border-gray-100 bg-gray-50 rounded-t-lg">
+                                <h4 class="font-bold text-sm text-brandDark m-0"><i class="fas fa-exclamation-circle text-orange-500"></i> Notificaciones de Cobranza</h4>
+                            </div>
+                            <ul id="lista-notificaciones" class="max-h-64 overflow-y-auto p-0 m-0 list-none">
+                                <!-- JS inyectará facturas aquí -->
+                            </ul>
+                        </div>
+                    </div>
+
                     <button onclick="cerrarSesion()" class="flex items-center gap-2 bg-red-500/20 text-red-50 hover:bg-red-500 hover:text-white px-4 py-2 rounded-lg font-bold transition border border-red-500/30 shadow-sm">
                         <i class="fas fa-sign-out-alt"></i> Salir
                     </button>
@@ -5546,6 +5563,93 @@
         };
 
         // ==========================================
+        // 🔔 NOTIFICACIONES DE COBRANZA
+        // ==========================================
+        window.toggleNotificaciones = function() {
+            const dropdown = document.getElementById('dropdown-notificaciones');
+            if (dropdown) dropdown.classList.toggle('hidden');
+        };
+
+        // Cerrar dropdown si hace clic afuera
+        document.addEventListener('click', function(event) {
+            const container = document.getElementById('bell-container');
+            const dropdown = document.getElementById('dropdown-notificaciones');
+            if (container && dropdown && !container.contains(event.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+
+        window.actualizarNotificacionesCobranza = async function() {
+            try {
+                const snap = await getDocs(collection(db, "facturas"));
+                let pendientes = [];
+                const hoy = new Date();
+                hoy.setHours(0,0,0,0);
+
+                snap.forEach(docSnap => {
+                    const fac = docSnap.data();
+                    const estatus = fac.estatus || "";
+                    
+                    // Factura a crédito que NO está pagada
+                    if (estatus.toLowerCase().includes("crédito") && !estatus.toLowerCase().includes("pagado")) {
+                        
+                        let diasTranscurridos = 0;
+                        if (fac.fecha) {
+                            const partes = fac.fecha.split('/');
+                            if (partes.length === 3) {
+                                // formato DD/MM/YYYY
+                                const fechaFac = new Date(partes[2], partes[1] - 1, partes[0]);
+                                const difTime = Math.abs(hoy - fechaFac);
+                                diasTranscurridos = Math.floor(difTime / (1000 * 60 * 60 * 24));
+                            }
+                        }
+                        
+                        pendientes.push({
+                            nro: fac.nro || "S/N",
+                            cliente: fac.cliente || "Sin Nombre",
+                            dias: diasTranscurridos,
+                            id: docSnap.id
+                        });
+                    }
+                });
+
+                const badge = document.getElementById('badge-notificaciones');
+                const lista = document.getElementById('lista-notificaciones');
+                
+                if (!badge || !lista) return;
+
+                if (pendientes.length > 0) {
+                    badge.textContent = pendientes.length;
+                    badge.classList.remove('hidden');
+                    
+                    // Ordenar: Las más viejas primero (mayor cantidad de días)
+                    pendientes.sort((a, b) => b.dias - a.dias);
+                    
+                    let html = '';
+                    pendientes.forEach(p => {
+                        let colorDias = p.dias > 15 ? 'text-red-500' : 'text-orange-500';
+                        // Al hacer clic, enviarlo a la pestaña de finanzas (CxC)
+                        html += `
+                            <li class="p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors" onclick="mostrarPestana('finanzas', document.querySelectorAll('.tab-btn')[1]); window.toggleNotificaciones();">
+                                <div class="flex justify-between items-start mb-1">
+                                    <strong class="text-brandDark text-sm">Factura #${p.nro}</strong>
+                                    <span class="text-xs font-bold ${colorDias}">${p.dias} días</span>
+                                </div>
+                                <div class="text-gray-500 text-xs truncate" title="${p.cliente}"><i class="fas fa-user mr-1"></i> ${p.cliente}</div>
+                            </li>
+                        `;
+                    });
+                    lista.innerHTML = html;
+                } else {
+                    badge.classList.add('hidden');
+                    lista.innerHTML = `<li class="p-4 text-center text-gray-500 text-sm"><i class="fas fa-check-circle text-green-500 text-2xl mb-2 block"></i><br>No hay cobros pendientes</li>`;
+                }
+            } catch (error) {
+                console.error("Error al actualizar notificaciones de cobranza:", error);
+            }
+        };
+
+        // ==========================================
         // 🚀 MOTOR DE ARRANQUE INICIAL
         // ==========================================
         window.panelIniciado = false;
@@ -5592,6 +5696,7 @@
             await runSafe('cargarHistorialReventas');
             
             await runSafe('cargarTasaBCV');
+            await runSafe('actualizarNotificacionesCobranza');
             await runSafe('cargarPuntosRuta');
             
             setTimeout(() => { 
