@@ -3707,9 +3707,7 @@ window.cargarHistorialFacturas = async function() {
             await runSafe('cargarHistorialFacturas');
             await runSafe('cargarHistorialImportaciones');
             await runSafe('cargarHistorialReventas');
-            await runSafe('cargarHistorialAuditoria');
             await runSafe('cargarHistorialReventas');
-            await runSafe('cargarHistorialAuditoria');
             
             await runSafe('cargarTasaBCV');
             await runSafe('cargarPuntosRuta');
@@ -5365,6 +5363,15 @@ window.cargarHistorialFacturas = async function() {
             } catch (error) {
                 console.error("Error registrando auditoría:", error);
             }
+        };
+
+        window.abrirModalAuditoria = function() {
+            document.getElementById('modal-auditoria').style.display = 'flex';
+            window.cargarHistorialAuditoria();
+        };
+        
+        window.cerrarModalAuditoria = function() {
+            document.getElementById('modal-auditoria').style.display = 'none';
         };
 
         window.cargarHistorialAuditoria = async function() {

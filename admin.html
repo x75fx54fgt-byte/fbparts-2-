@@ -319,7 +319,6 @@
                 <button class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium" onclick="mostrarPestana('historial-cotizaciones', this)"><i class="fas fa-folder-open w-5 text-gray-400"></i> Base de Cotizaciones</button>
                 <button class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium" onclick="mostrarPestana('importacion', this)"><i class="fas fa-calculator w-5 text-gray-400"></i> Landed Cost</button>
                 <button class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium" onclick="mostrarPestana('reventas', this)"><i class="fas fa-calculator w-5 text-gray-400"></i> Control de Reventas</button>
-                <button class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium" onclick="mostrarPestana('auditoria', this)"><i class="fas fa-shield-alt w-5 text-gray-400"></i> Auditoría Interna</button>
             </nav>
 
             <!-- Perfil (Fijo abajo) -->
@@ -353,6 +352,11 @@
                 <div class="flex items-center gap-6">
                     <a href="index.html" class="text-sm font-medium opacity-90 hover:opacity-100 hover:underline transition"><i class="fas fa-globe mr-1"></i> Sitio Web</a>
                     <a href="tienda.html" class="text-sm font-medium opacity-90 hover:opacity-100 hover:underline transition"><i class="fas fa-shopping-cart mr-1"></i> Tienda</a>
+                    
+                    <!-- 🛡️ Botón Auditoría Interna -->
+                    <button onclick="abrirModalAuditoria()" class="relative hover:opacity-80 transition-opacity p-2 text-white mr-2" title="Auditoría Interna">
+                        <i class="fas fa-shield-alt text-xl"></i>
+                    </button>
                     
                     <!-- 🔔 Notificaciones de Cobranza -->
                     <div class="relative" id="bell-container">
@@ -1591,33 +1595,7 @@
                 </div>
             </div>
 
-            <!-- PESTAÑA AUDITORIA -->
-            <div id="tab-auditoria" class="tab-content" style="display: none;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2 style="color: #385723; font-family: 'Oswald', sans-serif; font-size: 28px; margin: 0;"><i class="fas fa-shield-alt"></i> Historial de Auditoría y Cambios</h2>
-                    <button onclick="cargarHistorialAuditoria()" style="background: #385723; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                        <i class="fas fa-sync-alt"></i> Actualizar
-                    </button>
-                </div>
-                
-                <div style="background: white; border-radius: 8px; border: 1px solid #eee; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
-                    <div style="overflow-x: auto;">
-                        <table class="data-table" style="width: 100%; border-collapse: collapse;">
-                            <thead>
-                                <tr>
-                                    <th>Fecha / Hora</th>
-                                    <th>Usuario</th>
-                                    <th>Acción</th>
-                                    <th>Detalles del Cambio</th>
-                                </tr>
-                            </thead>
-                            <tbody id="auditoria-table-body">
-                                <tr><td colspan="4" style="text-align: center;">Cargando historial...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+            
 
         </div>
     </div> <!-- Cierre App Wrapper -->
@@ -5736,9 +5714,7 @@ window.cargarHistorialFacturas = async function() {
             await runSafe('cargarHistorialFacturas');
             await runSafe('cargarHistorialImportaciones');
             await runSafe('cargarHistorialReventas');
-            await runSafe('cargarHistorialAuditoria');
             await runSafe('cargarHistorialReventas');
-            await runSafe('cargarHistorialAuditoria');
             
             await runSafe('cargarTasaBCV');
             await runSafe('cargarPuntosRuta');
@@ -7396,6 +7372,15 @@ window.cargarHistorialFacturas = async function() {
             }
         };
 
+        window.abrirModalAuditoria = function() {
+            document.getElementById('modal-auditoria').style.display = 'flex';
+            window.cargarHistorialAuditoria();
+        };
+        
+        window.cerrarModalAuditoria = function() {
+            document.getElementById('modal-auditoria').style.display = 'none';
+        };
+
         window.cargarHistorialAuditoria = async function() {
             const tbody = document.getElementById('auditoria-table-body');
             if (!tbody) return;
@@ -7582,5 +7567,38 @@ window.cargarHistorialFacturas = async function() {
         };
 
     </script>
+
+    <!-- MODAL AUDITORIA INTERNA -->
+    <div id="modal-auditoria" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+        <div style="background: white; border-radius: 12px; width: 100%; max-width: 900px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+            <div style="background: #385723; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="margin: 0; font-family: 'Oswald', sans-serif; font-size: 22px;"><i class="fas fa-shield-alt"></i> Trazabilidad y Auditoría</h2>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="cargarHistorialAuditoria()" style="background: rgba(255,255,255,0.2); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: background 0.2s;"><i class="fas fa-sync-alt"></i> Actualizar</button>
+                    <button onclick="cerrarModalAuditoria()" style="background: transparent; border: none; color: white; font-size: 24px; line-height: 1; cursor: pointer;">&times;</button>
+                </div>
+            </div>
+            
+            <div style="padding: 20px; overflow-y: auto; flex: 1; background: #f4f8f5;">
+                <div style="background: white; border-radius: 8px; border: 1px solid #eee; overflow: hidden;">
+                    <div style="overflow-x: auto;">
+                        <table class="data-table" style="width: 100%; border-collapse: collapse; min-width: 600px;">
+                            <thead>
+                                <tr>
+                                    <th style="padding: 10px; background: #f9fafb; border-bottom: 2px solid #eee; text-align: left;">Fecha / Hora</th>
+                                    <th style="padding: 10px; background: #f9fafb; border-bottom: 2px solid #eee; text-align: left;">Usuario</th>
+                                    <th style="padding: 10px; background: #f9fafb; border-bottom: 2px solid #eee; text-align: left;">Acción</th>
+                                    <th style="padding: 10px; background: #f9fafb; border-bottom: 2px solid #eee; text-align: left;">Detalles del Cambio</th>
+                                </tr>
+                            </thead>
+                            <tbody id="auditoria-table-body">
+                                <tr><td colspan="4" style="text-align: center; padding: 20px;">Cargando historial...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
