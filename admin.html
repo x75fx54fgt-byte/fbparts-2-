@@ -357,7 +357,7 @@
                     <div class="relative" id="bell-container">
                         <button id="btn-campana" class="relative hover:opacity-80 transition-opacity p-2 text-white" onclick="toggleNotificaciones()">
                             <i class="fas fa-bell text-xl"></i>
-                            <span id="badge-notificaciones" class="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full hidden" style="transform: translate(20%, -10%);">0</span>
+                            
                         </button>
                         <div id="dropdown-notificaciones" class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl z-50 hidden text-gray-800 border border-gray-100">
                             <div class="p-3 border-b border-gray-100 bg-gray-50 rounded-t-lg">
@@ -5579,75 +5579,91 @@
             }
         });
 
-        window.actualizarNotificacionesCobranza = async function() {
-            try {
-                const snap = await getDocs(collection(db, "facturas"));
-                let pendientes = [];
-                const hoy = new Date();
-                hoy.setHours(0,0,0,0);
+        window.actualizarNotificacionesCobranza = function() {
+    const filas = document.querySelectorAll('#facturas-table-body tr');
+    const lista = document.getElementById('lista-notificaciones'); // Asegúrate de que este ID coincida con tu HTML
+    
+    let notificacionesHTML = '';
+    let contadorVencidas = 0;
+    const hoy = new Date();
 
-                snap.forEach(docSnap => {
-                    const fac = docSnap.data();
-                    const estatus = fac.estatus || "";
-                    
-                    // Factura a crédito que NO está pagada
-                    if (estatus.toLowerCase().includes("crédito") && !estatus.toLowerCase().includes("pagado")) {
-                        
-                        let diasTranscurridos = 0;
-                        if (fac.fecha) {
-                            const partes = fac.fecha.split('/');
-                            if (partes.length === 3) {
-                                // formato DD/MM/YYYY
-                                const fechaFac = new Date(partes[2], partes[1] - 1, partes[0]);
-                                const difTime = Math.abs(hoy - fechaFac);
-                                diasTranscurridos = Math.floor(difTime / (1000 * 60 * 60 * 24));
-                            }
-                        }
-                        
-                        pendientes.push({
-                            nro: fac.nro || "S/N",
-                            cliente: fac.cliente || "Sin Nombre",
-                            dias: diasTranscurridos,
-                            id: docSnap.id
-                        });
-                    }
-                });
+    filas.forEach(fila => {
+        if (fila.cells.length < 5) return; // Omitir filas de carga o vacías
 
-                const badge = document.getElementById('badge-notificaciones');
-                const lista = document.getElementById('lista-notificaciones');
+        // 1. Obtener número y cliente limpiando saltos de línea
+        const nroFila = fila.cells[0].textContent.trim().split('
+')[0];
+        const fechaStr = fila.cells[1].textContent.trim();
+        const clienteStr = fila.cells[2].textContent.trim().split('
+')[0];
+
+        // 2. Obtener el valor REAL seleccionado en el menú desplegable (NO el textContent de la celda)
+        const selectEstatus = fila.querySelector('td:nth-child(4) select');
+        if (!selectEstatus) return;
+        const estatusActivo = selectEstatus.options[selectEstatus.selectedIndex].text.toUpperCase();
+
+        // 3. Evaluar si es un crédito no pagado
+        if (estatusActivo.includes('CRÉDITO') && !estatusActivo.includes('PAGADO')) {
+            
+            // 4. Parsear fecha DD/MM/YYYY a un objeto Date válido
+            const partesFecha = fechaStr.split('/');
+            if (partesFecha.length === 3) {
+                // new Date(Año, Mes (0-11), Día)
+                const fechaFactura = new Date(partesFecha[2], partesFecha[1] - 1, partesFecha[0]);
                 
-                if (!badge || !lista) return;
-
-                if (pendientes.length > 0) {
-                    badge.textContent = pendientes.length;
-                    badge.classList.remove('hidden');
-                    
-                    // Ordenar: Las más viejas primero (mayor cantidad de días)
-                    pendientes.sort((a, b) => b.dias - a.dias);
-                    
-                    let html = '';
-                    pendientes.forEach(p => {
-                        let colorDias = p.dias > 15 ? 'text-red-500' : 'text-orange-500';
-                        // Al hacer clic, enviarlo a la pestaña de finanzas (CxC)
-                        html += `
-                            <li class="p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors" onclick="mostrarPestana('finanzas', document.querySelectorAll('.tab-btn')[1]); window.toggleNotificaciones();">
-                                <div class="flex justify-between items-start mb-1">
-                                    <strong class="text-brandDark text-sm">Factura #${p.nro}</strong>
-                                    <span class="text-xs font-bold ${colorDias}">${p.dias} días</span>
-                                </div>
-                                <div class="text-gray-500 text-xs truncate" title="${p.cliente}"><i class="fas fa-user mr-1"></i> ${p.cliente}</div>
-                            </li>
-                        `;
-                    });
-                    lista.innerHTML = html;
-                } else {
-                    badge.classList.add('hidden');
-                    lista.innerHTML = `<li class="p-4 text-center text-gray-500 text-sm"><i class="fas fa-check-circle text-green-500 text-2xl mb-2 block"></i><br>No hay cobros pendientes</li>`;
+                // Calcular diferencia en días exactos
+                const diferenciaTiempo = hoy.getTime() - fechaFactura.getTime();
+                const diasTranscurridos = Math.floor(diferenciaTiempo / (1000 * 3600 * 24));
+                
+                if (diasTranscurridos > 15) {
+                    contadorVencidas++;
+                    notificacionesHTML += `
+                        <li class="p-3 border-b border-gray-100 hover:bg-red-50 transition-colors cursor-default">
+                            <div class="text-sm">
+                                <strong class="text-red-600">${nroFila}</strong> - <span class="text-gray-800">${clienteStr}</span>
+                            </div>
+                            <div class="text-xs text-red-500 mt-1 font-semibold">
+                                <i class="fas fa-exclamation-triangle mr-1"></i> Vencida hace ${diasTranscurridos - 15} días (${diasTranscurridos} días desde emisión)
+                            </div>
+                        </li>`;
                 }
-            } catch (error) {
-                console.error("Error al actualizar notificaciones de cobranza:", error);
             }
-        };
+        }
+    });
+
+    // 5. Inyectar notificaciones en el menú desplegable
+    if (lista) {
+        lista.innerHTML = contadorVencidas > 0 ? notificacionesHTML : '<li class="p-4 text-gray-500 text-sm text-center">No hay cobros pendientes</li>';
+    }
+
+    // 6. Actualizar o crear el circulito rojo (badge) en la campana
+    const iconoCampana = document.querySelector('.fa-bell');
+    if (iconoCampana) {
+        const botonCampana = iconoCampana.parentElement;
+        let badge = botonCampana.querySelector('.badge-campana');
+        
+        if (!badge) {
+            // Crear el badge si no existe en el HTML
+            badge = document.createElement('span');
+            badge.className = 'badge-campana absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/4 -translate-y-1/4 bg-red-600 rounded-full';
+            botonCampana.appendChild(badge);
+        }
+        
+        if (contadorVencidas > 0) {
+            badge.textContent = contadorVencidas;
+            badge.style.display = 'inline-flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+};
+
+// Asegurar que la función se ejecute al terminar de cargar la tabla
+const originalCargarHistorial = window.cargarHistorialFacturas;
+window.cargarHistorialFacturas = async function() {
+    await originalCargarHistorial();
+    window.actualizarNotificacionesCobranza();
+};
 
         // ==========================================
         // 🚀 MOTOR DE ARRANQUE INICIAL
@@ -5696,7 +5712,6 @@
             await runSafe('cargarHistorialReventas');
             
             await runSafe('cargarTasaBCV');
-            await runSafe('actualizarNotificacionesCobranza');
             await runSafe('cargarPuntosRuta');
             
             setTimeout(() => { 
