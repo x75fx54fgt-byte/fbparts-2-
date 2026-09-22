@@ -734,7 +734,7 @@
                                     <th>Productos</th>
                                     <th>Total</th>
                                     <th>Logística y Envíos</th>
-                                    <th style="text-align: center;">Acción</th>
+                                    <th style="text-align: center; min-width: 100px;">Acción</th>
                                 </tr>
                             </thead>
                             <tbody id="orders-table-body">
@@ -815,7 +815,7 @@
                                     <th>Repuesto / Estado</th>
                                     <th>Categoría</th>
                                     <th>Precio / Stock</th>
-                                    <th style="text-align: center;">Acción</th>
+                                    <th style="text-align: center; min-width: 100px;">Acción</th>
                                 </tr>
                             </thead>
                             <tbody id="products-table-body">
@@ -874,7 +874,7 @@
                                     <th>RIF o C.I.</th>
                                     <th>Dirección</th>
                                     <th>Teléfono</th>
-                                    <th style="text-align: center;">Acción</th>
+                                    <th style="text-align: center; min-width: 100px;">Acción</th>
                                 </tr>
                             </thead>
                             <tbody id="clients-table-body">
@@ -1342,7 +1342,7 @@
                                     <th>FOB Total</th>
                                     <th>Gastos Logísticos</th>
                                     <th>Costo Landed Total</th>
-                                    <th style="text-align: center;">Acción</th>
+                                    <th style="text-align: center; min-width: 100px;">Acción</th>
                                 </tr>
                             </thead>
                             <tbody id="importaciones-table-body">
@@ -1472,7 +1472,7 @@
                                 <th>Fecha</th>
                                 <th>Motorizado</th>
                                 <th>Tarea (Punto Activo)</th>
-                                <th style="text-align: center;">Acción</th>
+                                <th style="text-align: center; min-width: 100px;">Acción</th>
                             </tr>
                         </thead>
                         <tbody id="tabla-puntos-rutas">
@@ -1561,7 +1561,7 @@
                                         <th>Costo Total</th>
                                         <th>Intermediario</th>
                                         <th>Neta Empresa</th>
-                                        <th style="text-align: center;">Acción</th>
+                                        <th style="text-align: center; min-width: 100px;">Acción</th>
                                     </tr>
                                 </thead>
                                 <tbody id="reventas-table-body">
@@ -7215,7 +7215,7 @@
                     
                     const btnGuardar = document.querySelector('#tab-reventas .btn-confirm-order');
                     if (btnGuardar) {
-                        btnGuardar.style.background = "#0275d8";
+                        btnGuardar.style.background = "#1d6fa5";
                         btnGuardar.innerHTML = '<i class="fas fa-edit"></i> Actualizar Operación';
                     }
                     
@@ -7342,9 +7342,11 @@
                             <td>$${costoTotal.toFixed(2)}</td>
                             <td>${rev.intermediario || 'N/A'}<br><span style="color: #d9534f; font-weight: bold;">$${(rev.comisionTerceroUSD || 0).toFixed(2)}</span></td>
                             <td><span style="color: #28a745; font-weight: bold;">$${(rev.gananciaNetaUSD || 0).toFixed(2)}</span><br><span style="font-size:10px; color:#666;">Bs.${netaVES}</span></td>
-                            <td style="text-align: center;">
-                                <button type="button" onclick="editarReventa('${rev.id}')" style="background:#0275d8; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; margin-right: 5px;" title="Editar"><i class="fas fa-edit"></i></button>
-                                <button type="button" onclick="eliminarReventa('${rev.id}')" style="background:#d9534f; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;" title="Eliminar"><i class="fas fa-trash"></i></button>
+                            <td style="text-align: center; vertical-align: middle;">
+                                <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
+                                    <button type="button" onclick="editarReventa('${rev.id}')" style="background:#1d6fa5; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;" title="Editar"><i class="fas fa-edit"></i></button>
+                                    <button type="button" onclick="eliminarReventa('${rev.id}')" style="background:#d9534f; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;" title="Eliminar"><i class="fas fa-trash"></i></button>
+                                </div>
                             </td>
                         </tr>
                     `;
