@@ -6961,16 +6961,16 @@
         const tdNro = fila.querySelector('td:first-child');
         if (!tdNro) return;
         
+        // REGLA CLAVE: Leer solo el texto de la PRIMERA columna para evitar leer el <select>
         const textoCeldaNro = tdNro.textContent.toUpperCase();
-        const textoFilaCompleta = fila.textContent.toUpperCase();
         
-        // Aislar SOLO el número (Ej: #00000625N o #00000615) usando Regex
+        // Aislar SOLO el número de control (Ej: #00000625N o #00000615)
         const coincidencia = textoCeldaNro.match(/#[0-9]+[A-Z]?/);
         const numeroPrincipal = coincidencia ? coincidencia[0] : "";
         
-        // Lógica estricta
+        // Lógica estricta aplicada solo a la primera columna
         const esNotaEntrega = numeroPrincipal.endsWith('N');
-        const esAnuladaONC = textoFilaCompleta.includes('N/C') || textoFilaCompleta.includes('ANULADA');
+        const esAnuladaONC = textoCeldaNro.includes('N/C') || textoCeldaNro.includes('ANULADA');
         
         let mostrar = false;
         
@@ -6981,13 +6981,14 @@
             mostrar = !esNotaEntrega && !esAnuladaONC;
         } else if (filtro === 'nofiscales') {
             // Solo notas de entrega puras
-            mostrar = esNotaEntrega;
+            mostrar = esNotaEntrega && !esAnuladaONC;
         } else if (filtro === 'anuladas') {
             // Solo anuladas o con Nota de Crédito
             mostrar = esAnuladaONC;
         }
         
-        fila.style.display = mostrar ? 'table-row' : 'none';
+        // Usar un string vacío en lugar de 'table-row' previene que se rompan las clases de Tailwind (Responsive)
+        fila.style.display = mostrar ? '' : 'none';
     });
 };
     </script>
