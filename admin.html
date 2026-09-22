@@ -7402,9 +7402,10 @@ window.cargarHistorialFacturas = async function() {
                 let html = '';
                 logs.forEach(log => {
                     let colorAccion = "color: #333;";
-                    if (log.accion.includes("CREAR")) colorAccion = "color: #28a745;";
-                    if (log.accion.includes("EDITAR") || log.accion.includes("ACTUALIZAR")) colorAccion = "color: #1d6fa5;";
-                    if (log.accion.includes("ELIMINAR") || log.accion.includes("BORRAR")) colorAccion = "color: #d9534f;";
+                    let accionTexto = log.accion || "";
+                    if (accionTexto.includes("CREAR")) colorAccion = "color: #28a745;";
+                    if (accionTexto.includes("EDITAR") || accionTexto.includes("ACTUALIZAR")) colorAccion = "color: #1d6fa5;";
+                    if (accionTexto.includes("ELIMINAR") || accionTexto.includes("BORRAR")) colorAccion = "color: #d9534f;";
                     
                     html += `
                         <tr>
@@ -7419,7 +7420,7 @@ window.cargarHistorialFacturas = async function() {
                 
             } catch (error) {
                 console.error("Error al cargar auditoría:", error);
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: red;">Error cargando registros.</td></tr>';
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: red;">Error cargando registros: ${error.message}</td></tr>`;
             }
         };
 
@@ -7571,7 +7572,7 @@ window.cargarHistorialFacturas = async function() {
     <!-- MODAL AUDITORIA INTERNA -->
     <div id="modal-auditoria" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
         <div style="background: white; border-radius: 12px; width: 100%; max-width: 900px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
-            <div style="background: #385723; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="background: #5B8266; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
                 <h2 style="margin: 0; font-family: 'Oswald', sans-serif; font-size: 22px;"><i class="fas fa-shield-alt"></i> Trazabilidad y Auditoría</h2>
                 <div style="display: flex; gap: 10px;">
                     <button onclick="cargarHistorialAuditoria()" style="background: rgba(255,255,255,0.2); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: background 0.2s;"><i class="fas fa-sync-alt"></i> Actualizar</button>
@@ -7585,10 +7586,10 @@ window.cargarHistorialFacturas = async function() {
                         <table class="data-table" style="width: 100%; border-collapse: collapse; min-width: 600px;">
                             <thead>
                                 <tr>
-                                    <th style="padding: 10px; background: #f9fafb; border-bottom: 2px solid #eee; text-align: left;">Fecha / Hora</th>
-                                    <th style="padding: 10px; background: #f9fafb; border-bottom: 2px solid #eee; text-align: left;">Usuario</th>
-                                    <th style="padding: 10px; background: #f9fafb; border-bottom: 2px solid #eee; text-align: left;">Acción</th>
-                                    <th style="padding: 10px; background: #f9fafb; border-bottom: 2px solid #eee; text-align: left;">Detalles del Cambio</th>
+                                    <th>Fecha / Hora</th>
+                                    <th>Usuario</th>
+                                    <th>Acción</th>
+                                    <th>Detalles del Cambio</th>
                                 </tr>
                             </thead>
                             <tbody id="auditoria-table-body">
