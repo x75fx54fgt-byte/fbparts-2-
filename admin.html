@@ -318,6 +318,7 @@
                 <button class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium" onclick="mostrarPestana('cotizaciones', this)"><i class="fas fa-file-invoice-dollar w-5 text-gray-400"></i> Crear Cotización</button>
                 <button class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium" onclick="mostrarPestana('historial-cotizaciones', this)"><i class="fas fa-folder-open w-5 text-gray-400"></i> Base de Cotizaciones</button>
                 <button class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium" onclick="mostrarPestana('importacion', this)"><i class="fas fa-calculator w-5 text-gray-400"></i> Landed Cost</button>
+                <button class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium" onclick="mostrarPestana('reventas', this)"><i class="fas fa-calculator w-5 text-gray-400"></i> Control de Reventas</button>
             </nav>
 
             <!-- Perfil (Fijo abajo) -->
@@ -334,7 +335,7 @@
         </aside>
 
         <!-- CONTENIDO PRINCIPAL -->
-        <div class="flex-1 flex flex-col h-full overflow-hidden">
+        <div class="flex-1 flex flex-col h-full overflow-hidden md:col-span-2 lg:col-span-2 xl:col-span-1">
             
             <!-- HEADER SUPERIOR LIMPIO -->
             <header class="h-[80px] bg-brand text-white flex items-center justify-between px-8 shadow-md shrink-0 z-10 transition-all duration-300">
@@ -373,7 +374,7 @@
                     </button>
                 </div>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
                     <!-- TARJETA 1: VENTAS -->
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
                         <div class="flex items-start justify-between mb-4">
@@ -394,7 +395,7 @@
                     </div>
 
                     <!-- TARJETA 2: CxC -->
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden md:col-span-2 lg:col-span-2 xl:col-span-1">
                         <div class="absolute top-0 left-0 w-1 h-full bg-orange-400"></div>
                         <div class="flex items-start justify-between mb-4">
                             <div class="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center">
@@ -414,7 +415,7 @@
                     </div>
 
                     <!-- TARJETA 3: CxP -->
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden md:col-span-2 lg:col-span-2 xl:col-span-1">
                         <div class="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
                         <div class="flex items-start justify-between mb-4">
                             <div class="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
@@ -434,7 +435,7 @@
                     </div>
 
                     <!-- TARJETA 4: INVENTARIO -->
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden md:col-span-2 lg:col-span-2 xl:col-span-1">
                         <div class="absolute top-0 left-0 w-1 h-full bg-cyan-500"></div>
                         <div class="flex items-start justify-between mb-4">
                             <div class="w-12 h-12 rounded-full bg-cyan-50 flex items-center justify-center">
@@ -448,6 +449,25 @@
                         </div>
                         <div class="mt-4 pt-4 border-t border-gray-50 flex justify-start text-xs text-gray-400 font-medium">
                             Calculado sobre stock disponible
+                        </div>
+                    </div>
+
+                    <!-- TARJETA 5: GANANCIA NETA -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden md:col-span-2 lg:col-span-2 xl:col-span-1">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-brandDark"></div>
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="w-12 h-12 rounded-full bg-brandDark/10 flex items-center justify-center">
+                                <i class="fas fa-wallet text-brandDark text-xl"></i>
+                            </div>
+                            <span class="text-xs font-semibold px-2 py-1 bg-brandDark/10 text-brandDark rounded-md">Mes Actual</span>
+                        </div>
+                        <div>
+                            <h4 class="text-gray-500 text-sm font-medium mb-1">Ganancia Neta</h4>
+                            <div class="text-3xl font-bold text-gray-900 mb-1">$<span id="dash-ganancia-usd">0.00</span></div>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-gray-50 flex justify-between text-xs text-gray-500 font-medium">
+                            <span class="flex flex-col"><span>VES</span> <b id="dash-ganancia-ves" class="text-gray-800 mt-0.5">0.00</b></span>
+                            <span class="flex flex-col"><span>EUR</span> <b id="dash-ganancia-eur" class="text-gray-800 mt-0.5">0.00</b></span>
                         </div>
                     </div>
                 </div>
@@ -1462,8 +1482,101 @@
                 </div>
             </div>
 
+            <!-- 🚀 PESTAÑA CONTROL DE REVENTAS -->
+            <div id="tab-reventas" class="tab-content">
+                <div class="admin-header">
+                    <h2>Control de Reventas y Comisiones</h2>
+                    <button class="refresh-btn" onclick="cargarHistorialReventas()"><i class="fas fa-sync-alt"></i> Actualizar Historial</button>
+                </div>
+
+                <div class="admin-grid">
+                    <!-- Formulario de Ingreso -->
+                    <div class="card-form">
+                        <h3><i class="fas fa-plus-circle"></i> Registrar Nueva Reventa</h3>
+                        <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div>
+                                <label>Descripción / Repuesto</label>
+                                <input type="text" id="rev-desc" placeholder="Ej: Venta de Motor Cummins" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+                            </div>
+                            <div>
+                                <label>Cliente Final</label>
+                                <input type="text" id="rev-cliente" placeholder="Ej: Transporte ABC" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Precio de Venta en $</label>
+                            <input type="number" id="rev-venta" placeholder="Ej: 1000" step="0.01" oninput="calcularReventa()" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+                        </div>
+                        <div class="form-group">
+                            <label>Costo de Compra al Proveedor en $</label>
+                            <input type="number" id="rev-costo" placeholder="Ej: 600" step="0.01" oninput="calcularReventa()" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+                        </div>
+                        <div class="form-group">
+                            <label>Gastos Operativos (envío, banco) en $</label>
+                            <input type="number" id="rev-gastos" placeholder="Ej: 50" step="0.01" oninput="calcularReventa()" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+                        </div>
+                        <div class="form-group" style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
+                            <div>
+                                <label>Nombre del Intermediario</label>
+                                <input type="text" id="rev-intermediario" placeholder="Ej: Pedro Pérez" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+                            </div>
+                            <div>
+                                <label>% Comisión</label>
+                                <input type="number" id="rev-porcentaje" value="50" step="0.1" oninput="calcularReventa()" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+                            </div>
+                        </div>
+
+                        <div style="background: #eef4f8; border: 1px solid #b8daff; border-radius: 6px; padding: 15px; margin-top: 15px;">
+                            <h4 style="margin-top: 0; color: #1d6fa5; font-family: 'Oswald', sans-serif;"><i class="fas fa-chart-line"></i> Resumen de Ganancias</h4>
+                            
+                            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-bottom: 5px;">
+                                <strong>Ganancia Bruta:</strong>
+                                <span id="rev-res-bruta">$0.00 | Bs.0.00 | €0.00</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-bottom: 5px;">
+                                <strong>Comisión Tercero:</strong>
+                                <span id="rev-res-tercero" style="color: #d9534f;">$0.00 | Bs.0.00 | €0.00</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 16px;">
+                                <strong style="color: #28a745;">Neta Empresa:</strong>
+                                <strong id="rev-res-neta" style="color: #28a745;">$0.00 | Bs.0.00 | €0.00</strong>
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn-confirm-order" onclick="guardarReventa()" style="width: 100%; margin-top: 20px; background: #385723; color: white; padding: 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">
+                            <i class="fas fa-save"></i> Guardar Operación
+                        </button>
+                    </div>
+
+                    <!-- Tabla de Historial -->
+                    <div class="card-form" style="grid-column: 2 / 3;">
+                        <h3><i class="fas fa-list-alt"></i> Historial de Reventas</h3>
+                        <div style="overflow-x: auto;">
+                            <table class="data-table" style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Descripción</th>
+                                        <th>Ingreso</th>
+                                        <th>Costo Total</th>
+                                        <th>Intermediario</th>
+                                        <th>Neta Empresa</th>
+                                        <th style="text-align: center;">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reventas-table-body">
+                                    <tr><td colspan="7" style="text-align: center;">Cargando historial...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div> <!-- Cierre App Wrapper -->
+
+
     <!-- CONTENEDOR EXCLUSIVO PARA IMPRESIÓN -->
     <div id="print-container" class="print-only"></div>
 
@@ -2111,6 +2224,39 @@
         // ==========================================
         // 🚀 DASHBOARD Y MÉTRICAS (CONECTADO A MAKE BCV/EUR)
         // ==========================================
+
+        window.calcularGananciaNetaDashboard = async function(tasaBCV, tasaEUR) {
+            try {
+                const now = new Date();
+                const currentMonth = now.getMonth() + 1;
+                const currentYear = now.getFullYear();
+                
+                const reventasSnap = await getDocs(collection(db, "reventas_gastos"));
+                let totalGananciaNetaUSD = 0;
+                
+                reventasSnap.forEach(docSnap => {
+                    const rev = docSnap.data();
+                    if (rev.fecha) {
+                        const dateParts = rev.fecha.split('/'); 
+                        if (dateParts.length >= 3) {
+                            const month = parseInt(dateParts[1], 10);
+                            const year = parseInt(dateParts[2].split(' ')[0], 10);
+                            if (month === currentMonth && year === currentYear) {
+                                totalGananciaNetaUSD += (parseFloat(rev.gananciaNetaUSD) || 0);
+                            }
+                        }
+                    }
+                });
+                
+                document.getElementById('dash-ganancia-usd').textContent = totalGananciaNetaUSD.toFixed(2);
+                document.getElementById('dash-ganancia-ves').textContent = (totalGananciaNetaUSD * tasaBCV).toFixed(2);
+                document.getElementById('dash-ganancia-eur').textContent = (totalGananciaNetaUSD / tasaEUR).toFixed(2);
+            } catch (e) {
+                console.error("Error calculando ganancia neta:", e);
+                document.getElementById('dash-ganancia-usd').textContent = "0.00";
+            }
+        };
+
         window.cargarDashboard = async function() {
             try {
                 // 1. CÁLCULO DE INVENTARIO
@@ -2298,6 +2444,10 @@
                     },
                     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
                 });
+
+                if (window.calcularGananciaNetaDashboard) {
+                    await window.calcularGananciaNetaDashboard(tasaVivaBCV, tasaVivaEUR);
+                }
 
             } catch (error) { console.error("Error cargando Dashboard:", error); }
         };
@@ -5434,6 +5584,8 @@
             await runSafe('calcularTotalFactura');
             await runSafe('cargarHistorialFacturas');
             await runSafe('cargarHistorialImportaciones');
+            await runSafe('cargarHistorialReventas');
+            await runSafe('cargarHistorialReventas');
             
             await runSafe('cargarTasaBCV');
             await runSafe('cargarPuntosRuta');
@@ -5603,6 +5755,8 @@
                 await updateDoc(docRef, {
                     historial_mensajes: arrayUnion({ user: mensaje, ai: respuestaFinal, fecha: new Date().toISOString() })
                 });
+
+
 
             } catch (e) {
                 console.error(e);
@@ -6991,6 +7145,164 @@
         fila.style.display = mostrar ? '' : 'none';
     });
 };
+
+
+        // ==========================================
+        // 🚀 MÓDULO DE REVENTAS Y COMISIONES
+        // ==========================================
+        
+        // Variables globales para las tasas de reventa (se actualizan al cargar el historial)
+        window.tasaReventaBCV = 42.00;
+        window.tasaReventaEUR = 1.08;
+
+        window.calcularReventa = function() {
+            const venta = parseFloat(document.getElementById('rev-venta').value) || 0;
+            const costo = parseFloat(document.getElementById('rev-costo').value) || 0;
+            const gastos = parseFloat(document.getElementById('rev-gastos').value) || 0;
+            const porcentaje = parseFloat(document.getElementById('rev-porcentaje').value) || 0;
+
+            const gananciaBruta = venta - costo - gastos;
+            const comisionTercero = gananciaBruta * (porcentaje / 100);
+            const gananciaNeta = gananciaBruta - comisionTercero;
+
+            // Reutilizamos la lógica y variables de tasas BCV y EUR leídas del sistema
+            const tasaVES = window.tasaReventaBCV;
+            const tasaEUR = window.tasaReventaEUR;
+            
+            const renderMonedas = (montoUSD) => {
+                const ves = (montoUSD * tasaVES).toFixed(2);
+                const eur = (montoUSD / tasaEUR).toFixed(2);
+                return `$${montoUSD.toFixed(2)} | Bs.${ves} | €${eur}`;
+            };
+
+            document.getElementById('rev-res-bruta').textContent = renderMonedas(gananciaBruta);
+            document.getElementById('rev-res-tercero').textContent = renderMonedas(comisionTercero);
+            document.getElementById('rev-res-neta').textContent = renderMonedas(gananciaNeta);
+            
+            return {
+                venta, costo, gastos, porcentaje,
+                gananciaBruta, comisionTercero, gananciaNeta,
+                tasaVES, tasaEUR
+            };
+        };
+
+        window.guardarReventa = async function() {
+            const desc = document.getElementById('rev-desc').value.trim();
+            const cliente = document.getElementById('rev-cliente').value.trim();
+            const intermediario = document.getElementById('rev-intermediario').value.trim();
+            if (!desc) { alert("Por favor ingresa una descripción para la operación."); return; }
+            
+            const calc = window.calcularReventa();
+            
+            try {
+                await addDoc(collection(db, "reventas_gastos"), {
+                    descripcion: desc,
+                    cliente: cliente,
+                    intermediario: intermediario,
+                    fecha: new Date().toLocaleDateString("es-VE"),
+                    timestamp: new Date().getTime(),
+                    ventaUSD: calc.venta,
+                    costoUSD: calc.costo,
+                    gastosUSD: calc.gastos,
+                    porcentajeComision: calc.porcentaje,
+                    gananciaBrutaUSD: calc.gananciaBruta,
+                    comisionTerceroUSD: calc.comisionTercero,
+                    gananciaNetaUSD: calc.gananciaNeta,
+                    tasaCambioVES: calc.tasaVES,
+                    tasaCambioEUR: calc.tasaEUR
+                });
+                
+                alert("Operación de reventa registrada con éxito.");
+                document.getElementById('rev-desc').value = "";
+                document.getElementById('rev-cliente').value = "";
+                document.getElementById('rev-intermediario').value = "";
+                document.getElementById('rev-venta').value = "";
+                document.getElementById('rev-costo').value = "";
+                document.getElementById('rev-gastos').value = "";
+                window.calcularReventa();
+                window.cargarHistorialReventas();
+                
+            } catch (error) {
+                console.error("Error guardando reventa:", error);
+                alert("Hubo un error al guardar la reventa.");
+            }
+        };
+
+        window.cargarHistorialReventas = async function() {
+            // Reutilizando la lógica de extracción de tasas de Firebase (igual al Dashboard)
+            try {
+                const bcvSnap = await getDoc(doc(db, "configuracion", "tasa_bcv"));
+                if(bcvSnap.exists()) {
+                    window.tasaReventaBCV = parseFloat(bcvSnap.data().Valor) || parseFloat(bcvSnap.data().valor) || window.tasaReventaBCV;
+                }
+                const eurSnap = await getDoc(doc(db, "configuracion", "tasa_euro"));
+                if(eurSnap.exists()) {
+                    window.tasaReventaEUR = parseFloat(eurSnap.data().Valor) || parseFloat(eurSnap.data().valor) || window.tasaReventaEUR;
+                }
+                // Refrescar cálculos visuales con las nuevas tasas
+                window.calcularReventa();
+            } catch(e) { console.warn("Error leyendo tasas para reventas"); }
+
+            const tbody = document.getElementById('reventas-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Cargando historial de reventas...</td></tr>';
+            
+            try {
+                const snap = await getDocs(collection(db, "reventas_gastos"));
+                if (snap.empty) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No hay operaciones registradas.</td></tr>';
+                    return;
+                }
+                
+                let html = '';
+                let totalNeta = 0;
+                
+                const reventas = [];
+                snap.forEach(docSnap => reventas.push({ id: docSnap.id, ...docSnap.data() }));
+                
+                // Ordenar por timestamp (más recientes primero)
+                reventas.sort((a, b) => b.timestamp - a.timestamp);
+                
+                reventas.forEach(rev => {
+                    const costoTotal = (rev.costoUSD || 0) + (rev.gastosUSD || 0);
+                    // Usa la tasa histórica grabada, sino usa la global actual
+                    const tasaUsoVES = rev.tasaCambioVES || window.tasaReventaBCV;
+                    const ventaVES = ((rev.ventaUSD || 0) * tasaUsoVES).toFixed(2);
+                    const netaVES = ((rev.gananciaNetaUSD || 0) * tasaUsoVES).toFixed(2);
+                    
+                    totalNeta += (rev.gananciaNetaUSD || 0);
+                    
+                    html += `
+                        <tr>
+                            <td>${rev.fecha}</td>
+                            <td><strong>${rev.descripcion}</strong><br><span style="font-size:11px; color:#555;">Cliente: ${rev.cliente || 'N/A'}</span></td>
+                            <td>$${(rev.ventaUSD || 0).toFixed(2)}<br><span style="font-size:10px; color:#666;">Bs.${ventaVES}</span></td>
+                            <td>$${costoTotal.toFixed(2)}</td>
+                            <td>${rev.intermediario || 'N/A'}<br><span style="color: #d9534f; font-weight: bold;">$${(rev.comisionTerceroUSD || 0).toFixed(2)}</span></td>
+                            <td><span style="color: #28a745; font-weight: bold;">$${(rev.gananciaNetaUSD || 0).toFixed(2)}</span><br><span style="font-size:10px; color:#666;">Bs.${netaVES}</span></td>
+                            <td style="text-align: center;">
+                                <button type="button" onclick="eliminarReventa('${rev.id}')" style="background:#d9534f; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;" title="Eliminar"><i class="fas fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                // Añadir fila de totales
+                html += `
+                    <tr style="background: #eef4f8; font-weight: bold; border-top: 2px solid #b8daff;">
+                        <td colspan="5" style="text-align: right;">TOTAL GANANCIA NETA GLOBAL:</td>
+                        <td colspan="2" style="color: #28a745; font-size: 16px;">$${totalNeta.toFixed(2)}</td>
+                    </tr>
+                `;
+                
+                tbody.innerHTML = html;
+                
+            } catch (error) {
+                console.error("Error cargando reventas:", error);
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: red;">Error al cargar el historial: ${error.message}</td></tr>`;
+            }
+        };
+
     </script>
 </body>
 </html>
