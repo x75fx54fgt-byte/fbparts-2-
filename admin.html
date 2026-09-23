@@ -1647,7 +1647,18 @@
 
                     <!-- Tabla de Historial -->
                     <div class="card-form" style="grid-column: 2 / 3;">
-                        <h3><i class="fas fa-list-alt"></i> Historial de Reventas</h3>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                            <h3 style="margin: 0;"><i class="fas fa-list-alt"></i> Historial de Reventas</h3>
+                            <div style="display: flex; gap: 8px;">
+                                <select id="historial-rev-mes" class="p-1 border rounded" style="font-size: 13px;" onchange="window.cargarHistorialReventas()">
+                                    <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+                                    <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+                                    <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+                                    <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+                                </select>
+                                <input type="number" id="historial-rev-anio" class="p-1 border rounded" style="width: 80px; font-size: 13px;" value="2026" onchange="window.cargarHistorialReventas()">
+                            </div>
+                        </div>
                         <div style="overflow-x: auto;">
                             <table class="data-table" style="width: 100%; border-collapse: collapse;">
                                 <thead>
@@ -8210,15 +8221,44 @@ window.cargarHistorialFacturas = async function() {
                     return;
                 }
                 
+                // Inicializar selectores si no tienen valor o es primera carga
+                const elMes = document.getElementById('historial-rev-mes');
+                const elAnio = document.getElementById('historial-rev-anio');
+                const hoy = new Date();
+                
+                if (elMes && !window._reventasFiltroInicializado) {
+                    elMes.value = (hoy.getMonth() + 1).toString();
+                    elAnio.value = hoy.getFullYear().toString();
+                    window._reventasFiltroInicializado = true;
+                }
+
+                const targetMes = elMes ? parseInt(elMes.value, 10) : (hoy.getMonth() + 1);
+                const targetAnio = elAnio ? parseInt(elAnio.value, 10) : hoy.getFullYear();
+
                 let html = '';
                 let totalNeta = 0;
                 
-                const reventas = [];
+                let reventas = [];
                 snap.forEach(docSnap => reventas.push({ id: docSnap.id, ...docSnap.data() }));
                 
+                // Filtrar por fecha
+                reventas = reventas.filter(rev => {
+                    if (!rev.fecha) return false;
+                    const parts = rev.fecha.split('/');
+                    if (parts.length >= 3) {
+                        return parseInt(parts[1], 10) === targetMes && parseInt(parts[2], 10) === targetAnio;
+                    }
+                    return false;
+                });
+
                 // Ordenar por timestamp (más recientes primero)
                 reventas.sort((a, b) => b.timestamp - a.timestamp);
                 
+                if (reventas.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center;">No hay operaciones registradas en el mes seleccionado.</td></tr>`;
+                    return;
+                }
+
                 reventas.forEach(rev => {
                     const costoTotal = (rev.costoUSD || 0) + (rev.gastosUSD || 0);
                     // Usa la tasa histórica grabada, sino usa la global actual
