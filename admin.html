@@ -1528,7 +1528,7 @@
                     </div>
                     <div style="flex:1; min-width: 100px;">
                         <label style="font-size:12px; font-weight:bold;">Año</label>
-                        <input type="number" id="cierre-anio" value="2024" class="w-full p-2 border rounded" style="font-size:14px; padding:8px;">
+                        <input type="number" id="cierre-anio" value="2026" class="w-full p-2 border rounded" style="font-size:14px; padding:8px;">
                     </div>
                     <div>
                         <button onclick="generarCierreMensual()" style="background:#385723; color:white; padding:9px 15px; border:none; border-radius:4px; font-weight:bold; cursor:pointer;"><i class="fas fa-search"></i> Generar Cierre</button>
@@ -7889,11 +7889,23 @@ window.cargarHistorialFacturas = async function() {
                 let totComisiones = 0;
                 let totNeta = 0;
 
-                const targetSuffix = `/${mes}/${anio}`; 
+                const targetMes = parseInt(mes, 10);
+                const targetAnio = parseInt(anio, 10);
 
                 snap.forEach(docSnap => {
                     const data = docSnap.data();
-                    if (data.fecha && data.fecha.endsWith(targetSuffix)) {
+                    let matchDate = false;
+                    
+                    if (data.fecha) {
+                        const parts = data.fecha.split('/');
+                        if (parts.length >= 3) {
+                            if (parseInt(parts[1], 10) === targetMes && parseInt(parts[2], 10) === targetAnio) {
+                                matchDate = true;
+                            }
+                        }
+                    }
+
+                    if (matchDate) {
                         operaciones.push(data);
                         let costo = parseFloat(data.costoUSD) || 0;
                         let gasto = parseFloat(data.gastosUSD) || 0;
