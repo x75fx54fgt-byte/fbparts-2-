@@ -1,0 +1,6247 @@
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, getDocs, getDoc, setDoc, addDoc, doc, updateDoc, deleteDoc, query, where, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // ==========================================
+        // 🛡️ MÓDULO DE SANITIZACIÓN AUTÓNOMO (INLINE PARA COMPATIBILIDAD TOTAL)
+        // ==========================================
+        const SecuritySanitizer = {
+            escapeHtml(val) {
+                if (val === null || val === undefined) return '';
+                return String(val).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+            },
+            cleanText(val, maxLen = 250) {
+                if (!val) return '';
+                return String(val).replace(/<[^>]*>?/gm, '').replace(/[\u0000-\u001F\u007F-\u009F]/g, '').trim().slice(0, maxLen);
+            },
+            cleanAddress(val, maxLen = 300) {
+                if (!val) return '';
+                return String(val).replace(/<[^>]*>?/gm, '').replace(/javascript:/gi, '').replace(/vbscript:/gi, '').replace(/data:text\/html/gi, '').trim().slice(0, maxLen);
+            },
+            cleanNote(val, maxLen = 600) {
+                if (!val) return '';
+                let cleaned = String(val)
+                    .replace(/<[^>]*>?/gm, '')
+                    .replace(/javascript:/gi, '')
+                    .trim();
+                return cleaned.slice(0, maxLen);
+            },
+            cleanPhone(val) {
+                if (!val) return '';
+                return String(val).replace(/[^0-9+\s\-()]/g, '').trim().slice(0, 30);
+            },
+            sanitizeAmount(val) {
+                if (val === null || val === undefined) return 0;
+                let num = typeof val === 'number' ? val : parseFloat(String(val).replace(/[^0-9.-]/g, ''));
+                if (isNaN(num) || !isFinite(num) || num < 0) return 0;
+                return Math.round(num * 100) / 100;
+            },
+            sanitizeInt(val, defaultVal = 1) {
+                let num = parseInt(val, 10);
+                return isNaN(num) || num < 1 ? defaultVal : num;
+            }
+        };
+
+        // ==========================================
+        // 🚀 CONFIGURACIÓN DE APIS Y BASES DE DATOS
+        // ==========================================
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
+            authDomain: "fb-parts-app.firebaseapp.com",
+            projectId: "fb-parts-app",
+            storageBucket: "fb-parts-app.firebasestorage.app",
+            messagingSenderId: "21714159445",
+            appId: "1:21714159445:web:8f4946cd1c98d9b95dd1dc"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Variables Locales de Memoria
+        window.SecuritySanitizer = SecuritySanitizer;
+        window.mapaCategorias = {};
+        window.clientesDBLocal = {}; 
+        window.pedidosDBLocal = {}; 
+        window.facturasDBLocal = {}; 
+        window.cotizacionesDBLocal = {}; 
+        window.importacionesDBLocal = {}; 
+        window.currentAdminDocId = null; 
+        
+        let salesChartInstance = null; 
+
+        // ==========================================
+        // GESTIÓN DE SESIÓN Y PERFIL (DEFENSIVO Y RESILIENTE)
+        // ==========================================
+        function verificarSesionAdminLocal() {
+            try {
+                const raw = localStorage.getItem('fyb_admin_session');
+                if (!raw) return null;
+                const s = JSON.parse(raw);
+                const esAdmin = (s.email === 'fybinversiones.ccs@gmail.com' || s.email === 'admin@fybparts.com');
+                const esReciente = (Date.now() - (s.timestamp || 0)) < (14 * 24 * 3600 * 1000);
+                if (esAdmin && esReciente) return s;
+            } catch(e) {}
+            return null;
+        }
+
+        function desbloquearPanelAdmin(nombre = "Administrador", cargo = "Control Maestro") {
+            const loadingScreen = document.getElementById('auth-loading-screen');
+            const appWrapper = document.getElementById('app-wrapper');
+            if (loadingScreen) loadingScreen.style.display = 'none';
+            if (appWrapper) appWrapper.style.display = 'flex'; // <--- FIX: Usar flex en lugar de block
+
+            const elNombre = document.getElementById('admin-nombre-txt');
+            const elCargo = document.getElementById('admin-cargo-txt');
+            if (elNombre && (!elNombre.textContent || elNombre.textContent.includes('...'))) {
+                elNombre.textContent = SecuritySanitizer.cleanText(nombre, 50);
+            }
+            if (elCargo && (!elCargo.textContent || elCargo.textContent.includes('...'))) {
+                elCargo.textContent = SecuritySanitizer.cleanText(cargo, 50);
+            }
+
+            if (typeof window.iniciarPanelCompleto === 'function') {
+                window.iniciarPanelCompleto();
+            }
+        }
+
+        // 1. Verificación inmediata de sesión administrativa local (desbloqueo instantáneo)
+        const sesionInmediata = verificarSesionAdminLocal();
+        if (sesionInmediata) {
+            desbloquearPanelAdmin("BAPA", "Administrador Maestro");
+        }
+
+        // 2. Monitoreo defensivo de Firebase Auth
+        onAuthStateChanged(auth, async (user) => {
+            const sesionLocal = verificarSesionAdminLocal();
+
+            if (user) {
+                const userEmail = (user.email || '').toLowerCase().trim();
+                
+                // Actualizar o respaldar sesión en almacenamiento local
+                if (userEmail === 'fybinversiones.ccs@gmail.com' || userEmail === 'admin@fybparts.com') {
+                    try {
+                        localStorage.setItem('fyb_admin_session', JSON.stringify({
+                            email: userEmail,
+                            localId: user.uid,
+                            timestamp: Date.now()
+                        }));
+                    } catch(e) {}
+                    
+                    if (!sessionStorage.getItem('audit_login_done')) {
+                        sessionStorage.setItem('audit_login_done', 'true');
+                        setTimeout(() => { if(window.registrarAuditoria) window.registrarAuditoria("LOGIN", "El usuario inició sesión en el panel."); }, 2000);
+                    }
+                    
+                    desbloquearPanelAdmin("BAPA", "Administrador Maestro");
+                }
+
+                // Cargar datos personalizados de la colección 'administradores' sin bloquear la interfaz
+                try {
+                    const q = query(collection(db, "administradores"), where("email", "==", userEmail));
+                    const querySnapshot = await Promise.race([
+                        getDocs(q),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 4000))
+                    ]);
+
+                    if (!querySnapshot.empty) {
+                        const adminDoc = querySnapshot.docs[0];
+                        window.currentAdminDocId = adminDoc.id;
+                        const adminData = adminDoc.data();
+
+                        const nombreAdmin = adminData.Nombre || adminData['Nombre:'] || "BAPA";
+                        const cargoAdmin = adminData.Cargo || adminData['Cargo:'] || "Administrador";
+
+                        document.getElementById('admin-nombre-txt').textContent = SecuritySanitizer.cleanText(nombreAdmin, 50);
+                        document.getElementById('admin-cargo-txt').textContent = SecuritySanitizer.cleanText(cargoAdmin, 50);
+                        
+                        if (adminData.Foto && adminData.Foto.trim() !== "") {
+                            document.getElementById('admin-avatar').src = adminData.Foto;
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Aviso: Datos de perfil cargados con valores por defecto.");
+                }
+
+                desbloquearPanelAdmin();
+                return;
+            }
+
+            // Si Firebase Auth aún no sincroniza pero existe una sesión administrativa activa local:
+            if (sesionLocal) {
+                desbloquearPanelAdmin("BAPA", "Administrador Maestro");
+            }
+
+            // Margen de gracia defensivo de 4 segundos para que Firebase Auth reaccione
+            setTimeout(() => {
+                if (!auth.currentUser) {
+                    console.error("Sesión de Firebase expirada o no válida. Forzando cierre de sesión.");
+                    try { localStorage.removeItem('fyb_admin_session'); } catch(e){}
+                    window.location.href = "admin-login.html";
+                }
+            }, 4000);
+        });
+
+        window.cerrarSesion = function() {
+            if(confirm("¿Estás seguro de que deseas cerrar sesión?")) {
+                if(window.registrarAuditoria) window.registrarAuditoria("LOGOUT", "El usuario cerró sesión en el panel.");
+                try {
+                    localStorage.removeItem('fyb_admin_session');
+                } catch(e) {}
+                signOut(auth).then(() => {
+                    window.location.href = "admin-login.html";
+                }).catch(() => {
+                    window.location.href = "admin-login.html";
+                });
+            }
+        };
+
+        window.abrirModalPerfil = async function() {
+            if (!window.currentAdminDocId) { alert("Cargando, intenta de nuevo."); return; }
+            document.getElementById('edit-admin-nombre').value = document.getElementById('admin-nombre-txt').textContent;
+            document.getElementById('edit-admin-cargo').value = document.getElementById('admin-cargo-txt').textContent;
+            const fotoActual = document.getElementById('admin-avatar').src;
+            document.getElementById('edit-admin-foto').value = fotoActual.includes('mv2.png') ? '' : fotoActual;
+            document.getElementById('modal-admin-perfil').style.display = 'flex';
+        };
+
+        window.cerrarModalPerfil = function() { document.getElementById('modal-admin-perfil').style.display = 'none'; };
+
+        window.guardarPerfilAdmin = async function() {
+            const btn = document.getElementById('btn-save-admin-perfil');
+            const nuevoNombre = document.getElementById('edit-admin-nombre').value.trim();
+            const nuevaFoto = document.getElementById('edit-admin-foto').value.trim();
+            if (!window.currentAdminDocId) return;
+
+            btn.innerHTML = "Guardando..."; btn.disabled = true;
+            try {
+                await updateDoc(doc(db, "administradores", window.currentAdminDocId), { Nombre: nuevoNombre, Foto: nuevaFoto });
+                document.getElementById('admin-nombre-txt').textContent = nuevoNombre;
+                if (nuevaFoto !== "") document.getElementById('admin-avatar').src = nuevaFoto;
+                alert("¡Perfil actualizado con éxito!");
+                window.cerrarModalPerfil();
+            } catch (error) { console.error(error); }
+            btn.innerHTML = "Guardar Cambios"; btn.disabled = false;
+        };
+
+        window.mostrarPestana = function(id, btnElement) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('tab-' + id).classList.add('active');
+            btnElement.classList.add('active');
+
+            if(id === 'dashboard') { window.cargarDashboard(); }
+            if(id === 'finanzas') { window.cargarFinanzas(); }
+            if(id === 'pedidos') { window.cargarPedidos(); }
+            if(id === 'catalogo') { window.cargarCatalogoAdmin(); }
+            if(id === 'clientes') { window.cargarBaseClientes(); }
+            if(id === 'cotizaciones') { window.cargarBaseClientes(); window.actualizarPreview(); }
+            if(id === 'historial-cotizaciones') { window.cargarHistorialCotizaciones(); }
+            if(id === 'facturacion') { window.cargarBaseClientes(); window.actualizarPreviewFactura(); }
+            if(id === 'historial-facturas') { window.cargarHistorialFacturas(); }
+            if(id === 'importacion') { window.cargarHistorialImportaciones(); }
+            if(id === 'rutas') { setTimeout(() => { window.iniciarMapaAdmin(); window.cargarPuntosRuta(); window.cargarSelectorPedidosRuta(); }, 200); }
+        };
+
+        // ==========================================
+        // 🚀 DASHBOARD Y MÉTRICAS (CONECTADO A MAKE BCV/EUR)
+        // ==========================================
+
+        window.calcularGananciaNetaDashboard = async function(tasaBCV, tasaEUR) {
+            try {
+                const now = new Date();
+                const currentMonth = now.getMonth() + 1;
+                const currentYear = now.getFullYear();
+                
+                const reventasSnap = await getDocs(collection(db, "reventas_gastos"));
+                let totalGananciaNetaUSD = 0;
+                
+                reventasSnap.forEach(docSnap => {
+                    const rev = docSnap.data();
+                    if (rev.fecha) {
+                        const dateParts = rev.fecha.split('/'); 
+                        if (dateParts.length >= 3) {
+                            const month = parseInt(dateParts[1], 10);
+                            const year = parseInt(dateParts[2].split(' ')[0], 10);
+                            if (month === currentMonth && year === currentYear) {
+                                totalGananciaNetaUSD += (parseFloat(rev.gananciaNetaUSD) || 0);
+                            }
+                        }
+                    }
+                });
+                
+                document.getElementById('dash-ganancia-usd').textContent = totalGananciaNetaUSD.toFixed(2);
+                document.getElementById('dash-ganancia-ves').textContent = (totalGananciaNetaUSD * tasaBCV).toFixed(2);
+                if (tasaEUR > 10) {
+                    document.getElementById('dash-ganancia-eur').textContent = (totalGananciaNetaUSD * 0.92).toFixed(2);
+                } else {
+                    document.getElementById('dash-ganancia-eur').textContent = (totalGananciaNetaUSD * tasaEUR).toFixed(2);
+                }
+            } catch (e) {
+                console.error("Error calculando ganancia neta:", e);
+                document.getElementById('dash-ganancia-usd').textContent = "0.00";
+            }
+        };
+
+        window.cargarDashboard = async function() {
+            try {
+                // 1. CÁLCULO DE INVENTARIO
+                const prodSnap = await getDocs(collection(db, "productos"));
+                let valorInventario = 0;
+                const repuestosUnicos = new Set(); 
+
+                prodSnap.forEach(docSnap => {
+                    const p = docSnap.data();
+                    if(p.estado !== 'inactivo') {
+                        const idUnico = (p.numero_parte && p.numero_parte.trim() !== '') ? p.numero_parte.trim().toUpperCase() : p.nombre.trim().toUpperCase();
+                        if (!repuestosUnicos.has(idUnico)) {
+                            valorInventario += (parseFloat(p.precio) || 0) * (parseInt(p.stock) || 0);
+                            repuestosUnicos.add(idUnico);
+                        }
+                    }
+                });
+                document.getElementById('dash-inventario').textContent = `$${valorInventario.toFixed(2)}`;
+
+                // 🔥 2. LEER TASAS EN VIVO DESDE MAKE (Carpeta configuracion)
+                let tasaVivaBCV = 42.00; // Respaldo por si Make falla
+                let tasaVivaEUR = 1.08;
+                try {
+                    const bcvSnap = await getDoc(doc(db, "configuracion", "tasa_bcv"));
+                    if(bcvSnap.exists()) {
+                        // Toma 'Valor' o 'valor' según como lo escriba Make
+                        tasaVivaBCV = parseFloat(bcvSnap.data().Valor) || parseFloat(bcvSnap.data().valor) || tasaVivaBCV;
+                    }
+                    const eurSnap = await getDoc(doc(db, "configuracion", "tasa_euro"));
+                    if(eurSnap.exists()) {
+                        tasaVivaEUR = parseFloat(eurSnap.data().Valor) || parseFloat(eurSnap.data().valor) || tasaVivaEUR;
+                    }
+                } catch(e) { console.warn("Error leyendo tasas de Make"); }
+
+                // 3. CÁLCULO DE VENTAS Y CXC
+                const facSnap = await getDocs(collection(db, "facturas"));
+                
+                let vMesUnificadoUSD = 0; 
+                let vMesUSD = 0, vMesVES = 0, vMesEUR = 0;
+                let cxcTotalUSD = 0, cxcUSD = 0, cxcVES = 0, cxcEUR = 0;
+                
+                const ventasPorMes = {};
+                const mesesNombres = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+                const fechaHoy = new Date();
+                const mesActual = fechaHoy.getMonth(); 
+                const anioActual = fechaHoy.getFullYear();
+
+                for (let i = 5; i >= 0; i--) {
+                    let d = new Date(anioActual, mesActual - i, 1);
+                    ventasPorMes[`${mesesNombres[d.getMonth()]} ${d.getFullYear()}`] = 0;
+                }
+
+                facSnap.forEach(docSnap => {
+                    const fac = docSnap.data();
+                    const estatus = fac.estatusComercial || '';
+                    
+                    if (estatus === 'Anulada') return;
+
+                    const totalFacNominal = parseFloat(fac.total) || 0;
+                    const monedaDoc = fac.moneda || 'USD';
+                    
+                    // 🚀 SALVAVIDAS: Si la factura no congeló la tasa, usamos la de Make hoy
+                    let tasaHistórica = parseFloat(fac.tasa);
+                    if (!tasaHistórica || tasaHistórica <= 1) {
+                        if (monedaDoc === 'VES') tasaHistórica = tasaVivaBCV;
+                        if (monedaDoc === 'EUR') tasaHistórica = tasaVivaEUR;
+                        if (monedaDoc === 'USD') tasaHistórica = 1;
+                    }
+
+                    let totalParaGrafica = totalFacNominal;
+                    
+                    if (monedaDoc === 'VES') {
+                        totalParaGrafica = totalFacNominal / tasaHistórica;
+                    } else if (monedaDoc === 'EUR') {
+                        totalParaGrafica = (tasaHistórica < 10) ? totalFacNominal * tasaHistórica : totalFacNominal * 1.08;
+                    }
+
+                    if (fac.fecha) {
+                        const partes = fac.fecha.split('/');
+                        if (partes.length === 3) {
+                            const mesFac = parseInt(partes[1]) - 1;
+                            const anioFac = parseInt(partes[2]);
+                            
+                            if (mesFac === mesActual && anioFac === anioActual) {
+                                vMesUnificadoUSD += totalParaGrafica; 
+                                if (monedaDoc === 'VES') vMesVES += totalFacNominal;
+                                else if (monedaDoc === 'EUR') vMesEUR += totalFacNominal;
+                                else vMesUSD += totalFacNominal;
+                            }
+
+                            const keyMes = `${mesesNombres[mesFac]} ${anioFac}`;
+                            if (ventasPorMes[keyMes] !== undefined) {
+                                ventasPorMes[keyMes] += totalParaGrafica;
+                            }
+                        }
+                    }
+
+                    if (estatus.includes('Crédito') && !estatus.includes('Pagado')) {
+                        let totalAbonado = 0;
+                        if (fac.abonos && Array.isArray(fac.abonos)) {
+                            fac.abonos.forEach(ab => totalAbonado += (parseFloat(ab.monto) || 0));
+                        }
+                        const deudaReal = totalFacNominal - totalAbonado;
+                        
+                        let deudaRealUSD = deudaReal;
+                        if (monedaDoc === 'VES') deudaRealUSD = deudaReal / tasaHistórica;
+                        else if (monedaDoc === 'EUR') deudaRealUSD = (tasaHistórica < 10) ? deudaReal * tasaHistórica : deudaReal * 1.08;
+                        
+                        cxcTotalUSD += deudaRealUSD;
+
+                        if (monedaDoc === 'VES') cxcVES += deudaReal;
+                        else if (monedaDoc === 'EUR') cxcEUR += deudaReal;
+                        else cxcUSD += deudaReal;
+                    }
+                });
+
+                document.getElementById('dash-v-total').textContent = vMesUnificadoUSD.toFixed(2);
+                document.getElementById('dash-v-usd').textContent = vMesUSD.toFixed(2);
+                document.getElementById('dash-v-ves').textContent = vMesVES.toFixed(2);
+                document.getElementById('dash-v-eur').textContent = vMesEUR.toFixed(2);
+
+                document.getElementById('dash-cxc-total').textContent = cxcTotalUSD.toFixed(2);
+                document.getElementById('dash-cxc-usd').textContent = cxcUSD.toFixed(2);
+                document.getElementById('dash-cxc-ves').textContent = cxcVES.toFixed(2);
+                document.getElementById('dash-cxc-eur').textContent = cxcEUR.toFixed(2);
+
+                // 4. CÁLCULO DE CXP
+                let cxpTotalRefUSD = 0, cxpUSD = 0, cxpVES = 0, cxpEUR = 0;
+                try {
+                    const cxpSnap = await getDocs(collection(db, "cuentas_pagar"));
+                    cxpSnap.forEach(docSnap => {
+                        const data = docSnap.data();
+                        if (data.estatus !== 'Liquidado') {
+                            const monedaCxp = data.moneda || 'USD';
+                            const montoCxp = parseFloat(data.monto) || 0;
+                            
+                            let tasaCxp = parseFloat(data.tasa);
+                            if (!tasaCxp || tasaCxp <= 1) {
+                                if (monedaCxp === 'VES') tasaCxp = tasaVivaBCV;
+                                if (monedaCxp === 'EUR') tasaCxp = tasaVivaEUR;
+                                if (monedaCxp === 'USD') tasaCxp = 1;
+                            }
+                            
+                            let montoRefUSD = montoCxp;
+                            if (monedaCxp === 'VES') {
+                                cxpVES += montoCxp;
+                                montoRefUSD = montoCxp / tasaCxp; 
+                            }
+                            else if (monedaCxp === 'EUR') {
+                                cxpEUR += montoCxp;
+                                montoRefUSD = (tasaCxp < 10) ? montoCxp * tasaCxp : montoCxp * 1.08;
+                            }
+                            else {
+                                cxpUSD += montoCxp;
+                            }
+                            cxpTotalRefUSD += montoRefUSD;
+                        }
+                    });
+                } catch(e) { }
+
+                document.getElementById('dash-cxp-total').textContent = cxpTotalRefUSD.toFixed(2);
+                document.getElementById('dash-cxp-usd').textContent = cxpUSD.toFixed(2);
+                document.getElementById('dash-cxp-ves').textContent = cxpVES.toFixed(2);
+                document.getElementById('dash-cxp-eur').textContent = cxpEUR.toFixed(2);
+
+                // 5. GRÁFICA
+                const ctx = document.getElementById('salesChart').getContext('2d');
+                if (salesChartInstance) { salesChartInstance.destroy(); }
+                
+                salesChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: Object.keys(ventasPorMes),
+                        datasets: [{
+                            label: 'Crecimiento de Ventas (USD Referencial)',
+                            data: Object.values(ventasPorMes),
+                            backgroundColor: 'rgba(56, 87, 35, 0.2)',
+                            borderColor: '#385723',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3,
+                            pointBackgroundColor: '#1d6fa5',
+                            pointRadius: 4
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+                });
+
+                if (window.calcularGananciaNetaDashboard) {
+                    await window.calcularGananciaNetaDashboard(tasaVivaBCV, tasaVivaEUR);
+                }
+
+            } catch (error) { console.error("Error cargando Dashboard:", error); }
+        };
+
+        // ==========================================
+        // 🚀 MÓDULO CXC Y CXP (MULTIMONEDA)
+        // ==========================================
+        window.guardarNuevaCxP = async function(e) {
+            e.preventDefault();
+            const prov = SecuritySanitizer.cleanText(document.getElementById('cxp-proveedor').value, 100);
+            const monto = SecuritySanitizer.sanitizeAmount(document.getElementById('cxp-monto').value);
+            const monedaData = document.getElementById('cxp-moneda').value.split('|');
+            const moneda = SecuritySanitizer.cleanText(monedaData[0], 20);
+            const simbolo = SecuritySanitizer.cleanText(monedaData[1], 10);
+
+            try {
+                await addDoc(collection(db, "cuentas_pagar"), {
+                    proveedor: prov,
+                    monto: monto,
+                    moneda: moneda,
+                    simbolo: simbolo,
+                    fecha: new Date().toLocaleDateString("es-VE"),
+                    estatus: "Pendiente"
+                });
+                document.getElementById('form-cxp').reset();
+                window.cargarFinanzas();
+                window.cargarDashboard();
+            } catch (error) { console.error(error); alert("Error guardando cuenta por pagar."); }
+        };
+
+        window.liquidarCxP = async function(docId) {
+            if(!confirm("¿Marcar esta deuda como liquidada/pagada? Desaparecerá de la lista pendiente.")) return;
+            try {
+                await updateDoc(doc(db, "cuentas_pagar", docId), { estatus: "Liquidado" });
+                window.cargarFinanzas();
+                window.cargarDashboard();
+            } catch(e) { console.error(e); }
+        };
+
+        window.cargarFinanzas = async function() {
+            const tbodyCxC = document.getElementById('cxc-table-body');
+            const tbodyCxP = document.getElementById('cxp-table-body');
+            
+            tbodyCxC.innerHTML = `<tr><td colspan="4" style="text-align: center;">Buscando deudas a crédito...</td></tr>`;
+            window.facturasDBLocal = {}; 
+
+            try {
+                // CXC: Buscar facturas a crédito
+                const snapFac = await getDocs(collection(db, "facturas"));
+                tbodyCxC.innerHTML = '';
+                let encontradasCxC = 0;
+
+                snapFac.forEach(docSnap => {
+                    const fac = docSnap.data();
+                    const docId = docSnap.id;
+                    const estatus = fac.estatusComercial || '';
+                    
+                    window.facturasDBLocal[docId] = fac; 
+
+                    if (estatus.includes('Crédito') && !estatus.includes('Pagado') && estatus !== 'Anulada') {
+                        encontradasCxC++;
+                        const totalFac = parseFloat(fac.total) || 0;
+                        let totalAbonado = 0;
+                        
+                        if (fac.abonos && Array.isArray(fac.abonos)) {
+                            fac.abonos.forEach(ab => totalAbonado += (parseFloat(ab.monto) || 0));
+                        }
+                        
+                        const saldoPendiente = totalFac - totalAbonado;
+                        const simbolo = fac.simbolo || '$';
+
+                        tbodyCxC.innerHTML += `
+                            <tr>
+                                <td><strong style="color:#1d6fa5;">#${fac.nro}</strong><br><span style="font-weight:bold;">${fac.cliente}</span><br><span style="font-size:10px;color:#666;">${estatus}</span></td>
+                                <td style="text-align: right;">${simbolo}${totalFac.toFixed(2)}</td>
+                                <td style="text-align: right;"><strong style="color: #d9534f; font-size:15px;">${simbolo}${saldoPendiente.toFixed(2)}</strong></td>
+                                <td style="display: flex; gap: 5px; justify-content: center; align-items: center;">
+                                    <button type="button" onclick="abrirModalAbono('${docId}')" style="background:#28a745; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;" title="Registrar Pago">
+                                        <i class="fas fa-plus"></i> Abono
+                                    </button>
+                                    
+                                 <!-- 🤖 BOTÓN MORADO DEL COBRADOR IA -->
+                                    <button type="button" onclick="abrirCobradorIA('${fac.cliente.replace(/'/g, "\\'")}', '${saldoPendiente}', '${simbolo}', '${fac.telefono || ''}', '${fac.nro}', '${fac.fecha}', '${estatus}')" title="Cobrador IA" style="background: #8e44ad; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
+                                        <i class="fas fa-robot"></i> Cobrar
+                                    </button>
+
+                                </td>
+
+                            </tr>
+                        `;
+                    }
+                });
+                
+                if (encontradasCxC === 0) tbodyCxC.innerHTML = `<tr><td colspan="4" style="text-align: center;">No hay cuentas por cobrar pendientes.</td></tr>`;
+
+                // CXP: Buscar deudas a proveedores
+                tbodyCxP.innerHTML = '';
+                const snapCxP = await getDocs(collection(db, "cuentas_pagar"));
+                
+                if (snapCxP.empty) {
+                    tbodyCxP.innerHTML = `<tr><td colspan="3" style="text-align: center;">No hay deudas por pagar registradas.</td></tr>`;
+                } else {
+                    snapCxP.forEach(docSnap => {
+                        const cxp = docSnap.data();
+                        if (cxp.estatus !== 'Liquidado') {
+                            const sim = cxp.simbolo || '$';
+                            tbodyCxP.innerHTML += `
+                                <tr>
+                                    <td><strong>${cxp.proveedor}</strong></td>
+                                    <td style="text-align: right;"><strong style="color: #d9534f;">${sim}${parseFloat(cxp.monto).toFixed(2)}</strong></td>
+                                    <td style="display: flex; gap: 5px; justify-content: center; align-items: center;">
+                                        <button type="button" onclick="liquidarCxP('${docSnap.id}')" style="background:#17a2b8; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;"><i class="fas fa-check"></i> Saldar</button>
+                                    </td>
+                                </tr>
+                            `;
+                        }
+                    });
+                }
+            } catch (error) { console.error("Error Finanzas:", error); }
+        };
+
+        window.abrirModalAbono = function(docId) {
+            const fac = window.facturasDBLocal[docId];
+            if (!fac) return;
+
+            document.getElementById('abono-doc-id').value = docId;
+            document.getElementById('abono-factura-nro').textContent = fac.nro;
+            document.getElementById('abono-cliente').textContent = fac.cliente;
+            
+            const totalFac = parseFloat(fac.total) || 0;
+            let totalAbonado = 0;
+            if (fac.abonos && Array.isArray(fac.abonos)) {
+                fac.abonos.forEach(ab => totalAbonado += (parseFloat(ab.monto) || 0));
+            }
+            const saldoPendiente = totalFac - totalAbonado;
+            const simbolo = fac.simbolo || '$';
+
+            document.getElementById('abono-total-fac').textContent = `${simbolo}${totalFac.toFixed(2)}`;
+            document.getElementById('abono-saldo-pendiente').textContent = `${simbolo}${saldoPendiente.toFixed(2)}`;
+            
+            document.getElementById('abono-monto').value = saldoPendiente.toFixed(2);
+            document.getElementById('abono-monto').max = saldoPendiente.toFixed(2);
+            
+            document.getElementById('abono-nota').value = '';
+            document.getElementById('modal-abono').style.display = 'flex';
+        };
+
+        window.cerrarModalAbono = function() { document.getElementById('modal-abono').style.display = 'none'; };
+
+        window.guardarAbono = async function() {
+            const docId = document.getElementById('abono-doc-id').value;
+            const montoAbono = SecuritySanitizer.sanitizeAmount(document.getElementById('abono-monto').value);
+            const metodo = SecuritySanitizer.cleanText(document.getElementById('abono-metodo').value, 50);
+            const nota = SecuritySanitizer.cleanNote(document.getElementById('abono-nota').value, 200);
+
+            if (montoAbono <= 0) { alert("El monto a abonar debe ser mayor a cero."); return; }
+
+            const fac = window.facturasDBLocal[docId];
+            let abonosExistentes = fac.abonos || [];
+            
+            abonosExistentes.push({
+                fecha: new Date().toLocaleDateString("es-VE"),
+                monto: montoAbono,
+                metodo: metodo,
+                nota: nota
+            });
+
+            const totalFac = parseFloat(fac.total) || 0;
+            let totalAbonadoNuevo = 0;
+            abonosExistentes.forEach(ab => totalAbonadoNuevo += parseFloat(ab.monto));
+            
+            let nuevoEstatus = fac.estatusComercial;
+            if (totalAbonadoNuevo >= totalFac) {
+                nuevoEstatus = "Crédito Pagado";
+            }
+
+            try {
+                await updateDoc(doc(db, "facturas", docId), {
+                    abonos: abonosExistentes,
+                    estatusComercial: nuevoEstatus
+                });
+                alert(nuevoEstatus === "Crédito Pagado" ? "¡Cuenta pagada en su totalidad!" : "Abono registrado correctamente.");
+                window.cerrarModalAbono();
+                window.cargarFinanzas(); 
+                window.cargarHistorialFacturas(); 
+                window.cargarDashboard();
+            } catch (error) { console.error("Error guardando abono:", error); alert("Error al registrar el abono."); }
+        };
+
+        // ==========================================
+        // GESTIÓN DE PEDIDOS Y ENVÍOS (NUEVO MULTI-ITEM Y EDICIÓN)
+        // ==========================================
+        window.seleccionarClientePedido = function() {
+            const clienteId = document.getElementById('ped-selector-clientes').value;
+            if(clienteId && window.clientesDBLocal[clienteId]) {
+                const cli = window.clientesDBLocal[clienteId];
+                document.getElementById('client-name').value = cli.nombre;
+                document.getElementById('client-email').value = (cli.telefono && cli.telefono !== "NO APLICA") ? cli.telefono : "";
+            }
+        };
+
+        window.agregarItemDesdeInventarioPedido = function() {
+            const select = document.getElementById('select-inventario-ped');
+            const selectedIndex = select.selectedIndex;
+            if (selectedIndex <= 0) { alert("Selecciona un repuesto del inventario primero."); return; }
+
+            const opt = select.options[selectedIndex];
+            const nombre = opt.getAttribute('data-nombre');
+            const precio = parseFloat(opt.getAttribute('data-precio')) || 0;
+
+            const container = document.getElementById('pedidos-items-container');
+            const row = document.createElement('div');
+            row.className = 'pedido-item-row';
+            row.innerHTML = `
+                <input type="number" class="ped-item-cant" value="1" min="1" placeholder="Cant" oninput="calcularTotalPedido()">
+                <input type="text" class="ped-item-desc" value="${nombre}" placeholder="Descripción" style="grid-column: span 3;">
+                <input type="number" step="0.01" class="ped-item-precio" value="${precio.toFixed(2)}" placeholder="Precio" oninput="calcularTotalPedido()">
+                <button type="button" onclick="this.parentElement.remove(); calcularTotalPedido();" style="background:#d9534f; color:white; border:none; border-radius:4px; cursor:pointer;"><i class="fas fa-times"></i></button>
+            `;
+            container.appendChild(row);
+            select.selectedIndex = 0;
+            window.calcularTotalPedido();
+        };
+
+        window.agregarFilaPedidoVacia = function() {
+            const container = document.getElementById('pedidos-items-container');
+            const row = document.createElement('div');
+            row.className = 'pedido-item-row';
+            row.innerHTML = `
+                <input type="number" class="ped-item-cant" value="1" min="1" placeholder="Cant" oninput="calcularTotalPedido()">
+                <input type="text" class="ped-item-desc" placeholder="Descripción del repuesto" style="grid-column: span 3;">
+                <input type="number" step="0.01" class="ped-item-precio" value="0.00" placeholder="Precio" oninput="calcularTotalPedido()">
+                <button type="button" onclick="this.parentElement.remove(); calcularTotalPedido();" style="background:#d9534f; color:white; border:none; border-radius:4px; cursor:pointer;"><i class="fas fa-times"></i></button>
+            `;
+            container.appendChild(row);
+            window.calcularTotalPedido();
+        };
+
+        window.calcularTotalPedido = function() {
+            const rows = document.querySelectorAll('.pedido-item-row');
+            let total = 0;
+            rows.forEach(row => {
+                const cant = parseFloat(row.querySelector('.ped-item-cant').value) || 0;
+                const precio = parseFloat(row.querySelector('.ped-item-precio').value) || 0;
+                total += (cant * precio);
+            });
+            document.getElementById('ped-total-general').innerText = total.toFixed(2);
+        };
+
+        window.mostrarOpcionesMotorizadoCreacion = function() {
+            const envio = document.getElementById('shipping-type').value;
+            const zonaMot = document.getElementById('zona-motorizado-creacion');
+            // Si el cliente retira en local, ocultamos el pago al motorizado
+            if (envio.includes('Retiro')) {
+                zonaMot.style.display = 'none';
+                document.getElementById('ped-motorizado').value = '';
+                document.getElementById('ped-tarifa-mot').value = '';
+            } else {
+                zonaMot.style.display = 'block';
+            }
+        };
+
+        window.guardarPedidoManual = async function(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            
+            const rows = document.querySelectorAll('.pedido-item-row');
+            const productos = [];
+            let totalPedido = 0;
+            
+            rows.forEach(row => {
+                const cant = SecuritySanitizer.sanitizeInt(row.querySelector('.ped-item-cant').value, 1);
+                const desc = SecuritySanitizer.cleanText(row.querySelector('.ped-item-desc').value, 150);
+                const precio = SecuritySanitizer.sanitizeAmount(row.querySelector('.ped-item-precio').value);
+                if(desc) { productos.push({ nombre: desc, cantidad: cant, precio: precio }); totalPedido += (cant * precio); }
+            });
+
+            if(productos.length === 0) { alert("Agrega al menos un repuesto al pedido."); return; }
+            btn.innerHTML = "Registrando..."; btn.disabled = true;
+
+            const envioVal = SecuritySanitizer.cleanText(document.getElementById('shipping-type').value, 50);
+            let trackingVal = SecuritySanitizer.cleanText(document.getElementById('tracking-info').value, 100);
+            let trackingMotVal = SecuritySanitizer.cleanText(document.getElementById('tracking-motorizado').value, 100);
+            const motorizadoVal = SecuritySanitizer.cleanText(document.getElementById('ped-motorizado').value, 50);
+            const tarifaVal = SecuritySanitizer.sanitizeAmount(document.getElementById('ped-tarifa-mot').value);
+
+            // Limpieza inteligente al editar para pedidos viejos
+            if (envioVal.includes('Motorizado')) {
+                if (trackingVal !== '' && trackingMotVal === '') trackingMotVal = trackingVal;
+                trackingVal = ''; // Forzamos a vaciar la agencia porque es moto directa
+            }
+
+            if (!envioVal.includes('Retiro') && motorizadoVal !== '' && trackingMotVal === '') {
+                const aleatorio = Math.floor(1000 + Math.random() * 9000);
+                const letMot = motorizadoVal.substring(0,1).toUpperCase();
+                trackingMotVal = `MOT${letMot}-${aleatorio}`;
+            }
+
+            const nuevoPedido = {
+                email: SecuritySanitizer.cleanText(document.getElementById('client-email').value, 100),
+                cliente: SecuritySanitizer.cleanText(document.getElementById('client-name').value, 120),
+                total: SecuritySanitizer.sanitizeAmount(totalPedido),
+                envio: envioVal,
+                tracking: trackingVal,
+                trackingMotorizado: trackingMotVal,
+                estado: "Pendiente",
+                fecha: new Date().toLocaleDateString("es-VE"),
+                productos: productos,
+                motorizado: motorizadoVal,
+                tarifaMotorizado: tarifaVal,
+                pagoMotorizadoEstatus: motorizadoVal ? 'Pendiente' : '',
+                rutasMotorizado: SecuritySanitizer.cleanAddress(document.getElementById('ped-ruta-mot').value, 300)
+            };
+
+            try {
+                await addDoc(collection(db, "pedidos"), nuevoPedido);
+                alert("¡Pedido registrado exitosamente!");
+                e.target.reset();
+                document.getElementById('pedidos-items-container').innerHTML = '';
+                document.getElementById('ped-total-general').innerText = '0.00';
+                window.mostrarOpcionesMotorizadoCreacion();
+                window.cargarPedidos();
+            } catch (error) { console.error(error); alert("Error al registrar."); }
+            btn.innerHTML = "Registrar Pedido"; btn.disabled = false;
+        };
+
+        window.enviarPedidoAFacturacion = function(docId) {
+            const ped = window.pedidosDBLocal[docId];
+            if(!ped) return;
+
+            const btnFacturacion = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.textContent.includes('Facturación'));
+            if(btnFacturacion) {
+                window.mostrarPestana('facturacion', btnFacturacion);
+            }
+
+            document.getElementById('fac-cliente').value = ped.cliente;
+            document.getElementById('fac-telefono').value = ped.email; 
+            document.getElementById('fac-rif').value = ""; 
+            document.getElementById('fac-direccion').value = ""; 
+            
+            for (const key in window.clientesDBLocal) {
+                if (window.clientesDBLocal[key].nombre.toUpperCase() === ped.cliente.toUpperCase()) {
+                    document.getElementById('fac-rif').value = window.clientesDBLocal[key].rif;
+                    document.getElementById('fac-direccion').value = window.clientesDBLocal[key].direccion;
+                    break;
+                }
+            }
+
+            const container = document.getElementById('facturacion-items-container');
+            container.innerHTML = ''; 
+            const simbolo = document.getElementById('fac-moneda').value.split('|')[1];
+            
+            if(ped.productos && Array.isArray(ped.productos)) {
+                ped.productos.forEach(prod => {
+                    const row = document.createElement('div');
+                    row.className = 'facturacion-item-row';
+                    const precioUnit = parseFloat(prod.precio) || 0;
+                    const cant = parseInt(prod.cantidad) || 1;
+                    const totalLinea = cant * precioUnit;
+                    
+                    row.innerHTML = `
+                        <input type="number" class="fac-item-cant" value="${cant}" min="1" placeholder="Cant" oninput="calcularTotalFactura()">
+                        <input type="text" class="fac-item-desc" value="${prod.nombre}" placeholder="Descripción" oninput="actualizarPreviewFactura()">
+                        <input type="number" step="0.01" class="fac-item-precio" value="${precioUnit.toFixed(2)}" placeholder="Precio" oninput="calcularTotalFactura()">
+                        <input type="number" step="0.01" class="fac-item-descval" value="0.00" placeholder="Desc." oninput="calcularTotalFactura()">
+                        <input type="text" class="fac-item-total-line" value="${simbolo}${totalLinea.toFixed(2)}" readonly style="background: #f1f1f1; text-align: right; font-weight: bold;">
+                        <button type="button" onclick="this.parentElement.remove(); calcularTotalFactura();" style="background:#d9534f; color:white; border:none; border-radius:4px; cursor:pointer;"><i class="fas fa-times"></i></button>
+                    `;
+                    container.appendChild(row);
+                });
+            } else {
+                const cant = ped.cantidad || 1;
+                const totalPed = ped.total || 0;
+                const precioUnit = totalPed / cant;
+                const row = document.createElement('div');
+                row.className = 'facturacion-item-row';
+                row.innerHTML = `
+                    <input type="number" class="fac-item-cant" value="${cant}" min="1" placeholder="Cant" oninput="calcularTotalFactura()">
+                    <input type="text" class="fac-item-desc" value="${ped.producto || 'Repuesto Varios'}" placeholder="Descripción" oninput="actualizarPreviewFactura()">
+                    <input type="number" step="0.01" class="fac-item-precio" value="${precioUnit.toFixed(2)}" placeholder="Precio" oninput="calcularTotalFactura()">
+                    <input type="number" step="0.01" class="fac-item-descval" value="0.00" placeholder="Desc." oninput="calcularTotalFactura()">
+                    <input type="text" class="fac-item-total-line" value="${simbolo}${totalPed.toFixed(2)}" readonly style="background: #f1f1f1; text-align: right; font-weight: bold;">
+                    <button type="button" onclick="this.parentElement.remove(); calcularTotalFactura();" style="background:#d9534f; color:white; border:none; border-radius:4px; cursor:pointer;"><i class="fas fa-times"></i></button>
+                `;
+                container.appendChild(row);
+            }
+
+            window.calcularTotalFactura();
+            alert("✅ Pedido enviado al facturador.\nCompleta cualquier dato faltante y genera la Nota de Entrega.");
+        };
+
+        window.cargarPedidos = async function() {
+            const tbody = document.getElementById('orders-table-body');
+            if(!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Buscando pedidos...</td></tr>';
+            window.pedidosDBLocal = {}; 
+
+            try {
+                const snap = await getDocs(collection(db, "pedidos"));
+                tbody.innerHTML = '';
+                
+                if(snap.empty) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No hay pedidos registrados en la base de datos.</td></tr>';
+                    return;
+                }
+
+                snap.forEach(docSnap => {
+                    const ped = docSnap.data();
+                    const docId = docSnap.id;
+                    window.pedidosDBLocal[docId] = ped;
+
+                    let badgeClass = 'badge-status-activo';
+                    if(ped.estado === 'Pendiente' || ped.estado === 'Procesando') badgeClass = 'badge-status-inactivo';
+
+                    let productosStr = '';
+                    if(ped.productos && Array.isArray(ped.productos)) {
+                        productosStr = ped.productos.map(p => `${p.cantidad}x ${p.nombre}`).join('<br>');
+                    } else {
+                        productosStr = `${ped.cantidad}x ${ped.producto}`;
+                    }
+
+                    let trackingHtml = '';
+                    if (ped.envio && ped.envio.includes('Motorizado')) {
+                        // Si es moto directa, usamos la guía del motorizado (o la vieja si se quedó trabada)
+                        let guiaReal = ped.trackingMotorizado || ped.tracking || 'Pendiente';
+                        trackingHtml = `<span style="font-size:11px; color:#1d6fa5;">🏍️ Guía Moto: <b>${guiaReal}</b></span><br>`;
+                    } else if (ped.envio && ped.envio.includes('Encomienda')) {
+                        // Si es encomienda, se muestran los dos viajes
+                        if (ped.trackingMotorizado) trackingHtml += `<span style="font-size:11px; color:#1d6fa5;">🏍️ Traslado Agencia: <b>${ped.trackingMotorizado}</b></span><br>`;
+                        if (ped.tracking) trackingHtml += `<span style="font-size:11px; color:#d35400;">📦 Guía Tealca/Zoom: <b>${ped.tracking}</b></span><br>`;
+                        if (!ped.tracking && !ped.trackingMotorizado) trackingHtml += `<span style="font-size:11px; color:#999;">Sin guías asignadas</span><br>`;
+                    } else {
+                        trackingHtml = `<span style="font-size:11px; color:#999;">Sin guía (Retiro en Local)</span><br>`;
+                    }
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${ped.fecha || 'N/A'}</td>
+                            <td><strong>${ped.cliente}</strong><br><span style="font-size:11px;color:#666;">${ped.email}</span></td>
+                            <td><div style="font-size:12px; line-height:1.4;">${productosStr}</div></td>
+                            <td><strong>$${Number(ped.total || 0).toFixed(2)}</strong></td>
+                            <td>
+                                <span class="badge-shipping">${ped.envio}</span><br>
+                                ${trackingHtml}
+                                <span class="${badgeClass}" style="margin-top:4px; display:inline-block;">${ped.estado || 'Pendiente'}</span>
+                            </td>
+                            <td style="display: flex; gap: 5px; justify-content: center; align-items: center;">
+                                <button type="button" onclick="abrirModalPedido('${docId}')" style="background:#1d6fa5; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="Editar Envío"><i class="fas fa-edit"></i></button>
+                                <button type="button" onclick="enviarPedidoAFacturacion('${docId}')" style="background:#28a745; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="Facturar / Nota de Entrega"><i class="fas fa-file-invoice"></i></button>
+                                <!-- 🖨️ NUEVO BOTÓN: ETIQUETA TÉRMICA -->
+                                <button type="button" onclick="imprimirEtiquetaEnvio('${docId}')" style="background:#333; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="Imprimir Etiqueta (58mm)"><i class="fas fa-print"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch(e) {
+                console.error("Error cargando pedidos:", e);
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: red;">Error al conectar con la base de datos de pedidos.</td></tr>';
+            }
+            if (typeof window.cargarSelectorPedidosRuta === 'function') window.cargarSelectorPedidosRuta();
+        };
+
+        window.abrirModalPedido = function(docId) {
+            const ped = window.pedidosDBLocal[docId];
+            if(!ped) return;
+            
+            document.getElementById('edit-pedido-id').value = docId;
+            document.getElementById('edit-pedido-email').value = ped.email || '';
+            document.getElementById('edit-pedido-cliente').value = ped.cliente || '';
+            
+            const envioSelect = document.getElementById('edit-pedido-envio');
+            if (ped.envio === "Encomienda Tealca") envioSelect.value = "Encomienda Tealca/Zoom";
+            else envioSelect.value = ped.envio || 'Retiro en Local';
+            
+            // 🚀 RESCATE BLINDADO DE GUÍAS
+            let valAgencia = ped.tracking ? ped.tracking.trim() : '';
+            let valMot = ped.trackingMotorizado ? ped.trackingMotorizado.trim() : '';
+            
+            // Si es Motorizado y la guía se quedó atrapada en la agencia, sácala de ahí
+            if (envioSelect.value.includes('Motorizado')) {
+                if (valAgencia !== '' && valMot === '') {
+                    valMot = valAgencia;
+                    valAgencia = '';
+                }
+            } else if (valAgencia.toUpperCase().includes('MOT') && valMot === '') {
+                valMot = valAgencia;
+                valAgencia = '';
+            }
+
+            document.getElementById('edit-pedido-tracking').value = valAgencia;
+            document.getElementById('edit-pedido-tracking-mot').value = valMot;
+            
+            document.getElementById('edit-pedido-estado').value = ped.estado || 'Pendiente';
+            
+            document.getElementById('edit-pedido-motorizado').value = ped.motorizado || '';
+            document.getElementById('edit-pedido-tarifa').value = ped.tarifaMotorizado || '';
+            document.getElementById('edit-pedido-ruta').value = ped.rutasMotorizado || '';
+            
+            window.mostrarOpcionesMotorizado();
+
+            const container = document.getElementById('edit-pedido-productos-container');
+            container.innerHTML = '';
+            
+            let productosList = [];
+            if (ped.productos && Array.isArray(ped.productos)) {
+                productosList = ped.productos;
+            } else if (ped.producto) {
+                // Formato antiguo
+                let preUni = (parseFloat(ped.total) || 0) / (parseFloat(ped.cantidad) || 1);
+                productosList = [{ nombre: ped.producto, cantidad: ped.cantidad, precio: preUni }];
+            }
+
+            if (productosList.length > 0) {
+                productosList.forEach((prod, index) => {
+                    const cant = parseFloat(prod.cantidad) || 1;
+                    const preUnitario = parseFloat(prod.precio) || 0;
+                    const preTotal = (cant * preUnitario).toFixed(2);
+                    
+                    const div = document.createElement('div');
+                    div.style = "background: #f9f9f9; padding: 10px; border-radius: 6px; border: 1px solid #eee; margin-bottom: 10px;";
+                    div.innerHTML = `
+                        <div class="form-group" style="margin-bottom: 8px;">
+                            <label style="font-size: 11px;">Descripción del Repuesto</label>
+                            <input type="text" class="edit-ped-item-desc" value="${prod.nombre || ''}">
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <div class="form-group" style="margin-bottom: 0; flex: 1;">
+                                <label style="font-size: 11px;">Cantidad</label>
+                                <input type="number" step="0.01" class="edit-ped-item-cant" value="${cant}">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0; flex: 1;">
+                                <label style="font-size: 11px;">Precio Total ($)</label>
+                                <input type="number" step="0.01" class="edit-ped-item-preciototal" value="${preTotal}">
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            } else {
+                container.innerHTML = '<p style="font-size: 12px; color: #999;">Este pedido no tiene productos registrados.</p>';
+            }
+
+            document.getElementById('modal-pedido').style.display = 'flex';
+        };
+
+        window.guardarCambiosPedido = async function() {
+            const docId = document.getElementById('edit-pedido-id').value;
+            const pedOriginal = window.pedidosDBLocal[docId] || {};
+            const btn = document.getElementById('btn-save-pedido');
+            btn.innerHTML = "Guardando..."; btn.disabled = true;
+
+            let trackingVal = SecuritySanitizer.cleanText(document.getElementById('edit-pedido-tracking').value, 100);
+            let trackingMotVal = SecuritySanitizer.cleanText(document.getElementById('edit-pedido-tracking-mot').value, 100);
+            const envioVal = SecuritySanitizer.cleanText(document.getElementById('edit-pedido-envio').value, 50);
+            const motorizadoVal = SecuritySanitizer.cleanText(document.getElementById('edit-pedido-motorizado').value, 50);
+            const tarifaVal = SecuritySanitizer.sanitizeAmount(document.getElementById('edit-pedido-tarifa').value);
+
+            // Limpieza antes de guardar a Firebase
+            if (envioVal.includes('Motorizado')) {
+                if (trackingVal !== '' && trackingMotVal === '') trackingMotVal = trackingVal;
+                trackingVal = ''; 
+            }
+
+            if (!envioVal.includes('Retiro') && motorizadoVal !== '' && trackingMotVal === '') {
+                const aleatorio = Math.floor(1000 + Math.random() * 9000);
+                const letMot = motorizadoVal.substring(0,1).toUpperCase();
+                trackingMotVal = `MOT${letMot}-${aleatorio}`;
+            }
+
+            const datosActualizados = {
+                email: SecuritySanitizer.cleanText(document.getElementById('edit-pedido-email').value, 100),
+                cliente: SecuritySanitizer.cleanText(document.getElementById('edit-pedido-cliente').value, 120),
+                envio: envioVal,
+                tracking: trackingVal,
+                trackingMotorizado: trackingMotVal,
+                estado: SecuritySanitizer.cleanText(document.getElementById('edit-pedido-estado').value, 50),
+                motorizado: motorizadoVal,
+                tarifaMotorizado: tarifaVal,
+                pagoMotorizadoEstatus: motorizadoVal ? (pedOriginal.pagoMotorizadoEstatus || 'Pendiente') : '',
+                rutasMotorizado: SecuritySanitizer.cleanAddress(document.getElementById('edit-pedido-ruta').value, 300)
+            };
+
+            try {
+                await updateDoc(doc(db, "pedidos", docId), datosActualizados);
+                window.cerrarModalPedido();
+                window.cargarPedidos();
+            } catch (error) { 
+                console.error(error); 
+                alert("Error al actualizar la información del pedido."); 
+            }
+            btn.innerHTML = "Guardar"; btn.disabled = false;
+        };
+
+        window.eliminarPedido = async function() {
+            const docId = document.getElementById('edit-pedido-id').value;
+            if(!confirm("¿Estás seguro de eliminar este pedido del historial?")) return;
+            try {
+                await deleteDoc(doc(db, "pedidos", docId));
+                window.cerrarModalPedido();
+                window.cargarPedidos();
+            } catch (error) {
+                console.error(error);
+                alert("No se pudo eliminar el pedido.");
+            }
+        };
+
+        // ==========================================
+        // CATÁLOGO Y STOCK
+        // ==========================================
+        window.abrirModalCategorias = async function() {
+            document.getElementById('modal-categorias').style.display = 'flex';
+            await renderizarListaCategorias();
+        };
+        window.cerrarModalCategorias = function() { document.getElementById('modal-categorias').style.display = 'none'; };
+        
+        window.renderizarListaCategorias = async function() {
+            const lista = document.getElementById('lista-categorias-modal');
+            lista.innerHTML = '<p style="text-align:center; padding: 20px;">Cargando categorías...</p>';
+            try {
+                const snap = await getDocs(collection(db, "categorias"));
+                lista.innerHTML = '';
+                if (snap.empty) { lista.innerHTML = '<p style="text-align:center; color:#666; padding: 20px;">No hay categorías.</p>'; return; }
+                snap.forEach(docSnap => {
+                    const cat = docSnap.data();
+                    lista.innerHTML += `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #e2e8f0; font-size: 14px;">
+                            <span style="font-weight: 500;">${cat.nombre}</span>
+                            <button type="button" onclick="eliminarCategoria('${docSnap.id}')" style="background:#d9534f; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;"><i class="fas fa-trash"></i></button>
+                        </div>`;
+                });
+            } catch (error) { console.error(error); }
+        };
+
+        window.eliminarCategoria = async function(docId) {
+            if(!confirm("¿Estás seguro de eliminar esta categoría?")) return;
+            try {
+                await deleteDoc(doc(db, "categorias", docId));
+                await renderizarListaCategorias(); window.cargarCatalogoAdmin(); 
+            } catch (error) { console.error(error); }
+        };
+
+        window.borrarTodoInventario = async function() {
+            if(!confirm("⚠️ ¡ADVERTENCIA EXTREMA!\n¿Estás absolutamente seguro de querer BORRAR TODO EL CATÁLOGO Y STOCK?\nEsta acción NO se puede deshacer.")) return;
+            
+            const btn = document.querySelector('button[onclick="borrarTodoInventario()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Borrando..."; 
+            btn.disabled = true;
+
+            try {
+                const querySnapshot = await getDocs(collection(db, "productos"));
+                const batchPromises = [];
+                querySnapshot.forEach((docSnap) => {
+                    batchPromises.push(deleteDoc(doc(db, "productos", docSnap.id)));
+                });
+                
+                await Promise.all(batchPromises); 
+                alert("✅ Todo el inventario ha sido borrado exitosamente.");
+                window.cargarCatalogoAdmin(); 
+                window.cargarDashboard();
+            } catch (error) {
+                console.error("Error borrando inventario:", error);
+                alert("Error al intentar borrar el inventario.");
+            }
+            btn.innerHTML = originalText; 
+            btn.disabled = false;
+        };
+
+        window.guardarNuevoRepuesto = async function(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.innerHTML = "Guardando..."; btn.disabled = true;
+
+            const catInput = SecuritySanitizer.cleanText(document.getElementById('prod-categoria').value, 50);
+            let catId = catInput.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]/g, '-');
+            if (catId === "") catId = "otros";
+
+            try {
+                if (!window.mapaCategorias[catId]) {
+                    await addDoc(collection(db, "categorias"), { nombre: catInput, id: catId });
+                    window.mapaCategorias[catId] = catInput;
+                }
+            } catch(err) { console.error("Error guardando categoría", err); }
+
+            let modalidadVal = document.getElementById('prod-modalidad').value;
+            if (modalidadVal === 'custom') {
+                modalidadVal = SecuritySanitizer.cleanText(document.getElementById('prod-modalidad-custom').value, 100) || 'Importación Personalizada';
+            }
+
+            const nuevoProducto = {
+                nombre: SecuritySanitizer.cleanText(document.getElementById('prod-nombre').value, 150),
+                precio: SecuritySanitizer.sanitizeAmount(document.getElementById('prod-precio').value),
+                stock: SecuritySanitizer.sanitizeInt(document.getElementById('prod-stock').value, 0),
+                categoria: catId,
+                imagen: SecuritySanitizer.cleanText(document.getElementById('prod-imagen').value, 500),
+                numero_parte: SecuritySanitizer.cleanText(document.getElementById('prod-numero-parte').value, 50),
+                descripcion: SecuritySanitizer.cleanNote(document.getElementById('prod-descripcion').value, 1000),
+                marca: SecuritySanitizer.cleanText(document.getElementById('prod-marca').value, 50),
+                modelo: SecuritySanitizer.cleanText(document.getElementById('prod-modelo').value, 100),
+                subcategoria: SecuritySanitizer.cleanText(document.getElementById('prod-subcategoria').value, 50),
+                posicion: SecuritySanitizer.cleanText(document.getElementById('prod-posicion').value, 20),
+                modalidad: modalidadVal,
+                estado: "activo",
+                ml_id: ""
+            };
+
+            try {
+                await addDoc(collection(db, "productos"), nuevoProducto);
+                alert("¡Repuesto guardado con éxito!");
+                e.target.reset();
+                const cust = document.getElementById('prod-modalidad-custom');
+                if(cust) { cust.style.display = 'none'; cust.required = false; }
+                window.cargarCatalogoAdmin();
+                window.cargarDashboard();
+            } catch (error) { console.error(error); alert("Error al guardar el repuesto."); }
+            btn.innerHTML = "Guardar Repuesto"; btn.disabled = false;
+        };
+
+        window.cargarCatalogoAdmin = async function() {
+            const selectCat = document.getElementById('prod-categoria');
+            const selectEditCat = document.getElementById('edit-categoria');
+            const selectFiltroAdmin = document.getElementById('admin-category-filter');
+            const selectProdManual = document.getElementById('product-select');
+            const selectInventarioCot = document.getElementById('select-inventario-cot');
+            const selectInventarioFac = document.getElementById('select-inventario-fac'); 
+            const selectInventarioPed = document.getElementById('select-inventario-ped'); 
+            
+            const datalistCats = document.getElementById('lista-categorias');
+            if(selectCat && selectCat.tagName === 'SELECT') selectCat.innerHTML = '<option value="">Seleccionar...</option>';
+            if(datalistCats) datalistCats.innerHTML = '';
+            if(selectEditCat) selectEditCat.innerHTML = '';
+            if(selectFiltroAdmin) selectFiltroAdmin.innerHTML = '<option value="todos">Todas las Categorías</option>';
+            if(selectProdManual) selectProdManual.innerHTML = '<option value="">Selecciona repuesto...</option>';
+            if(selectInventarioCot) selectInventarioCot.innerHTML = '<option value="">Selecciona repuesto...</option>';
+            if(selectInventarioFac) selectInventarioFac.innerHTML = '<option value="">Selecciona repuesto...</option>';
+            if(selectInventarioPed) selectInventarioPed.innerHTML = '<option value="">Selecciona repuesto...</option>';
+            window.mapaCategorias = {};
+
+            try {
+                const catSnap = await getDocs(collection(db, "categorias"));
+                catSnap.forEach(docSnap => {
+                    const cat = docSnap.data();
+                    window.mapaCategorias[cat.id] = cat.nombre;
+                    const opt = `<option value="${cat.id}">${cat.nombre}</option>`;
+                    if(selectCat && selectCat.tagName === 'SELECT') selectCat.innerHTML += opt;
+                    if(datalistCats) datalistCats.innerHTML += `<option value="${cat.nombre}"></option>`;
+                    if(selectEditCat) selectEditCat.innerHTML += opt;
+                    if(selectFiltroAdmin) selectFiltroAdmin.innerHTML += opt;
+                });
+            } catch (e) { console.error(e); }
+
+            const tablaProd = document.getElementById('products-table-body');
+            if(tablaProd) tablaProd.innerHTML = `<tr><td colspan="5" style="text-align: center;">Buscando repuestos...</td></tr>`;
+            
+            try {
+                const prodSnap = await getDocs(collection(db, "productos"));
+                if(tablaProd) tablaProd.innerHTML = '';
+                
+                prodSnap.forEach(docSnap => {
+                    const prod = docSnap.data();
+                    const docId = docSnap.id;
+                    const stock = prod.stock !== undefined ? prod.stock : 1;
+                    
+                    if(tablaProd) {
+                        const badgeEstado = prod.estado === 'activo' ? `<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-[10px] uppercase font-bold inline-block mt-1">Activo</span>` : `<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] uppercase font-bold inline-block mt-1">Inactivo</span>`;
+                        
+                        let bMarca = '';
+                        if(prod.marca && prod.marca !== "Universal/Multi-marca" && prod.marca !== "") {
+                            bMarca = `<span class="bg-gray-100 text-gray-700 border border-gray-200 px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide shadow-sm inline-flex items-center gap-1"><i class="fas fa-car-side"></i> ${prod.marca}</span>`;
+                        }
+                        
+                        let bPos = '';
+                        if(prod.posicion && prod.posicion !== "N/A" && prod.posicion !== "") {
+                            bPos = `<span class="bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide shadow-sm inline-flex items-center gap-1"><i class="fas fa-arrows-alt-h"></i> ${prod.posicion}</span>`;
+                        }
+                        
+                        let bMod = '';
+                        if(prod.modalidad && prod.modalidad.toLowerCase().includes("importación")) {
+                            bMod = `<span class="bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide shadow-sm inline-flex items-center gap-1 mt-1"><i class="fas fa-plane-arrival"></i> ${prod.modalidad}</span>`;
+                        } else if(prod.modalidad) {
+                            bMod = `<span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide shadow-sm inline-flex items-center gap-1 mt-1"><i class="fas fa-box"></i> ${prod.modalidad}</span>`;
+                        }
+
+                        // 🚀 LIMPIEZA DE TEXTOS
+                        const safeNombre = (prod.nombre || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                        const safeImg = (prod.imagen || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                        const safeNumParte = (prod.numero_parte || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                        const safeDesc = (prod.descripcion || '').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, '\\n').replace(/\r/g, '');
+
+                        tablaProd.innerHTML += `
+                            <tr class="admin-prod-row" data-category="${prod.categoria}">
+                                <td style="vertical-align: top; padding-top: 12px;"><img src="${prod.imagen}" width="60" style="border-radius:4px; border:1px solid #eee; background:#f0f0f0; object-fit:cover;" onerror="this.src='img/logo.png'"></td>
+                                <td class="prod-nombre-col" style="vertical-align: top; padding-top: 12px;">
+                                    <div style="margin-bottom:3px; line-height: 1.2;"><strong>${prod.nombre}</strong> <br>${badgeEstado}</div>
+                                    <div class="flex flex-wrap gap-1 mt-2 mb-1">
+                                        ${bMarca}
+                                        ${bPos}
+                                    </div>
+                                    ${bMod}
+                                    ${prod.modelo ? `<div class="text-[11px] text-gray-500 mt-2"><i class="fas fa-cogs"></i> Mod/Motor: ${prod.modelo}</div>` : ''}
+                                </td>
+                                <td style="vertical-align: top; padding-top: 12px;"><span style="background:#eee;padding:3px 8px;border-radius:10px;font-size:11px;font-weight:bold;">${prod.categoria}</span>${prod.subcategoria ? `<br><span style="font-size:10px; color:#777; display:block; margin-top:4px;">↳ ${prod.subcategoria}</span>` : ''}</td>
+                                <td><strong>$${Number(prod.precio).toFixed(2)}</strong><br><span style="font-size:12px;color:#666;">Stock: ${stock}</span></td>
+                                <td style="display: flex; gap: 5px; justify-content: center; align-items: center; min-width: 60px;">
+                                    <button type="button" onclick="abrirEdicion('${docId}', '${safeNombre}', ${prod.precio}, ${stock}, '${prod.categoria}', '${prod.estado || 'activo'}', '${safeImg}', '${safeNumParte}', '${safeDesc}')" style="background:#1d6fa5; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;"><i class="fas fa-edit"></i></button>
+                                </td>
+                            </tr>`;
+                    }
+
+                    if(selectProdManual) selectProdManual.innerHTML += `<option value="${prod.nombre}" data-price="${prod.precio}">${prod.nombre} - $${prod.precio}</option>`;
+                    
+                    const optCots = `<option value="${docSnap.id}" data-nombre="${(prod.nombre || '').replace(/"/g, '&quot;')}" data-precio="${prod.precio}">${prod.nombre} - $${prod.precio}</option>`;
+                    if(selectInventarioCot) selectInventarioCot.innerHTML += optCots;
+                    if(selectInventarioFac) selectInventarioFac.innerHTML += optCots;
+                    if(selectInventarioPed) selectInventarioPed.innerHTML += optCots;
+                });
+            } catch (e) { console.error(e); }
+            window.filtrarTablaAdmin();
+        };
+
+        window.filtrarTablaAdmin = function() {
+            const filtroCat = document.getElementById('admin-category-filter')?.value || 'todos';
+            const texto = document.getElementById('admin-search-filter')?.value.toLowerCase() || '';
+            document.querySelectorAll('.admin-prod-row').forEach(fila => {
+                const cat = fila.getAttribute('data-category');
+                const nom = fila.querySelector('.prod-nombre-col')?.textContent.toLowerCase() || '';
+                fila.style.display = ((filtroCat === 'todos' || cat === filtroCat) && nom.includes(texto)) ? '' : 'none';
+            });
+        };
+
+        // ==========================================
+        // BASE DE CLIENTES (EDICIÓN Y CARGA MASIVA)
+        // ==========================================
+        window.cancelarEdicionCliente = function() {
+            document.getElementById('form-cliente-db').reset();
+            document.getElementById('db-cliente-id').value = '';
+            document.getElementById('btn-guardar-cliente').textContent = "Guardar en Base de Datos";
+            document.getElementById('btn-cancelar-edicion-cli').style.display = 'none';
+            document.getElementById('titulo-form-cliente').innerHTML = '<i class="fas fa-user-plus"></i> Registrar Nuevo Cliente';
+        };
+
+        window.editarClienteDB = function(docId) {
+            const cli = window.clientesDBLocal[docId];
+            if(!cli) return;
+            document.getElementById('db-cliente-id').value = docId;
+            document.getElementById('db-cliente-nombre').value = cli.nombre || '';
+            document.getElementById('db-cliente-rif').value = cli.rif || '';
+            document.getElementById('db-cliente-dir').value = cli.direccion || '';
+            document.getElementById('db-cliente-tel').value = cli.telefono || '';
+            
+            document.getElementById('btn-guardar-cliente').textContent = "Actualizar Cliente";
+            document.getElementById('btn-cancelar-edicion-cli').style.display = 'block';
+            document.getElementById('titulo-form-cliente').innerHTML = '<i class="fas fa-user-edit"></i> Editar Cliente';
+            
+            document.getElementById('titulo-form-cliente').scrollIntoView({ behavior: 'smooth' });
+        };
+
+        window.guardarNuevoClienteDB = async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-guardar-cliente');
+            btn.innerHTML = "Guardando..."; btn.disabled = true;
+
+            const docId = document.getElementById('db-cliente-id').value;
+            const dataCliente = {
+                nombre: SecuritySanitizer.cleanText(document.getElementById('db-cliente-nombre').value, 120),
+                rif: SecuritySanitizer.cleanText(document.getElementById('db-cliente-rif').value, 30),
+                direccion: SecuritySanitizer.cleanAddress(document.getElementById('db-cliente-dir').value, 300),
+                telefono: SecuritySanitizer.cleanPhone(document.getElementById('db-cliente-tel').value)
+            };
+
+            try {
+                if(docId) {
+                    await updateDoc(doc(db, "clientes", docId), dataCliente);
+                    if(window.registrarAuditoria) window.registrarAuditoria("EDITAR CLIENTE", "Se modificó el cliente: " + dataCliente.nombre + " (" + dataCliente.rif + ")");
+                    alert("¡Cliente actualizado con éxito!");
+                } else {
+                    await addDoc(collection(db, "clientes"), dataCliente);
+                    if(window.registrarAuditoria) window.registrarAuditoria("CREAR CLIENTE", "Se registró el cliente: " + dataCliente.nombre + " (" + dataCliente.rif + ")");
+                    alert("¡Cliente registrado en la base de datos con éxito!");
+                }
+                window.cancelarEdicionCliente();
+                window.cargarBaseClientes();
+            } catch (error) { console.error(error); alert("Error al procesar el cliente."); }
+            btn.innerHTML = docId ? "Actualizar Cliente" : "Guardar en Base de Datos"; 
+            btn.disabled = false;
+        };
+
+        window.procesarPegadoMasivoClientes = async function() {
+            const texto = document.getElementById('excel-paste-clientes').value.trim();
+            const btn = document.getElementById('btn-excel-upload-clientes');
+            if(!texto) { alert("Pega el contenido de tu Excel."); return; }
+
+            btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Procesando..."; btn.disabled = true;
+            const lineas = texto.split('\n');
+            let importados = 0; let ignorados = 0;
+            
+            try {
+                for(let linea of lineas) {
+                    const columnas = linea.split('\t'); 
+                    if(columnas.length >= 2) {
+                        const nombre = columnas[0] ? columnas[0].trim() : "";
+                        const rif = columnas[1] ? columnas[1].trim() : "";
+                        const direccion = columnas[2] ? columnas[2].trim() : "NO APLICA";
+                        const telefono = columnas[3] ? columnas[3].trim() : "NO APLICA";
+                        
+                        if(nombre && rif && nombre.toLowerCase() !== "nombre" && nombre.toLowerCase() !== "cliente") {
+                            let existe = false;
+                            for (const key in window.clientesDBLocal) {
+                                if (window.clientesDBLocal[key].rif && window.clientesDBLocal[key].rif.trim().toUpperCase() === rif.toUpperCase()) {
+                                    existe = true; break;
+                                }
+                            }
+
+                            if(!existe) {
+                                await addDoc(collection(db, "clientes"), { nombre, rif, direccion, telefono });
+                                importados++; window.clientesDBLocal["temp_" + importados] = { rif: rif }; 
+                            } else { ignorados++; }
+                        }
+                    }
+                }
+                alert(`¡Carga Completada!\n\n✅ Clientes nuevos subidos: ${importados}\n⚠️ Ignorados (ya existían): ${ignorados}`);
+                document.getElementById('excel-paste-clientes').value = ""; window.cargarBaseClientes();
+            } catch(e) { console.error(e); alert("Ocurrió un error al procesar el Excel de clientes."); }
+            btn.innerHTML = "Subir Clientes"; btn.disabled = false;
+        };
+
+        window.cargarBaseClientes = async function() {
+            const tbody = document.getElementById('clients-table-body');
+            const selectCotizacion = document.getElementById('cot-selector-clientes');
+            const selectFactura = document.getElementById('fac-selector-clientes'); 
+            const selectPedido = document.getElementById('ped-selector-clientes');
+            
+            if(tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">Cargando base de datos...</td></tr>`;
+            if(selectCotizacion) selectCotizacion.innerHTML = '<option value="">Selecciona un cliente o aseguradora...</option>';
+            if(selectFactura) selectFactura.innerHTML = '<option value="">Selecciona un cliente o mostrador...</option>';
+            if(selectPedido) selectPedido.innerHTML = '<option value="">Selecciona un cliente registrado...</option>';
+            window.clientesDBLocal = {};
+
+            try {
+                const snap = await getDocs(collection(db, "clientes"));
+                if(tbody) tbody.innerHTML = '';
+                
+                if(snap.empty && tbody) {
+                     tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">No hay clientes registrados.</td></tr>`;
+                     return;
+                }
+                
+                snap.forEach((docSnap) => {
+                    const cli = docSnap.data();
+                    const docId = docSnap.id;
+                    window.clientesDBLocal[docId] = cli;
+
+                    if(selectCotizacion) selectCotizacion.innerHTML += `<option value="${docId}">${cli.nombre} - ${cli.rif}</option>`;
+                    if(selectFactura) selectFactura.innerHTML += `<option value="${docId}">${cli.nombre} - ${cli.rif}</option>`;
+                    if(selectPedido) selectPedido.innerHTML += `<option value="${docId}">${cli.nombre} - ${cli.rif}</option>`;
+
+                    if(tbody) {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td><strong>${cli.nombre}</strong></td>
+                                <td>${cli.rif}</td>
+                                <td>${cli.direccion}</td>
+                                <td>${cli.telefono}</td>
+                                <td style="display: flex; gap: 5px; justify-content: center; align-items: center; min-width: 90px;">
+                                    <button type="button" onclick="editarClienteDB('${docId}')" style="background:#1d6fa5; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;" title="Editar Datos"><i class="fas fa-edit"></i></button>
+                                    <button type="button" onclick="eliminarClienteDB('${docId}')" style="background:#d9534f; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;" title="Eliminar Cliente"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>`;
+                    }
+                });
+            } catch (error) { 
+                console.error(error); 
+                if(tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: red;">Error al cargar: ${error.message}</td></tr>`;
+            }
+        };
+
+        window.eliminarClienteDB = async function(docId) {
+            if(!confirm("¿Eliminar este cliente de la base de datos?")) return;
+            try { 
+                let c = window.clientesDBLocal ? window.clientesDBLocal[docId] : null;
+                let cname = c ? c.nombre : docId;
+                await deleteDoc(doc(db, "clientes", docId)); 
+                if(window.registrarAuditoria) window.registrarAuditoria("ELIMINAR CLIENTE", "Se eliminó el cliente: " + cname);
+                window.cargarBaseClientes(); 
+            } catch (error) { console.error(error); }
+        };
+
+        window.abrirEdicion = function(id, nombre, precio, stock, categoria, estado, imagen, numero_parte, descripcion) {
+            document.getElementById('edit-id').value = id;
+            document.getElementById('edit-nombre').value = nombre;
+            document.getElementById('edit-precio').value = precio;
+            document.getElementById('edit-stock').value = stock;
+            document.getElementById('edit-categoria').value = categoria;
+            document.getElementById('edit-estado').value = estado || 'activo';
+            document.getElementById('edit-imagen').value = imagen;
+            document.getElementById('edit-numero-parte').value = (numero_parte && numero_parte !== 'undefined') ? numero_parte : '';
+            document.getElementById('edit-descripcion').value = (descripcion && descripcion !== 'undefined') ? descripcion.replace(/\\n/g, '\n') : '';
+            document.getElementById('modal-edicion').style.display = 'flex';
+        };
+
+        window.cerrarModalEdicion = function() { document.getElementById('modal-edicion').style.display = 'none'; };
+
+        window.guardarCambiosProducto = async function() {
+            const docId = document.getElementById('edit-id').value;
+            const btn = document.getElementById('btn-save-edit');
+            btn.innerHTML = "Guardando..."; btn.disabled = true;
+
+            const datosActualizados = {
+                nombre: SecuritySanitizer.cleanText(document.getElementById('edit-nombre').value, 150),
+                precio: SecuritySanitizer.sanitizeAmount(document.getElementById('edit-precio').value),
+                stock: SecuritySanitizer.sanitizeInt(document.getElementById('edit-stock').value, 0),
+                categoria: SecuritySanitizer.cleanText(document.getElementById('edit-categoria').value, 50),
+                estado: SecuritySanitizer.cleanText(document.getElementById('edit-estado').value, 30),
+                imagen: SecuritySanitizer.cleanText(document.getElementById('edit-imagen').value, 500),
+                numero_parte: SecuritySanitizer.cleanText(document.getElementById('edit-numero-parte').value, 50),
+                descripcion: SecuritySanitizer.cleanNote(document.getElementById('edit-descripcion').value, 1000)
+            };
+
+            try {
+                await updateDoc(doc(db, "productos", docId), datosActualizados);
+                if(window.registrarAuditoria) window.registrarAuditoria("EDITAR PRODUCTO", "Se modificó el producto: " + datosActualizados.nombre);
+                window.cerrarModalEdicion(); 
+                window.cargarCatalogoAdmin();
+                window.cargarDashboard();
+            } catch (error) { console.error(error); alert("Ocurrió un error al guardar los cambios."); }
+            btn.innerHTML = "Guardar"; btn.disabled = false;
+        };
+
+        window.eliminarProducto = async function() {
+            const docId = document.getElementById('edit-id').value;
+            const nombreProd = document.getElementById('edit-nombre').value;
+            if(!confirm("¿Estás seguro de eliminar permanentemente este repuesto?")) return;
+            try {
+                await deleteDoc(doc(db, "productos", docId));
+                if(window.registrarAuditoria) window.registrarAuditoria("ELIMINAR PRODUCTO", "Se eliminó el producto: " + nombreProd);
+                window.cerrarModalEdicion(); 
+                window.cargarCatalogoAdmin(); 
+                window.cargarDashboard();
+                alert("Repuesto eliminado con éxito.");
+            } catch (error) { console.error(error); alert("No se pudo eliminar el repuesto."); }
+        };
+
+        window.procesarPegadoMasivo = async function() {
+            const texto = document.getElementById('excel-paste').value.trim();
+            const btn = document.getElementById('btn-excel-upload');
+            if(!texto) { alert("Pega el contenido de tu Excel."); return; }
+
+            btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Procesando..."; btn.disabled = true;
+            const lineas = texto.split('\n');
+            let importados = 0; let nuevasCatCount = 0;
+            
+            try {
+                for(let linea of lineas) {
+                    const columnas = linea.split('\t'); 
+                    const mlvIndex = columnas.findIndex(col => col.trim().startsWith('MLV'));
+
+                    if(mlvIndex !== -1) {
+                        const ml_id = columnas[mlvIndex].trim();
+                        const nombre = columnas[mlvIndex + 2] ? columnas[mlvIndex + 2].trim() : "";
+                        const numero_parte = columnas[mlvIndex + 3] ? columnas[mlvIndex + 3].trim() : "";
+                        let stockRaw = columnas[mlvIndex + 4] ? columnas[mlvIndex + 4].trim() : "1";
+                        const stock = parseInt(stockRaw) || 1;
+                        let precioRaw = columnas[mlvIndex + 5] ? columnas[mlvIndex + 5].replace(/US\$|Bs\./g, '').trim() : "0";
+                        const precio = parseFloat(precioRaw.replace(',', '.')) || 0;
+                        const categoriaExcel = columnas[mlvIndex + 12] ? columnas[mlvIndex + 12].trim() : "Otros";
+                        let catId = categoriaExcel.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '-');
+                        if (catId === "") catId = "otros";
+
+                        if (!window.mapaCategorias[catId]) {
+                            await addDoc(collection(db, "categorias"), { nombre: categoriaExcel, id: catId });
+                            window.mapaCategorias[catId] = categoriaExcel; nuevasCatCount++;
+                        }
+                        const imagen = "https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png"; 
+                        if(nombre && precio > 0 && nombre.toLowerCase() !== "título") {
+                            await addDoc(collection(db, "productos"), {
+                                nombre, precio, stock, categoria: catId, estado: "activo", imagen, ml_id, numero_parte
+                            });
+                            importados++;
+                        }
+                    }
+                }
+                alert(`¡Carga Completada!\n\n✅ Repuestos subidos: ${importados}\n📁 Categorías creadas: ${nuevasCatCount}`);
+                document.getElementById('excel-paste').value = ""; 
+                window.cargarCatalogoAdmin();
+                window.cargarDashboard();
+            } catch(e) { console.error(e); alert("Ocurrió un error al procesar el Excel."); }
+            btn.innerHTML = "Subir y Crear Categorías"; btn.disabled = false;
+        };
+
+        // ==========================================
+        // 🚀 FACTURACIÓN Y COTIZACIONES
+        // ==========================================
+        window.seleccionarClienteFactura = function() {
+            const clienteId = document.getElementById('fac-selector-clientes').value;
+            if(clienteId && window.clientesDBLocal[clienteId]) {
+                const cli = window.clientesDBLocal[clienteId];
+                document.getElementById('fac-cliente').value = cli.nombre;
+                document.getElementById('fac-rif').value = cli.rif;
+                document.getElementById('fac-direccion').value = cli.direccion;
+                document.getElementById('fac-telefono').value = cli.telefono;
+                window.actualizarPreviewFactura();
+            }
+        };
+
+        window.agregarItemDesdeInventarioFactura = function() {
+            const select = document.getElementById('select-inventario-fac');
+            const selectedIndex = select.selectedIndex;
+            if (selectedIndex <= 0) { alert("Selecciona un repuesto del inventario primero."); return; }
+
+            const opt = select.options[selectedIndex];
+            const nombre = opt.getAttribute('data-nombre');
+            
+            const monedaSeleccionada = document.getElementById('fac-moneda').value.split('|')[0];
+            const tasaMostrada = parseFloat(document.getElementById('fac-tasa').value) || 1;
+            const precioBaseUSD = parseFloat(opt.getAttribute('data-precio')) || 0;
+            
+            let precioCalculado = precioBaseUSD;
+            const simbolo = document.getElementById('fac-moneda').value.split('|')[1];
+
+            if (monedaSeleccionada === "VES") {
+                precioCalculado = precioBaseUSD * tasaMostrada;
+            } else if (monedaSeleccionada === "EUR") {
+                if (tasaMostrada > 10) { precioCalculado = precioBaseUSD * 0.92; } 
+                else { precioCalculado = precioBaseUSD * tasaMostrada; }
+            }
+
+            const container = document.getElementById('facturacion-items-container');
+            const row = document.createElement('div');
+            row.className = 'facturacion-item-row';
+            row.innerHTML = `
+                <input type="number" class="fac-item-cant" value="1" min="1" placeholder="Cant" oninput="calcularTotalFactura()">
+                <input type="text" class="fac-item-desc" value="${nombre}" placeholder="Descripción" oninput="actualizarPreviewFactura()">
+                <input type="number" step="0.01" class="fac-item-precio" value="${precioCalculado.toFixed(2)}" placeholder="Precio" oninput="calcularTotalFactura()">
+                <input type="number" step="0.01" class="fac-item-descval" value="0.00" placeholder="Desc." oninput="calcularTotalFactura()">
+                <input type="text" class="fac-item-total-line" value="${simbolo}${precioCalculado.toFixed(2)}" readonly style="background: #f1f1f1; text-align: right; font-weight: bold;">
+                <button type="button" onclick="this.parentElement.remove(); calcularTotalFactura();" style="background:#d9534f; color:white; border:none; border-radius:4px; cursor:pointer;"><i class="fas fa-times"></i></button>
+            `;
+            container.appendChild(row);
+            select.selectedIndex = 0;
+            window.calcularTotalFactura();
+        };
+
+        window.agregarFilaFacturaVacia = function() {
+            const container = document.getElementById('facturacion-items-container');
+            const row = document.createElement('div');
+            row.className = 'facturacion-item-row';
+            const simbolo = document.getElementById('fac-moneda').value.split('|')[1];
+            row.innerHTML = `
+                <input type="number" class="fac-item-cant" value="1" min="1" placeholder="Cant" oninput="calcularTotalFactura()">
+                <input type="text" class="fac-item-desc" placeholder="Escribe el repuesto de reventa..." oninput="actualizarPreviewFactura()">
+                <input type="number" step="0.01" class="fac-item-precio" value="0.00" placeholder="Precio" oninput="calcularTotalFactura()">
+                <input type="number" step="0.01" class="fac-item-descval" value="0.00" placeholder="Desc." oninput="calcularTotalFactura()">
+                <input type="text" class="fac-item-total-line" value="${simbolo}0.00" readonly style="background: #f1f1f1; text-align: right; font-weight: bold;">
+                <button type="button" onclick="this.parentElement.remove(); calcularTotalFactura();" style="background:#d9534f; color:white; border:none; border-radius:4px; cursor:pointer;"><i class="fas fa-times"></i></button>
+            `;
+            container.appendChild(row);
+            window.calcularTotalFactura();
+        };
+
+        window.calcularTotalFactura = function() {
+            const rows = document.querySelectorAll('.facturacion-item-row');
+            let subtotal = 0; let totalDescuento = 0;
+            const simbolo = document.getElementById('fac-moneda').value.split('|')[1];
+
+            rows.forEach(row => {
+                const cant = parseFloat(row.querySelector('.fac-item-cant').value) || 0;
+                const precio = parseFloat(row.querySelector('.fac-item-precio').value) || 0;
+                const desc = parseFloat(row.querySelector('.fac-item-descval').value) || 0;
+                const totalLinea = (cant * precio) - desc;
+                
+                row.querySelector('.fac-item-total-line').value = `${simbolo}${totalLinea.toFixed(2)}`;
+                subtotal += (cant * precio);
+                totalDescuento += desc;
+            });
+
+            const baseImponible = subtotal - totalDescuento;
+            const iva = baseImponible * 0.16;
+            const totalGeneral = baseImponible + iva;
+
+            if(document.getElementById('fac-subtotal')) document.getElementById('fac-subtotal').innerText = subtotal.toFixed(2);
+            if(document.getElementById('fac-total-desc')) document.getElementById('fac-total-desc').innerText = totalDescuento.toFixed(2);
+            if(document.getElementById('fac-iva')) document.getElementById('fac-iva').innerText = iva.toFixed(2);
+            if(document.getElementById('fac-total-general')) document.getElementById('fac-total-general').innerText = totalGeneral.toFixed(2);
+
+            window.actualizarPreviewFactura();
+        };
+
+        function construirHTMLFactura(datos = null) {
+            let cliente, rif, direccion, telefono, itemsHTML = '', subtotal, descuento, iva, total, nro;
+            let moneda, simbolo, disponibilidad, tasaGuardada;
+            const fechaActual = new Date().toLocaleDateString("es-VE");
+
+            if (datos) {
+                cliente = datos.cliente; rif = datos.rif; direccion = datos.direccion; telefono = datos.telefono;
+                subtotal = datos.subtotal; descuento = datos.descuento; iva = datos.iva; total = datos.total;
+                nro = datos.nro; moneda = datos.moneda || 'USD'; simbolo = datos.simbolo || '$';
+                disponibilidad = datos.disponibilidad || 'ENTREGA INMEDIATA';
+                tasaGuardada = datos.tasa || '1';
+
+                datos.items.forEach(item => {
+                    const totalLinea = (parseFloat(item.cantidad) * parseFloat(item.precioUnitario)) - parseFloat(item.descuento);
+                    itemsHTML += `
+                        <tr style="border-bottom: 1px solid #eee; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                            <td style="padding: 6px 10px; text-align: center;">${item.cantidad}</td>
+                            <td style="padding: 6px 10px;">${item.descripcion}</td>
+                            <td style="padding: 6px 10px; text-align: right;">${simbolo}${Number(item.precioUnitario).toFixed(2)}</td>
+                            <td style="padding: 6px 10px; text-align: right; color: #d9534f;">-${simbolo}${Number(item.descuento).toFixed(2)}</td>
+                            <td style="padding: 6px 10px; text-align: right; font-weight: bold;">${simbolo}${totalLinea.toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                cliente = document.getElementById('fac-cliente')?.value || 'Cliente Mostrador';
+                rif = document.getElementById('fac-rif')?.value || '';
+                direccion = document.getElementById('fac-direccion')?.value || '';
+                telefono = document.getElementById('fac-telefono')?.value || '';
+                subtotal = document.getElementById('fac-subtotal')?.innerText || '0.00';
+                descuento = document.getElementById('fac-total-desc')?.innerText || '0.00';
+                iva = document.getElementById('fac-iva')?.innerText || '0.00';
+                total = document.getElementById('fac-total-general')?.innerText || '0.00';
+                nro = document.getElementById('fac-nro')?.value || '0000';
+                disponibilidad = document.getElementById('fac-disponibilidad')?.value || 'ENTREGA INMEDIATA';
+                tasaGuardada = document.getElementById('fac-tasa')?.value || '1';
+                
+                const monedaData = document.getElementById('fac-moneda').value.split('|');
+                moneda = monedaData[0]; simbolo = monedaData[1];
+
+                document.querySelectorAll('.facturacion-item-row').forEach(row => {
+                    const cant = row.querySelector('.fac-item-cant')?.value || 1;
+                    const desc = row.querySelector('.fac-item-desc')?.value || '';
+                    const precio = parseFloat(row.querySelector('.fac-item-precio')?.value) || 0;
+                    const descval = parseFloat(row.querySelector('.fac-item-descval')?.value) || 0;
+                    const totalLinea = (parseFloat(cant) * precio) - descval;
+
+                    itemsHTML += `
+                        <tr style="border-bottom: 1px solid #eee; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                            <td style="padding: 6px 10px; text-align: center;">${cant}</td>
+                            <td style="padding: 6px 10px;">${desc}</td>
+                            <td style="padding: 6px 10px; text-align: right;">${simbolo}${precio.toFixed(2)}</td>
+                            <td style="padding: 6px 10px; text-align: right; color: #d9534f;">-${simbolo}${descval.toFixed(2)}</td>
+                            <td style="padding: 6px 10px; text-align: right; font-weight: bold;">${simbolo}${totalLinea.toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            return `
+                <div style="max-width: 800px; margin: 0 auto; background: white; padding: 25px; font-family: Arial, sans-serif; color: #333; box-sizing: border-box; width: 100%;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #385723; padding-bottom: 10px; margin-bottom: 12px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logo" style="width: 100px; height: auto; display: block;">
+                            <div>
+                                <p style="margin: 0; font-size: 11px; font-weight: bold; color: #333;">F&B PARTS</p>
+                                <p style="margin: 1px 0; font-size: 10px; color: #555;">RIF: J-503971118</p>
+                                <p style="margin: 1px 0; font-size: 10px; color: #555;">fybinversiones.ccs@gmail.com | +584120161036</p>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <h2 style="color: #385723; font-family: Arial, sans-serif; font-size: 16px; margin: 0; font-weight: bold;">NOTA DE ENTREGA</h2>
+                            <p style="font-size: 12px; font-weight: bold; color: #333; margin: 2px 0;">Ctrl/Nro: ${nro}</p>
+                            <p style="font-size: 10px; color: #666; margin: 0;">Fecha: ${fechaActual}</p>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: #f4f6f4; padding: 10px 12px; border-radius: 4px; margin-bottom: 12px; font-size: 11px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                        <div>
+                            <p style="margin: 2px 0;"><strong>Cliente:</strong> ${cliente}</p>
+                            <p style="margin: 2px 0;"><strong>RIF o C.I:</strong> ${rif}</p>
+                        </div>
+                        <div>
+                            <p style="margin: 2px 0;"><strong>Dirección:</strong> ${direccion}</p>
+                            <p style="margin: 2px 0;"><strong>Teléfono:</strong> ${telefono}</p>
+                            <p style="margin: 2px 0;"><strong>Condición:</strong> <span style="color: #385723; font-weight: bold;">${disponibilidad}</span></p>
+                        </div>
+                    </div>
+
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 11px;">
+                        <thead>
+                            <tr style="background-color: #385723 !important; color: white !important; text-align: left; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                                <th style="padding: 6px 10px; width: 45px; text-align: center;">CANT</th>
+                                <th style="padding: 6px 10px;">DESCRIPCIÓN</th>
+                                <th style="padding: 6px 10px; width: 80px; text-align: right;">PRECIO U.</th>
+                                <th style="padding: 6px 10px; width: 80px; text-align: right;">DESC.</th>
+                                <th style="padding: 6px 10px; width: 85px; text-align: right;">TOTAL</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsHTML}
+                        </tbody>
+                    </table>
+
+                    <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+                        <div style="width: 220px; font-size: 11px;">
+                            <div style="display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #eee;">
+                                <span>SUB TOTAL:</span>
+                                <strong>${simbolo}${subtotal}</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #eee; color: #d9534f; -webkit-print-color-adjust: exact;">
+                                <span>DESCUENTO:</span>
+                                <strong>-${simbolo}${descuento}</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #eee;">
+                                <span>16% IVA:</span>
+                                <strong>${simbolo}${iva}</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 5px 0; font-size: 12px; font-weight: bold; color: #385723; border-bottom: 2px solid #385723; -webkit-print-color-adjust: exact;">
+                                <span>TOTAL A PAGAR:</span>
+                                <span>${simbolo}${total}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="border-top: 1px solid #ddd; padding-top: 8px; font-size: 9px; color: #555;">
+                        <p style="margin: 0 0 2px 0; font-weight: bold; color: #333;">Representado en ${moneda}. Tasa Referencial de la Operación: ${tasaGuardada}. El documento fiscal original se emite por caja registradora.</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function construirHTMLFacturaTicket58(datos = null) {
+            let cliente, rif, direccion, telefono, subtotal, descuento, iva, total, nro;
+            let moneda, simbolo, disponibilidad, tasaGuardada, items = [];
+            const fechaActual = new Date().toLocaleDateString("es-VE");
+            const horaActual = new Date().toLocaleTimeString("es-VE", { hour: '2-digit', minute: '2-digit' });
+
+            if (datos) {
+                cliente = datos.cliente || 'Cliente Mostrador';
+                rif = datos.rif || '';
+                direccion = datos.direccion || '';
+                telefono = datos.telefono || '';
+                subtotal = datos.subtotal || '0.00';
+                descuento = datos.descuento || '0.00';
+                iva = datos.iva || '0.00';
+                total = datos.total || '0.00';
+                nro = datos.nro || '0000';
+                moneda = datos.moneda || 'USD';
+                simbolo = datos.simbolo || '$';
+                disponibilidad = datos.disponibilidad || 'ENTREGA INMEDIATA';
+                tasaGuardada = datos.tasa || '1';
+                items = datos.items || [];
+            } else {
+                cliente = document.getElementById('fac-cliente')?.value || 'Cliente Mostrador';
+                rif = document.getElementById('fac-rif')?.value || '';
+                direccion = document.getElementById('fac-direccion')?.value || '';
+                telefono = document.getElementById('fac-telefono')?.value || '';
+                subtotal = document.getElementById('fac-subtotal')?.innerText || '0.00';
+                descuento = document.getElementById('fac-total-desc')?.innerText || '0.00';
+                iva = document.getElementById('fac-iva')?.innerText || '0.00';
+                total = document.getElementById('fac-total-general')?.innerText || '0.00';
+                nro = document.getElementById('fac-nro')?.value || '0000';
+                disponibilidad = document.getElementById('fac-disponibilidad')?.value || 'ENTREGA INMEDIATA';
+                tasaGuardada = document.getElementById('fac-tasa')?.value || '1';
+                
+                const monedaData = (document.getElementById('fac-moneda')?.value || 'USD|$').split('|');
+                moneda = monedaData[0] || 'USD';
+                simbolo = monedaData[1] || '$';
+
+                document.querySelectorAll('.facturacion-item-row').forEach(row => {
+                    const cant = row.querySelector('.fac-item-cant')?.value || 1;
+                    const desc = row.querySelector('.fac-item-desc')?.value || '';
+                    const precio = parseFloat(row.querySelector('.fac-item-precio')?.value) || 0;
+                    const descval = parseFloat(row.querySelector('.fac-item-descval')?.value) || 0;
+                    items.push({
+                        cantidad: cant,
+                        descripcion: desc,
+                        precioUnitario: precio,
+                        descuento: descval
+                    });
+                });
+            }
+
+            let itemsFilasHTML = '';
+            items.forEach((item, index) => {
+                const cant = parseFloat(item.cantidad) || 1;
+                const pu = parseFloat(item.precioUnitario) || 0;
+                const desc = parseFloat(item.descuento) || 0;
+                const totalLinea = (cant * pu) - desc;
+
+                itemsFilasHTML += `
+                    <div style="padding: 4px 0; border-bottom: 1px dashed #777;">
+                        <div style="font-weight: 800; font-size: 12px; line-height: 1.25; color: #000; text-transform: uppercase; word-break: break-word;">
+                            ${item.descripcion}
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 2px; font-size: 11.5px;">
+                            <span style="color: #111; font-weight: 700; white-space: nowrap;">
+                                ${cant} x ${simbolo} ${pu.toFixed(2)}${desc > 0 ? ' <small style="color:#d9534f;">(-' + simbolo + desc.toFixed(2) + ')</small>' : ''}
+                            </span>
+                            <span style="font-weight: 900; font-size: 12.5px; color: #000; white-space: nowrap;">
+                                ${simbolo} ${totalLinea.toFixed(2)}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            const numSub = parseFloat(subtotal) || 0;
+            const numDesc = parseFloat(descuento) || 0;
+            const numIva = parseFloat(iva) || 0;
+            const numTotal = parseFloat(total) || 0;
+            const numTasa = parseFloat(tasaGuardada) || 1;
+            
+            // Calculo de referencia cruzada VES <-> USD
+            let refCruzadaHTML = '';
+            if (moneda === 'VES' && numTasa > 1) {
+                const totalUSD = (numTotal / numTasa).toFixed(2);
+                refCruzadaHTML = ` | Ref: <strong>$${totalUSD}</strong>`;
+            } else if (moneda === 'USD' && numTasa > 1) {
+                const totalVES = (numTotal * numTasa).toFixed(2);
+                refCruzadaHTML = ` | Ref: <strong>Bs ${totalVES}</strong>`;
+            }
+
+            return `
+                <div class="ticket-recibo-58" style="width: 100%; max-width: 100%; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #000; box-sizing: border-box; text-align: left;">
+                    <!-- ENCABEZADO COMPACTO F&B PARTS -->
+                    <div style="text-align: center; margin-bottom: 4px;">
+                        <div style="font-size: 18px; font-weight: 900; letter-spacing: 0.5px; line-height: 1.1; text-transform: uppercase;">F&B PARTS</div>
+                        <div style="font-size: 11.5px; font-weight: 800; margin-top: 1px;">RIF: J-503971118</div>
+                        <div style="font-size: 9.5px; font-weight: 600; margin-top: 1px;">fybinversiones.ccs@gmail.com</div>
+                        <div style="font-size: 10.5px; font-weight: 700; margin-top: 1px;">+58 412-0161036</div>
+                        <div style="font-size: 9.5px; font-weight: 600;">Caracas, Venezuela</div>
+                    </div>
+
+                    <div style="border-top: 1.5px dashed #000; margin: 4px 0;"></div>
+
+                    <!-- CONTROL Y FECHA -->
+                    <div style="text-align: center; margin: 2px 0;">
+                        <div style="font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px;">NOTA DE ENTREGA</div>
+                        <div style="font-size: 13px; font-weight: 900; margin-top: 1px;">CONTROL: #${nro}</div>
+                        <div style="font-size: 10px; font-weight: 600; color: #111;">Fecha: ${fechaActual} • ${horaActual}</div>
+                    </div>
+
+                    <div style="border-top: 1.5px dashed #000; margin: 4px 0;"></div>
+
+                    <!-- DATOS DEL CLIENTE -->
+                    <div style="font-size: 11px; line-height: 1.35; font-weight: 600;">
+                        <div><strong>CLIENTE:</strong> ${cliente}</div>
+                        ${rif ? `<div><strong>RIF/CI:</strong> ${rif}</div>` : ''}
+                        ${telefono ? `<div><strong>TELÉFONO:</strong> ${telefono}</div>` : ''}
+                        ${direccion ? `<div><strong>DIRECCIÓN:</strong> ${direccion}</div>` : ''}
+                        <div><strong>ENTREGA:</strong> ${disponibilidad}</div>
+                    </div>
+
+                    <div style="border-top: 1.5px solid #000; margin: 4px 0 2px 0;"></div>
+
+                    <!-- CABECERA PRODUCTOS -->
+                    <div style="font-size: 10px; font-weight: 900; display: flex; justify-content: space-between; border-bottom: 1.5px solid #000; padding-bottom: 2px; margin-bottom: 2px;">
+                        <span>DESCRIPCIÓN / CANT x PRECIO</span>
+                        <span>TOTAL</span>
+                    </div>
+
+                    <!-- LISTA DE PRODUCTOS -->
+                    <div>
+                        ${itemsFilasHTML}
+                    </div>
+
+                    <div style="border-top: 1.5px solid #000; margin: 5px 0 3px 0;"></div>
+
+                    <!-- TOTALES -->
+                    <div style="font-size: 12px; line-height: 1.35; font-weight: 700;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="white-space: nowrap;">SUBTOTAL:</span>
+                            <span style="font-weight: 800; white-space: nowrap;">${simbolo} ${numSub.toFixed(2)}</span>
+                        </div>
+                        ${numDesc > 0 ? `
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="white-space: nowrap;">DESCUENTO:</span>
+                            <span style="font-weight: 800; white-space: nowrap;">-${simbolo} ${numDesc.toFixed(2)}</span>
+                        </div>` : ''}
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="white-space: nowrap;">16% IVA:</span>
+                            <span style="font-weight: 800; white-space: nowrap;">${simbolo} ${numIva.toFixed(2)}</span>
+                        </div>
+                        <div style="border-top: 2px solid #000; margin: 3px 0 3px 0;"></div>
+                        <div style="display: flex; justify-content: space-between; font-size: 15px; font-weight: 900;">
+                            <span style="white-space: nowrap;">TOTAL:</span>
+                            <span style="white-space: nowrap;">${simbolo} ${numTotal.toFixed(2)}</span>
+                        </div>
+                    </div>
+
+                    <div style="border-top: 1.5px dashed #000; margin: 5px 0;"></div>
+
+                    <!-- PIE DE TICKET -->
+                    <div style="text-align: center; font-size: 10px; line-height: 1.3; margin-top: 3px;">
+                        <div style="font-weight: 700;">Tasa: <strong>${tasaGuardada}</strong>${refCruzadaHTML}</div>
+                        <div style="margin-top: 3px; font-weight: 900; font-size: 12px;">¡GRACIAS POR SU PREFERENCIA!</div>
+                        <div style="margin-top: 2px; color: #444; font-size: 8.5px;">Documento de control y entrega interna.</div>
+                    </div>
+                    <!-- Espacio seguro para barra de corte / tear-off -->
+                    <div style="height: 12mm;"></div>
+                </div>
+            `;
+        }
+
+        window.formatoFacturaActual = 'carta';
+
+        window.cambiarFormatoPreviewFactura = function(formato) {
+            window.formatoFacturaActual = formato;
+            const btnCarta = document.getElementById('btn-preview-fac-carta');
+            const btnTicket = document.getElementById('btn-preview-fac-ticket');
+            
+            if (formato === 'ticket58') {
+                if (btnTicket) {
+                    btnTicket.style.background = '#007bff';
+                    btnTicket.style.color = 'white';
+                    btnTicket.style.borderColor = '#007bff';
+                }
+                if (btnCarta) {
+                    btnCarta.style.background = '#f8f9fa';
+                    btnCarta.style.color = '#444';
+                    btnCarta.style.borderColor = '#ccc';
+                }
+            } else {
+                if (btnCarta) {
+                    btnCarta.style.background = '#385723';
+                    btnCarta.style.color = 'white';
+                    btnCarta.style.borderColor = '#385723';
+                }
+                if (btnTicket) {
+                    btnTicket.style.background = '#f8f9fa';
+                    btnTicket.style.color = '#444';
+                    btnTicket.style.borderColor = '#ccc';
+                }
+            }
+            window.actualizarPreviewFactura();
+        };
+
+        window.actualizarPreviewFactura = function() {
+            const box = document.getElementById('pdf-preview-box-fac');
+            if (!box) return;
+            if (window.formatoFacturaActual === 'ticket58') {
+                box.style.display = 'flex';
+                box.style.justifyContent = 'center';
+                box.style.alignItems = 'flex-start';
+                box.innerHTML = `<div style="width: 270px; background: white; border: 1px solid #ddd; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); padding: 12px 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #000; box-sizing: border-box; margin: 10px auto;">${construirHTMLFacturaTicket58()}</div>`;
+            } else {
+                box.style.display = 'block';
+                box.innerHTML = `<div style="transform: scale(0.68); transform-origin: top left; width: 147%; pointer-events: none;">${construirHTMLFactura()}</div>`;
+            }
+        };
+
+        window.imprimirFacturaCarta = function(fac, ventanaExterna = null) {
+            const ventanaPDF = ventanaExterna || window.open('', '_blank');
+            if(!ventanaPDF) { alert("⚠️ Tu navegador bloqueó la ventana de impresión."); return; }
+            
+            const docHTML = construirHTMLFactura(fac);
+            const finalStyle = '<style>body{background:white;margin:0;padding:20px;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}@media print{@page{size:letter portrait;margin:0.5cm;}body{padding:0;}.no-print{display:none!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}}</style>';
+            const htmlParte1 = '<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n<title>Nota de Entrega F&B #' + (fac && fac.nro ? fac.nro : '') + '</title>\n' + finalStyle + '\n</head>\n<body>\n';
+            const htmlParte2 = '\n<div style="text-align:center;margin:40px 0;" class="no-print"><button onclick="window.print()" style="background:#28a745;color:white;border:none;padding:15px 30px;font-size:18px;font-weight:bold;border-radius:6px;cursor:pointer;">🖨️ Imprimir Factura Carta</button></div>\n</b' + 'ody>\n</h' + 'tml>';
+
+            ventanaPDF.document.open();
+            ventanaPDF.document.write(htmlParte1 + docHTML + htmlParte2);
+            ventanaPDF.document.close();
+            setTimeout(() => { ventanaPDF.focus(); ventanaPDF.print(); }, 700);
+        };
+
+        window.imprimirTicket58 = function(fac, ventanaExterna = null) {
+            const ventanaPDF = ventanaExterna || window.open('', '_blank');
+            if(!ventanaPDF) { alert("⚠️ Tu navegador bloqueó la ventana de impresión."); return; }
+            
+            const ticketHTML = construirHTMLFacturaTicket58(fac);
+            const finalStyle = `
+                <style>
+                    @page {
+                        size: 48mm 210mm;
+                        margin: 0 !important;
+                    }
+                    *, *:before, *:after {
+                        box-sizing: border-box !important;
+                    }
+                    html, body {
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        background: #fff !important;
+                        color: #000 !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+                    }
+                    .ticket-box {
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        margin: 0 auto !important;
+                        padding: 0 0.5mm !important;
+                        background: #fff !important;
+                        box-sizing: border-box !important;
+                    }
+                    @media screen {
+                        body {
+                            padding: 20px 10px !important;
+                            background: #e9ecef !important;
+                            display: flex !important;
+                            flex-direction: column !important;
+                            align-items: center !important;
+                        }
+                        .ticket-box {
+                            width: 320px !important;
+                            max-width: 100% !important;
+                            box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important;
+                            border-radius: 6px !important;
+                            padding: 15px 12px !important;
+                            background: #fff !important;
+                        }
+                    }
+                    @media print {
+                        @page {
+                            size: 58mm 180mm;
+                            margin: 0 !important;
+                        }
+                        .no-print {
+                            display: none !important;
+                        }
+                        html, body {
+                            width: 48mm !important;
+                            max-width: 48mm !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            background: #fff !important;
+                            display: block !important;
+                        }
+                        .ticket-box {
+                            width: 100% !important;
+                            max-width: 100% !important;
+                            margin: 0 !important;
+                            padding: 0 0.5mm !important;
+                            box-shadow: none !important;
+                            border: none !important;
+                        }
+                        * {
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                            color-adjust: exact !important;
+                        }
+                        body.scale-100 .ticket-recibo-58 {
+                            zoom: 1.0 !important;
+                            transform: scale(1.0) !important;
+                            transform-origin: top center !important;
+                        }
+                        body.scale-115 .ticket-recibo-58 {
+                            zoom: 1.15 !important;
+                            transform: scale(1.15) !important;
+                            transform-origin: top center !important;
+                        }
+                        body.scale-128 .ticket-recibo-58 {
+                            zoom: 1.28 !important;
+                            transform: scale(1.28) !important;
+                            transform-origin: top center !important;
+                        }
+                    }
+                </style>
+            `;
+            const headerControls = `
+                <div class="no-print" style="margin-bottom:15px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">
+                    <div style="background:#fff;border:1px solid #d0d7de;border-radius:8px;padding:10px 14px;box-shadow:0 3px 10px rgba(0,0,0,0.08);display:inline-flex;flex-direction:column;align-items:center;gap:8px;">
+                        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;">
+                            <button onclick="window.print()" style="background:#007bff;color:white;border:none;padding:10px 22px;font-size:15px;font-weight:bold;border-radius:6px;cursor:pointer;box-shadow:0 3px 8px rgba(0,123,255,0.3);display:flex;align-items:center;gap:6px;">
+                                🖨️ Mandar a Imprimir
+                            </button>
+                            <div style="display:flex;align-items:center;gap:4px;background:#f6f8fa;border:1px solid #d0d7de;border-radius:6px;padding:3px 6px;">
+                                <span style="font-size:11.5px;font-weight:bold;color:#444;margin-right:2px;">Ajuste Ancho:</span>
+                                <button id="btn-scale-100" onclick="cambiarEscala('100')" style="padding:4px 8px;font-size:11px;font-weight:bold;border:1px solid #ccc;border-radius:4px;cursor:pointer;background:#fff;color:#333;">Normal (100%)</button>
+                                <button id="btn-scale-115" onclick="cambiarEscala('115')" style="padding:4px 8px;font-size:11px;font-weight:bold;border:1px solid #007bff;border-radius:4px;cursor:pointer;background:#e7f1ff;color:#007bff;">Óptimo (+15%)</button>
+                                <button id="btn-scale-128" onclick="cambiarEscala('128')" style="padding:4px 8px;font-size:11px;font-weight:bold;border:1px solid #ccc;border-radius:4px;cursor:pointer;background:#fff;color:#333;">Máximo (+28%)</button>
+                            </div>
+                        </div>
+                        <div style="font-size:11px;color:#555;line-height:1.3;max-width:440px;">
+                            💡 <strong>Tip Safari/Mac:</strong> Si ves margen lateral, en la ventana de impresión pon <strong>Escala: 125%</strong> o usa <strong>Google Chrome</strong> (con Márgenes: Ninguno).
+                        </div>
+                    </div>
+                </div>
+                <script>
+                    function cambiarEscala(scale) {
+                        document.body.classList.remove('scale-100', 'scale-115', 'scale-128');
+                        document.body.classList.add('scale-' + scale);
+                        try { localStorage.setItem('fyb_ticket_scale', scale); } catch(e){}
+                        ['100', '115', '128'].forEach(function(s) {
+                            var btn = document.getElementById('btn-scale-' + s);
+                            if(btn) {
+                                if(s === scale) {
+                                    btn.style.background = '#007bff';
+                                    btn.style.color = '#fff';
+                                    btn.style.borderColor = '#007bff';
+                                } else {
+                                    btn.style.background = '#fff';
+                                    btn.style.color = '#333';
+                                    btn.style.borderColor = '#ccc';
+                                }
+                            }
+                        });
+                    }
+                    (function(){
+                        var saved = '115';
+                        try { saved = localStorage.getItem('fyb_ticket_scale') || '115'; } catch(e){}
+                        cambiarEscala(saved);
+                    })();
+                <\/script>
+            `;
+            const htmlParte1 = '<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>Ticket F&B #' + (fac && fac.nro ? fac.nro : '') + '</title>\n' + finalStyle + '\n</head>\n<body>\n' + headerControls + '\n<div class="ticket-box">\n';
+            const htmlParte2 = '\n</div>\n</b' + 'ody>\n</h' + 'tml>';
+
+            ventanaPDF.document.open();
+            ventanaPDF.document.write(htmlParte1 + ticketHTML + htmlParte2);
+            ventanaPDF.document.close();
+            setTimeout(() => { ventanaPDF.focus(); ventanaPDF.print(); }, 700);
+        };
+
+        window.guardarYGenerarFactura = async function(formato = 'carta') {
+            const cliente = SecuritySanitizer.cleanText(document.getElementById('fac-cliente').value, 120);
+            const rif = SecuritySanitizer.cleanText(document.getElementById('fac-rif').value, 30);
+            const direccion = SecuritySanitizer.cleanAddress(document.getElementById('fac-direccion').value, 300);
+            const telefono = SecuritySanitizer.cleanPhone(document.getElementById('fac-telefono').value);
+            const disponibilidad = SecuritySanitizer.cleanText(document.getElementById('fac-disponibilidad').value, 100);
+
+            const rows = document.querySelectorAll('.facturacion-item-row');
+            const items = [];
+            
+            rows.forEach(row => {
+                items.push({
+                    cantidad: SecuritySanitizer.sanitizeInt(row.querySelector('.fac-item-cant').value, 1),
+                    descripcion: SecuritySanitizer.cleanText(row.querySelector('.fac-item-desc').value, 200),
+                    precioUnitario: SecuritySanitizer.sanitizeAmount(row.querySelector('.fac-item-precio').value),
+                    descuento: SecuritySanitizer.sanitizeAmount(row.querySelector('.fac-item-descval').value)
+                });
+            });
+
+            if(items.length === 0) { alert("Agrega al menos un ítem."); return; }
+
+            const subtotal = SecuritySanitizer.sanitizeAmount(document.getElementById('fac-subtotal').innerText);
+            const descuento = SecuritySanitizer.sanitizeAmount(document.getElementById('fac-total-desc').innerText);
+            const iva = SecuritySanitizer.sanitizeAmount(document.getElementById('fac-iva').innerText);
+            const total = SecuritySanitizer.sanitizeAmount(document.getElementById('fac-total-general').innerText);
+            
+            const rawNroFac = document.getElementById('fac-nro').value.trim();
+            const nroFactura = SecuritySanitizer.cleanText(rawNroFac || Math.floor(1000 + Math.random() * 9000).toString(), 30);
+            const fechaActual = new Date().toLocaleDateString("es-VE");
+            
+            const monedaData = document.getElementById('fac-moneda').value.split('|');
+            const moneda = SecuritySanitizer.cleanText(monedaData[0], 20); 
+            const simbolo = SecuritySanitizer.cleanText(monedaData[1], 10);
+            const tasa = SecuritySanitizer.sanitizeAmount(document.getElementById('fac-tasa').value);
+
+            const objetoFactura = {
+                nro: nroFactura, fecha: fechaActual, cliente, rif, direccion, telefono,
+                items, subtotal, descuento, iva, total, moneda, simbolo, tasa, disponibilidad,
+                estatusComercial: "Pendiente", 
+                notaInterna: "",
+                notaCredito: "",
+                abonos: [] 
+            };
+
+            const ventanaPDF = window.open('', '_blank');
+            if(!ventanaPDF) { alert("⚠️ Tu navegador bloqueó la ventana de impresión."); return; }
+
+            try {
+                await addDoc(collection(db, "facturas"), objetoFactura);
+
+                let clienteExiste = false;
+                const rifLimpio = (rif || '').trim().toUpperCase();
+                for (const key in window.clientesDBLocal) {
+                    if (window.clientesDBLocal[key].rif && window.clientesDBLocal[key].rif.trim().toUpperCase() === rifLimpio) {
+                        clienteExiste = true; break;
+                    }
+                }
+
+                if (!clienteExiste && rifLimpio !== '') {
+                    await addDoc(collection(db, "clientes"), {
+                        nombre: (cliente || '').trim(), rif: (rif || '').trim(), direccion: (direccion || '').trim(), telefono: (telefono || '').trim()
+                    });
+                    window.cargarBaseClientes();
+                }
+
+                if (formato === 'ticket58') {
+                    window.imprimirTicket58(objetoFactura, ventanaPDF);
+                } else {
+                    window.imprimirFacturaCarta(objetoFactura, ventanaPDF);
+                }
+
+                window.actualizarPreviewFactura();
+                window.cargarHistorialFacturas();
+                window.cargarDashboard();
+                window.cargarFinanzas();
+                window.abrirModoCajeroParaFactura(objetoFactura);
+
+            } catch (error) { console.error(error); ventanaPDF.close(); alert("Hubo un error al guardar la factura."); }
+        };
+
+        window.abrirVentanaFacturaExistente = function(fac, formato = 'carta') {
+            if (formato === 'ticket58') {
+                window.imprimirTicket58(fac);
+            } else {
+                window.imprimirFacturaCarta(fac);
+            }
+        };
+
+        window.cargarHistorialFacturas = async function() {
+            const tbody = document.getElementById('facturas-table-body');
+            if(!tbody) return;
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center;">Cargando historial de facturas...</td></tr>`;
+
+            try {
+                const snap = await getDocs(collection(db, "facturas"));
+                tbody.innerHTML = '';
+                
+                let maxNro = 0;
+
+                if(snap.empty) { 
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center;">No hay facturas guardadas.</td></tr>`;
+                    document.getElementById('fac-nro').value = "1000";
+                    window.actualizarPreviewFactura();
+                    return; 
+                }
+
+                snap.forEach(docSnap => {
+                    const fac = docSnap.data();
+                    const docId = docSnap.id;
+                    window.facturasDBLocal[docId] = fac;
+                    
+                    const currNro = parseInt(fac.nro);
+                    if (!isNaN(currNro) && currNro > maxNro) maxNro = currNro;
+
+                    const tr = document.createElement('tr');
+                    const simbolo = fac.simbolo || '$';
+                    const estatus = fac.estatusComercial || 'Pendiente';
+                    
+                    let colorClase = 'status-pendiente';
+                    if(estatus.includes("Pagado")) colorClase = 'status-pagado';
+                    else if (estatus.includes("Crédito")) colorClase = 'status-credito';
+                    else if (estatus.includes("Importación")) colorClase = 'status-importacion';
+                    else if (estatus === "Anulada") colorClase = 'status-inactivo';
+
+                    let ncBadge = '';
+                    if (estatus === 'Anulada') {
+                        ncBadge = fac.notaCredito ? `<br><span style="font-size:10px; font-weight:bold; color:#d9534f; background:#f8d7da; padding:2px 4px; border-radius:3px;">N/C: ${fac.notaCredito}</span>` : `<br><span style="font-size:10px; font-weight:bold; color:#d9534f; background:#f8d7da; padding:2px 4px; border-radius:3px;">Anulada</span>`;
+                    }
+
+                    tr.innerHTML = `
+                        <td><strong>#${fac.nro}</strong>${ncBadge}</td>
+                        <td>${fac.fecha}</td>
+                        <td><strong>${fac.cliente}</strong><br><span style="font-size:11px; color:#666;">RIF: ${fac.rif}</span></td>
+                        <td>
+                            <select class="select-status ${colorClase}" onchange="actualizarEstatusDocumento('${docId}', 'facturas', this)">
+                                <option value="Pendiente" ${estatus === 'Pendiente' ? 'selected' : ''}>⏳ Pendiente</option>
+                                <option value="Pagado y Despachado" ${estatus === 'Pagado y Despachado' ? 'selected' : ''}>✅ Pagado y Despachado</option>
+                                <option value="Crédito Despachado (15 Días)" ${estatus === 'Crédito Despachado (15 Días)' ? 'selected' : ''}>💳 Crédito Despachado (15 Días)</option>
+                                <option value="Crédito Despachado (30 Días)" ${estatus === 'Crédito Despachado (30 Días)' ? 'selected' : ''}>💳 Crédito Despachado (30 Días)</option>
+                                <option value="Crédito Pagado" ${estatus === 'Crédito Pagado' ? 'selected' : ''}>✅ Crédito Pagado</option>
+                                <option value="Bajo Importación" ${estatus === 'Bajo Importación' ? 'selected' : ''}>🚢 Bajo Importación</option>
+                                <option value="Anulada" ${estatus === 'Anulada' ? 'selected' : ''}>❌ Anulada</option>
+                            </select>
+                        </td>
+                        <td><strong style="color: #155724;">${simbolo}${fac.total}</strong></td>
+                        <td style="display: flex; gap: 5px; justify-content: center; align-items: center; min-width: 230px;"></td>
+                    `;
+
+                    const tdAcciones = tr.querySelector('td:last-child');
+
+                    const btnEditar = document.createElement('button');
+                    btnEditar.type = 'button'; 
+                    btnEditar.style = 'background:#6c757d; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;';
+                    btnEditar.innerHTML = '<i class="fas fa-edit"></i>'; 
+                    btnEditar.title = "Corregir Nro o Fecha";
+                    btnEditar.addEventListener('click', () => window.abrirModalEditarFactura(docId));
+
+                    const btnRetencion = document.createElement('button');
+                    btnRetencion.type = 'button'; 
+                    btnRetencion.style = 'background:#17a2b8; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;';
+                    btnRetencion.innerHTML = '<i class="fas fa-file-invoice-dollar"></i>'; 
+                    btnRetencion.title = "Ver Retenciones Automáticas (IA)";
+                    btnRetencion.addEventListener('click', () => window.abrirModalRetenciones(fac.nro));
+
+                    const btnNotas = document.createElement('button');
+                    btnNotas.type = 'button'; btnNotas.className = 'btn-note';
+                    btnNotas.innerHTML = '<i class="fas fa-sticky-note"></i>'; btnNotas.title = "Notas Internas";
+                    btnNotas.addEventListener('click', () => window.abrirModalNotas(docId, 'facturas', fac.notaInterna));
+
+                    const btnCajero = document.createElement('button');
+                    btnCajero.type = 'button'; btnCajero.style = 'background:#f0ad4e; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;';
+                    btnCajero.innerHTML = '<i class="fas fa-cash-register"></i>'; btnCajero.title = "Abrir Modo Cajero";
+                    btnCajero.addEventListener('click', () => window.abrirModoCajeroParaFactura(fac));
+
+                    const btnImprimirCarta = document.createElement('button');
+                    btnImprimirCarta.type = 'button'; 
+                    btnImprimirCarta.style = 'background:#28a745; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;';
+                    btnImprimirCarta.innerHTML = '<i class="fas fa-print"></i>'; 
+                    btnImprimirCarta.title = "Imprimir Hoja Carta (PDF)";
+                    btnImprimirCarta.addEventListener('click', () => window.abrirVentanaFacturaExistente(fac, 'carta'));
+
+                    const btnImprimirTicket = document.createElement('button');
+                    btnImprimirTicket.type = 'button'; 
+                    btnImprimirTicket.style = 'background:#007bff; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;';
+                    btnImprimirTicket.innerHTML = '<i class="fas fa-receipt"></i>'; 
+                    btnImprimirTicket.title = "Imprimir Ticket Térmico 58mm";
+                    btnImprimirTicket.addEventListener('click', () => window.abrirVentanaFacturaExistente(fac, 'ticket58'));
+
+                    const btnEliminar = document.createElement('button');
+                    btnEliminar.type = 'button'; btnEliminar.style = 'background:#d9534f; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;';
+                    btnEliminar.innerHTML = '<i class="fas fa-trash"></i>';
+                    btnEliminar.addEventListener('click', async () => {
+                        if(!confirm("¿Eliminar esta factura del historial?")) return;
+                        try { 
+                            await deleteDoc(doc(db, "facturas", docId)); 
+                            if(window.registrarAuditoria) window.registrarAuditoria("ELIMINAR FACTURA", "Se eliminó la factura número: " + fac.nro);
+                            window.cargarHistorialFacturas(); window.cargarDashboard(); window.cargarFinanzas(); 
+                        } catch (e) { alert("Error al eliminar."); }
+                    });
+
+                    tdAcciones.appendChild(btnEditar);
+                    tdAcciones.appendChild(btnRetencion); 
+                    tdAcciones.appendChild(btnNotas);
+                    tdAcciones.appendChild(btnCajero); 
+                    tdAcciones.appendChild(btnImprimirCarta); 
+                    tdAcciones.appendChild(btnImprimirTicket); 
+                    tdAcciones.appendChild(btnEliminar);
+                    tbody.appendChild(tr);
+                });
+                
+                const nextNro = maxNro > 0 ? maxNro + 1 : 1000;
+                document.getElementById('fac-nro').value = String(nextNro).padStart(4, '0');
+                window.actualizarPreviewFactura();
+                
+                if (typeof window.filtrarTipoFactura === 'function') window.filtrarTipoFactura();
+                
+            } catch (error) { console.error(error); }
+        };
+
+        // ==========================================
+        // LÓGICA DE COTIZACIONES E IMPORTACIÓN LANDED
+        // ==========================================
+        window.seleccionarClienteCotizacion = function() {
+            const clienteId = document.getElementById('cot-selector-clientes').value;
+            if(clienteId && window.clientesDBLocal[clienteId]) {
+                const cli = window.clientesDBLocal[clienteId];
+                document.getElementById('cot-cliente').value = cli.nombre;
+                document.getElementById('cot-rif').value = cli.rif;
+                document.getElementById('cot-direccion').value = cli.direccion;
+                document.getElementById('cot-telefono').value = cli.telefono;
+                window.actualizarPreview();
+            }
+        };
+
+        window.agregarFilaCotizacionVacia = function() {
+            const container = document.getElementById('cotizacion-items-container');
+            const row = document.createElement('div');
+            row.className = 'cotizacion-item-row';
+            row.innerHTML = `
+                <input type="number" class="item-cant" value="1" min="1" placeholder="Cant" oninput="calcularTotalCotizacion()">
+                <input type="text" class="item-desc" placeholder="Descripción" oninput="actualizarPreview()">
+                <input type="number" step="0.01" class="item-precio" value="0.00" placeholder="Precio" oninput="calcularTotalCotizacion()">
+                <input type="number" step="0.01" class="item-descval" value="0.00" placeholder="Desc." oninput="calcularTotalCotizacion()">
+                <input type="text" class="item-total-line" value="$0.00" readonly style="background: #f1f1f1; text-align: right; font-weight: bold;">
+                <button type="button" onclick="this.parentElement.remove(); calcularTotalCotizacion();" style="background:#d9534f; color:white; border:none; border-radius:4px; cursor:pointer;"><i class="fas fa-times"></i></button>
+            `;
+            container.appendChild(row);
+            window.calcularTotalCotizacion();
+        };
+
+        window.agregarItemDesdeInventario = function() {
+            const select = document.getElementById('select-inventario-cot');
+            const selectedIndex = select.selectedIndex;
+            if (selectedIndex <= 0) { alert("Selecciona un repuesto del inventario primero."); return; }
+
+            const opt = select.options[selectedIndex];
+            const nombre = opt.getAttribute('data-nombre');
+            const precio = parseFloat(opt.getAttribute('data-precio')) || 0;
+
+            const container = document.getElementById('cotizacion-items-container');
+            const row = document.createElement('div');
+            row.className = 'cotizacion-item-row';
+            row.innerHTML = `
+                <input type="number" class="item-cant" value="1" min="1" placeholder="Cant" oninput="calcularTotalCotizacion()">
+                <input type="text" class="item-desc" value="${nombre}" placeholder="Descripción" oninput="actualizarPreview()">
+                <input type="number" step="0.01" class="item-precio" value="${precio.toFixed(2)}" placeholder="Precio" oninput="calcularTotalCotizacion()">
+                <input type="number" step="0.01" class="item-descval" value="0.00" placeholder="Desc." oninput="calcularTotalCotizacion()">
+                <input type="text" class="item-total-line" value="$${precio.toFixed(2)}" readonly style="background: #f1f1f1; text-align: right; font-weight: bold;">
+                <button type="button" onclick="this.parentElement.remove(); calcularTotalCotizacion();" style="background:#d9534f; color:white; border:none; border-radius:4px; cursor:pointer;"><i class="fas fa-times"></i></button>
+            `;
+            container.appendChild(row);
+            select.selectedIndex = 0;
+            window.calcularTotalCotizacion();
+        };
+
+        window.cargarItemsDesdeLanded = function() {
+            const select = document.getElementById('cot-selector-landed');
+            const docId = select.value;
+            if(!docId || !window.importacionesDBLocal[docId]) {
+                alert("Por favor selecciona un cálculo válido de la lista desplegable.");
+                return;
+            }
+
+            const data = window.importacionesDBLocal[docId];
+            const container = document.getElementById('cotizacion-items-container');
+            
+            data.items.forEach(item => {
+                const precioDetalStr = (item.precioDetal || "$0.00").replace('$', '').replace(',', '');
+                const precio = parseFloat(precioDetalStr) || 0;
+                
+                const row = document.createElement('div');
+                row.className = 'cotizacion-item-row';
+                row.innerHTML = `
+                    <input type="number" class="item-cant" value="${item.cantidad}" min="1" placeholder="Cant" oninput="calcularTotalCotizacion()">
+                    <input type="text" class="item-desc" value="${item.descripcion}" placeholder="Descripción" oninput="actualizarPreview()">
+                    <input type="number" step="0.01" class="item-precio" value="${precio.toFixed(2)}" placeholder="Precio" oninput="calcularTotalCotizacion()">
+                    <input type="number" step="0.01" class="item-descval" value="0.00" placeholder="Desc." oninput="calcularTotalCotizacion()">
+                    <input type="text" class="item-total-line" value="$${(precio * item.cantidad).toFixed(2)}" readonly style="background: #f1f1f1; text-align: right; font-weight: bold;">
+                    <button type="button" onclick="this.parentElement.remove(); calcularTotalCotizacion();" style="background:#d9534f; color:white; border:none; border-radius:4px; cursor:pointer;"><i class="fas fa-times"></i></button>
+                `;
+                container.appendChild(row);
+            });
+            window.calcularTotalCotizacion();
+            select.selectedIndex = 0;
+            alert("¡Repuestos importados exitosamente a la cotización!");
+        };
+
+        window.calcularTotalCotizacion = function() {
+            const rows = document.querySelectorAll('.cotizacion-item-row');
+            let subtotal = 0; let totalDescuento = 0;
+
+            rows.forEach(row => {
+                const cant = parseFloat(row.querySelector('.item-cant').value) || 0;
+                const precio = parseFloat(row.querySelector('.item-precio').value) || 0;
+                const desc = parseFloat(row.querySelector('.item-descval').value) || 0;
+
+                const totalLinea = (cant * precio) - desc;
+                row.querySelector('.item-total-line').value = `$${totalLinea.toFixed(2)}`;
+
+                subtotal += (cant * precio);
+                totalDescuento += desc;
+            });
+
+            const baseImponible = subtotal - totalDescuento;
+            const iva = baseImponible * 0.16;
+            const totalGeneral = baseImponible + iva;
+
+            if(document.getElementById('cot-subtotal')) document.getElementById('cot-subtotal').innerText = subtotal.toFixed(2);
+            if(document.getElementById('cot-total-desc')) document.getElementById('cot-total-desc').innerText = totalDescuento.toFixed(2);
+            if(document.getElementById('cot-iva')) document.getElementById('cot-iva').innerText = iva.toFixed(2);
+            if(document.getElementById('cot-total-general')) document.getElementById('cot-total-general').innerText = totalGeneral.toFixed(2);
+
+            window.actualizarPreview();
+        };
+
+        function construirHTMLCotizacion(datos = null) {
+            let cliente, rif, direccion, telefono, vehiculo, anio, itemsHTML = '', subtotal, descuento, iva, total, nro, disponibilidad;
+            const fechaActual = new Date().toLocaleDateString("es-VE");
+
+            if (datos) {
+                cliente = datos.cliente; rif = datos.rif; direccion = datos.direccion; telefono = datos.telefono;
+                vehiculo = datos.vehiculo; anio = datos.anio; subtotal = datos.subtotal; descuento = datos.descuento;
+                iva = datos.iva; total = datos.total; nro = datos.nro; 
+                disponibilidad = datos.disponibilidad || 'ENTREGA INMEDIATA';
+
+                datos.items.forEach(item => {
+                    const totalLinea = (parseFloat(item.cantidad) * parseFloat(item.precioUnitario)) - parseFloat(item.descuento);
+                    itemsHTML += `
+                        <tr style="border-bottom: 1px solid #eee; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                            <td style="padding: 6px 10px; text-align: center;">${item.cantidad}</td>
+                            <td style="padding: 6px 10px;">${item.descripcion}</td>
+                            <td style="padding: 6px 10px; text-align: right;">$${Number(item.precioUnitario).toFixed(2)}</td>
+                            <td style="padding: 6px 10px; text-align: right; color: #d9534f;">-$${Number(item.descuento).toFixed(2)}</td>
+                            <td style="padding: 6px 10px; text-align: right; font-weight: bold;">$${totalLinea.toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                cliente = document.getElementById('cot-cliente')?.value || '';
+                rif = document.getElementById('cot-rif')?.value || '';
+                direccion = document.getElementById('cot-direccion')?.value || '';
+                telefono = document.getElementById('cot-telefono')?.value || '';
+                vehiculo = document.getElementById('cot-vehiculo')?.value || '';
+                anio = document.getElementById('cot-anio')?.value || '';
+                subtotal = document.getElementById('cot-subtotal')?.innerText || '0.00';
+                descuento = document.getElementById('cot-total-desc')?.innerText || '0.00';
+                iva = document.getElementById('cot-iva')?.innerText || '0.00';
+                total = document.getElementById('cot-total-general')?.innerText || '0.00';
+                nro = document.getElementById('cot-nro')?.value || '0000';
+                disponibilidad = document.getElementById('cot-disponibilidad')?.value || 'ENTREGA INMEDIATA';
+
+                const rows = document.querySelectorAll('.cotizacion-item-row');
+                rows.forEach(row => {
+                    const cant = row.querySelector('.item-cant')?.value || 1;
+                    const desc = row.querySelector('.item-desc')?.value || '';
+                    const precio = parseFloat(row.querySelector('.item-precio')?.value) || 0;
+                    const descval = parseFloat(row.querySelector('.item-descval')?.value) || 0;
+                    const totalLinea = (parseFloat(cant) * precio) - descval;
+
+                    itemsHTML += `
+                        <tr style="border-bottom: 1px solid #eee; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                            <td style="padding: 6px 10px; text-align: center;">${cant}</td>
+                            <td style="padding: 6px 10px;">${desc}</td>
+                            <td style="padding: 6px 10px; text-align: right;">$${precio.toFixed(2)}</td>
+                            <td style="padding: 6px 10px; text-align: right; color: #d9534f;">-$${descval.toFixed(2)}</td>
+                            <td style="padding: 6px 10px; text-align: right; font-weight: bold;">$${totalLinea.toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            return `
+                <div style="max-width: 800px; margin: 0 auto; background: white; padding: 25px; font-family: Arial, sans-serif; color: #333; box-sizing: border-box; width: 100%;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #385723; padding-bottom: 10px; margin-bottom: 12px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logo" style="width: 100px; height: auto; display: block;">
+                            <div>
+                                <p style="margin: 0; font-size: 11px; font-weight: bold; color: #333;">F&B PARTS</p>
+                                <p style="margin: 1px 0; font-size: 10px; color: #555;">RIF: J-503971118</p>
+                                <p style="margin: 1px 0; font-size: 10px; color: #555;">fybinversiones.ccs@gmail.com | +584120161036</p>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <h2 style="color: #385723; font-family: Arial, sans-serif; font-size: 16px; margin: 0; font-weight: bold;">COTIZACIÓN</h2>
+                            <p style="font-size: 12px; font-weight: bold; color: #333; margin: 2px 0;">Nro: ${nro}</p>
+                            <p style="font-size: 10px; color: #666; margin: 0;">Fecha: ${fechaActual}</p>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: #f4f6f4; padding: 10px 12px; border-radius: 4px; margin-bottom: 12px; font-size: 11px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                        <div>
+                            <p style="margin: 2px 0;"><strong>Cliente:</strong> ${cliente}</p>
+                            <p style="margin: 2px 0;"><strong>RIF o C.I:</strong> ${rif}</p>
+                            <p style="margin: 2px 0;"><strong>Dirección:</strong> ${direccion}</p>
+                            <p style="margin: 2px 0;"><strong>Teléfono:</strong> ${telefono}</p>
+                        </div>
+                        <div>
+                            <p style="margin: 2px 0;"><strong>Vehículo:</strong> ${vehiculo}</p>
+                            <p style="margin: 2px 0;"><strong>Año:</strong> ${anio}</p>
+                            <p style="margin: 2px 0;"><strong>Disponibilidad:</strong> <span style="color: #385723; font-weight: bold;">${disponibilidad}</span></p>
+                        </div>
+                    </div>
+
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 11px;">
+                        <thead>
+                            <tr style="background-color: #385723 !important; color: white !important; text-align: left; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                                <th style="padding: 6px 10px; width: 45px; text-align: center;">CANT</th>
+                                <th style="padding: 6px 10px;">DESCRIPCIÓN</th>
+                                <th style="padding: 6px 10px; width: 80px; text-align: right;">PRECIO U.</th>
+                                <th style="padding: 6px 10px; width: 80px; text-align: right;">DESC.</th>
+                                <th style="padding: 6px 10px; width: 85px; text-align: right;">TOTAL</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsHTML}
+                        </tbody>
+                    </table>
+
+                    <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+                        <div style="width: 220px; font-size: 11px;">
+                            <div style="display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #eee;">
+                                <span>SUB TOTAL:</span>
+                                <strong>$${subtotal}</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #eee; color: #d9534f; -webkit-print-color-adjust: exact;">
+                                <span>DESCUENTO:</span>
+                                <strong>-$${descuento}</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #eee;">
+                                <span>16% IVA:</span>
+                                <strong>$${iva}</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 5px 0; font-size: 12px; font-weight: bold; color: #385723; border-bottom: 2px solid #385723; -webkit-print-color-adjust: exact;">
+                                <span>TOTAL:</span>
+                                <span>$${total}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="border-top: 1px solid #ddd; padding-top: 8px; font-size: 9px; color: #555; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div>
+                            <p style="margin: 0 0 2px 0; font-weight: bold; color: #333;">MÉTODO DE PAGOS:</p>
+                            <ul style="margin: 0; padding-left: 12px;">
+                                <li>Transferencias (Banesco y BNC). Internacionales (BOA).</li>
+                                <li>Zelle, Pago móvil y Efectivo.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <p style="margin: 0 0 2px 0; font-weight: bold; color: #333;">TÉRMINOS:</p>
+                            <p style="margin: 0;">Representado en USD. Válida por 7 días. https://www.fybparts.com</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        window.actualizarPreview = function() {
+            const box = document.getElementById('pdf-preview-box');
+            if (box) {
+                box.innerHTML = `<div style="transform: scale(0.68); transform-origin: top left; width: 147%; pointer-events: none;">${construirHTMLCotizacion()}</div>`;
+            }
+        };
+
+        window.guardarYGenerarCotizacion = async function() {
+            const cliente = SecuritySanitizer.cleanText(document.getElementById('cot-cliente').value, 120);
+            const rif = SecuritySanitizer.cleanText(document.getElementById('cot-rif').value, 30);
+            const direccion = SecuritySanitizer.cleanAddress(document.getElementById('cot-direccion').value, 300);
+            const telefono = SecuritySanitizer.cleanPhone(document.getElementById('cot-telefono').value);
+            const vehiculo = SecuritySanitizer.cleanText(document.getElementById('cot-vehiculo').value, 100);
+            const anio = SecuritySanitizer.cleanText(document.getElementById('cot-anio').value, 20);
+            const disponibilidad = SecuritySanitizer.cleanText(document.getElementById('cot-disponibilidad').value, 100);
+
+            const rows = document.querySelectorAll('.cotizacion-item-row');
+            const items = [];
+            
+            rows.forEach(row => {
+                items.push({
+                    cantidad: SecuritySanitizer.sanitizeInt(row.querySelector('.item-cant').value, 1),
+                    descripcion: SecuritySanitizer.cleanText(row.querySelector('.item-desc').value, 200),
+                    precioUnitario: SecuritySanitizer.sanitizeAmount(row.querySelector('.item-precio').value),
+                    descuento: SecuritySanitizer.sanitizeAmount(row.querySelector('.item-descval').value)
+                });
+            });
+
+            if(items.length === 0) { alert("Agrega al menos un ítem a la cotización."); return; }
+
+            const subtotal = SecuritySanitizer.sanitizeAmount(document.getElementById('cot-subtotal').innerText);
+            const descuento = SecuritySanitizer.sanitizeAmount(document.getElementById('cot-total-desc').innerText);
+            const iva = SecuritySanitizer.sanitizeAmount(document.getElementById('cot-iva').innerText);
+            const total = SecuritySanitizer.sanitizeAmount(document.getElementById('cot-total-general').innerText);
+            
+            const rawNroCot = document.getElementById('cot-nro').value.trim();
+            const nroCotizacion = SecuritySanitizer.cleanText(rawNroCot || Math.floor(1000 + Math.random() * 9000).toString(), 30);
+            const fechaActual = new Date().toLocaleDateString("es-VE");
+
+            const objetoCotizacion = {
+                nro: nroCotizacion, fecha: fechaActual, cliente, rif, direccion, telefono, vehiculo, anio,
+                items, subtotal, descuento, iva, total, disponibilidad,
+                estatusComercial: "Pendiente",
+                notaInterna: ""
+            };
+
+            const ventanaPDF = window.open('', '_blank');
+            if(!ventanaPDF) { alert("⚠️ Tu navegador bloqueó la ventana de impresión."); return; }
+
+            try {
+                await addDoc(collection(db, "cotizaciones"), objetoCotizacion);
+
+                let clienteExiste = false;
+                const rifLimpio = (rif || '').trim().toUpperCase();
+                for (const key in window.clientesDBLocal) {
+                    if (window.clientesDBLocal[key].rif && window.clientesDBLocal[key].rif.trim().toUpperCase() === rifLimpio) {
+                        clienteExiste = true; break;
+                    }
+                }
+
+                if (!clienteExiste && rifLimpio !== '') {
+                    await addDoc(collection(db, "clientes"), {
+                        nombre: (cliente || '').trim(), rif: (rif || '').trim(), direccion: (direccion || '').trim(), telefono: (telefono || '').trim()
+                    });
+                    window.cargarBaseClientes();
+                }
+
+                const docHTML = construirHTMLCotizacion(objetoCotizacion);
+                const finalStyle = '<style>body{background:white;margin:0;padding:20px;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}@media print{@page{margin:0.5cm;}body{padding:0;}.no-print{display:none!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}}</style>';
+                const htmlParte1 = '<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n<title>Cotización Oficial</title>\n' + finalStyle + '\n</head>\n<body>\n';
+                const htmlParte2 = '\n<div style="text-align:center;margin:40px 0;" class="no-print"><button onclick="window.print()" style="background:#1d6fa5;color:white;border:none;padding:15px 30px;font-size:18px;font-weight:bold;border-radius:6px;cursor:pointer;">🖨️ Imprimir o Guardar PDF</button></div>\n</b' + 'ody>\n</h' + 'tml>';
+
+                ventanaPDF.document.open();
+                ventanaPDF.document.write(htmlParte1 + docHTML + htmlParte2);
+                ventanaPDF.document.close();
+                setTimeout(() => { ventanaPDF.focus(); ventanaPDF.print(); }, 800);
+
+                window.cargarHistorialCotizaciones();
+            } catch (error) { console.error(error); ventanaPDF.close(); alert("Hubo un error al guardar la cotización."); }
+        };
+
+        window.abrirVentanaCotizacionExistente = function(cot) {
+            const ventanaPDF = window.open('', '_blank');
+            if(!ventanaPDF) { alert("⚠️ Permite las ventanas emergentes."); return; }
+            
+            const docHTML = construirHTMLCotizacion(cot);
+            const finalStyle = '<style>body{background:white;margin:0;padding:20px;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}@media print{@page{margin:0.5cm;}body{padding:0;}.no-print{display:none!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}}</style>';
+            const htmlParte1 = '<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n<title>Cotización Oficial</title>\n' + finalStyle + '\n</head>\n<body>\n';
+            const htmlParte2 = '\n<div style="text-align:center;margin:40px 0;" class="no-print"><button onclick="window.print()" style="background:#1d6fa5;color:white;border:none;padding:15px 30px;font-size:18px;font-weight:bold;border-radius:6px;cursor:pointer;">🖨️ Imprimir o Guardar PDF</button></div>\n</b' + 'ody>\n</h' + 'tml>';
+
+            ventanaPDF.document.open();
+            ventanaPDF.document.write(htmlParte1 + docHTML + htmlParte2);
+            ventanaPDF.document.close();
+            setTimeout(() => { ventanaPDF.focus(); ventanaPDF.print(); }, 800);
+        };
+
+        window.cargarHistorialCotizaciones = async function() {
+            const tbody = document.getElementById('cotizaciones-table-body');
+            if(!tbody) return;
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center;">Cargando historial...</td></tr>`;
+
+            try {
+                const snap = await getDocs(collection(db, "cotizaciones"));
+                tbody.innerHTML = '';
+                
+                let maxNro = 0;
+
+                if(snap.empty) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center;">No hay cotizaciones guardadas.</td></tr>`;
+                    document.getElementById('cot-nro').value = "1000";
+                    window.actualizarPreview();
+                    return;
+                }
+
+                snap.forEach(docSnap => {
+                    const cot = docSnap.data();
+                    const docId = docSnap.id;
+                    
+                    window.cotizacionesDBLocal[docId] = cot; 
+                    
+                    const currNro = parseInt(cot.nro);
+                    if (!isNaN(currNro) && currNro > maxNro) maxNro = currNro;
+                    
+                    const tr = document.createElement('tr');
+                    const estatus = cot.estatusComercial || 'En espera';
+                    
+                    let colorClase = 'status-pendiente';
+                    if (estatus === "Aprobada") colorClase = 'status-pagado';
+                    else if (estatus === "En espera" || estatus === "Pendiente") colorClase = 'status-credito';
+                    else if (estatus === "No aprobada") colorClase = 'status-inactivo';
+
+                    tr.innerHTML = `
+                        <td><strong>#${cot.nro}</strong></td>
+                        <td>${cot.fecha}</td>
+                        <td><strong>${cot.cliente}</strong><br><span style="font-size:11px; color:#666;">RIF: ${cot.rif}</span></td>
+                        <td>
+                            <select class="select-status ${colorClase}" onchange="actualizarEstatusDocumento('${docId}', 'cotizaciones', this)">
+                                <option value="En espera" ${estatus === 'En espera' || estatus === 'Pendiente' ? 'selected' : ''}>⏳ En espera</option>
+                                <option value="Aprobada" ${estatus === 'Aprobada' ? 'selected' : ''}>✅ Aprobada</option>
+                                <option value="No aprobada" ${estatus === 'No aprobada' ? 'selected' : ''}>❌ No aprobada</option>
+                            </select>
+                        </td>
+                        <td><strong>$${cot.total}</strong></td>
+                        <td style="display: flex; gap: 5px; justify-content: center; align-items: center; min-width: 180px;"></td>
+                    `;
+
+                    const tdAcciones = tr.querySelector('td:last-child');
+
+                    const btnWhatsApp = document.createElement('button');
+                    btnWhatsApp.type = 'button'; btnWhatsApp.style = 'background:#25D366; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;';
+                    btnWhatsApp.innerHTML = '<i class="fab fa-whatsapp"></i>'; btnWhatsApp.title = "Enviar por WhatsApp";
+                    btnWhatsApp.addEventListener('click', () => window.enviarPorWhatsApp(docId));
+
+                    const btnCorreo = document.createElement('button');
+                    btnCorreo.type = 'button'; btnCorreo.style = 'background:#EA4335; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;';
+                    btnCorreo.innerHTML = '<i class="fas fa-envelope"></i>'; btnCorreo.title = "Asistente IA para Correos";
+                    btnCorreo.addEventListener('click', () => window.abrirModalCorreoIA(docId));
+
+                    const btnImprimir = document.createElement('button');
+                    btnImprimir.type = 'button'; btnImprimir.style = 'background:#1d6fa5; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;';
+                    btnImprimir.innerHTML = '<i class="fas fa-print"></i>'; btnImprimir.title = "Imprimir";
+                    btnImprimir.addEventListener('click', () => window.abrirVentanaCotizacionExistente(cot));
+
+                    // 🚀 NUEVO BOTÓN: ENVIAR A PEDIDOS
+                    const btnPedido = document.createElement('button');
+                    btnPedido.type = 'button'; btnPedido.style = 'background:#f0ad4e; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;';
+                    btnPedido.innerHTML = '<i class="fas fa-box"></i>'; btnPedido.title = "Convertir a Pedido";
+                    btnPedido.addEventListener('click', () => window.enviarCotizacionAPedido(docId));
+
+                    const btnEliminar = document.createElement('button');
+                    btnEliminar.type = 'button'; btnEliminar.style = 'background:#d9534f; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;';
+                    btnEliminar.innerHTML = '<i class="fas fa-trash"></i>';
+                    btnEliminar.addEventListener('click', async () => {
+                        if(!confirm("¿Eliminar esta cotización del historial?")) return;
+                        try { await deleteDoc(doc(db, "cotizaciones", docId)); window.cargarHistorialCotizaciones(); } catch (e) { alert("Error al eliminar."); }
+                    });
+
+                    tdAcciones.appendChild(btnWhatsApp);
+                    tdAcciones.appendChild(btnCorreo);
+                    tdAcciones.appendChild(btnImprimir); 
+                    tdAcciones.appendChild(btnPedido); // 👈 Lo agregamos aquí
+                    tdAcciones.appendChild(btnEliminar);
+                    tbody.appendChild(tr);
+                });
+                
+                const nextNro = maxNro > 0 ? maxNro + 1 : 1000;
+                document.getElementById('cot-nro').value = String(nextNro).padStart(4, '0');
+                window.actualizarPreview();
+                
+            } catch (error) { console.error(error); }
+        };
+
+        window.enviarPorWhatsApp = function(docId) {
+            const cot = window.cotizacionesDBLocal[docId];
+            if(!cot) return;
+            
+            const texto = `Hola ${cot.cliente},\n\nTe adjunto la información de tu cotización *Nro: #${cot.nro}*.\n\n*Total:* $${cot.total}\n\nQuedamos a tu disposición para concretar el despacho o resolver cualquier duda.\n\nSaludos,\nEquipo F&B Parts`;
+            let phone = cot.telefono.replace(/\D/g, ''); 
+            if (phone.length >= 10 && !phone.startsWith('58')) {
+                phone = '58' + phone.slice(-10);
+            }
+            window.open(`https://wa.me/${phone}?text=${encodeURIComponent(texto)}`, '_blank');
+        };
+
+        window.abrirModalCorreoIA = function(docId) {
+            const cot = window.cotizacionesDBLocal[docId];
+            if(!cot) return;
+            
+            document.getElementById('ia-doc-id').value = docId;
+            document.getElementById('ia-nro-cot').textContent = cot.nro;
+            document.getElementById('ia-cliente-cot').textContent = cot.cliente;
+            document.getElementById('ia-contexto').value = '';
+            
+            const textoBasico = `Estimado/a ${cot.cliente},\n\nDe acuerdo a su solicitud, adjunto la información referente a la cotización #${cot.nro} para su vehículo ${cot.vehiculo}.\n\nEl total estimado es de $${cot.total}. \n\nQuedo a su entera disposición para cualquier duda.\n\nAtentamente,\nF&B Parts`;
+            document.getElementById('ia-respuesta').value = textoBasico;
+            
+            document.getElementById('modal-ia-correo').style.display = 'flex';
+        };
+
+        window.cerrarModalCorreoIA = function() {
+            document.getElementById('modal-ia-correo').style.display = 'none';
+        };
+
+        // 🚀 LÓGICA DE IA CON PUTER.JS (Cero API Keys, Cero Bloqueos)
+        window.generarRespuestaIA = async function() {
+            const docId = document.getElementById('ia-doc-id').value;
+            const contexto = document.getElementById('ia-contexto').value.trim();
+            const cot = window.cotizacionesDBLocal[docId];
+            const btn = document.getElementById('btn-generar-ia');
+            
+            // Verificamos si Puter cargó correctamente (CORREGIDO EL BUG DE LA ETIQUETA SCRIPT)
+            if (typeof puter === 'undefined') {
+                alert("⚠️ Puter no está cargado. Asegúrate de haber puesto su librería en el encabezado.");
+                return;
+            }
+
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Puter pensando...';
+            btn.disabled = true;
+
+            // Construimos las instrucciones
+            let promptTexto = `Eres Brhayan Polidor, Gerente de Ventas de Inversiones FB Parts, C.A. en Caracas, Venezuela.
+            Redacta un correo profesional, persuasivo y cordial para enviarle una cotización a tu cliente.
+            
+            DATOS DE LA COTIZACIÓN:
+            - Cliente: ${cot.cliente}
+            - Vehículo: ${cot.vehiculo}
+            - Nro Cotización: #${cot.nro}
+            - Total: $${cot.total}
+            
+            REPUESTOS COTIZADOS:\n`;
+            
+            cot.items.forEach(i => {
+                promptTexto += `- ${i.cantidad}x ${i.descripcion} ($${i.precioUnitario})\n`;
+            });
+            
+            if (contexto !== "") {
+                promptTexto += `\nCONTEXTO ADICIONAL / MENSAJE PREVIO DEL CLIENTE:\n"${contexto}"\n(Responde a esto de forma natural en el correo, brindando soluciones amables).\n`;
+            }
+
+            promptTexto += `\nINSTRUCCIONES FINALES:
+            - Menciona que la cotización en formato PDF va adjunta al correo.
+            - Firma como "Brhayan Polidor, Gerente de Ventas, Inversiones FB Parts, C.A.".
+            - Devuelve ÚNICAMENTE el texto listo para enviar por correo. No incluyas "Asunto:" ni comillas raras.`;
+
+            try {
+                // Llamada nativa a la IA de Puter
+                const respuesta = await puter.ai.chat(promptTexto);
+                
+                // Puter.js devuelve el texto directamente o un objeto, extraemos el texto
+                const textoFinal = typeof respuesta === 'string' ? respuesta : respuesta.message.content;
+                
+                document.getElementById('ia-respuesta').value = textoFinal.trim();
+                btn.innerHTML = '<i class="fas fa-check"></i> ¡Correo Listo!';
+                
+            } catch (error) {
+                console.error("Error con Puter API:", error);
+                alert("⚠️ Ocurrió un error con la IA de Puter:\n" + error.message);
+                btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
+            }
+
+            // Restaurar el botón después de 3 segundos
+            setTimeout(() => {
+                btn.innerHTML = '<i class="fas fa-magic"></i> Escribir Respuesta con IA';
+                btn.disabled = false;
+            }, 3000);
+        };
+      
+        // 🚀 FUNCIÓN PARA ABRIR GMAIL CON EL TEXTO GENERADO
+        window.enviarPorGmail = function() {
+            const docId = document.getElementById('ia-doc-id').value;
+            const cot = window.cotizacionesDBLocal[docId];
+            if(!cot) return;
+            
+            const asunto = encodeURIComponent(`Cotización #${cot.nro} - F&B Parts`);
+            const cuerpo = encodeURIComponent(document.getElementById('ia-respuesta').value);
+            
+            // Abre una pestaña nueva directo en la ventana de redactar de Gmail
+            window.open(`https://mail.google.com/mail/?view=cm&fs=1&tf=1&su=${asunto}&body=${cuerpo}`, '_blank');
+        };
+
+        // ==========================================
+        // 🚀 GENERADOR DE SITEMAP SEO PARA GOOGLE (CON URLS AMIGABLES)
+        // ==========================================
+        window.generarSitemapXML = async function(btnElement) {
+            const originalText = btnElement.innerHTML;
+            btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
+            btnElement.disabled = true;
+
+            try {
+                let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+                const baseUrl = 'https://www.fybparts.com/';
+                const fechaHoy = new Date().toISOString().split('T')[0];
+
+                const paginasEstaticas = ['index.html', 'tienda.html'];
+                paginasEstaticas.forEach(pag => {
+                    xml += `  <url>\n    <loc>${baseUrl}${pag}</loc>\n    <lastmod>${fechaHoy}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>1.0</priority>\n  </url>\n`;
+                });
+
+                const prodSnap = await getDocs(collection(db, "productos"));
+                prodSnap.forEach(docSnap => {
+                    const data = docSnap.data();
+                    if (data.estado !== 'inactivo') {
+                        // 🚀 CREAR "SLUG" AMIGABLE (Ej: Bomba de Agua -> bomba-de-agua)
+                        const slug = (data.nombre || 'repuesto').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '-').replace(/(^-|-$)/g, '').replace(/-+/g, '-');
+                        
+                        // NOTA: En XML, el símbolo "&" debe escribirse como "&amp;" obligatoriamente
+                        xml += `  <url>\n    <loc>${baseUrl}producto.html?id=${docSnap.id}&amp;pieza=${slug}</loc>\n    <lastmod>${fechaHoy}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+                    }
+                });
+                xml += '</urlset>';
+
+                const blob = new Blob([xml], { type: 'application/xml' });
+                const enlaceDescarga = document.createElement('a');
+                enlaceDescarga.href = URL.createObjectURL(blob);
+                enlaceDescarga.download = 'sitemap.xml';
+                
+                document.body.appendChild(enlaceDescarga);
+                enlaceDescarga.click();
+                document.body.removeChild(enlaceDescarga);
+                alert("✅ ¡Sitemap generado y descargado con éxito!\n\nSube este archivo 'sitemap.xml' a la raíz de tu dominio.");
+            } catch (error) { console.error(error); alert("Ocurrió un error al generar el mapa del sitio."); }
+
+            btnElement.innerHTML = originalText; btnElement.disabled = false;
+        };
+
+        // ==========================================
+        // CALCULADORA DE IMPORTACIÓN (LANDED COST)
+        // ==========================================
+        window.cambiarCriterioMedida = function() {
+            const criterio = document.getElementById('imp-criterio').value;
+            const labelTotal = document.getElementById('imp-label-medida-total');
+            const inputTotal = document.getElementById('imp-cbm-total');
+
+            if (criterio === 'cbm') {
+                labelTotal.textContent = "Volumen Total del Embarque (CBM / m³)";
+                inputTotal.step = "0.001";
+            } else if (criterio === 'cuft') {
+                labelTotal.textContent = "Volumen Total del Embarque (Pie Cúbico / ft³)";
+                inputTotal.step = "0.01";
+            } else if (criterio === 'peso') {
+                labelTotal.textContent = "Peso Total del Embarque (kg)";
+                inputTotal.step = "0.01";
+            } else if (criterio === 'fob') {
+                labelTotal.textContent = "Referencia / No requerido para FOB";
+            }
+
+            document.querySelectorAll('.imp-item-row').forEach(row => {
+                const labelItem = row.querySelector('.imp-item-medida-label');
+                if (labelItem) {
+                    if (criterio === 'cbm') labelItem.textContent = "Vol. Unit. (CBM)";
+                    else if (criterio === 'cuft') labelItem.textContent = "Vol. Unit. (ft³)";
+                    else if (criterio === 'peso') labelItem.textContent = "Peso Unit. (kg)";
+                    else labelItem.textContent = "Medida (Opcional)";
+                }
+            });
+
+            window.calcularLandedCost();
+        };
+
+        window.agregarFilaGastoVacia = function() {
+            const container = document.getElementById('imp-gastos-container');
+            const row = document.createElement('div');
+            row.className = 'imp-gasto-row';
+            row.style = 'display: flex; gap: 8px; margin-bottom: 10px; align-items: center;';
+            
+            row.innerHTML = `
+                <input type="text" class="imp-gasto-desc" placeholder="Ej: Seguro, Aduana, Transporte..." style="flex: 2; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; outline: none;">
+                <input type="number" step="0.01" class="imp-gasto-monto" value="0.00" placeholder="$0.00" oninput="calcularLandedCost()" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; outline: none;">
+                <button type="button" onclick="this.parentElement.remove(); calcularLandedCost();" style="background: #d9534f; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;" title="Eliminar Gasto"><i class="fas fa-times"></i></button>
+            `;
+            container.appendChild(row);
+        };
+
+        window.agregarFilaImportacionVacia = function() {
+            const container = document.getElementById('imp-items-container');
+            const row = document.createElement('div');
+            row.className = 'imp-item-row';
+            row.style = 'background: #f9f9f9; border: 1px solid #ddd; padding: 12px; border-radius: 6px; margin-bottom: 12px;';
+            
+            const criterio = document.getElementById('imp-criterio')?.value || 'cbm';
+            let labelMedida = "Vol. Unit. (CBM)";
+            if (criterio === 'cuft') labelMedida = "Vol. Unit. (ft³)";
+            else if (criterio === 'peso') labelMedida = "Peso Unit. (kg)";
+            else if (criterio === 'fob') labelMedida = "Medida (Opcional)";
+
+            row.innerHTML = `
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 8px;">
+                    <div>
+                        <label style="font-size: 11px; font-weight: bold; color: #555;">Repuesto / Descripción</label>
+                        <input type="text" class="imp-item-desc" placeholder="Ej: Kit de Tiempo Yaris" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                    </div>
+                    <div>
+                        <label style="font-size: 11px; font-weight: bold; color: #555;">Cantidad</label>
+                        <input type="number" class="imp-item-cant" value="1" min="1" oninput="calcularLandedCost()" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                    </div>
+                    <div>
+                        <label style="font-size: 11px; font-weight: bold; color: #555;">Precio FOB ($ u.)</label>
+                        <input type="number" step="0.01" class="imp-item-fob" value="0.00" oninput="calcularLandedCost()" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                    </div>
+                    <div>
+                        <label class="imp-item-medida-label" style="font-size: 11px; font-weight: bold; color: #555;">${labelMedida}</label>
+                        <input type="number" step="0.001" class="imp-item-cbm" value="0.010" oninput="calcularLandedCost()" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 40px; gap: 10px; align-items: center; background: #eef2eb; padding: 8px; border-radius: 4px;">
+                    <div>
+                        <span style="font-size: 10px; color: #555; display:block;">Costo Puesto ($ u.):</span>
+                        <strong class="imp-item-landed-unit" style="font-size: 13px; color: #d9534f;">$0.00</strong>
+                    </div>
+                    <div>
+                        <label style="font-size: 10px; font-weight: bold; color: #555;">Margen Detal (%)</label>
+                        <input type="number" class="imp-item-margen-detal" value="40" oninput="calcularLandedCost()" style="width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: 4px; font-size: 11px;">
+                    </div>
+                    <div>
+                        <span style="font-size: 10px; color: #555; display:block;">P. Venta Detal ($):</span>
+                        <strong class="imp-item-precio-detal" style="font-size: 13px; color: #385723;">$0.00</strong>
+                    </div>
+                    <div>
+                        <span style="font-size: 10px; color: #555; display:block;">P. Venta Mayor ($):</span>
+                        <strong class="imp-item-precio-mayor" style="font-size: 13px; color: #1d6fa5;">$0.00</strong>
+                    </div>
+                    <button type="button" onclick="this.parentElement.parentElement.remove(); calcularLandedCost();" style="background: #d9534f; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;" title="Eliminar"><i class="fas fa-times"></i></button>
+                </div>
+            `;
+            container.appendChild(row);
+            window.calcularLandedCost();
+        };
+
+        window.calcularLandedCost = function() {
+            let gastosTotales = 0;
+            document.querySelectorAll('.imp-gasto-row').forEach(row => {
+                const monto = parseFloat(row.querySelector('.imp-gasto-monto').value) || 0;
+                gastosTotales += monto;
+            });
+
+            if (document.getElementById('imp-total-gastos-display')) {
+                document.getElementById('imp-total-gastos-display').innerText = gastosTotales.toFixed(2);
+            }
+
+            const medidaTotalCarga = parseFloat(document.getElementById('imp-cbm-total')?.value) || 1;
+            const criterio = document.getElementById('imp-criterio')?.value || 'cbm';
+
+            const rows = document.querySelectorAll('.imp-item-row');
+            let sumaFobTotal = 0;
+            let sumaMedidaTotalItems = 0;
+
+            rows.forEach(row => {
+                const cant = parseFloat(row.querySelector('.imp-item-cant').value) || 0;
+                const fob = parseFloat(row.querySelector('.imp-item-fob').value) || 0;
+                const medidaUnit = parseFloat(row.querySelector('.imp-item-cbm').value) || 0;
+
+                sumaFobTotal += (cant * fob);
+                sumaMedidaTotalItems += (cant * medidaUnit);
+            });
+
+            let acumLandedTotal = 0;
+
+            rows.forEach(row => {
+                const cant = parseFloat(row.querySelector('.imp-item-cant').value) || 1;
+                const fob = parseFloat(row.querySelector('.imp-item-fob').value) || 0;
+                const medidaUnit = parseFloat(row.querySelector('.imp-item-cbm').value) || 0;
+                const margenDetal = parseFloat(row.querySelector('.imp-item-margen-detal').value) || 0;
+
+                let costoGastosPorUnidad = 0;
+
+                if ((criterio === 'cbm' || criterio === 'cuft' || criterio === 'peso') && medidaTotalCarga > 0) {
+                    const fraccionMedida = medidaUnit / medidaTotalCarga;
+                    costoGastosPorUnidad = gastosTotales * fraccionMedida;
+                } else if (criterio === 'fob' && sumaFobTotal > 0) {
+                    const fraccionFob = fob / sumaFobTotal;
+                    costoGastosPorUnidad = (gastosTotales * fraccionFob) / cant;
+                }
+
+                const landedUnitario = fob + costoGastosPorUnidad;
+                const precioDetal = landedUnitario * (1 + (margenDetal / 100));
+                const precioMayor = landedUnitario * (1 + ((margenDetal * 0.7) / 100));
+
+                row.querySelector('.imp-item-landed-unit').innerText = `$${landedUnitario.toFixed(2)}`;
+                row.querySelector('.imp-item-precio-detal').innerText = `$${precioDetal.toFixed(2)}`;
+                row.querySelector('.imp-item-precio-mayor').innerText = `$${precioMayor.toFixed(2)}`;
+
+                acumLandedTotal += (landedUnitario * cant);
+            });
+
+            if (document.getElementById('imp-resumen-fob')) document.getElementById('imp-resumen-fob').innerText = sumaFobTotal.toFixed(2);
+            if (document.getElementById('imp-resumen-landed')) document.getElementById('imp-resumen-landed').innerText = acumLandedTotal.toFixed(2);
+        };
+
+        window.guardarImportacion = async function() {
+            const btn = document.getElementById('btn-save-imp');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Guardando...";
+            btn.disabled = true;
+
+            const editId = document.getElementById('edit-imp-id').value;
+            const criterio = document.getElementById('imp-criterio').value;
+            const medidaTotal = document.getElementById('imp-cbm-total').value;
+            const totalGastos = document.getElementById('imp-total-gastos-display').innerText;
+            const fobTotal = document.getElementById('imp-resumen-fob').innerText;
+            const landedTotal = document.getElementById('imp-resumen-landed').innerText;
+            
+            const gastosDetalle = [];
+            document.querySelectorAll('.imp-gasto-row').forEach(row => {
+                gastosDetalle.push({
+                    desc: row.querySelector('.imp-gasto-desc').value,
+                    monto: row.querySelector('.imp-gasto-monto').value
+                });
+            });
+
+            const rows = document.querySelectorAll('.imp-item-row');
+            const items = [];
+            rows.forEach(row => {
+                items.push({
+                    descripcion: row.querySelector('.imp-item-desc').value || 'Sin descripción',
+                    cantidad: row.querySelector('.imp-item-cant').value,
+                    fob: row.querySelector('.imp-item-fob').value,
+                    medidaUnit: row.querySelector('.imp-item-cbm').value,
+                    margenDetal: row.querySelector('.imp-item-margen-detal').value,
+                    landed: row.querySelector('.imp-item-landed-unit').innerText,
+                    precioDetal: row.querySelector('.imp-item-precio-detal').innerText,
+                    precioMayor: row.querySelector('.imp-item-precio-mayor').innerText
+                });
+            });
+
+            if(items.length === 0) {
+                alert("Agrega al menos un repuesto para guardar el cálculo.");
+                btn.innerHTML = originalText; btn.disabled = false;
+                return;
+            }
+
+            let unidadTexto = 'm³ (China)';
+            if (criterio === 'cuft') unidadTexto = 'ft³ (USA)';
+            else if (criterio === 'peso') unidadTexto = 'kg (Brasil)';
+            else if (criterio === 'fob') unidadTexto = 'FOB ($)';
+
+            const data = {
+                fecha: new Date().toLocaleString("es-VE"),
+                criterio: criterio,
+                medidaTotal: medidaTotal,
+                unidadTexto: unidadTexto,
+                totalGastos: totalGastos,
+                fobTotal: fobTotal,
+                landedTotal: landedTotal,
+                gastosDetalle: gastosDetalle,
+                items: items
+            };
+
+            try {
+                if (editId) {
+                    await updateDoc(doc(db, "importaciones", editId), data);
+                    alert("✅ Cálculo actualizado exitosamente.");
+                    document.getElementById('edit-imp-id').value = '';
+                    btn.style.background = '#28a745'; 
+                } else {
+                    await addDoc(collection(db, "importaciones"), data);
+                    alert("✅ Cálculo guardado exitosamente en el historial.");
+                }
+                window.cargarHistorialImportaciones();
+            } catch (error) {
+                console.error("Error al guardar:", error);
+                alert("Hubo un error al guardar el cálculo en la base de datos.");
+            }
+            btn.innerHTML = '<i class="fas fa-save"></i> Guardar Cálculo en Historial'; 
+            btn.disabled = false;
+        };
+
+        window.cargarHistorialImportaciones = async function() {
+            const tbody = document.getElementById('importaciones-table-body');
+            const selectLanded = document.getElementById('cot-selector-landed'); 
+            
+            if(!tbody) return;
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center;">Cargando historial...</td></tr>`;
+            if(selectLanded) selectLanded.innerHTML = '<option value="">Selecciona un cálculo de importación...</option>';
+            
+            window.importacionesDBLocal = {}; 
+            
+            try {
+                const snap = await getDocs(collection(db, "importaciones"));
+                tbody.innerHTML = '';
+                
+                if(snap.empty) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center;">No hay cálculos guardados.</td></tr>`;
+                    return;
+                }
+
+                snap.forEach(docSnap => {
+                    const data = docSnap.data();
+                    const docId = docSnap.id;
+                    window.importacionesDBLocal[docId] = data; 
+                    
+                    if(selectLanded) selectLanded.innerHTML += `<option value="${docId}">${data.fecha} - ${data.medidaTotal} ${data.unidadTexto} - Costo Total: $${data.landedTotal}</option>`;
+
+                    let itemsList = data.items ? data.items.map(i => {
+                        const margen = i.margenDetal || '40';
+                        const pDetal = i.precioDetal || '$0.00';
+                        const pMayor = i.precioMayor || '$0.00';
+                        return `
+                            <div style="border-bottom: 1px dashed #ccc; padding-bottom: 6px; margin-bottom: 6px;">
+                                <strong style="color:#333;">${i.cantidad}x ${i.descripcion}</strong><br>
+                                <div style="display:flex; justify-content:space-between; font-size:10px; color:#666; margin-top:3px;">
+                                    <span>FOB: $${i.fob}</span>
+                                    <span>Medida: ${i.medidaUnit || '0'}</span>
+                                    <span>Costo Puesto: <strong style="color:#d9534f;">${i.landed}</strong></span>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; font-size:10px; color:#555; margin-top:3px; background:#eef2eb; padding:4px; border-radius:3px;">
+                                    <span>Margen: ${margen}%</span>
+                                    <span>P. Detal: <strong style="color:#385723;">${pDetal}</strong></span>
+                                    <span>P. Mayor: <strong style="color:#1d6fa5;">${pMayor}</strong></span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('') : 'Sin detalles';
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${data.fecha || 'N/A'}</td>
+                        <td><strong>${data.medidaTotal || '0'} ${data.unidadTexto || 'm³'}</strong></td>
+                        <td><strong>$${data.fobTotal || '0.00'}</strong></td>
+                        <td>$${data.totalGastos || '0.00'}</td>
+                        <td>
+                            <strong style="color: #385723; font-size: 14px;">$${data.landedTotal || '0.00'}</strong>
+                            <details style="font-size: 11px; color: #555; margin-top: 5px; cursor: pointer;">
+                                <summary>Ver detalle de piezas</summary>
+                                <div style="margin-top: 5px; padding: 5px; background: #f1f1f1; border-radius: 4px; line-height: 1.4;">${itemsList}</div>
+                            </details>
+                        </td>
+                        <td style="display: flex; gap: 5px; justify-content: center; align-items: center; min-width: 90px;">
+                            <button type="button" onclick="editarImportacion('${docId}')" style="background:#1d6fa5; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;" title="Editar"><i class="fas fa-edit"></i></button>
+                            <button type="button" onclick="eliminarImportacion('${docId}')" style="background:#d9534f; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;" title="Eliminar"><i class="fas fa-trash"></i></button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch(error) {
+                console.error("Error cargando historial de importaciones:", error);
+            }
+        };
+
+        window.editarImportacion = function(docId) {
+            const data = window.importacionesDBLocal[docId];
+            if(!data) return;
+
+            document.getElementById('edit-imp-id').value = docId;
+            document.getElementById('imp-criterio').value = data.criterio || 'cbm';
+            document.getElementById('imp-cbm-total').value = data.medidaTotal || '1.000';
+            
+            const gastosContainer = document.getElementById('imp-gastos-container');
+            gastosContainer.innerHTML = '';
+            if (data.gastosDetalle && data.gastosDetalle.length > 0) {
+                data.gastosDetalle.forEach(g => {
+                    const row = document.createElement('div');
+                    row.className = 'imp-gasto-row';
+                    row.style = 'display: flex; gap: 8px; margin-bottom: 10px; align-items: center;';
+                    row.innerHTML = `
+                        <input type="text" class="imp-gasto-desc" value="${g.desc}" placeholder="Ej: Seguro, Aduana..." style="flex: 2; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; outline: none;">
+                        <input type="number" step="0.01" class="imp-gasto-monto" value="${g.monto}" placeholder="$0.00" oninput="calcularLandedCost()" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; outline: none;">
+                        <button type="button" onclick="this.parentElement.remove(); calcularLandedCost();" style="background: #d9534f; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;" title="Eliminar Gasto"><i class="fas fa-times"></i></button>
+                    `;
+                    gastosContainer.appendChild(row);
+                });
+            } else {
+                const row = document.createElement('div');
+                row.className = 'imp-gasto-row';
+                row.style = 'display: flex; gap: 8px; margin-bottom: 10px; align-items: center;';
+                row.innerHTML = `
+                    <input type="text" class="imp-gasto-desc" value="Gastos Generales (Historial Antiguo)" style="flex: 2; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; outline: none;">
+                    <input type="number" step="0.01" class="imp-gasto-monto" value="${(data.totalGastos || '0').replace('$','')}" oninput="calcularLandedCost()" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; outline: none;">
+                    <button type="button" onclick="this.parentElement.remove(); calcularLandedCost();" style="background: #d9534f; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;" title="Eliminar Gasto"><i class="fas fa-times"></i></button>
+                `;
+                gastosContainer.appendChild(row);
+            }
+
+            const itemsContainer = document.getElementById('imp-items-container');
+            itemsContainer.innerHTML = '';
+            
+            let labelMedida = "Vol. Unit. (CBM)";
+            if (data.criterio === 'cuft') labelMedida = "Vol. Unit. (ft³)";
+            else if (data.criterio === 'peso') labelMedida = "Peso Unit. (kg)";
+            else if (data.criterio === 'fob') labelMedida = "Medida (Opcional)";
+
+            if (data.items && data.items.length > 0) {
+                data.items.forEach(i => {
+                    const row = document.createElement('div');
+                    row.className = 'imp-item-row';
+                    row.style = 'background: #f9f9f9; border: 1px solid #ddd; padding: 12px; border-radius: 6px; margin-bottom: 12px;';
+                    
+                    const margenDetal = i.margenDetal || '40';
+                    const precioDetal = i.precioDetal || '$0.00';
+                    const precioMayor = i.precioMayor || '$0.00';
+                    const landed = i.landed || '$0.00';
+                    const safeDesc = (i.descripcion || '').replace(/"/g, '&quot;');
+
+                    row.innerHTML = `
+                        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 8px;">
+                            <div>
+                                <label style="font-size: 11px; font-weight: bold; color: #555;">Repuesto / Descripción</label>
+                                <input type="text" class="imp-item-desc" value="${safeDesc}" placeholder="Ej: Kit de Tiempo Yaris" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 11px; font-weight: bold; color: #555;">Cantidad</label>
+                                <input type="number" class="imp-item-cant" value="${i.cantidad}" min="1" oninput="calcularLandedCost()" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 11px; font-weight: bold; color: #555;">Precio FOB ($ u.)</label>
+                                <input type="number" step="0.01" class="imp-item-fob" value="${i.fob}" oninput="calcularLandedCost()" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                            </div>
+                            <div>
+                                <label class="imp-item-medida-label" style="font-size: 11px; font-weight: bold; color: #555;">${labelMedida}</label>
+                                <input type="number" step="0.001" class="imp-item-cbm" value="${i.medidaUnit || '0'}" oninput="calcularLandedCost()" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px;">
+                            </div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 40px; gap: 10px; align-items: center; background: #eef2eb; padding: 8px; border-radius: 4px;">
+                            <div>
+                                <span style="font-size: 10px; color: #555; display:block;">Costo Puesto ($ u.):</span>
+                                <strong class="imp-item-landed-unit" style="font-size: 13px; color: #d9534f;">${landed}</strong>
+                            </div>
+                            <div>
+                                <label style="font-size: 10px; font-weight: bold; color: #555;">Margen Detal (%)</label>
+                                <input type="number" class="imp-item-margen-detal" value="${margenDetal}" oninput="calcularLandedCost()" style="width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: 4px; font-size: 11px;">
+                            </div>
+                            <div>
+                                <span style="font-size: 10px; color: #555; display:block;">P. Venta Detal ($):</span>
+                                <strong class="imp-item-precio-detal" style="font-size: 13px; color: #385723;">${precioDetal}</strong>
+                            </div>
+                            <div>
+                                <span style="font-size: 10px; color: #555; display:block;">P. Venta Mayor ($):</span>
+                                <strong class="imp-item-precio-mayor" style="font-size: 13px; color: #1d6fa5;">${precioMayor}</strong>
+                            </div>
+                            <button type="button" onclick="this.parentElement.parentElement.remove(); calcularLandedCost();" style="background: #d9534f; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer;" title="Eliminar"><i class="fas fa-times"></i></button>
+                        </div>
+                    `;
+                    itemsContainer.appendChild(row);
+                });
+            }
+
+            window.calcularLandedCost();
+            
+            document.getElementById('tab-importacion').scrollIntoView({ behavior: 'smooth' });
+
+            const btnSave = document.getElementById('btn-save-imp');
+            if(btnSave) {
+                btnSave.innerHTML = '<i class="fas fa-sync"></i> Actualizar Cálculo Editado';
+                btnSave.style.background = '#1d6fa5'; 
+            }
+        };
+
+        window.eliminarImportacion = async function(docId) {
+            if(!confirm("¿Seguro que deseas eliminar este cálculo del historial?")) return;
+            try {
+                await deleteDoc(doc(db, "importaciones", docId));
+                window.cargarHistorialImportaciones();
+            } catch (error) {
+                console.error("Error eliminando:", error);
+            }
+        };
+        // ==========================================
+        // FUNCIONES COMPLEMENTARIAS Y CAJERO
+        // ==========================================
+        window.copiarAlPortapapeles = function(texto, btnElement) {
+            navigator.clipboard.writeText(texto).then(() => {
+                const originalHTML = btnElement.innerHTML;
+                btnElement.innerHTML = '<i class="fas fa-check"></i> ¡Copiado!';
+                btnElement.classList.add('copied');
+                setTimeout(() => {
+                    btnElement.innerHTML = originalHTML;
+                    btnElement.classList.remove('copied');
+                }, 1500);
+            }).catch(err => { console.error(err); alert("Error copiando al portapapeles."); });
+        };
+
+        window.abrirModoCajeroParaFactura = function(factura) {
+            document.getElementById('cajero-cliente-nombre').textContent = factura.cliente || 'Cliente Mostrador';
+            
+            let rifHtml = '';
+            if (factura.rif) {
+                let rifLimpio = factura.rif;
+                const lastDash = factura.rif.lastIndexOf('-');
+                if (lastDash > 0) { rifLimpio = factura.rif.substring(0, lastDash) + factura.rif.substring(lastDash + 1); }
+                rifHtml = `<span>RIF/C.I: ${factura.rif}</span> <button type="button" class="btn-copy" style="padding: 2px 8px; font-size: 11px; margin-left: 6px; display: inline-flex; align-items: center; gap: 4px;" onclick="copiarAlPortapapeles('${rifLimpio}', this)"><i class="fas fa-copy"></i> Copiar RIF</button>`;
+            }
+            const dirStr = factura.direccion ? `<span style="margin-left: 8px;">| Dir: ${factura.direccion}</span>` : '';
+            const telStr = factura.telefono ? `<span style="margin-left: 8px;">| Tel: ${factura.telefono}</span>` : '';
+            document.getElementById('cajero-cliente-detalles').innerHTML = `<div style="display: flex; align-items: center; flex-wrap: wrap;">${rifHtml}${dirStr}${telStr}</div>`;
+
+            const simbolo = factura.simbolo || '$';
+            const totalF = Number(factura.total || 0).toFixed(2);
+            const totalEl = document.getElementById('cajero-total-monto');
+            totalEl.textContent = `${simbolo}${totalF}`; totalEl.setAttribute('data-raw', totalF);
+
+            const lista = document.getElementById('cajero-items-lista');
+            lista.innerHTML = '';
+            if (factura.items) {
+                factura.items.forEach(prod => {
+                    const safeName = (prod.descripcion || '').replace(/'/g, "\\'");
+                    const precioConIva = (Number(prod.precioUnitario || 0) * 1.16).toFixed(2); 
+                    lista.innerHTML += `
+                        <div class="cajero-item-row">
+                            <div class="cajero-item-details">
+                                <strong style="font-size: 13px; color: #333;">${prod.cantidad}x ${prod.descripcion}</strong><br>
+                                <span style="font-size: 12px; color: #666;">${simbolo}${precioConIva} c/u (IVA incl.)</span>
+                            </div>
+                            <div class="cajero-item-actions">
+                                <button type="button" class="btn-copy" onclick="copiarAlPortapapeles('${safeName}', this)"><i class="fas fa-copy"></i> Nombre</button>
+                                <button type="button" class="btn-copy" onclick="copiarAlPortapapeles('${precioConIva}', this)"><i class="fas fa-copy"></i> Precio</button>
+                            </div>
+                        </div>`;
+                });
+            }
+            document.getElementById('modal-cajero').style.display = 'flex';
+        };
+
+        window.cerrarModoCajero = function() { document.getElementById('modal-cajero').style.display = 'none'; };
+
+        window.abrirModalNotas = function(docId, tipoDocumento, notaExistente) {
+            document.getElementById('nota-doc-id').value = docId;
+            document.getElementById('nota-doc-tipo').value = tipoDocumento;
+            document.getElementById('nota-texto').value = notaExistente && notaExistente !== 'undefined' ? notaExistente : '';
+            document.getElementById('modal-notas').style.display = 'flex';
+        };
+
+        window.cerrarModalNotas = function() {
+            document.getElementById('modal-notas').style.display = 'none';
+        };
+
+        window.guardarNotaInterna = async function() {
+            const docId = document.getElementById('nota-doc-id').value;
+            const tipo = document.getElementById('nota-doc-tipo').value; 
+            const texto = document.getElementById('nota-texto').value.trim();
+
+            try {
+                await updateDoc(doc(db, tipo, docId), { notaInterna: texto });
+                window.cerrarModalNotas();
+                
+                if(tipo === 'facturas') { window.cargarHistorialFacturas(); window.cargarDashboard(); window.cargarFinanzas(); }
+                else if (tipo === 'cotizaciones') { window.cargarHistorialCotizaciones(); }
+                
+            } catch (error) { console.error("Error al guardar la nota:", error); alert("Error al guardar la nota."); }
+        };
+
+        window.actualizarEstatusDocumento = async function(docId, tipoDocumento, selectElement) {
+            const nuevoEstatus = selectElement.value;
+            let colorClase = 'status-pendiente';
+            
+            if (nuevoEstatus.includes("Pagado") || nuevoEstatus === "Aprobada") { colorClase = 'status-pagado'; }
+            else if (nuevoEstatus.includes("Crédito") || nuevoEstatus === "En espera") { colorClase = 'status-credito'; }
+            else if (nuevoEstatus.includes("Importación")) { colorClase = 'status-importacion'; }
+            else if (nuevoEstatus === "No aprobada" || nuevoEstatus === "Anulada") { colorClase = 'status-inactivo'; }
+            
+            selectElement.className = 'select-status ' + colorClase;
+
+            let dataUpdate = { estatusComercial: nuevoEstatus };
+
+            if (tipoDocumento === 'facturas' && nuevoEstatus === 'Anulada') {
+                let nc = prompt("La factura será Anulada.\n¿Deseas registrar un número de Nota de Crédito? (Déjalo en blanco si no aplica)");
+                if(nc !== null && nc.trim() !== "") {
+                    dataUpdate.notaCredito = nc.trim();
+                } else {
+                    dataUpdate.notaCredito = "";
+                }
+            }
+
+            try {
+                await updateDoc(doc(db, tipoDocumento, docId), dataUpdate);
+                if(window.registrarAuditoria) {
+                    if (tipoDocumento === 'facturas') {
+                        let fac = window.facturasDBLocal ? window.facturasDBLocal[docId] : null;
+                        let nro = fac ? fac.nro : docId;
+                        window.registrarAuditoria("CAMBIO DE ESTATUS FACTURA", "Factura #" + nro + " cambiada a: " + nuevoEstatus);
+                    } else if (tipoDocumento === 'cotizaciones') {
+                        window.registrarAuditoria("CAMBIO ESTATUS COTIZACIÓN", "Cotización ID " + docId + " cambiada a: " + nuevoEstatus);
+                    }
+                }
+                if (tipoDocumento === 'facturas') {
+                    window.cargarHistorialFacturas(); 
+                    window.cargarDashboard();
+                    window.cargarFinanzas();
+                }
+            } catch (error) {
+                console.error("Error al actualizar estatus:", error);
+            }
+        };
+
+        // ==========================================
+        // 🚀 RETENCIONES AUTOMÁTICAS (IA)
+        // ==========================================
+        window.abrirModalRetenciones = async function(nroFactura) {
+            document.getElementById('ret-nro-factura').textContent = nroFactura;
+            document.getElementById('modal-retenciones').style.display = 'flex';
+            const contenedor = document.getElementById('lista-retenciones');
+            contenedor.innerHTML = '<p style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin"></i> Buscando retenciones automáticas...</p>';
+
+            try {
+                const snap = await getDocs(collection(db, "retenciones"));
+                let html = '';
+                let encontradas = 0;
+
+                const buscarNro = String(nroFactura).replace(/^0+/, '').toUpperCase();
+
+                snap.forEach(docSnap => {
+                    const ret = docSnap.data();
+                    const retNroOriginal = String(ret.Factura || ret.factura || ret.FACTURA || '');
+                    const retNroLimpio = retNroOriginal.replace(/^0+/, '').toUpperCase();
+
+                    if (retNroLimpio === buscarNro && retNroLimpio !== '') {
+                        encontradas++;
+                        const montoDisplay = (!isNaN(parseFloat(ret.monto))) ? `$${parseFloat(ret.monto).toFixed(2)}` : (ret.monto || 'No especificado');
+                        
+                        html += `
+                            <div style="background: white; border: 1px solid #c3e6cb; border-left: 4px solid #28a745; padding: 12px; border-radius: 6px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02);">
+                                <div>
+                                    <span style="display:block; font-weight:bold; color:#155724; font-size:14px;">RIF: ${ret.rif || 'N/A'}</span>
+                                    <span style="font-size:12px; color:#555;">Monto Retenido: <strong style="color:#d9534f;">${montoDisplay}</strong></span>
+                                </div>
+                                <div>
+                                    ${ret.link_pdf 
+                                        ? `<a href="${ret.link_pdf}" target="_blank" style="background:#1d6fa5; color:white; padding:6px 12px; border-radius:4px; text-decoration:none; font-size:12px; font-weight:bold; display:inline-block;"><i class="fas fa-file-pdf"></i> Ver PDF</a>` 
+                                        : `<span style="font-size:11px; background:#f1f1f1; padding:4px 8px; border-radius:4px; color:#666;"><i class="fas fa-robot"></i> Procesado por IA</span>`}
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+
+                if (encontradas === 0) {
+                    contenedor.innerHTML = `
+                        <div style="text-align:center; padding:30px 10px; color:#666;">
+                            <i class="fas fa-inbox" style="font-size: 30px; color: #ccc; margin-bottom: 10px;"></i>
+                            <p style="margin:0;">No se han recibido comprobantes automáticos para esta factura aún.</p>
+                            <small style="font-size: 11px;">(Recuerda que Make las escanea del correo y las vincula aquí)</small>
+                        </div>`;
+                } else {
+                    contenedor.innerHTML = html;
+                }
+
+            } catch (error) {
+                console.error(error);
+                contenedor.innerHTML = '<p style="text-align:center; color:#d9534f; padding:20px;"><i class="fas fa-exclamation-triangle"></i> Error al buscar las retenciones en Firestore.</p>';
+            }
+        };
+
+        window.cerrarModalRetenciones = function() {
+            document.getElementById('modal-retenciones').style.display = 'none';
+        };
+
+        // ==========================================
+        // 🚀 LECTURA DE TASAS (CORREGIDO Y MEJORADO)
+        // ==========================================
+        window.cargarTasaBCV = async function() {
+            const inputTasa = document.getElementById('fac-tasa');
+            const monedaSeleccionada = document.getElementById('fac-moneda').value.split('|')[0];
+            const baseMoneda = document.getElementById('fac-base-moneda') ? document.getElementById('fac-base-moneda').value : 'USD';
+            
+            try {
+                let nombreDocumento = "tasa_bcv";
+                
+                // Lógica inteligente para saber qué tasa buscar en Firebase
+                if (monedaSeleccionada === "EUR") { 
+                    nombreDocumento = "tasa_euro"; 
+                } else if (monedaSeleccionada === "VES") {
+                    if (baseMoneda === "EUR") {
+                        nombreDocumento = "tasa_euro";
+                    } else {
+                        nombreDocumento = "tasa_bcv";
+                    }
+                } else if (monedaSeleccionada === "USD") {
+                    // Para USD, mostramos la Tasa BCV para que aparezca en el recibo legal
+                    nombreDocumento = "tasa_bcv";
+                }
+
+                const docRef = doc(db, "configuracion", nombreDocumento);
+                const docSnap = await getDoc(docRef);
+                
+                let tasaValor = 1;
+                if (docSnap.exists()) {
+                    tasaValor = docSnap.data().Valor || docSnap.data().valor || 1;
+                    if (inputTasa) inputTasa.value = parseFloat(tasaValor).toFixed(4);
+                } else {
+                    if (inputTasa) inputTasa.value = 1;
+                }
+                
+                if (window.actualizarPreviewFactura) window.actualizarPreviewFactura();
+            } catch (error) { console.error("Error cargando tasa:", error); }
+        };
+
+        window.actualizarSimboloMoneda = function() {
+            const monedaStr = document.getElementById('fac-moneda').value;
+            const monedaCode = monedaStr.split('|')[0];
+            const simbolo = monedaStr.split('|')[1];
+            
+            // Actualiza los símbolos visuales ($, Bs, €)
+            document.querySelectorAll('.fac-simbolo-display').forEach(el => el.textContent = simbolo);
+            
+            // Mostrar/Ocultar el selector de base si es VES
+            const divBase = document.getElementById('div-base-moneda');
+            if (divBase) {
+                if (monedaCode === 'VES') {
+                    divBase.style.display = 'block';
+                } else {
+                    divBase.style.display = 'none';
+                }
+            }
+            
+            // Recargar la tasa automáticamente según la nueva selección
+            window.cargarTasaBCV();
+        };
+
+        // ==========================================
+        // 🔔 NOTIFICACIONES DE COBRANZA
+        // ==========================================
+        window.toggleNotificaciones = function() {
+            const dropdown = document.getElementById('dropdown-notificaciones');
+            if (dropdown) dropdown.classList.toggle('hidden');
+        };
+
+        // Cerrar dropdown si hace clic afuera
+        document.addEventListener('click', function(event) {
+            const container = document.getElementById('bell-container');
+            const dropdown = document.getElementById('dropdown-notificaciones');
+            if (container && dropdown && !container.contains(event.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+
+        window.actualizarNotificacionesCobranza = function() {
+    const filas = document.querySelectorAll('#facturas-table-body tr');
+    const lista = document.getElementById('lista-notificaciones'); // Asegúrate de que este ID coincida con tu HTML
+    
+    let notificacionesHTML = '';
+    let contadorVencidas = 0;
+    const hoy = new Date();
+
+    filas.forEach(fila => {
+        if (fila.cells.length < 5) return; // Omitir filas de carga o vacías
+
+        // 1. Obtener número y cliente limpiando saltos de línea
+        const nroFila = fila.cells[0].textContent.trim().split('\n')[0];
+        const fechaStr = fila.cells[1].textContent.trim();
+        const clienteStr = fila.cells[2].textContent.trim().split('\n')[0];
+
+        // 2. Obtener el valor REAL seleccionado en el menú desplegable (NO el textContent de la celda)
+        const selectEstatus = fila.querySelector('td:nth-child(4) select');
+        if (!selectEstatus) return;
+        const estatusActivo = selectEstatus.options[selectEstatus.selectedIndex].text.toUpperCase();
+
+        // 3. Evaluar si es un crédito no pagado
+        if (estatusActivo.includes('CRÉDITO') && !estatusActivo.includes('PAGADO')) {
+            
+            // 4. Parsear fecha DD/MM/YYYY a un objeto Date válido
+            const partesFecha = fechaStr.split('/');
+            if (partesFecha.length === 3) {
+                // new Date(Año, Mes (0-11), Día)
+                const fechaFactura = new Date(partesFecha[2], partesFecha[1] - 1, partesFecha[0]);
+                
+                // Calcular diferencia en días exactos
+                const diferenciaTiempo = hoy.getTime() - fechaFactura.getTime();
+                const diasTranscurridos = Math.floor(diferenciaTiempo / (1000 * 3600 * 24));
+                
+                if (diasTranscurridos > 15) {
+                    contadorVencidas++;
+                    notificacionesHTML += `
+                        <li class="p-3 border-b border-gray-100 hover:bg-red-50 transition-colors cursor-default">
+                            <div class="text-sm">
+                                <strong class="text-red-600">${nroFila}</strong> - <span class="text-gray-800">${clienteStr}</span>
+                            </div>
+                            <div class="text-xs text-red-500 mt-1 font-semibold">
+                                <i class="fas fa-exclamation-triangle mr-1"></i> Vencida hace ${diasTranscurridos - 15} días (${diasTranscurridos} días desde emisión)
+                            </div>
+                        </li>`;
+                }
+            }
+        }
+    });
+
+    // 5. Inyectar notificaciones en el menú desplegable
+    if (lista) {
+        lista.innerHTML = contadorVencidas > 0 ? notificacionesHTML : '<li class="p-4 text-gray-500 text-sm text-center">No hay cobros pendientes</li>';
+    }
+
+    // 6. Actualizar o crear el circulito rojo (badge) en la campana
+    const iconoCampana = document.querySelector('.fa-bell');
+    if (iconoCampana) {
+        const botonCampana = iconoCampana.parentElement;
+        let badge = botonCampana.querySelector('.badge-campana');
+        
+        if (!badge) {
+            // Crear el badge si no existe en el HTML
+            badge = document.createElement('span');
+            badge.className = 'badge-campana absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/4 -translate-y-1/4 bg-red-600 rounded-full';
+            botonCampana.appendChild(badge);
+        }
+        
+        if (contadorVencidas > 0) {
+            badge.textContent = contadorVencidas;
+            badge.style.display = 'inline-flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+};
+
+// Asegurar que la función se ejecute al terminar de cargar la tabla
+const originalCargarHistorial = window.cargarHistorialFacturas;
+window.cargarHistorialFacturas = async function() {
+    await originalCargarHistorial();
+    window.actualizarNotificacionesCobranza();
+};
+
+        // ==========================================
+        // 🚀 MOTOR DE ARRANQUE INICIAL
+        // ==========================================
+        window.panelIniciado = false;
+        window.iniciarPanelCompleto = async function() {
+            if (window.panelIniciado) return;
+            window.panelIniciado = true;
+            
+            // Esperar activamente hasta que Firebase Auth reconozca el token (máximo 4 seg)
+            // Esto evita errores de permisos (Missing or insufficient permissions)
+            if (!auth.currentUser) {
+                console.log("Firebase Auth no está listo aún. Esperando token para cargar bases de datos...");
+                for(let i=0; i<40; i++){
+                    if(auth.currentUser) break;
+                    await new Promise(r => setTimeout(r, 100));
+                }
+            }
+
+            console.log("Iniciando módulos de bases de datos de forma secuencial para evitar saturación...");
+            
+            const runSafe = async (fnName) => {
+                try {
+                    if (typeof window[fnName] === 'function') {
+                        await window[fnName]();
+                        await new Promise(r => setTimeout(r, 150)); // Breve respiro para el navegador
+                    }
+                } catch(e) {
+                    console.error("Error al ejecutar " + fnName + ":", e);
+                }
+            };
+
+            await runSafe('cargarDashboard');
+            await runSafe('cargarFinanzas');
+            await runSafe('cargarPedidos');
+            await runSafe('cargarCatalogoAdmin');
+            await runSafe('cargarBaseClientes');
+            
+            await runSafe('calcularTotalCotizacion');
+            await runSafe('cargarHistorialCotizaciones');
+            
+            await runSafe('calcularTotalFactura');
+            await runSafe('cargarHistorialFacturas');
+            await runSafe('cargarHistorialImportaciones');
+            await runSafe('cargarHistorialReventas');
+            await runSafe('cargarHistorialReventas');
+            
+            await runSafe('cargarTasaBCV');
+            await runSafe('cargarPuntosRuta');
+            
+            setTimeout(() => { 
+                runSafe('cargarCxCPersonal');
+            }, 1000);
+        };
+
+        // Disparo seguro e inmediato sin depender de si DOMContentLoaded ya disparó
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', window.iniciarPanelCompleto);
+        } else {
+            window.iniciarPanelCompleto();
+        }
+
+        // ==========================================
+        // 🚀 ANALISTA IA CON MEMORIA FIREBASE (sesion_001)
+        // ==========================================
+        window.historialAdminIA = [];
+
+        window.toggleAdminAi = function() {
+            const box = document.getElementById('admin-ai-box');
+            const icon = document.getElementById('admin-ai-icon');
+            const chatArea = document.getElementById('admin-ai-messages');
+            
+            if (box.style.display === 'none' || box.style.display === '') {
+                box.style.display = 'flex';
+                icon.className = 'fas fa-times';
+                document.getElementById('admin-ai-input').focus();
+                
+                // Cargar historial de Firebase si el chat solo tiene el saludo inicial
+                if (chatArea.children.length <= 1) {
+                    window.cargarHistorialAI();
+                }
+            } else {
+                box.style.display = 'none';
+                icon.className = 'fas fa-robot';
+            }
+        };
+
+        window.cargarHistorialAI = async function() {
+            const chatArea = document.getElementById('admin-ai-messages');
+            try {
+                const docRef = doc(db, "ai_copilot_sessions", "sesion_001");
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.historial_mensajes && data.historial_mensajes.length > 0) {
+                        chatArea.innerHTML = ''; // Limpiamos el saludo default
+                        window.historialAdminIA = [];
+
+                        data.historial_mensajes.forEach(msg => {
+                            window.historialAdminIA.push({ user: msg.user, ai: msg.ai });
+                            
+                            // Burbuja Tuya
+                            chatArea.innerHTML += `
+                                <div style="align-self: flex-end; background: #e2eef7; padding: 10px 14px; border-radius: 12px 0 12px 12px; max-width: 85%; color: #333; border-right: 3px solid #1d6fa5; margin-bottom: 10px;">
+                                    <p style="margin: 0;">${msg.user}</p>
+                                </div>`;
+                            // Burbuja IA
+                            chatArea.innerHTML += `
+                                <div style="align-self: flex-start; background: white; padding: 10px 14px; border-radius: 0 12px 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; border-left: 3px solid #1d6fa5; color: #333; margin-bottom: 10px;">
+                                    <p style="margin: 0; white-space: pre-wrap; line-height: 1.5;">${msg.ai}</p>
+                                </div>`;
+                        });
+                        chatArea.scrollTop = chatArea.scrollHeight;
+                    }
+                }
+            } catch (error) { console.error("Error cargando la memoria:", error); }
+        };
+
+        window.enviarMensajeAdminAi = async function() {
+            const input = document.getElementById('admin-ai-input');
+            const mensaje = input.value.trim();
+            if (!mensaje) return;
+
+            const chatArea = document.getElementById('admin-ai-messages');
+            const btn = document.getElementById('admin-ai-send-btn');
+
+            chatArea.innerHTML += `
+                <div style="align-self: flex-end; background: #e2eef7; padding: 10px 14px; border-radius: 12px 0 12px 12px; max-width: 85%; color: #333; border-right: 3px solid #1d6fa5; margin-bottom: 10px;">
+                    <p style="margin: 0;">${mensaje}</p>
+                </div>`;
+            input.value = '';
+            chatArea.scrollTop = chatArea.scrollHeight;
+
+            btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            const typingId = 'typing-' + Date.now();
+            chatArea.innerHTML += `
+                <div id="${typingId}" style="align-self: flex-start; background: white; padding: 10px 14px; border-radius: 0 12px 12px 12px; max-width: 85%; border-left: 3px solid #ccc; color: #888; font-style: italic; margin-bottom: 10px;">
+                    <i class="fas fa-circle-notch fa-spin"></i> Analizando...
+                </div>`;
+            chatArea.scrollTop = chatArea.scrollHeight;
+
+            // 🧠 SÚPER CONTEXTO EN TIEMPO REAL PARA LA IA
+            const ventasMes = document.getElementById('dash-v-total')?.innerText || '0.00';
+            const cxcTotal = document.getElementById('dash-cxc-total')?.innerText || '0.00';
+            const cxpTotal = document.getElementById('dash-cxp-total')?.innerText || '0.00';
+            const invTotal = document.getElementById('dash-inventario')?.innerText || '$0.00';
+
+            // 🚀 NUEVA MAGIA: INTERCEPTOR DE DOCUMENTOS
+            let contextoExtra = "";
+            
+            // Buscar menciones a Cotizaciones (Ej: "cotizacion 1837" o "cotización #1837")
+            const regexCot = /cotizaci[oó]n\s*#?\s*(\d+)/i;
+            const matchCot = mensaje.match(regexCot);
+            if (matchCot) {
+                const nroBusqueda = parseInt(matchCot[1]);
+                for (const docId in window.cotizacionesDBLocal) {
+                    if (parseInt(window.cotizacionesDBLocal[docId].nro) === nroBusqueda) {
+                        const cot = window.cotizacionesDBLocal[docId];
+                        contextoExtra += `\n\n📄 [ATENCIÓN IA: El usuario te está preguntando por la COTIZACIÓN #${cot.nro}. Aquí tienes los datos extraídos de la base de datos para que le respondas con precisión absoluta]:\n`;
+                        contextoExtra += `- Cliente: ${cot.cliente} (RIF: ${cot.rif})\n- Vehículo: ${cot.vehiculo} (${cot.anio})\n- Estatus: ${cot.estatusComercial}\n- Fecha: ${cot.fecha}\n- Total General: $${cot.total}\n- Ítems cotizados:\n`;
+                        cot.items.forEach(i => { contextoExtra += `  * ${i.cantidad}x ${i.descripcion} a $${i.precioUnitario} c/u (Desc: $${i.descuento})\n`; });
+                        break;
+                    }
+                }
+            }
+
+            // Buscar menciones a Facturas (Ej: "factura 0607" o "factura 607")
+            const regexFac = /factura\s*#?\s*(\d+)/i;
+            const matchFac = mensaje.match(regexFac);
+            if (matchFac) {
+                const nroBusqueda = parseInt(matchFac[1]);
+                for (const docId in window.facturasDBLocal) {
+                    if (parseInt(window.facturasDBLocal[docId].nro) === nroBusqueda) {
+                        const fac = window.facturasDBLocal[docId];
+                        contextoExtra += `\n\n🧾 [ATENCIÓN IA: El usuario te está preguntando por la FACTURA #${fac.nro}. Aquí tienes los datos extraídos de la base de datos para que le respondas con precisión absoluta]:\n`;
+                        contextoExtra += `- Cliente: ${fac.cliente} (RIF: ${fac.rif})\n- Estatus: ${fac.estatusComercial}\n- Fecha: ${fac.fecha}\n- Total General: ${fac.simbolo}${fac.total}\n- Ítems facturados:\n`;
+                        if(fac.items) fac.items.forEach(i => { contextoExtra += `  * ${i.cantidad}x ${i.descripcion} a ${fac.simbolo}${i.precioUnitario} c/u\n`; });
+                        break;
+                    }
+                }
+            }
+
+            let promptBase = `Actúa como el Director Financiero (CFO) y Analista Estratégico de "Inversiones FB Parts, C.A.". Eres la mano derecha del Gerente (Brhayan).
+            
+            📊 ESTADO FINANCIERO EN TIEMPO REAL:
+            - Ventas del Mes: $${ventasMes}
+            - Cuentas por Cobrar (Dinero en la calle): $${cxcTotal}
+            - Cuentas por Pagar (Deudas a proveedores): $${cxpTotal}
+            - Capital en Inventario: ${invTotal}
+            
+            INSTRUCCIONES: Tienes visión global de toda la empresa. Da respuestas analíticas, cortas y estratégicas. NO uses formato markdown (**) ni asteriscos en tus respuestas.`;
+            
+            let contextoHistorial = window.historialAdminIA.map(msg => `Brhayan: ${msg.user}\nAnalista: ${msg.ai}`).join("\n\n");
+            
+            // Unimos el prompt + historial + documento inyectado + mensaje del usuario
+            let promptFinal = promptBase + "\n\n" + (contextoHistorial ? `HISTORIAL DE SESIÓN:\n${contextoHistorial}\n\n` : "") + contextoExtra + `\n\nBRHAYAN: "${mensaje}"`;
+
+            try {
+                const respuesta = await puter.ai.chat(promptFinal);
+                const respuestaFinal = typeof respuesta === 'string' ? respuesta : respuesta.message.content;
+                document.getElementById(typingId).remove();
+
+                chatArea.innerHTML += `
+                    <div style="align-self: flex-start; background: white; padding: 10px 14px; border-radius: 0 12px 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; border-left: 3px solid #1d6fa5; color: #333; margin-bottom: 10px;">
+                        <p style="margin: 0; white-space: pre-wrap; line-height: 1.5;">${respuestaFinal.replace(/\*\*/g, '')}</p>
+                    </div>`;
+                chatArea.scrollTop = chatArea.scrollHeight;
+
+                // 💾 GUARDAR EN LA MEMORIA DE FIREBASE (sesion_001)
+                window.historialAdminIA.push({ user: mensaje, ai: respuestaFinal });
+                const docRef = doc(db, "ai_copilot_sessions", "sesion_001");
+                await updateDoc(docRef, {
+                    historial_mensajes: arrayUnion({ user: mensaje, ai: respuestaFinal, fecha: new Date().toISOString() })
+                });
+
+
+
+            } catch (e) {
+                console.error(e);
+                document.getElementById(typingId).remove();
+                chatArea.innerHTML += `<div style="color: #d9534f; margin-bottom: 10px;">Error de conexión IA.</div>`;
+            }
+
+            btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i>'; input.focus();
+        };
+
+        // Función puente para el botón de "Landed Cost"
+        window.abrirAnalisisLandedIA = function() {
+            const rows = document.querySelectorAll('.imp-item-row');
+            if (rows.length === 0) { alert("Agrega un repuesto primero a la calculadora."); return; }
+            
+            const origen = document.getElementById('imp-criterio').options[document.getElementById('imp-criterio').selectedIndex].text;
+            const fobTotal = document.getElementById('imp-resumen-fob').innerText;
+            const gastosTotal = document.getElementById('imp-total-gastos-display').innerText;
+            const landedTotal = document.getElementById('imp-resumen-landed').innerText;
+
+            // 🚀 NUEVO: Extraer cada línea de repuesto con lujo de detalles
+            let listaItems = '';
+            rows.forEach(row => {
+                const desc = row.querySelector('.imp-item-desc').value || 'Repuesto sin especificar';
+                const cant = row.querySelector('.imp-item-cant').value;
+                const fob = row.querySelector('.imp-item-fob').value;
+                const medidaUnit = row.querySelector('.imp-item-cbm').value;
+                const landedUnit = row.querySelector('.imp-item-landed-unit').innerText;
+                const margen = row.querySelector('.imp-item-margen-detal').value;
+                const pDetal = row.querySelector('.imp-item-precio-detal').innerText;
+                
+                listaItems += `- ${cant}x [${desc}] | FOB: $${fob} | Vol/Peso: ${medidaUnit} | Costo Puesto: ${landedUnit} | Margen: ${margen}% | PV Detal: ${pDetal}\n`;
+            });
+
+            // Armamos un súper-prompt para la IA
+            let promptTexto = `Revisa mi pantalla actual del Landed Cost.\n\n` +
+                              `📊 RESUMEN GLOBAL:\n` +
+                              `Origen: ${origen}\n` +
+                              `FOB Total: $${fobTotal} | Gastos Logísticos: $${gastosTotal} | Costo Puesto Total: $${landedTotal}\n\n` +
+                              `📦 DESGLOSE DE REPUESTOS:\n${listaItems}\n` +
+                              `Por favor, analiza estos datos. Detecta si hay algún repuesto cuyo volumen o peso se esté comiendo el margen de ganancia (los gastos logísticos), dime si los precios de venta son competitivos y qué estrategia recomiendas.`;
+
+            document.getElementById('admin-ai-box').style.display = 'flex';
+            document.getElementById('admin-ai-icon').className = 'fas fa-times';
+            
+            // Carga memoria previa primero, si no lo ha hecho
+            if (document.getElementById('admin-ai-messages').children.length <= 1) {
+                window.cargarHistorialAI().then(() => {
+                    document.getElementById('admin-ai-input').value = promptTexto;
+                    window.enviarMensajeAdminAi();
+                });
+            } else {
+                document.getElementById('admin-ai-input').value = promptTexto;
+                window.enviarMensajeAdminAi();
+            }
+        };
+
+        // ==========================================
+        // 🚀 CREADOR DE DESCRIPCIONES (PLANTILLA FIJA FB PARTS)
+        // ==========================================
+        window.generarDescripcionIA = async function() {
+            const nombre = document.getElementById('edit-nombre').value.trim();
+            const categoriaElement = document.getElementById('edit-categoria');
+            const categoria = categoriaElement.options[categoriaElement.selectedIndex]?.text || 'Repuestos Automotrices';
+            const numParte = document.getElementById('edit-numero-parte').value.trim() || 'No especificado / Varios';
+            const textArea = document.getElementById('edit-descripcion');
+            const btn = document.getElementById('btn-ia-desc');
+
+            if (!nombre) {
+                alert("Por favor, escribe primero el 'Nombre del Repuesto' para que la IA pueda rellenar la plantilla.");
+                return;
+            }
+
+            if (typeof puter === 'undefined') {
+                alert("⚠️ Puter no está cargado. Revisa tu conexión a internet.");
+                return;
+            }
+
+            const textoBotonOriginal = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Llenando Plantilla...';
+            btn.disabled = true;
+
+            // 🚀 PROMPT ESTRICTO CON PLANTILLA BASE
+            let promptTexto = `Eres el asistente de publicaciones de "Inversiones FB Parts, C.A.".
+            Tu única tarea es copiar LA PLANTILLA EXACTA que te daré abajo y rellenar los espacios indicados entre corchetes [ ] con la información técnica del repuesto. 
+            NO cambies la estructura, NO borres los emojis, y NO uses asteriscos (**) de markdown.
+
+            DATOS DEL REPUESTO:
+            - Nombre: ${nombre}
+            - Categoría: ${categoria}
+            - Nro de Parte: ${numParte}
+
+            --- COPIA Y RELLENA ESTA PLANTILLA EXACTA DESDE AQUÍ ---
+
+            ✅ FUNCIÓN Y BENEFICIOS:
+            [Redacta aquí 2 o 3 líneas atractivas explicando brevemente para qué sirve esta pieza en el vehículo y por qué es importante cambiarla a tiempo. Usa un tono experto y vendedor].
+
+            🔧 COMPATIBILIDAD SUGERIDA:
+            - [Menciona aquí 2 o 3 vehículos o motores compatibles que conozcas para este repuesto. Si no los conoces con seguridad, escribe: "Aplica para varios modelos. Por favor consultar compatibilidad indicando el modelo y año de su vehículo"].`
+            
+
+            try {
+                // Llamada a la IA
+                const respuesta = await puter.ai.chat(promptTexto);
+                const textoFinal = typeof respuesta === 'string' ? respuesta : respuesta.message.content;
+                
+                // Limpieza de seguridad por si la IA devuelve formato Markdown
+                const textoLimpio = textoFinal.replace(/\*\*/g, '').replace(/\*/g, '•');
+                
+                textArea.value = textoLimpio.trim();
+                
+            } catch (error) {
+                console.error("Error Puter Descripciones:", error);
+                alert("⚠️ Error al generar la descripción: " + error.message);
+            }
+
+            btn.innerHTML = textoBotonOriginal;
+            btn.disabled = false;
+        };
+
+        // ==========================================
+        // 🚀 LÓGICA DEL COBRADOR INTELIGENTE IA
+        // ==========================================
+        let datosCobroActual = {};
+
+        window.abrirCobradorIA = function(cliente, monto, moneda, telefono, nro, fecha, estatus) {
+            datosCobroActual = { cliente, monto, moneda, telefono, nro, fecha, estatus };
+            
+            document.getElementById('cobro-cliente').textContent = cliente;
+            // Mostramos también el número de factura en la ventanita para que tú lo veas
+            document.getElementById('cobro-monto').innerHTML = `${moneda} ${parseFloat(monto).toFixed(2)} <span style="font-size:12px; color:#666; font-weight:normal;">(Factura #${nro})</span>`;
+            document.getElementById('texto-cobro-ia').value = ""; 
+            
+            document.getElementById('modal-cobrador-ia').style.display = 'flex';
+        };
+
+        window.generarMensajeCobro = async function(tono) {
+            const textArea = document.getElementById('texto-cobro-ia');
+            textArea.value = "⏳ El Analista de Cobranzas IA está calculando fechas y redactando el mensaje...";
+            
+            // Obtenemos la fecha de hoy para que la IA sepa cuánto tiempo ha pasado
+            const fechaHoy = new Date().toLocaleDateString('es-VE');
+
+            const prompt = `Actúa como el Departamento de Cobranzas y Administración de la tienda automotriz "Inversiones FB Parts, C.A.".
+            Tu tarea es redactar un mensaje corto y profesional de WhatsApp para cobrar una factura.
+            
+            DATOS DE LA DEUDA:
+            - Cliente: ${datosCobroActual.cliente}
+            - Nro. de Factura/Nota de Entrega: #${datosCobroActual.nro}
+            - Fecha de Emisión: ${datosCobroActual.fecha}
+            - Condición de Crédito: ${datosCobroActual.estatus}
+            - Fecha Actual (Hoy): ${fechaHoy}
+            - Monto pendiente a cobrar: ${datosCobroActual.moneda} ${datosCobroActual.monto}
+            
+            INSTRUCCIONES OBLIGATORIAS:
+            1. Menciona SIEMPRE el Nro. de factura y la fecha de emisión.
+            2. Evalúa internamente el tiempo transcurrido desde la fecha de emisión hasta la fecha actual (hoy).
+            
+            ESTRATEGIA Y TONO SOLICITADO: ${tono}
+            - Si es "Amigable": Saluda cordialmente. Menciona suavemente que están escribiendo para actualizar el estatus de la factura #${datosCobroActual.nro} emitida el ${datosCobroActual.fecha}. Pregunta si requieren los datos bancarios.
+            - Si es "Negociador": Muestra empatía. Sugiéreles que, si no pueden cubrir el total hoy, pueden realizar un abono parcial a la factura #${datosCobroActual.nro} para mantener su línea de crédito activa e impecable.
+            - Si es "Firme": Lenguaje muy formal. Indica claramente que la factura #${datosCobroActual.nro} emitida el ${datosCobroActual.fecha} ha vencido según su condición de crédito (${datosCobroActual.estatus}) y que el departamento requiere la liquidación inmediata hoy mismo para evitar retenciones de despacho.
+            
+            REGLAS DE FORMATO: 
+            Usa máximo 3 párrafos cortos. Agrega un par de emojis corporativos discretos. NUNCA uses formato markdown ni asteriscos. Despídete siempre como "Dpto. de Administración - F&B Parts".`;
+
+            try {
+                const respuesta = await puter.ai.chat(prompt);
+                const textoLimpio = typeof respuesta === 'string' ? respuesta : respuesta.message.content;
+                textArea.value = textoLimpio.replace(/\*\*/g, '').replace(/\*/g, '•').trim();
+            } catch (error) {
+                console.error("Error IA Cobrador:", error);
+                textArea.value = "⚠️ Error de conexión con la IA. Por favor, intenta de nuevo.";
+            }
+        };
+
+        window.enviarCobroWhatsApp = function() {
+            const mensaje = document.getElementById('texto-cobro-ia').value.trim();
+            if(!mensaje || mensaje.includes("⏳")) {
+                alert("Primero debes generar el mensaje seleccionando un Tono.");
+                return;
+            }
+            
+            let url = 'https://wa.me/';
+            if(datosCobroActual.telefono && datosCobroActual.telefono !== 'undefined' && datosCobroActual.telefono !== 'null') {
+                const tlfLimpio = datosCobroActual.telefono.replace(/\D/g, '');
+                url += tlfLimpio;
+            }
+            url += `?text=${encodeURIComponent(mensaje)}`;
+            
+            window.open(url, '_blank');
+            document.getElementById('modal-cobrador-ia').style.display = 'none';
+        };
+
+        // ==========================================
+        // 🚀 ASESOR DE VENTAS CRUZADAS (UP-SELLING IA)
+        // ==========================================
+        window.abrirAsesorVentasCruzadas = async function(origen) {
+            let items = [];
+            let selectorClase = '';
+            
+            // Evaluamos de dónde viene el clic para buscar en la tabla correcta
+            if (origen === 'cotizacion') selectorClase = '.cotizacion-item-row .item-desc';
+            else if (origen === 'facturacion') selectorClase = '.facturacion-item-row .fac-item-desc';
+            else if (origen === 'pedido') selectorClase = '.pedido-item-row .ped-item-desc';
+            
+            // Recolectar todos los repuestos escritos
+            document.querySelectorAll(selectorClase).forEach(input => {
+                if (input.value.trim() !== '') items.push(input.value.trim());
+            });
+
+            if (items.length === 0) {
+                alert("⚠️ Primero debes agregar al menos un repuesto a la lista para que la IA tenga algo que analizar.");
+                return;
+            }
+
+            // Mostrar el Modal
+            const listaUI = document.getElementById('upselling-lista-actual');
+            listaUI.innerHTML = items.map(i => `<li>${i}</li>`).join('');
+            document.getElementById('upselling-respuesta').value = "⏳ Pensando en la mejor estrategia de venta... \n\nDiagnosticando reparación...";
+            document.getElementById('modal-upselling-ia').style.display = 'flex';
+
+            if (typeof puter === 'undefined') {
+                document.getElementById('upselling-respuesta').value = "⚠️ Puter no está cargado. Revisa tu conexión a internet.";
+                return;
+            }
+
+            // El Prompt Estratégico
+            const promptTexto = `Eres un vendedor estrella de repuestos automotrices trabajando para "F&B Parts". 
+            Tu objetivo es el "Up-Selling" (ventas cruzadas).
+            
+            El cliente está armando un presupuesto con estos repuestos:
+            ${items.map(i => "- " + i).join('\n')}
+            
+            Analiza qué tipo de reparación está haciendo. 
+            Dime a mí (Brhayan) 2 o 3 repuestos o consumibles ADICIONALES lógicos que el cliente olvidó comprar o que debería cambiar aprovechando la mano de obra (Ej: Si compra pastillas, ofrécele liga de frenos).
+            
+            FORMATO ESTRICTO:
+            1. Diagnóstico: [Dime qué reparación crees que está haciendo].
+            2. Ofrécele: [Lista de 2-3 piezas con viñetas cortas].
+            3. Frase de Cierre: [Escribe 1 sola frase persuasiva que puedo copiar y pegarle al cliente por WhatsApp para convencerlo de llevar esos extras].
+            
+            Sé directo, sin saludos largos y NO uses formato markdown (**).`;
+
+            try {
+                const respuesta = await puter.ai.chat(promptTexto);
+                const textoFinal = typeof respuesta === 'string' ? respuesta : respuesta.message.content;
+                document.getElementById('upselling-respuesta').value = textoFinal.replace(/\*\*/g, '').replace(/\*/g, '•').trim();
+            } catch (error) {
+                console.error("Error UpSelling IA:", error);
+                document.getElementById('upselling-respuesta').value = "⚠️ Ocurrió un error al consultar a la IA.";
+            }
+        };
+
+        // ==========================================
+        // 🖨️ GENERADOR DE ETIQUETAS TÉRMICAS (58MM)
+        // ==========================================
+        window.imprimirEtiquetaEnvio = function(docId) {
+            const ped = window.pedidosDBLocal[docId];
+            if(!ped) return;
+
+            // Extraer productos a formato texto
+            let productosHTML = '';
+            if(ped.productos && Array.isArray(ped.productos)) {
+                ped.productos.forEach(p => {
+                    productosHTML += `
+                    <tr>
+                        <td style="padding: 2px 0; border-bottom: 1px dashed #000; font-size: 13px;"><b>${p.cantidad}x</b> ${p.nombre}</td>
+                    </tr>`;
+                });
+            } else {
+                productosHTML = `<tr><td style="padding: 2px 0; border-bottom: 1px dashed #000; font-size: 13px;"><b>${ped.cantidad || 1}x</b> ${ped.producto || 'Repuesto'}</td></tr>`;
+            }
+
+            const ventanaTicket = window.open('', '_blank', 'width=400,height=600');
+            if(!ventanaTicket) { alert("⚠️ Tu navegador bloqueó la ventana de impresión."); return; }
+
+            // CSS Mágico para impresoras de 58mm
+            const estiloTermico = `
+                <style>
+                    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #fff; margin: 0; padding: 0; color: #000; }
+                    .ticket-container { width: 58mm; max-width: 100%; margin: 0 auto; padding: 2mm; box-sizing: border-box; }
+                    h2 { margin: 0 0 5px 0; font-size: 18px; text-align: center; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 5px; }
+                    p { margin: 3px 0; font-size: 13px; line-height: 1.2; }
+                    .info-box { border: 1px solid #000; padding: 5px; margin-bottom: 5px; border-radius: 3px; }
+                    .resaltado { font-weight: bold; font-size: 15px; text-align: center; display: block; margin: 5px 0; border: 1px dashed #000; padding: 4px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+                    .cut-line { text-align: center; margin-top: 20px; font-size: 12px; color: #000; border-top: 1px dashed #000; padding-top: 5px; margin-bottom: 15px; }
+                    
+                    /* Reglas exclusivas para el momento de imprimir */
+                    @media print {
+                        @page { margin: 0; size: 58mm auto; }
+                        body { width: 58mm; }
+                        .no-print { display: none !important; }
+                    }
+                </style>
+            `;
+
+            const contenidoTicket = `
+                <!DOCTYPE html>
+                <html lang="es">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Ticket de Envío</title>
+                    ${estiloTermico}
+                </head>
+                <body>
+                    <div style="text-align:center; padding: 10px;" class="no-print">
+                        <button onclick="window.print()" style="background:#000; color:#fff; border:none; padding:10px 20px; font-size:16px; font-weight:bold; cursor:pointer; border-radius:5px;">🖨️ IMPRIMIR TICKET</button>
+                        <p style="font-size:12px; color:#666;">(Asegúrate de seleccionar tu impresora de 58mm en Destino)</p>
+                    </div>
+
+                    <div class="ticket-container">
+                        <h2>F&B PARTS</h2>
+                        <p style="text-align: center; font-weight: bold; font-size: 14px; margin-bottom: 10px;">ORDEN DE DESPACHO</p>
+                        
+                        <p><b>Fecha:</b> ${ped.fecha || new Date().toLocaleDateString("es-VE")}</p>
+                        
+                        <div class="info-box">
+                            <p style="font-size: 11px;">CLIENTE DESTINO:</p>
+                            <p style="font-weight: bold; font-size: 16px;">${ped.cliente}</p>
+                            <p><b>Tlf/Correo:</b> ${ped.email}</p>
+                        </div>
+
+                        <span class="resaltado">🚚 ${ped.envio}</span>
+                        ${ped.tracking ? `<p style="text-align:center;">Guía: <b>${ped.tracking}</b></p>` : ''}
+                        
+                        <p style="margin-top: 10px; font-weight: bold; border-bottom: 1px solid #000;">CONTENIDO DEL PAQUETE:</p>
+                        <table>
+                            ${productosHTML}
+                        </table>
+
+                        <p style="text-align: center; font-size: 11px; margin-top: 15px;">
+                            *** GRACIAS POR SU COMPRA ***<br>
+                            www.fybparts.com
+                        </p>
+                        
+                        <div class="cut-line">✂ - - - - - - - - - - - - </div>
+                    </div>
+                </${'body'}>
+                </${'html'}>
+            `;
+
+            ventanaTicket.document.open();
+            ventanaTicket.document.write(contenidoTicket);
+            ventanaTicket.document.close();
+
+            // Lanzar impresión automática después de cargar
+            setTimeout(() => { 
+                ventanaTicket.focus(); 
+                ventanaTicket.print(); 
+            }, 500);
+        };
+
+        // ==========================================
+        // 🚀 LÓGICA DE PEDIDOS Y MOTORIZADOS
+        // ==========================================
+        window.mostrarOpcionesMotorizado = function() {
+            const envio = document.getElementById('edit-pedido-envio').value;
+            const zonaMot = document.getElementById('zona-motorizado');
+            // Ocultar base del motorizado SOLAMENTE si el cliente retira en local
+            if (envio.includes('Retiro')) {
+                zonaMot.style.display = 'none';
+            } else {
+                zonaMot.style.display = 'block';
+            }
+        };
+
+        window.abrirModalPedido = function(docId) {
+            const ped = window.pedidosDBLocal[docId];
+            if(!ped) return;
+            
+            document.getElementById('edit-pedido-id').value = docId;
+            document.getElementById('edit-pedido-email').value = ped.email || '';
+            document.getElementById('edit-pedido-cliente').value = ped.cliente || '';
+            
+            // Reparación del select: Si era un pedido viejo que decía "Encomienda Tealca", lo forzamos al nombre nuevo
+            const envioSelect = document.getElementById('edit-pedido-envio');
+            if (ped.envio === "Encomienda Tealca") {
+                envioSelect.value = "Encomienda Tealca/Zoom";
+            } else {
+                envioSelect.value = ped.envio || 'Retiro en Local';
+            }
+            
+            document.getElementById('edit-pedido-tracking').value = ped.tracking || '';
+            document.getElementById('edit-pedido-estado').value = ped.estado || 'Pendiente';
+            
+            // Cargar datos del motorizado si existen
+            document.getElementById('edit-pedido-motorizado').value = ped.motorizado || '';
+            document.getElementById('edit-pedido-tarifa').value = ped.tarifaMotorizado || '';
+            
+            window.mostrarOpcionesMotorizado();
+            document.getElementById('modal-pedido').style.display = 'flex';
+        };
+
+        window.cerrarModalPedido = function() {
+            document.getElementById('modal-pedido').style.display = 'none';
+        };
+
+        window.guardarCambiosPedido = async function() {
+            const docId = document.getElementById('edit-pedido-id').value;
+            const pedOriginal = window.pedidosDBLocal[docId] || {};
+            const btn = document.getElementById('btn-save-pedido');
+            btn.innerHTML = "Guardando..."; btn.disabled = true;
+
+            let trackingVal = document.getElementById('edit-pedido-tracking').value.trim();
+            const envioVal = document.getElementById('edit-pedido-envio').value;
+            const motorizadoVal = document.getElementById('edit-pedido-motorizado').value;
+            const tarifaVal = parseFloat(document.getElementById('edit-pedido-tarifa').value) || 0;
+
+            // Auto-generar código MOT si no tiene guía, tiene chofer y no es retiro en local
+            if (!envioVal.includes('Retiro') && motorizadoVal !== '' && trackingVal === '') {
+                const aleatorio = Math.floor(1000 + Math.random() * 9000);
+                const letMot = motorizadoVal.substring(0,1).toUpperCase();
+                trackingVal = `MOT${letMot}-${aleatorio}`;
+            }
+
+            const datosActualizados = {
+                email: document.getElementById('edit-pedido-email').value.trim(),
+                cliente: document.getElementById('edit-pedido-cliente').value.trim(),
+                envio: envioVal,
+                tracking: trackingVal,
+                estado: document.getElementById('edit-pedido-estado').value,
+                motorizado: motorizadoVal,
+                tarifaMotorizado: tarifaVal,
+                pagoMotorizadoEstatus: motorizadoVal ? (pedOriginal.pagoMotorizadoEstatus || 'Pendiente') : ''
+            };
+
+            try {
+                await updateDoc(doc(db, "pedidos", docId), datosActualizados);
+                window.cerrarModalPedido();
+                window.cargarPedidos();
+            } catch (error) {
+                console.error(error);
+                alert("Error al actualizar la información del pedido.");
+            }
+            btn.innerHTML = "Guardar"; btn.disabled = false;
+        };
+
+        window.eliminarPedido = async function() {
+            const docId = document.getElementById('edit-pedido-id').value;
+            if(!confirm("¿Estás seguro de eliminar este pedido del historial?")) return;
+            try {
+                await deleteDoc(doc(db, "pedidos", docId));
+                window.cerrarModalPedido();
+                window.cargarPedidos();
+            } catch (error) {
+                console.error(error);
+                alert("No se pudo eliminar el pedido.");
+            }
+        };
+
+        // 💰 PANEL DE LIQUIDACIÓN DE MOTORIZADOS
+        window.abrirLiquidacionMotorizados = function() {
+            const lista = document.getElementById('lista-viajes-pendientes');
+            let viajesJhon = []; let totalJhon = 0;
+            let viajesBryan = []; let totalBryan = 0;
+
+            // Revisar la memoria local de pedidos
+            for (const docId in window.pedidosDBLocal) {
+                const ped = window.pedidosDBLocal[docId];
+                
+                // 🚀 CORRECCIÓN: Ahora busca cualquier pedido que tenga a un chofer asignado, omitiendo clones huérfanos
+                if (ped.motorizado && ped.motorizado !== '' && ped.pagoMotorizadoEstatus !== 'Pagado' && (!ped.cliente || !ped.cliente.includes('RUTA MAESTRA MULTIPARADA'))) {
+                    if (ped.motorizado === 'Jhon') {
+                        viajesJhon.push({ id: docId, ...ped });
+                        totalJhon += (parseFloat(ped.tarifaMotorizado) || 0);
+                    } else if (ped.motorizado === 'Bryan') {
+                        viajesBryan.push({ id: docId, ...ped });
+                        totalBryan += (parseFloat(ped.tarifaMotorizado) || 0);
+                    }
+                }
+            }
+
+            // Construir HTML del resumen
+            let html = '';
+            
+            const generarBloque = (nombre, viajes, total) => {
+                if(viajes.length === 0) return '';
+                let filas = viajes.map(v => `<div style="display:flex; justify-content:space-between; border-bottom:1px dashed #ccc; padding:4px 0; font-size:12px;"><span>${v.fecha} | ${v.tracking || 'Sin guía'} - ${v.cliente}</span> <strong>$${(v.tarifaMotorizado || 0).toFixed(2)}</strong></div>`).join('');
+                return `
+                    <div style="background: #f9f9f9; border: 1px solid #ddd; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+                        <h4 style="margin: 0 0 10px 0; color: #333; display: flex; justify-content: space-between; align-items: center;">
+                            <span><i class="fas fa-motorcycle"></i> Viajes de ${nombre}</span>
+                            <strong style="color:#d9534f;">Deuda: $${total.toFixed(2)}</strong>
+                        </h4>
+                        ${filas}
+                        <button onclick="marcarMotorizadoPagado('${nombre}')" style="margin-top: 10px; width: 100%; background: #28a745; color: white; border: none; padding: 8px; border-radius: 4px; font-weight: bold; cursor: pointer;">
+                            <i class="fas fa-check-double"></i> Marcar semana como PAGADA a ${nombre}
+                        </button>
+                    </div>
+                `;
+            };
+
+            html += generarBloque('Jhon', viajesJhon, totalJhon);
+            html += generarBloque('Bryan', viajesBryan, totalBryan);
+
+            if(html === '') html = '<div style="text-align:center; padding:20px; color:#666;">No hay viajes de motorizados pendientes por liquidar.</div>';
+
+            lista.innerHTML = html;
+            document.getElementById('modal-liquidar-motorizados').style.display = 'flex';
+        };
+
+        window.marcarMotorizadoPagado = async function(nombreChofer) {
+            if(!confirm(`¿Estás seguro de marcar todos los viajes pendientes de ${nombreChofer} como PAGADOS?`)) return;
+            
+            try {
+                // Actualizamos todos los que correspondan
+                for (const docId in window.pedidosDBLocal) {
+                    const ped = window.pedidosDBLocal[docId];
+                    if (ped.motorizado === nombreChofer && ped.pagoMotorizadoEstatus !== 'Pagado' && (!ped.cliente || !ped.cliente.includes('RUTA MAESTRA MULTIPARADA'))) {
+                        await updateDoc(doc(db, "pedidos", docId), { pagoMotorizadoEstatus: 'Pagado' });
+                    }
+                }
+                alert(`¡Semana liquidada para ${nombreChofer} exitosamente!`);
+                window.cargarPedidos(); // Recargar datos frescos
+                document.getElementById('modal-liquidar-motorizados').style.display = 'none';
+            } catch (error) {
+                console.error(error);
+                alert("Hubo un error al intentar marcar los pagos.");
+            }
+        };
+
+        // ==========================================
+        // 🚀 LÓGICA PARA EDITAR FACTURA
+        // ==========================================
+        window.abrirModalEditarFactura = function(docId) {
+            const fac = window.facturasDBLocal[docId];
+            if(!fac) return;
+            document.getElementById('edit-fac-id').value = docId;
+            document.getElementById('edit-fac-nro').value = fac.nro || '';
+            document.getElementById('edit-fac-fecha').value = fac.fecha || '';
+            
+            const container = document.getElementById('edit-fac-items-container');
+            container.innerHTML = '';
+            
+            if (fac.items && fac.items.length > 0) {
+                fac.items.forEach((item, index) => {
+                    const cant = parseFloat(item.cantidad) || 1;
+                    const preU = parseFloat(item.precioUnitario) || 0;
+                    const preTotal = (cant * preU).toFixed(2);
+                    
+                    const div = document.createElement('div');
+                    div.style = "background: #f9f9f9; padding: 10px; border-radius: 6px; border: 1px solid #eee; margin-bottom: 10px;";
+                    div.innerHTML = `
+                        <div class="form-group" style="margin-bottom: 8px;">
+                            <label style="font-size: 11px;">Descripción del Repuesto</label>
+                            <input type="text" class="edit-item-desc" value="${item.descripcion || ''}">
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <div class="form-group" style="margin-bottom: 0; flex: 1;">
+                                <label style="font-size: 11px;">Cantidad</label>
+                                <input type="number" step="0.01" class="edit-item-cant" value="${cant}">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0; flex: 1;">
+                                <label style="font-size: 11px;">Precio Total ($)</label>
+                                <input type="number" step="0.01" class="edit-item-preciototal" value="${preTotal}">
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            } else {
+                container.innerHTML = '<p style="font-size: 12px; color: #999;">Esta factura no tiene productos detallados.</p>';
+            }
+
+            document.getElementById('modal-editar-factura').style.display = 'flex';
+        };
+
+        window.guardarEdicionFactura = async function() {
+            const docId = document.getElementById('edit-fac-id').value;
+            const nuevoNro = document.getElementById('edit-fac-nro').value.trim();
+            const nuevaFecha = document.getElementById('edit-fac-fecha').value.trim();
+            
+            if(!nuevoNro) { alert("El número de factura no puede estar vacío."); return; }
+
+            const fac = window.facturasDBLocal[docId];
+            if(!fac) return;
+
+            let updatedItems = [];
+            let newSubtotal = 0;
+            
+            // Reconstruir items si existen
+            if (fac.items && fac.items.length > 0) {
+                const descInputs = document.querySelectorAll('.edit-item-desc');
+                const cantInputs = document.querySelectorAll('.edit-item-cant');
+                const precioTotalInputs = document.querySelectorAll('.edit-item-preciototal');
+                
+                for(let i = 0; i < fac.items.length; i++) {
+                    let oldItem = fac.items[i];
+                    let desc = descInputs[i] ? descInputs[i].value.trim() : oldItem.descripcion;
+                    let cant = cantInputs[i] ? parseFloat(cantInputs[i].value) : parseFloat(oldItem.cantidad);
+                    let oldCant = parseFloat(oldItem.cantidad) || 1;
+                    let oldPreU = parseFloat(oldItem.precioUnitario) || 0;
+                    let preTotal = precioTotalInputs[i] ? parseFloat(precioTotalInputs[i].value) : (oldCant * oldPreU);
+                    
+                    if(isNaN(cant) || cant <= 0) cant = 1;
+                    if(isNaN(preTotal) || preTotal < 0) preTotal = 0;
+                    
+                    let precioUnitario = preTotal / cant;
+                    
+                    updatedItems.push({
+                        ...oldItem,
+                        descripcion: desc,
+                        cantidad: cant,
+                        precioUnitario: precioUnitario
+                    });
+                    newSubtotal += preTotal;
+                }
+            } else {
+                updatedItems = fac.items || [];
+                newSubtotal = parseFloat(fac.subtotal) || 0;
+            }
+
+            // Recalcular Total e IVA (respetando los descuentos existentes)
+            let descuento = parseFloat(fac.descuento) || 0;
+            let baseImp = newSubtotal - descuento;
+            let currentIva = parseFloat(fac.iva) || 0;
+            let iva = 0;
+            if (currentIva > 0 && parseFloat(fac.subtotal) > 0) {
+                // Hay IVA, calculamos el % original
+                let ivaPorcentaje = currentIva / (parseFloat(fac.subtotal) - descuento);
+                iva = baseImp * ivaPorcentaje;
+            }
+            let newTotal = baseImp + iva;
+
+            try {
+                let updateData = {
+                    nro: nuevoNro,
+                    fecha: nuevaFecha,
+                    items: updatedItems,
+                    subtotal: newSubtotal.toFixed(2),
+                    total: newTotal.toFixed(2)
+                };
+                if(currentIva > 0) { updateData.iva = iva.toFixed(2); }
+
+                await updateDoc(doc(db, "facturas", docId), updateData);
+                
+                if (window.registrarAuditoria) {
+                    window.registrarAuditoria("EDITAR DETALLE DE FACTURA", "Se modificó el producto/precio de la factura #" + nuevoNro);
+                }
+
+                document.getElementById('modal-editar-factura').style.display = 'none';
+                window.cargarHistorialFacturas();
+                window.cargarFinanzas();
+            } catch (error) {
+                console.error("Error editando factura:", error);
+                alert("Hubo un error al guardar los cambios.");
+            }
+        };
+
+        // ==========================================
+        // 🏍️ LÓGICA DE CXC PERSONAL Y MOTORIZADOS
+        // ==========================================
+        window.agregarCxCPersonal = async function() {
+            const concepto = SecuritySanitizer.cleanText(document.getElementById('cxc-pers-concepto').value, 100);
+            const moneda = SecuritySanitizer.cleanText(document.getElementById('cxc-pers-moneda').value, 10);
+            const monto = SecuritySanitizer.sanitizeAmount(document.getElementById('cxc-pers-monto').value);
+
+            if (!concepto || isNaN(monto) || monto <= 0) {
+                alert("Por favor ingresa a quién se le cobra (concepto) y un monto válido.");
+                return;
+            }
+
+            try {
+                // Creamos una nueva colección exclusiva para el personal
+                await addDoc(collection(db, "cxc_personal"), {
+                    concepto: concepto,
+                    moneda: moneda,
+                    monto: monto,
+                    fechaCreacion: new Date().toISOString(),
+                    estado: 'Pendiente'
+                });
+                
+                document.getElementById('cxc-pers-concepto').value = '';
+                document.getElementById('cxc-pers-monto').value = '';
+                window.cargarCxCPersonal();
+            } catch (error) {
+                console.error("Error agregando CxC Personal:", error);
+                alert("Error al guardar la deuda.");
+            }
+        };
+
+        window.cargarCxCPersonal = async function() {
+            const lista = document.getElementById('lista-cxc-personal');
+            if (!lista) return;
+
+            lista.innerHTML = '<div style="padding:15px; text-align:center; color:#666;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+
+            try {
+                const q = query(collection(db, "cxc_personal"), where("estado", "==", "Pendiente"));
+                const snap = await getDocs(q);
+                
+                if (snap.empty) {
+                    lista.innerHTML = '<div style="padding: 15px; text-align: center; color: #666; font-size: 13px;">No hay deudas de personal pendientes.</div>';
+                    return;
+                }
+
+                let html = '';
+                snap.forEach(docSnap => {
+                    const data = docSnap.data();
+                    let simbolo = '$';
+                    if (data.moneda.includes('Bs')) simbolo = 'Bs';
+                    if (data.moneda.includes('€')) simbolo = '€';
+
+                    html += `
+                        <div style="display: flex; padding: 10px; border-bottom: 1px solid #eee; align-items: center; font-size: 13px;">
+                            <div style="flex: 2; font-weight: bold; color: #333;">${data.concepto}</div>
+                            <div style="flex: 1; text-align: center; font-weight: bold; color: #d9534f;">${simbolo}${data.monto.toFixed(2)}</div>
+                            <div style="flex: 1; text-align: center;">
+                                <button onclick="cobrarCxCPersonal('${docSnap.id}')" style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight:bold;">
+                                    <i class="fas fa-check-double"></i> Recibido
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                lista.innerHTML = html;
+            } catch (error) {
+                console.error("Error cargando CxC Personal:", error);
+                lista.innerHTML = '<div style="padding:15px; text-align:center; color:red;">Error al cargar.</div>';
+            }
+        };
+
+        window.cobrarCxCPersonal = async function(docId) {
+            if (!confirm("¿Confirmas que este dinero ya fue entregado/devuelto por el personal?")) return;
+            try {
+                await updateDoc(doc(db, "cxc_personal", docId), {
+                    estado: 'Cobrado',
+                    fechaCobro: new Date().toISOString()
+                });
+                window.cargarCxCPersonal();
+            } catch (error) {
+                console.error("Error al cobrar:", error);
+                alert("Hubo un error al procesar el cobro.");
+            }
+        };
+        
+
+
+        // 🚀 CORRECCIÓN DEFINITIVA DE GUÍAS (FORZAR LECTURA DE CAJAS NUEVAS)
+        window.abrirModalPedido = function(docId) {
+            const ped = window.pedidosDBLocal[docId];
+            if(!ped) return;
+            
+            document.getElementById('edit-pedido-id').value = docId;
+            document.getElementById('edit-pedido-email').value = ped.email || '';
+            document.getElementById('edit-pedido-cliente').value = ped.cliente || '';
+            
+            const envioSelect = document.getElementById('edit-pedido-envio');
+            if (ped.envio === "Encomienda Tealca") envioSelect.value = "Encomienda Tealca/Zoom";
+            else envioSelect.value = ped.envio || 'Retiro en Local';
+            
+            let valAgencia = ped.tracking ? ped.tracking.trim() : '';
+            let valMot = ped.trackingMotorizado ? ped.trackingMotorizado.trim() : '';
+            
+            // Si es Motorizado y la guía se quedó atrapada en la agencia, sácala de ahí
+            if (envioSelect.value.includes('Motorizado')) {
+                if (valAgencia !== '' && valMot === '') { valMot = valAgencia; valAgencia = ''; }
+            } else if (valAgencia.toUpperCase().includes('MOT') && valMot === '') {
+                valMot = valAgencia; valAgencia = '';
+            }
+
+            document.getElementById('edit-pedido-tracking').value = valAgencia;
+            document.getElementById('edit-pedido-tracking-mot').value = valMot;
+            document.getElementById('edit-pedido-estado').value = ped.estado || 'Pendiente';
+            
+            document.getElementById('edit-pedido-motorizado').value = ped.motorizado || '';
+            document.getElementById('edit-pedido-tarifa').value = ped.tarifaMotorizado || '';
+            document.getElementById('edit-pedido-ruta').value = ped.rutasMotorizado || '';
+            
+            window.mostrarOpcionesMotorizado();
+
+            const container = document.getElementById('edit-pedido-productos-container');
+            container.innerHTML = '';
+            
+            let productosList = [];
+            if (ped.productos && Array.isArray(ped.productos)) {
+                productosList = ped.productos;
+            } else if (ped.producto) {
+                // Formato antiguo
+                let preUni = (parseFloat(ped.total) || 0) / (parseFloat(ped.cantidad) || 1);
+                productosList = [{ nombre: ped.producto, cantidad: ped.cantidad, precio: preUni }];
+            }
+
+            if (productosList.length > 0) {
+                productosList.forEach((prod, index) => {
+                    const cant = parseFloat(prod.cantidad) || 1;
+                    const preUnitario = parseFloat(prod.precio) || 0;
+                    const preTotal = (cant * preUnitario).toFixed(2);
+                    
+                    const div = document.createElement('div');
+                    div.style = "background: #f9f9f9; padding: 10px; border-radius: 6px; border: 1px solid #eee; margin-bottom: 10px;";
+                    div.innerHTML = `
+                        <div class="form-group" style="margin-bottom: 8px;">
+                            <label style="font-size: 11px;">Descripción del Repuesto</label>
+                            <input type="text" class="edit-ped-item-desc" value="${prod.nombre || ''}">
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <div class="form-group" style="margin-bottom: 0; flex: 1;">
+                                <label style="font-size: 11px;">Cantidad</label>
+                                <input type="number" step="0.01" class="edit-ped-item-cant" value="${cant}">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0; flex: 1;">
+                                <label style="font-size: 11px;">Precio Total ($)</label>
+                                <input type="number" step="0.01" class="edit-ped-item-preciototal" value="${preTotal}">
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            } else {
+                container.innerHTML = '<p style="font-size: 12px; color: #999;">Este pedido no tiene productos registrados.</p>';
+            }
+
+            document.getElementById('modal-pedido').style.display = 'flex';
+        };
+
+        window.guardarCambiosPedido = async function() {
+            const docId = document.getElementById('edit-pedido-id').value;
+            const pedOriginal = window.pedidosDBLocal[docId] || {};
+            const btn = document.getElementById('btn-save-pedido');
+            btn.innerHTML = "Guardando..."; btn.disabled = true;
+
+            let trackingVal = document.getElementById('edit-pedido-tracking').value.trim();
+            let trackingMotVal = document.getElementById('edit-pedido-tracking-mot').value.trim();
+            const envioVal = document.getElementById('edit-pedido-envio').value;
+            const motorizadoVal = document.getElementById('edit-pedido-motorizado').value;
+            const tarifaVal = parseFloat(document.getElementById('edit-pedido-tarifa').value) || 0;
+
+            if (envioVal.includes('Motorizado')) {
+                if (trackingVal !== '' && trackingMotVal === '') trackingMotVal = trackingVal;
+                trackingVal = ''; 
+            }
+
+            if (!envioVal.includes('Retiro') && motorizadoVal !== '' && trackingMotVal === '') {
+                const aleatorio = Math.floor(1000 + Math.random() * 9000);
+                const letMot = motorizadoVal.substring(0,1).toUpperCase();
+                trackingMotVal = `MOT${letMot}-${aleatorio}`;
+            }
+
+            let updatedProductos = [];
+            let newTotal = 0;
+            const descInputs = document.querySelectorAll('.edit-ped-item-desc');
+            const cantInputs = document.querySelectorAll('.edit-ped-item-cant');
+            const precioTotalInputs = document.querySelectorAll('.edit-ped-item-preciototal');
+            
+            for(let i = 0; i < descInputs.length; i++) {
+                let desc = descInputs[i].value.trim();
+                let cant = parseFloat(cantInputs[i].value) || 1;
+                let preTotal = parseFloat(precioTotalInputs[i].value) || 0;
+                
+                if(cant <= 0) cant = 1;
+                let precioUnitario = preTotal / cant;
+                
+                updatedProductos.push({
+                    nombre: desc,
+                    cantidad: cant,
+                    precio: precioUnitario
+                });
+                newTotal += preTotal;
+            }
+
+            const datosActualizados = {
+                email: document.getElementById('edit-pedido-email').value.trim(),
+                cliente: document.getElementById('edit-pedido-cliente').value.trim(),
+                envio: envioVal,
+                tracking: trackingVal,
+                trackingMotorizado: trackingMotVal,
+                estado: document.getElementById('edit-pedido-estado').value,
+                motorizado: motorizadoVal,
+                tarifaMotorizado: tarifaVal,
+                pagoMotorizadoEstatus: motorizadoVal ? (pedOriginal.pagoMotorizadoEstatus || 'Pendiente') : '',
+                rutasMotorizado: document.getElementById('edit-pedido-ruta').value.trim(),
+                productos: updatedProductos.length > 0 ? updatedProductos : pedOriginal.productos,
+                total: updatedProductos.length > 0 ? newTotal.toFixed(2) : pedOriginal.total
+            };
+
+            // Remover campos legacy para no causar ruido si existian
+            datosActualizados.producto = null;
+            datosActualizados.cantidad = null;
+
+            try {
+                // Se limpian los nulls
+                for (let key in datosActualizados) {
+                    if (datosActualizados[key] === null) delete datosActualizados[key];
+                }
+                
+                await updateDoc(doc(db, "pedidos", docId), datosActualizados);
+                
+                if (window.registrarAuditoria) {
+                    window.registrarAuditoria("EDITAR DETALLE DE PEDIDO", "Se modificó logística/producto del pedido: " + datosActualizados.cliente);
+                }
+                
+                window.cerrarModalPedido();
+                window.cargarPedidos();
+                window.cargarDashboard();
+            } catch (error) { 
+                console.error(error); 
+                alert("Error al actualizar la información del pedido."); 
+            }
+            btn.innerHTML = "Guardar"; btn.disabled = false;
+        };
+
+        // 🚀 FUNCIÓN PARA CONVERTIR COTIZACIÓN EN PEDIDO
+        window.enviarCotizacionAPedido = function(docId) {
+            const cot = window.cotizacionesDBLocal[docId];
+            if(!cot) return;
+
+            // 1. Verificación de Seguridad (Aprobada)
+            if(cot.estatusComercial !== 'Aprobada') {
+                if(!confirm(`⚠️ Esta cotización está en estatus "${cot.estatusComercial}".\n¿Estás seguro de que deseas procesarla como un Pedido de todas formas?`)) {
+                    return;
+                }
+            }
+
+            // 2. Cambiar a la pestaña de Pedidos
+            const btnPedidos = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.textContent.includes('Gestión de Pedidos'));
+            if(btnPedidos) {
+                window.mostrarPestana('pedidos', btnPedidos);
+            }
+
+            // 3. Llenar los datos del cliente
+            document.getElementById('client-name').value = cot.cliente || '';
+            document.getElementById('client-email').value = cot.telefono || ''; 
+            
+            // Opcional: Intentar autoseleccionar el cliente si existe en el selector
+            const selectPedido = document.getElementById('ped-selector-clientes');
+            for(let i = 0; i < selectPedido.options.length; i++) {
+                if(selectPedido.options[i].text.toUpperCase().includes(cot.cliente.toUpperCase())) {
+                    selectPedido.selectedIndex = i;
+                    break;
+                }
+            }
+
+            // 4. Trasladar los repuestos al carrito de Pedidos
+            const container = document.getElementById('pedidos-items-container');
+            container.innerHTML = ''; // Limpiar cualquier pedido a medias
+            
+            if(cot.items && Array.isArray(cot.items)) {
+                cot.items.forEach(prod => {
+                    const row = document.createElement('div');
+                    row.className = 'pedido-item-row';
+                    
+                    // Extraemos los valores de la cotización
+                    const cant = parseInt(prod.cantidad) || 1;
+                    const precioUnit = parseFloat(prod.precioUnitario) || 0;
+                    const descuentoLinea = parseFloat(prod.descuento) || 0;
+                    
+                    // Calculamos el precio real (restándole el descuento proporcional si le hiciste descuento en la cotización)
+                    const precioFinalReal = precioUnit - (descuentoLinea / cant);
+                    const safeDesc = (prod.descripcion || '').replace(/"/g, '&quot;');
+
+                    row.innerHTML = `
+                        <input type="number" class="ped-item-cant" value="${cant}" min="1" placeholder="Cant" oninput="calcularTotalPedido()">
+                        <input type="text" class="ped-item-desc" value="${safeDesc}" placeholder="Descripción" style="grid-column: span 3;">
+                        <input type="number" step="0.01" class="ped-item-precio" value="${precioFinalReal.toFixed(2)}" placeholder="Precio" oninput="calcularTotalPedido()">
+                        <button type="button" onclick="this.parentElement.remove(); calcularTotalPedido();" style="background:#d9534f; color:white; border:none; border-radius:4px; cursor:pointer;"><i class="fas fa-times"></i></button>
+                    `;
+                    container.appendChild(row);
+                });
+            }
+
+            // 5. Recalcular el total y avisar al usuario
+            window.calcularTotalPedido();
+            alert("✅ Cotización enviada a Pedidos con éxito.\nRevisa los datos, selecciona el Motorizado/Encomienda y haz clic en 'Registrar Pedido'.");
+            
+            // Hacer scroll hacia arriba para que el usuario vea el formulario
+            document.querySelector('.admin-container').scrollIntoView({ behavior: 'smooth' });
+        };
+
+        // ==========================================
+        // 🚀 LÓGICA MULTIPARADA, PAGOS Y RADAR GPS (VERSIÓN A COLOR)
+        // ==========================================
+        window.mapaAdmin = null;
+        window.marcadorTemporal = null;
+        window.marcadoresGuardados = [];
+        window.rutaEnConstruccion = []; 
+        window.marcadoresConstruccion = []; 
+        window.rutasAgrupadasLocal = {}; 
+        window.marcadoresMotos = {};
+
+        // 🎨 DICCIONARIO DE COLORES OFICIALES
+        window.coloresMotorizados = {
+            "Jhon": "#1d6fa5",   // Azul Logística
+            "Bryan": "#28a745",  // Verde Ventas
+            "Moto A": "#f0ad4e", // Naranja
+            "Moto B": "#d9534f", // Rojo
+            "Moto C": "#8e44ad"  // Morado
+        };
+
+        window.iniciarMapaAdmin = function() {
+            if(window.mapaAdmin) { window.mapaAdmin.invalidateSize(); return; }
+            window.mapaAdmin = L.map('admin-map').setView([10.4806, -66.9036], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(window.mapaAdmin);
+
+            window.mapaAdmin.on('click', function(e) {
+                const lat = e.latlng.lat.toFixed(5);
+                const lng = e.latlng.lng.toFixed(5);
+                document.getElementById('ruta-lat').value = lat;
+                document.getElementById('ruta-lng').value = lng;
+
+                if(window.marcadorTemporal) window.mapaAdmin.removeLayer(window.marcadorTemporal);
+                window.marcadorTemporal = L.marker([lat, lng]).addTo(window.mapaAdmin).bindPopup("<b>Fijar coordenada</b><br>Llena los datos a la izquierda").openPopup();
+            });
+
+            window.iniciarRastreoMotorizados();
+        };
+
+        window.iniciarRastreoMotorizados = function() {
+            setInterval(async () => {
+                if(!window.mapaAdmin) return;
+                try {
+                    const snap = await getDocs(collection(db, "choferes_gps"));
+                    snap.forEach(docSnap => {
+                        const data = docSnap.data();
+                        const chofer = docSnap.id;
+                        
+                        // Obtenemos el color del chofer (si no existe, usa gris oscuro)
+                        const colorChofer = window.coloresMotorizados[chofer] || "#333";
+                        
+                        // 🛵 Creamos el Icono de la Moto con el color de fondo dinámico
+                        const motoHtml = `<div style="background-color: ${colorChofer}; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.4); color: white; font-size: 16px;"><i class="fas fa-motorcycle"></i></div>`;
+                        const motoIconColor = L.divIcon({ className: '', html: motoHtml, iconSize: [34, 34], iconAnchor: [17, 17] });
+
+                        if (Date.now() - data.timestamp < 600000) { // Activo en los últimos 10 minutos
+                            if (!window.marcadoresMotos[chofer]) {
+                                window.marcadoresMotos[chofer] = L.marker([data.lat, data.lng], {icon: motoIconColor})
+                                    .addTo(window.mapaAdmin)
+                                    .bindPopup(`<div style="text-align:center;"><b>🏍️ ${chofer}</b><br><span style="color:${colorChofer}; font-weight:bold;">En Ruta</span><br><span style="font-size:10px;color:#666;">Señal: ${data.hora}</span></div>`);
+                            } else {
+                                window.marcadoresMotos[chofer].setLatLng([data.lat, data.lng]);
+                                window.marcadoresMotos[chofer].setIcon(motoIconColor); // Actualizamos color por si cambió
+                                window.marcadoresMotos[chofer].getPopup().setContent(`<div style="text-align:center;"><b>🏍️ ${chofer}</b><br><span style="color:${colorChofer}; font-weight:bold;">En Ruta</span><br><span style="font-size:10px;color:#666;">Señal: ${data.hora}</span></div>`);
+                            }
+                        }
+                    });
+                } catch(e) { console.warn("Error en radar GPS:", e); }
+            }, 5000);
+        };
+
+        window.agregarParadaTemporal = function() {
+            const lat = document.getElementById('ruta-lat').value;
+            const lng = document.getElementById('ruta-lng').value;
+            const nota = document.getElementById('stop-nota').value.trim();
+            const pagoDinero = parseFloat(document.getElementById('stop-pago-dinero').value) || 0; 
+            
+            if(!lat || !lng || !nota) { alert("⚠️ Haz clic en el mapa y escribe qué hará el motorizado."); return; }
+
+            const parada = {
+                lat: parseFloat(lat), lng: parseFloat(lng),
+                tipo: document.getElementById('stop-tipo').value,
+                pago: document.getElementById('stop-pago').value,
+                tlf: document.getElementById('stop-tlf').value.trim() || 'Sin teléfono',
+                confianza: document.getElementById('stop-confianza').value,
+                pagoDinero: pagoDinero,
+                nota: nota
+            };
+
+            window.rutaEnConstruccion.push(parada);
+            
+            if(window.marcadorTemporal) window.mapaAdmin.removeLayer(window.marcadorTemporal);
+            window.marcadorTemporal = null;
+            
+            const marker = L.marker([lat, lng]).addTo(window.mapaAdmin).bindPopup(`<b>Parada ${window.rutaEnConstruccion.length}</b><br>${parada.tipo}: ${parada.nota}`);
+            window.marcadoresConstruccion.push(marker);
+
+            window.actualizarListaRutaUI();
+            
+            document.getElementById('stop-nota').value = '';
+            document.getElementById('stop-tlf').value = '';
+            document.getElementById('ruta-lat').value = '';
+            document.getElementById('ruta-lng').value = '';
+            document.getElementById('stop-pago-dinero').value = '';
+        };
+
+        window.actualizarListaRutaUI = function() {
+            const container = document.getElementById('lista-ruta-temp');
+            let totalAuto = 0; 
+
+            if(window.rutaEnConstruccion.length === 0) {
+                container.innerHTML = '<span style="color: #999;">Ruta vacía. Agrega la primera parada.</span>';
+                document.getElementById('ruta-pago').value = '';
+                return;
+            }
+            let html = '';
+            window.rutaEnConstruccion.forEach((p, i) => {
+                const icon = p.tipo === 'Retiro' ? '🟢' : '🔵';
+                totalAuto += p.pagoDinero; 
+                html += `<div style="margin-bottom:5px; border-bottom: 1px solid #eee; padding-bottom: 5px; display:flex; justify-content:space-between; align-items:center;">
+                            <div style="flex:1;">
+                                <strong>${icon} Parada ${i+1}:</strong> ${p.nota} <br>
+                                <span style="color:#666;">📞 ${p.tlf} | Estatus: ${p.pago}</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <strong style="color:#28a745;">$${p.pagoDinero.toFixed(2)}</strong>
+                                <button type="button" onclick="eliminarParadaTemporal(${i})" style="background:#d9534f; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:10px;" title="Borrar parada"><i class="fas fa-times"></i></button>
+                            </div>
+                         </div>`;
+            });
+            container.innerHTML = html;
+            document.getElementById('ruta-pago').value = totalAuto.toFixed(2);
+        };
+
+        window.eliminarParadaTemporal = function(index) {
+            window.rutaEnConstruccion.splice(index, 1);
+            window.marcadoresConstruccion.forEach(m => window.mapaAdmin.removeLayer(m));
+            window.marcadoresConstruccion = [];
+            window.rutaEnConstruccion.forEach((p, i) => {
+                const marker = L.marker([p.lat, p.lng]).addTo(window.mapaAdmin).bindPopup(`<b>Parada ${i+1}</b><br>${p.tipo}: ${p.nota}`);
+                window.marcadoresConstruccion.push(marker);
+            });
+            window.actualizarListaRutaUI();
+        };
+
+        // ==========================================
+        // 🚀 ASOCIACIÓN DE RUTAS A PEDIDOS EXISTENTES
+        // ==========================================
+        window.cargarSelectorPedidosRuta = function() {
+            const select = document.getElementById('ruta-pedido-asociado');
+            if (!select) return;
+            const valorPrevio = select.value;
+            select.innerHTML = '<option value="">-- Selecciona un Pedido o Factura --</option>';
+
+            if (window.pedidosDBLocal) {
+                Object.keys(window.pedidosDBLocal).forEach(docId => {
+                    const ped = window.pedidosDBLocal[docId];
+                    if (ped.cliente === "📍 RUTA MAESTRA MULTIPARADA") return;
+
+                    let productosStr = '';
+                    if (ped.productos && Array.isArray(ped.productos)) {
+                        productosStr = ped.productos.map(p => `${p.cantidad}x ${p.nombre}`).join(', ');
+                    } else if (ped.producto) {
+                        productosStr = `${ped.cantidad || 1}x ${ped.producto}`;
+                    }
+
+                    const rutaAsignada = (ped.trackingMotorizado && ped.motorizado) ? ` (🏍️ ${ped.motorizado})` : '';
+                    const texto = `📦 [Pedido] ${ped.cliente || 'Sin nombre'} ($${Number(ped.total || 0).toFixed(2)}) - ${ped.fecha || ''} [${ped.envio || 'Delivery'}]${rutaAsignada}`;
+                    const opt = document.createElement('option');
+                    opt.value = docId;
+                    opt.textContent = texto;
+                    select.appendChild(opt);
+                });
+            }
+
+            if (valorPrevio) select.value = valorPrevio;
+        };
+
+        window.alSeleccionarPedidoRuta = function(pedidoId) {
+            const preview = document.getElementById('ruta-pedido-preview');
+            if (!pedidoId || !window.pedidosDBLocal || !window.pedidosDBLocal[pedidoId]) {
+                if (preview) preview.style.display = 'none';
+                return;
+            }
+
+            const ped = window.pedidosDBLocal[pedidoId];
+            
+            let productosStr = '';
+            if (ped.productos && Array.isArray(ped.productos)) {
+                productosStr = ped.productos.map(p => `${p.cantidad}x ${p.nombre}`).join(', ');
+            } else if (ped.producto) {
+                productosStr = `${ped.cantidad || 1}x ${ped.producto}`;
+            }
+
+            if (preview) {
+                preview.style.display = 'block';
+                preview.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <strong style="color:#1d6fa5; font-size:13px;"><i class="fas fa-user-check"></i> ${ped.cliente || 'Cliente'}</strong>
+                        <span style="color:#28a745; font-weight:bold; font-size:13px;">$${Number(ped.total || 0).toFixed(2)}</span>
+                    </div>
+                    <div style="margin-top:4px; color:#555;">
+                        <i class="fas fa-phone"></i> <strong>Contacto:</strong> ${ped.telefono || ped.email || 'Sin teléfono'} | 
+                        <i class="fas fa-truck"></i> <strong>Envío:</strong> ${ped.envio || 'Delivery'}
+                    </div>
+                    <div style="margin-top:4px; color:#333;">
+                        <i class="fas fa-boxes"></i> <strong>Repuestos:</strong> ${productosStr || 'N/A'}
+                    </div>
+                `;
+            }
+
+            // Auto-completar campos de parada
+            const inputNota = document.getElementById('stop-nota');
+            const inputTlf = document.getElementById('stop-tlf');
+            const selectTipo = document.getElementById('stop-tipo');
+            const selectChofer = document.getElementById('ruta-chofer');
+
+            if (selectTipo) selectTipo.value = "Entrega";
+            if (inputNota && (!inputNota.value || inputNota.value.startsWith('Entrega'))) {
+                inputNota.value = `Entrega a ${ped.cliente || 'Cliente'}: ${(productosStr || ped.envio || '').substring(0, 45)}`;
+            }
+            if (inputTlf && (!inputTlf.value || inputTlf.value === 'Sin teléfono')) {
+                inputTlf.value = ped.telefono || '';
+            }
+            if (ped.motorizado && (ped.motorizado === 'Jhon' || ped.motorizado === 'Bryan')) {
+                if (selectChofer) selectChofer.value = ped.motorizado;
+            }
+            if (ped.tarifaMotorizado && parseFloat(ped.tarifaMotorizado) > 0) {
+                const inputCostoParada = document.getElementById('stop-pago-dinero');
+                if (inputCostoParada && (!inputCostoParada.value || parseFloat(inputCostoParada.value) === 0)) {
+                    inputCostoParada.value = parseFloat(ped.tarifaMotorizado).toFixed(2);
+                }
+            }
+        };
+
+        window.cancelarEdicionRuta = function() {
+            window.rutaEnConstruccion = [];
+            window.marcadoresConstruccion.forEach(m => window.mapaAdmin.removeLayer(m));
+            window.marcadoresConstruccion = [];
+            window.actualizarListaRutaUI();
+            document.getElementById('edit-ruta-id').value = '';
+            document.getElementById('ruta-pago').value = '';
+            const selectPedido = document.getElementById('ruta-pedido-asociado');
+            if (selectPedido) selectPedido.value = '';
+            const preview = document.getElementById('ruta-pedido-preview');
+            if (preview) preview.style.display = 'none';
+            document.getElementById('titulo-ruta').innerHTML = '<i class="fas fa-route"></i> Armar Ruta Multiparada';
+            document.getElementById('btn-cancelar-ruta').style.display = 'none';
+            document.getElementById('btn-guardar-ruta').innerHTML = '<i class="fab fa-whatsapp"></i> Guardar y Enviar';
+        };
+
+        window.guardarRutaCompleta = async function() {
+            if(window.rutaEnConstruccion.length === 0) { alert("⚠️ La ruta está vacía. Haz clic en el mapa y agrega al menos una parada."); return; }
+
+            const pedidoId = document.getElementById('ruta-pedido-asociado').value;
+            if (!pedidoId) {
+                alert("⚠️ Debes seleccionar un Pedido o Factura en el selector para asociar esta ruta.\nEsto vincula los datos al cliente y previene duplicados en la liquidación.");
+                document.getElementById('ruta-pedido-asociado').focus();
+                return;
+            }
+
+            const chofer = SecuritySanitizer.cleanText(document.getElementById('ruta-chofer').value, 50);
+            const pagoTotal = SecuritySanitizer.sanitizeAmount(document.getElementById('ruta-pago').value);
+            const editRutaId = document.getElementById('edit-ruta-id').value;
+            const rutaIdMaster = editRutaId ? editRutaId : "RUTA-" + Date.now();
+            
+            const btn = document.getElementById('btn-guardar-ruta');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando y vinculando...'; btn.disabled = true;
+
+            try {
+                if (editRutaId) {
+                    const qPuntos = query(collection(db, "rutas_puntos"), where("rutaId", "==", editRutaId));
+                    const snapPuntos = await getDocs(qPuntos);
+                    snapPuntos.forEach(async (d) => await deleteDoc(d.ref));
+                }
+
+                const pedOriginal = window.pedidosDBLocal[pedidoId] || {};
+                const paradas = window.rutaEnConstruccion.map((p, i) => ({
+                    orden: i + 1,
+                    tipo: SecuritySanitizer.cleanText(p.tipo, 30),
+                    nota: SecuritySanitizer.cleanNote(p.nota, 200),
+                    tlf: SecuritySanitizer.cleanPhone(p.tlf),
+                    pago: SecuritySanitizer.cleanText(p.pago, 50),
+                    confianza: SecuritySanitizer.cleanText(p.confianza, 50),
+                    pagoDinero: SecuritySanitizer.sanitizeAmount(p.pagoDinero),
+                    lat: typeof p.lat === 'number' ? p.lat : parseFloat(p.lat) || 0,
+                    lng: typeof p.lng === 'number' ? p.lng : parseFloat(p.lng) || 0,
+                    estado: "Activa"
+                }));
+
+                let resumenRuta = "";
+                for (let i = 0; i < paradas.length; i++) {
+                    const p = paradas[i];
+                    resumenRuta += `${p.tipo} ${p.nota} -> `;
+                    
+                    await setDoc(doc(collection(db, "rutas_puntos")), {
+                        rutaId: rutaIdMaster,
+                        pedidoId: pedidoId,
+                        cliente: SecuritySanitizer.cleanText(pedOriginal.cliente || "Cliente", 120),
+                        orden: i + 1,
+                        chofer: chofer,
+                        subChofer: "",
+                        rutaPagoTotal: pagoTotal,
+                        nota: `(Parada ${i+1}) ${p.nota} | Tlf: ${p.tlf} | ${p.pago} | ${p.confianza}`,
+                        rawTipo: p.tipo,
+                        rawNota: p.nota,
+                        rawTlf: p.tlf,
+                        rawPago: p.pago,
+                        rawConfianza: p.confianza,
+                        pagoDinero: p.pagoDinero,
+                        lat: p.lat,
+                        lng: p.lng,
+                        fecha: new Date().toLocaleDateString("es-VE"),
+                        timestamp: Date.now(),
+                        estado: "Activa"
+                    });
+                }
+
+                // 🚀 ACTUALIZAMOS DIRECTAMENTE EL DOCUMENTO DEL PEDIDO ORIGINAL
+                // (Cero creación de pedidos clonados "RUTA MAESTRA MULTIPARADA")
+                const datosActualizadosPedido = {
+                    motorizado: chofer,
+                    tarifaMotorizado: pagoTotal,
+                    pagoMotorizadoEstatus: pedOriginal.pagoMotorizadoEstatus || "Pendiente",
+                    trackingMotorizado: rutaIdMaster,
+                    rutasMotorizado: resumenRuta.slice(0, -4),
+                    rutaPuntos: paradas,
+                    rutaId: rutaIdMaster,
+                    subChofer: "",
+                    rutaEstado: "Activa",
+                    fechaRuta: new Date().toLocaleDateString("es-VE"),
+                    timestampRuta: Date.now()
+                };
+
+                if (pedOriginal.estado === 'Pendiente') {
+                    datosActualizadosPedido.estado = 'En camino';
+                }
+
+                await updateDoc(doc(db, "pedidos", pedidoId), datosActualizadosPedido);
+
+                let waText = `🛵 *RUTA ASIGNADA A PEDIDO* 🛵\n*Cliente:* ${pedOriginal.cliente || 'Cliente'}\n*Chofer:* ${chofer}\n*Total Servicio:* $${pagoTotal}\n\n`;
+                window.rutaEnConstruccion.forEach((p, i) => {
+                    const icon = p.tipo === 'Retiro' ? '🟢' : '🔵';
+                    waText += `*${icon} PARADA ${i+1}: ${p.tipo.toUpperCase()} ($${p.pagoDinero})*\n📦 Tarea: ${p.nota}\n📞 Tlf: ${p.tlf}\n💰 Estatus: ${p.pago}\n🛡️ Zona: ${p.confianza}\n📍 GPS: https://maps.google.com/?q=${p.lat},${p.lng}\n\n`;
+                });
+                waText += `*(Ingresa al Portal de Motorizados para ver tu entrega y navegar)*`;
+
+                window.cancelarEdicionRuta(); 
+                window.cargarPuntosRuta(); 
+                if (typeof window.cargarPedidos === 'function') await window.cargarPedidos(); 
+
+                const telefonosChoferes = { "Jhon": "584120000000", "Bryan": "584120161036" };
+                const numeroDestino = telefonosChoferes[chofer] || "";
+                window.open(`https://api.whatsapp.com/send?phone=${numeroDestino}&text=${encodeURIComponent(waText)}`, '_blank');
+
+            } catch(error) {
+                console.error(error); alert("Hubo un error al guardar: " + error.message);
+            }
+            btn.innerHTML = '<i class="fab fa-whatsapp"></i> Guardar y Enviar'; btn.disabled = false;
+        };
+
+        window.cargarPuntosRuta = async function() {
+            const tbody = document.getElementById('tabla-puntos-rutas');
+            const btnActualizar = document.querySelector('button[onclick="cargarPuntosRuta()"]');
+            
+            if(!tbody) return;
+            if(btnActualizar) btnActualizar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando...';
+
+            try {
+                const q = query(collection(db, "rutas_puntos")); 
+                const snap = await getDocs(q);
+                tbody.innerHTML = '';
+                
+                if(window.marcadoresGuardados && window.mapaAdmin) { 
+                    window.marcadoresGuardados.forEach(m => window.mapaAdmin.removeLayer(m)); 
+                }
+                window.marcadoresGuardados = [];
+                window.rutasAgrupadasLocal = {};
+
+                if(snap.empty) { 
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No hay rutas asignadas.</td></tr>'; 
+                } else {
+                    snap.forEach(docSnap => {
+                        const data = docSnap.data();
+                        const rId = data.rutaId || docSnap.id; 
+                        
+                        if(!window.rutasAgrupadasLocal[rId]) {
+                            window.rutasAgrupadasLocal[rId] = {
+                                rutaId: rId,
+                                pedidoId: data.pedidoId || '',
+                                cliente: data.cliente || '',
+                                chofer: data.chofer,
+                                fecha: data.fecha,
+                                pagoTotal: data.rutaPagoTotal || 0,
+                                puntos: []
+                            };
+                        }
+                        if (data.cliente && !window.rutasAgrupadasLocal[rId].cliente) {
+                            window.rutasAgrupadasLocal[rId].cliente = data.cliente;
+                        }
+                        window.rutasAgrupadasLocal[rId].puntos.push({ idDoc: docSnap.id, ...data });
+
+                        // 📍 DIBUJAMOS EL PIN DE LA PARADA EN EL MAPA CON EL COLOR DEL CHOFER
+                        if(data.lat && data.lng && data.estado !== 'Completada') {
+                            const colorChofer = window.coloresMotorizados[data.chofer] || "#333";
+                            const pinHtml = `<div style="color: ${colorChofer}; font-size: 32px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); text-align: center; margin-top:-10px;"><i class="fas fa-map-marker-alt"></i></div>`;
+                            const pinIconColor = L.divIcon({ className: '', html: pinHtml, iconSize: [30, 30], iconAnchor: [15, 30] });
+
+                            const m = L.marker([data.lat, data.lng], {icon: pinIconColor}).addTo(window.mapaAdmin).bindPopup(`<b>${data.chofer}</b><br>${data.cliente ? `<b>Cliente:</b> ${data.cliente}<br>` : ''}${data.nota}`);
+                            window.marcadoresGuardados.push(m);
+                        }
+                    });
+
+                    Object.values(window.rutasAgrupadasLocal).forEach(ruta => {
+                        ruta.puntos.sort((a,b) => (a.orden || 0) - (b.orden || 0));
+                        
+                        const colorChofer = window.coloresMotorizados[ruta.chofer] || "#333";
+                        const todasCompletadas = ruta.puntos.every(p => p.estado === "Completada");
+                        const badgeRuta = todasCompletadas ? 
+                            `<span style="background:#28a745; color:white; padding:3px 6px; border-radius:4px; font-size:10px;"><i class="fas fa-check-double"></i> Ruta Terminada</span>` : 
+                            `<span style="background:#f0ad4e; color:white; padding:3px 6px; border-radius:4px; font-size:10px;"><i class="fas fa-motorcycle"></i> En Progreso</span>`;
+                        
+                        let desgloseHtml = ruta.puntos.map((p, i) => {
+                            const isDone = p.estado === 'Completada';
+                            const icon = isDone ? '<i class="fas fa-check-circle" style="color:#28a745;"></i>' : '<i class="fas fa-clock" style="color:#f0ad4e;"></i>';
+                            const style = isDone ? 'text-decoration: line-through; color: #999;' : 'color: #555;';
+                            const delegadoStr = p.subChofer ? ` <span style="background:#1d6fa5; color:white; padding:2px 4px; border-radius:3px; font-size:9px;">Delegado a ${p.subChofer}</span>` : '';
+                            return `<div style="font-size:11px; margin-bottom:3px; ${style}"><b>${i+1}.</b> ${icon} ${p.rawTipo||'Punto'}: ${p.rawNota || p.nota} ${delegadoStr}</div>`;
+                        }).join('');
+
+                        const clienteTitulo = ruta.cliente ? `👤 ${ruta.cliente} - ` : '';
+
+                        tbody.innerHTML += `<tr>
+                                <td>${ruta.fecha || ''}</td>
+                                <td><strong style="color: ${colorChofer};">${ruta.chofer || ''}</strong></td>
+                                <td>
+                                    <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                                        <strong style="color:#333; font-size:13px;">📍 ${clienteTitulo}Ruta (${ruta.puntos.length} paradas)</strong>
+                                        ${badgeRuta}
+                                    </div>
+                                    ${desgloseHtml}
+                                </td>
+                                <td style="text-align: center; display: flex; gap: 5px; justify-content: center; align-items: center; height:100%;">
+                                    ${!todasCompletadas ? `<button type="button" onclick="marcarRutaTerminada('${ruta.rutaId}')" style="background:#28a745; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold;" title="Marcar Terminada"><i class="fas fa-check-circle"></i></button>` : ''}
+                                    <button type="button" onclick="editarRutaMaestra('${ruta.rutaId}')" style="background:#f0ad4e; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold;" title="Editar Ruta"><i class="fas fa-edit"></i> Editar</button>
+                                    <button type="button" onclick="eliminarRutaMaestra('${ruta.rutaId}')" style="background:#d9534f; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold;" title="Borrar Toda la Ruta"><i class="fas fa-times"></i> Borrar</button>
+                                </td>
+                            </tr>`;
+                    });
+                }
+            } catch(e) { console.error("Error al cargar la tabla:", e); }
+            if(btnActualizar) btnActualizar.innerHTML = '<i class="fas fa-sync-alt"></i> Actualizar Rutas';
+        };
+
+        window.editarRutaMaestra = function(rutaId) {
+            const ruta = window.rutasAgrupadasLocal[rutaId];
+            if(!ruta) return;
+
+            window.rutaEnConstruccion = ruta.puntos.map(p => ({
+                lat: p.lat, lng: p.lng,
+                tipo: p.rawTipo || 'Retiro',
+                pago: p.rawPago || 'Pagado',
+                tlf: p.rawTlf || '',
+                confianza: p.rawConfianza || 'Conocido',
+                pagoDinero: p.pagoDinero || 0,
+                nota: p.rawNota || p.nota
+            }));
+
+            document.getElementById('edit-ruta-id').value = ruta.rutaId;
+            document.getElementById('ruta-chofer').value = ruta.chofer;
+
+            // Seleccionar el pedido correspondiente en el selector
+            const selectPedido = document.getElementById('ruta-pedido-asociado');
+            if (selectPedido && window.pedidosDBLocal) {
+                let encontrado = false;
+                if (ruta.pedidoId && window.pedidosDBLocal[ruta.pedidoId]) {
+                    selectPedido.value = ruta.pedidoId;
+                    window.alSeleccionarPedidoRuta(ruta.pedidoId);
+                    encontrado = true;
+                }
+                if (!encontrado) {
+                    for (let id in window.pedidosDBLocal) {
+                        const p = window.pedidosDBLocal[id];
+                        if (p.trackingMotorizado === rutaId || p.rutaId === rutaId) {
+                            selectPedido.value = id;
+                            window.alSeleccionarPedidoRuta(id);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            document.getElementById('titulo-ruta').innerHTML = '<i class="fas fa-edit"></i> Editando Ruta Maestra';
+            document.getElementById('btn-cancelar-ruta').style.display = 'block';
+            document.getElementById('btn-guardar-ruta').innerHTML = '<i class="fas fa-sync"></i> Actualizar y Reenviar';
+
+            window.marcadoresConstruccion.forEach(m => window.mapaAdmin.removeLayer(m));
+            window.marcadoresConstruccion = [];
+            window.rutaEnConstruccion.forEach((p, i) => {
+                const marker = L.marker([p.lat, p.lng]).addTo(window.mapaAdmin).bindPopup(`<b>Parada ${i+1}</b><br>${p.tipo}: ${p.nota}`);
+                window.marcadoresConstruccion.push(marker);
+            });
+
+            window.actualizarListaRutaUI(); 
+            document.querySelector('#form-rutas-container').scrollIntoView({ behavior: 'smooth' });
+        };
+
+        window.marcarRutaTerminada = async function(rutaId) {
+            if(!confirm("¿Marcar toda la ruta y sus paradas como Terminadas?")) return;
+            try {
+                const qPuntos = query(collection(db, "rutas_puntos"), where("rutaId", "==", rutaId));
+                const snapPuntos = await getDocs(qPuntos);
+                
+                let promesasUpdate = [];
+                snapPuntos.forEach((d) => {
+                    promesasUpdate.push(updateDoc(d.ref, { estado: "Completada" }));
+                });
+                
+                await Promise.all(promesasUpdate);
+
+                if (window.registrarAuditoria) {
+                    window.registrarAuditoria("CAMBIO ESTATUS RUTA", "Se marcó la ruta como Terminada (Acción Rápida).");
+                }
+                
+                window.cargarPuntosRuta(); // Repintar instantáneamente
+            } catch (error) {
+                console.error("Error al marcar ruta terminada:", error);
+                alert("Ocurrió un error al procesar la ruta.");
+            }
+        };
+
+        window.eliminarRutaMaestra = async function(rutaId) {
+            if(!confirm("¿Estás seguro de desvincular o borrar esta ruta? (Se limpiará la asignación al motorizado).")) return;
+            try {
+                const qPuntos = query(collection(db, "rutas_puntos"), where("rutaId", "==", rutaId));
+                const snapPuntos = await getDocs(qPuntos);
+                snapPuntos.forEach(async (d) => await deleteDoc(d.ref));
+
+                // Desvincular en el pedido original sin borrar el pedido
+                const qPed = query(collection(db, "pedidos"), where("trackingMotorizado", "==", rutaId));
+                const snapPed = await getDocs(qPed);
+                snapPed.forEach(async (d) => {
+                    const data = d.data();
+                    if (data.cliente === "📍 RUTA MAESTRA MULTIPARADA") {
+                        await deleteDoc(d.ref); // Si era un registro clonado viejo, se borra
+                    } else {
+                        await updateDoc(d.ref, {
+                            trackingMotorizado: "",
+                            rutasMotorizado: "",
+                            tarifaMotorizado: 0,
+                            pagoMotorizadoEstatus: "",
+                            rutaPuntos: [],
+                            rutaId: "",
+                            rutaEstado: ""
+                        });
+                    }
+                });
+
+                try { await deleteDoc(doc(db, "rutas_puntos", rutaId)); } catch(e){}
+
+                window.cargarPuntosRuta(); 
+                if (typeof window.cargarPedidos === 'function') await window.cargarPedidos(); 
+            } catch(e) { console.error(e); alert("Error borrando la ruta."); }
+        };
+
+        // 🚀 LÓGICA PARA OCULTAR/MOSTRAR EL SIDEBAR
+        window.toggleSidebar = function() {
+            const sidebar = document.getElementById('main-sidebar');
+            if (sidebar.classList.contains('w-[280px]')) {
+                sidebar.classList.remove('w-[280px]');
+                sidebar.classList.add('w-0');
+                sidebar.classList.remove('border-r');
+            } else {
+                sidebar.classList.remove('w-0');
+                sidebar.classList.add('w-[280px]');
+                sidebar.classList.add('border-r');
+            }
+        };
+
+        window.filtrarTipoFactura = function() {
+    const filtro = document.getElementById('filtro-tipo-factura').value;
+    const filas = document.querySelectorAll('#facturas-table-body tr');
+    
+    filas.forEach(fila => {
+        // Evitar filtrar la fila vacía o de carga
+        if (fila.cells.length < 2) return; 
+        
+        const tdNro = fila.querySelector('td:first-child');
+        if (!tdNro) return;
+        
+        // REGLA CLAVE: Leer solo el texto de la PRIMERA columna para evitar leer el <select>
+        const textoCeldaNro = tdNro.textContent.toUpperCase();
+        
+        // Aislar SOLO el número de control (Ej: #00000625N o #00000615)
+        const coincidencia = textoCeldaNro.match(/#[0-9]+[A-Z]?/);
+        const numeroPrincipal = coincidencia ? coincidencia[0] : "";
+        
+        // Lógica estricta aplicada solo a la primera columna
+        const esNotaEntrega = numeroPrincipal.endsWith('N');
+        const esAnuladaONC = textoCeldaNro.includes('N/C') || textoCeldaNro.includes('ANULADA');
+        
+        let mostrar = false;
+        
+        if (filtro === 'todas') {
+            mostrar = true;
+        } else if (filtro === 'fiscales') {
+            // Es fiscal activa si NO es nota de entrega y NO está anulada ni tiene N/C
+            mostrar = !esNotaEntrega && !esAnuladaONC;
+        } else if (filtro === 'nofiscales') {
+            // Solo notas de entrega puras
+            mostrar = esNotaEntrega && !esAnuladaONC;
+        } else if (filtro === 'anuladas') {
+            // Solo anuladas o con Nota de Crédito
+            mostrar = esAnuladaONC;
+        }
+        
+        // Usar un string vacío en lugar de 'table-row' previene que se rompan las clases de Tailwind (Responsive)
+        fila.style.display = mostrar ? '' : 'none';
+    });
+};
+
+
+        // ==========================================
+        // 🚀 MÓDULO DE REVENTAS Y COMISIONES
+        // ==========================================
+        
+        // Variables globales para las tasas de reventa (se actualizan al cargar el historial)
+        window.tasaReventaBCV = 42.00;
+        window.tasaReventaEUR = 1.08;
+
+        window.calcularReventa = function() {
+            const venta = parseFloat(document.getElementById('rev-venta').value) || 0;
+            const costo = parseFloat(document.getElementById('rev-costo').value) || 0;
+            const gastos = parseFloat(document.getElementById('rev-gastos').value) || 0;
+            const porcentaje = parseFloat(document.getElementById('rev-porcentaje').value) || 0;
+
+            const gananciaBruta = venta - costo - gastos;
+            const comisionTercero = gananciaBruta * (porcentaje / 100);
+            const gananciaNeta = gananciaBruta - comisionTercero;
+
+            // Reutilizamos la lógica y variables de tasas BCV y EUR leídas del sistema
+            const tasaVES = window.tasaReventaBCV;
+            const tasaEUR = window.tasaReventaEUR;
+            
+            const renderMonedas = (montoUSD) => {
+                const ves = (montoUSD * tasaVES).toFixed(2);
+                let eurMonto = 0;
+                if (tasaEUR > 10) {
+                    eurMonto = montoUSD * 0.92;
+                } else {
+                    eurMonto = montoUSD * tasaEUR;
+                }
+                const eur = eurMonto.toFixed(2);
+                return `$${montoUSD.toFixed(2)} | Bs.${ves} | €${eur}`;
+            };
+
+            document.getElementById('rev-res-bruta').textContent = renderMonedas(gananciaBruta);
+            document.getElementById('rev-res-tercero').textContent = renderMonedas(comisionTercero);
+            document.getElementById('rev-res-neta').textContent = renderMonedas(gananciaNeta);
+            
+            return {
+                venta, costo, gastos, porcentaje,
+                gananciaBruta, comisionTercero, gananciaNeta,
+                tasaVES, tasaEUR
+            };
+        };
+
+                window.editarReventa = async function(id) {
+            try {
+                const docRef = doc(db, "reventas_gastos", id);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const rev = docSnap.data();
+                    document.getElementById('rev-desc').value = rev.descripcion || "";
+                    document.getElementById('rev-cliente').value = rev.cliente || "";
+                    document.getElementById('rev-intermediario').value = rev.intermediario || "";
+                    document.getElementById('rev-venta').value = rev.ventaUSD || "";
+                    document.getElementById('rev-costo').value = rev.costoUSD || "";
+                    document.getElementById('rev-gastos').value = rev.gastosUSD || "";
+                    document.getElementById('rev-porcentaje').value = rev.porcentajeComision || 50;
+                    
+                    window.calcularReventa();
+                    window.idReventaEditando = id;
+                    
+                    const btnGuardar = document.querySelector('#tab-reventas .btn-confirm-order');
+                    if (btnGuardar) {
+                        btnGuardar.style.background = "#1d6fa5";
+                        btnGuardar.innerHTML = '<i class="fas fa-edit"></i> Actualizar Operación';
+                    }
+                    
+                    document.querySelector('#tab-reventas').scrollIntoView({ behavior: 'smooth' });
+                }
+            } catch (error) {
+                console.error("Error al cargar la reventa para editar:", error);
+                alert("Hubo un error cargando los datos.");
+            }
+        };
+
+        // ==========================================
+        // 🛡️ MÓDULO DE AUDITORÍA INTERNA
+        // ==========================================
+        window.registrarAuditoria = async function(accion, detalles) {
+            try {
+                const elNombre = document.getElementById('admin-nombre-txt');
+                const usuario = (elNombre && elNombre.textContent && elNombre.textContent !== 'Cargando...') ? elNombre.textContent.trim() : "Administrador";
+                
+                await addDoc(collection(db, 'auditoria_logs'), {
+                    fecha: new Date().toLocaleString("es-VE"),
+                    usuario: usuario,
+                    accion: accion,
+                    detalles: detalles,
+                    timestamp: new Date().getTime()
+                });
+            } catch (error) {
+                console.error("Error registrando auditoría:", error);
+            }
+        };
+
+        window.abrirModalAuditoria = function() {
+            document.getElementById('modal-auditoria').style.display = 'flex';
+            window.cargarHistorialAuditoria();
+        };
+        
+        window.cerrarModalAuditoria = function() {
+            document.getElementById('modal-auditoria').style.display = 'none';
+        };
+
+        window.cargarHistorialAuditoria = async function() {
+            const tbody = document.getElementById('auditoria-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Cargando historial de auditoría...</td></tr>';
+            
+            try {
+                const snap = await getDocs(collection(db, "auditoria_logs"));
+                if (snap.empty) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No hay registros de auditoría.</td></tr>';
+                    return;
+                }
+                
+                let logs = [];
+                snap.forEach(docSnap => logs.push({ id: docSnap.id, ...docSnap.data() }));
+                
+                // Ordenar más recientes primero
+                logs.sort((a, b) => b.timestamp - a.timestamp);
+                
+                let html = '';
+                logs.forEach(log => {
+                    let colorAccion = "color: #333;";
+                    let accionTexto = log.accion || "";
+                    if (accionTexto.includes("CREAR")) colorAccion = "color: #28a745;";
+                    if (accionTexto.includes("EDITAR") || accionTexto.includes("ACTUALIZAR")) colorAccion = "color: #1d6fa5;";
+                    if (accionTexto.includes("ELIMINAR") || accionTexto.includes("BORRAR")) colorAccion = "color: #d9534f;";
+                    
+                    html += `
+                        <tr>
+                            <td style="font-size: 12px; color: #555;">${log.fecha}</td>
+                            <td><strong><i class="fas fa-user-circle" style="color:#ccc;"></i> ${log.usuario}</strong></td>
+                            <td><span style="font-weight: bold; ${colorAccion}">${log.accion}</span></td>
+                            <td style="font-size: 13px;">${log.detalles}</td>
+                        </tr>
+                    `;
+                });
+                tbody.innerHTML = html;
+                
+            } catch (error) {
+                console.error("Error al cargar auditoría:", error);
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: red;">Error cargando registros: ${error.message}</td></tr>`;
+            }
+        };
+
+        window.guardarReventa = async function() {
+            const desc = document.getElementById('rev-desc').value.trim();
+            const cliente = document.getElementById('rev-cliente').value.trim();
+            const intermediario = document.getElementById('rev-intermediario').value.trim();
+            if (!desc) { alert("Por favor ingresa una descripción para la operación."); return; }
+            
+            const calc = window.calcularReventa();
+            
+            const dataToSave = {
+                descripcion: desc,
+                cliente: cliente,
+                intermediario: intermediario,
+                ventaUSD: calc.venta,
+                costoUSD: calc.costo,
+                gastosUSD: calc.gastos,
+                porcentajeComision: calc.porcentaje,
+                gananciaBrutaUSD: calc.gananciaBruta,
+                comisionTerceroUSD: calc.comisionTercero,
+                gananciaNetaUSD: calc.gananciaNeta,
+                tasaCambioVES: calc.tasaVES,
+                tasaCambioEUR: calc.tasaEUR
+            };
+            
+            try {
+                if (window.idReventaEditando) {
+                    const docRef = doc(db, "reventas_gastos", window.idReventaEditando);
+                    await updateDoc(docRef, dataToSave);
+                    window.registrarAuditoria("EDITAR REVENTA", "Se actualizó la reventa con ID: " + window.idReventaEditando + " (" + desc + ")");
+                    alert("Operación de reventa actualizada con éxito.");
+                    
+                    window.idReventaEditando = null;
+                    const btnGuardar = document.querySelector('#tab-reventas .btn-confirm-order');
+                    if (btnGuardar) {
+                        btnGuardar.style.background = "#385723";
+                        btnGuardar.innerHTML = '<i class="fas fa-save"></i> Guardar Operación';
+                    }
+                } else {
+                    dataToSave.fecha = new Date().toLocaleDateString("es-VE");
+                    dataToSave.timestamp = new Date().getTime();
+                    await addDoc(collection(db, "reventas_gastos"), dataToSave);
+                    window.registrarAuditoria("CREAR REVENTA", "Se registró la reventa: " + desc);
+                    alert("Operación de reventa registrada con éxito.");
+                }
+                
+                document.getElementById('rev-desc').value = "";
+                document.getElementById('rev-cliente').value = "";
+                document.getElementById('rev-intermediario').value = "";
+                document.getElementById('rev-venta').value = "";
+                document.getElementById('rev-costo').value = "";
+                document.getElementById('rev-gastos').value = "";
+                document.getElementById('rev-porcentaje').value = "50";
+                
+                window.calcularReventa();
+                window.cargarHistorialReventas();
+                
+                if (window.calcularGananciaNetaDashboard) {
+                    await window.calcularGananciaNetaDashboard(window.tasaVivaBCV || 42.00, window.tasaVivaEUR || 1.08);
+                }
+
+            } catch (e) {
+                console.error(e);
+                alert("Error al guardar la operación.");
+            }
+        };
+
+        window.eliminarReventa = async function(docId) {
+            if(!confirm("¿Eliminar esta operación de reventa?")) return;
+            try {
+                await deleteDoc(doc(db, "reventas_gastos", docId));
+                if(window.registrarAuditoria) window.registrarAuditoria("ELIMINAR REVENTA", "Se eliminó la reventa con ID: " + docId);
+                window.cargarHistorialReventas();
+                if(window.cargarDashboard) window.cargarDashboard();
+            } catch (error) { console.error(error); alert("Error al eliminar la reventa."); }
+        };
+
+        window.generarCierreMensual = async function() {
+            const mes = document.getElementById('cierre-mes').value;
+            const anio = document.getElementById('cierre-anio').value;
+            const btn = document.querySelector('button[onclick="generarCierreMensual()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
+            btn.disabled = true;
+
+            try {
+                if (typeof window.cargarHistorialReventas === 'function') {
+                    try {
+                        const bcvSnap = await getDoc(doc(db, "configuracion", "tasa_bcv"));
+                        if(bcvSnap.exists()) window.tasaReventaBCV = parseFloat(bcvSnap.data().Valor) || parseFloat(bcvSnap.data().valor) || window.tasaReventaBCV || 1;
+                        const eurSnap = await getDoc(doc(db, "configuracion", "tasa_euro"));
+                        if(eurSnap.exists()) window.tasaReventaEUR = parseFloat(eurSnap.data().Valor) || parseFloat(eurSnap.data().valor) || window.tasaReventaEUR || 1;
+                    } catch(e) {}
+                }
+
+                const snap = await getDocs(collection(db, "reventas_gastos"));
+                const operaciones = [];
+                let totInvertido = 0;
+                let totIngresos = 0;
+                let totComisiones = 0;
+                let totNeta = 0;
+
+                const targetMes = parseInt(mes, 10);
+                const targetAnio = parseInt(anio, 10);
+
+                snap.forEach(docSnap => {
+                    const data = docSnap.data();
+                    let matchDate = false;
+                    
+                    if (data.fecha) {
+                        const parts = data.fecha.split('/');
+                        if (parts.length >= 3) {
+                            if (parseInt(parts[1], 10) === targetMes && parseInt(parts[2], 10) === targetAnio) {
+                                matchDate = true;
+                            }
+                        }
+                    }
+
+                    if (matchDate) {
+                        operaciones.push(data);
+                        let costo = parseFloat(data.costoUSD) || 0;
+                        let gasto = parseFloat(data.gastosUSD) || 0;
+                        totInvertido += (costo + gasto);
+                        totIngresos += parseFloat(data.ventaUSD) || 0;
+                        totComisiones += parseFloat(data.comisionTerceroUSD) || 0;
+                        totNeta += parseFloat(data.gananciaNetaUSD) || 0;
+                    }
+                });
+
+                const tasaVES = window.tasaReventaBCV || 1;
+                const tasaEUR = window.tasaReventaEUR || 1;
+
+                const formatCur = (val, cur, rate) => {
+                    return `${cur} ` + (val * rate).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+                };
+
+                document.getElementById('cierre-invertido').innerText = `$${totInvertido.toLocaleString('en-US', {minimumFractionDigits:2})}`;
+                document.getElementById('cierre-invertido-alt').innerText = `${formatCur(totInvertido, 'Bs.', tasaVES)} | ${formatCur(totInvertido, '€', 1/tasaEUR)}`;
+
+                document.getElementById('cierre-ingresos').innerText = `$${totIngresos.toLocaleString('en-US', {minimumFractionDigits:2})}`;
+                document.getElementById('cierre-ingresos-alt').innerText = `${formatCur(totIngresos, 'Bs.', tasaVES)} | ${formatCur(totIngresos, '€', 1/tasaEUR)}`;
+
+                document.getElementById('cierre-comisiones').innerText = `$${totComisiones.toLocaleString('en-US', {minimumFractionDigits:2})}`;
+                document.getElementById('cierre-comisiones-alt').innerText = `${formatCur(totComisiones, 'Bs.', tasaVES)} | ${formatCur(totComisiones, '€', 1/tasaEUR)}`;
+
+                document.getElementById('cierre-neta').innerText = `$${totNeta.toLocaleString('en-US', {minimumFractionDigits:2})}`;
+                document.getElementById('cierre-neta-alt').innerText = `${formatCur(totNeta, 'Bs.', tasaVES)} | ${formatCur(totNeta, '€', 1/tasaEUR)}`;
+
+                const tbody = document.getElementById('cierre-table-body');
+                if (operaciones.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center;">No hay operaciones registradas en ${mes}/${anio}.</td></tr>`;
+                } else {
+                    operaciones.sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
+                    
+                    let html = '';
+                    operaciones.forEach(op => {
+                        let costoTotal = (parseFloat(op.costoUSD)||0) + (parseFloat(op.gastosUSD)||0);
+                        html += `
+                            <tr>
+                                <td>${op.fecha}</td>
+                                <td><strong>${op.descripcion}</strong><br><span style="font-size:11px; color:#555;">${op.cliente || ''}</span></td>
+                                <td>$${costoTotal.toFixed(2)}</td>
+                                <td>$${(parseFloat(op.ventaUSD) || 0).toFixed(2)}</td>
+                                <td><span style="color:#d9534f;">$${(parseFloat(op.comisionTerceroUSD) || 0).toFixed(2)}</span><br><span style="font-size:10px;">${op.intermediario || ''}</span></td>
+                                <td><strong style="color:#385723;">$${(parseFloat(op.gananciaNetaUSD) || 0).toFixed(2)}</strong></td>
+                            </tr>
+                        `;
+                    });
+                    tbody.innerHTML = html;
+                }
+
+                window.datosCierreMensual = {
+                    mes, anio,
+                    totInvertido, totIngresos, totComisiones, totNeta,
+                    operaciones,
+                    tasaVES, tasaEUR
+                };
+
+            } catch (error) {
+                console.error(error);
+                alert("Error al generar el cierre mensual.");
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        };
+
+        window.imprimirCierreMensual = function(formato) {
+            if (!window.datosCierreMensual || !window.datosCierreMensual.operaciones) {
+                alert("Primero debes generar el cierre haciendo clic en 'Generar Cierre'.");
+                return;
+            }
+            
+            const data = window.datosCierreMensual;
+            if (data.operaciones.length === 0) {
+                alert("No hay operaciones para imprimir en este periodo.");
+                return;
+            }
+
+            const w = window.open('', '_blank');
+            const isTermico = formato === 'termico';
+            
+            const numes = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            const mesNombre = numes[parseInt(data.mes, 10)];
+            const fechaReporte = new Date().toLocaleDateString('es-VE');
+
+            let filasHtml = '';
+            data.operaciones.forEach(op => {
+                const ganancia = parseFloat(op.gananciaNetaUSD) || 0;
+                filasHtml += isTermico ? `
+                    <tr><td colspan="2" style="font-weight:bold; padding-top:4px;">${op.descripcion}</td></tr>
+                    <tr>
+                        <td style="border-bottom:1px dashed #ccc; padding-bottom:4px;">${op.fecha} | Neta:</td>
+                        <td style="border-bottom:1px dashed #ccc; padding-bottom:4px; text-align:right;">$${ganancia.toFixed(2)}</td>
+                    </tr>
+                ` : `
+                    <tr>
+                        <td style="padding: 8px; border-bottom: 1px solid #eee;">${op.fecha}</td>
+                        <td style="padding: 8px; border-bottom: 1px solid #eee;">${op.descripcion}</td>
+                        <td style="padding: 8px; border-bottom: 1px solid #eee;">$${((parseFloat(op.costoUSD)||0) + (parseFloat(op.gastosUSD)||0)).toFixed(2)}</td>
+                        <td style="padding: 8px; border-bottom: 1px solid #eee;">$${(parseFloat(op.ventaUSD)||0).toFixed(2)}</td>
+                        <td style="padding: 8px; border-bottom: 1px solid #eee; color:#d9534f;">$${(parseFloat(op.comisionTerceroUSD)||0).toFixed(2)}</td>
+                        <td style="padding: 8px; border-bottom: 1px solid #eee; font-weight:bold; color:#385723;">$${ganancia.toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+
+            const htmlTermico = `<!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        @page {
+                            size: 48mm 210mm;
+                            margin: 0 !important;
+                        }
+                        *, *:before, *:after {
+                            box-sizing: border-box !important;
+                        }
+                        html, body {
+                            width: 100% !important;
+                            max-width: 100% !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            background: #fff !important;
+                            font-family: 'Courier New', Courier, monospace;
+                            font-size: 11px;
+                            color: #000;
+                        }
+                        .ticket-container {
+                            width: 100%;
+                            padding: 10px 5px;
+                        }
+                        @media print {
+                            @page {
+                                size: 58mm auto;
+                                margin: 0 !important;
+                            }
+                            html, body {
+                                width: 48mm !important;
+                                max-width: 48mm !important;
+                                margin: 0 !important;
+                                padding: 0 !important;
+                            }
+                        }
+                        h2, h3, h4, p { margin: 2px 0; text-align: center; }
+                        .line { border-top: 1px dashed #000; margin: 8px 0; }
+                        table { width: 100%; font-size: 11px; border-collapse: collapse; color: #000; }
+                        td { padding: 2px 0; }
+                        .right { text-align: right; }
+                        .bold { font-weight: bold; }
+                    </style>
+                </head>
+                <body onload="setTimeout(function(){ window.print(); window.close(); }, 500);">
+                    <div class="ticket-container">
+                        <h3>INVERSIONES FB PARTS, C.A.</h3>
+                        <p>RIF: J-50478082-4</p>
+                        <p>Cierre Mensual</p>
+                        <p>Período: ${mesNombre} ${data.anio}</p>
+                        <p>Fecha Impresión: ${fechaReporte}</p>
+                        <div class="line"></div>
+                        <table style="margin-bottom: 10px;">
+                            <tr><td>Tasa BCV:</td><td class="right">Bs. ${data.tasaVES.toFixed(2)}</td></tr>
+                            <tr><td>Tasa EUR:</td><td class="right">€ ${data.tasaEUR.toFixed(2)}</td></tr>
+                        </table>
+                        <div class="line"></div>
+                        <table>
+                            <tr><td>Inversión:</td><td class="right">$${data.totInvertido.toFixed(2)}</td></tr>
+                            <tr><td>Ingresos:</td><td class="right">$${data.totIngresos.toFixed(2)}</td></tr>
+                            <tr><td>Comis.:</td><td class="right">-$${data.totComisiones.toFixed(2)}</td></tr>
+                            <tr><td class="bold">NETA(USD):</td><td class="right bold" style="font-size:13px;">$${data.totNeta.toFixed(2)}</td></tr>
+                            <tr><td>Neta(VES):</td><td class="right">Bs. ${(data.totNeta * data.tasaVES).toFixed(2)}</td></tr>
+                        </table>
+                        <div class="line"></div>
+                        <p style="text-align:left; font-weight:bold; margin-top:10px;">Desglose Neta:</p>
+                        <table>
+                            ${filasHtml}
+                        </table>
+                        <div class="line" style="margin-top:15px;"></div>
+                        <p style="margin-top:20px;">Firma Resp.</p>
+                        <p style="margin-top:30px;">__________________</p>
+                    </div>
+                </body>
+                </html>
+            `;
+
+            const htmlCarta = `
+                <html>
+                <head>
+                    <style>
+                        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 14px; margin: 0; padding: 40px; color: #333; }
+                        h2 { color: #385723; margin-bottom: 5px; text-transform: uppercase; }
+                        p { margin: 3px 0; color: #666; }
+                        .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #385723; padding-bottom: 20px; margin-bottom: 20px; }
+                        .summary-grid { display: flex; gap: 20px; margin-bottom: 30px; }
+                        .summary-card { background: #f9f9f9; padding: 15px; border-radius: 8px; flex: 1; border: 1px solid #eee; text-align: center; }
+                        .summary-card h3 { margin: 5px 0; font-size: 22px; color: #333; }
+                        .summary-card p { font-size: 12px; margin:0; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size:13px; }
+                        th { background: #385723; color: white; padding: 10px 8px; text-align: left; }
+                        td { padding: 8px; border-bottom: 1px solid #eee; }
+                        .signatures { display: flex; justify-content: space-around; margin-top: 60px; }
+                        .sig-box { text-align: center; width: 250px; border-top: 1px solid #333; padding-top: 10px; }
+                        @media print {
+                            body { padding: 0; margin: 20mm; }
+                        }
+                    </style>
+                </head>
+                <body onload="setTimeout(function(){ window.print(); window.close(); }, 500);">
+                    <div class="header">
+                        <div>
+                            <h2>INVERSIONES FB PARTS, C.A.</h2>
+                            <p><strong>Reporte de Cierre Financiero (Reventas)</strong></p>
+                            <p>Período: ${mesNombre} ${data.anio}</p>
+                        </div>
+                        <div style="text-align:right;">
+                            <p>Fecha Generación: ${fechaReporte}</p>
+                            <p>Tasa BCV: Bs. ${data.tasaVES.toFixed(2)}</p>
+                            <p>Tasa EUR: € ${data.tasaEUR.toFixed(2)}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-grid">
+                        <div class="summary-card" style="border-top: 4px solid #f0ad4e;">
+                            <p>Total Invertido</p>
+                            <h3>$${data.totInvertido.toLocaleString('en-US', {minimumFractionDigits:2})}</h3>
+                        </div>
+                        <div class="summary-card" style="border-top: 4px solid #28a745;">
+                            <p>Total Ingresos</p>
+                            <h3>$${data.totIngresos.toLocaleString('en-US', {minimumFractionDigits:2})}</h3>
+                        </div>
+                        <div class="summary-card" style="border-top: 4px solid #d9534f;">
+                            <p>Comisiones</p>
+                            <h3>$${data.totComisiones.toLocaleString('en-US', {minimumFractionDigits:2})}</h3>
+                        </div>
+                        <div class="summary-card" style="border-top: 4px solid #1d6fa5; background:#e8f4f8;">
+                            <p style="color:#1d6fa5; font-weight:bold;">Ganancia Neta Empresa</p>
+                            <h3 style="color:#1d6fa5;">$${data.totNeta.toLocaleString('en-US', {minimumFractionDigits:2})}</h3>
+                            <p>Bs. ${(data.totNeta * data.tasaVES).toLocaleString('en-US', {minimumFractionDigits:2})}</p>
+                        </div>
+                    </div>
+
+                    <h4 style="margin-bottom:10px; border-bottom:1px solid #ccc; padding-bottom:5px;">Detalle de Operaciones</h4>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Descripción</th>
+                                <th>Inversión</th>
+                                <th>Ingreso</th>
+                                <th>Comisión</th>
+                                <th>Ganancia Neta</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${filasHtml}
+                        </tbody>
+                    </table>
+
+                    <div class="signatures">
+                        <div class="sig-box">
+                            <strong>Preparado por</strong><br>
+                            Firma y Sello
+                        </div>
+                        <div class="sig-box">
+                            <strong>Revisado / Aprobado por</strong><br>
+                            Dirección General
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `;
+
+            w.document.write(isTermico ? htmlTermico : htmlCarta);
+            w.document.close();
+        };
+
+        window.cargarHistorialReventas = async function() {
+            // Reutilizando la lógica de extracción de tasas de Firebase (igual al Dashboard)
+            try {
+                const bcvSnap = await getDoc(doc(db, "configuracion", "tasa_bcv"));
+                if(bcvSnap.exists()) {
+                    window.tasaReventaBCV = parseFloat(bcvSnap.data().Valor) || parseFloat(bcvSnap.data().valor) || window.tasaReventaBCV;
+                }
+                const eurSnap = await getDoc(doc(db, "configuracion", "tasa_euro"));
+                if(eurSnap.exists()) {
+                    window.tasaReventaEUR = parseFloat(eurSnap.data().Valor) || parseFloat(eurSnap.data().valor) || window.tasaReventaEUR;
+                }
+                // Refrescar cálculos visuales con las nuevas tasas
+                window.calcularReventa();
+            } catch(e) { console.warn("Error leyendo tasas para reventas"); }
+
+            const tbody = document.getElementById('reventas-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Cargando historial de reventas...</td></tr>';
+            
+            try {
+                const snap = await getDocs(collection(db, "reventas_gastos"));
+                if (snap.empty) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No hay operaciones registradas.</td></tr>';
+                    return;
+                }
+                
+                // Inicializar selectores si no tienen valor o es primera carga
+                const elMes = document.getElementById('historial-rev-mes');
+                const elAnio = document.getElementById('historial-rev-anio');
+                const hoy = new Date();
+                
+                if (elMes && !window._reventasFiltroInicializado) {
+                    elMes.value = (hoy.getMonth() + 1).toString();
+                    elAnio.value = hoy.getFullYear().toString();
+                    window._reventasFiltroInicializado = true;
+                }
+
+                const targetMes = elMes ? parseInt(elMes.value, 10) : (hoy.getMonth() + 1);
+                const targetAnio = elAnio ? parseInt(elAnio.value, 10) : hoy.getFullYear();
+
+                let html = '';
+                let totalNeta = 0;
+                
+                let reventas = [];
+                snap.forEach(docSnap => reventas.push({ id: docSnap.id, ...docSnap.data() }));
+                
+                // Filtrar por fecha
+                reventas = reventas.filter(rev => {
+                    if (!rev.fecha) return false;
+                    const parts = rev.fecha.split('/');
+                    if (parts.length >= 3) {
+                        return parseInt(parts[1], 10) === targetMes && parseInt(parts[2], 10) === targetAnio;
+                    }
+                    return false;
+                });
+
+                // Ordenar por timestamp (más recientes primero)
+                reventas.sort((a, b) => b.timestamp - a.timestamp);
+                
+                if (reventas.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center;">No hay operaciones registradas en el mes seleccionado.</td></tr>`;
+                    return;
+                }
+
+                reventas.forEach(rev => {
+                    const costoTotal = (rev.costoUSD || 0) + (rev.gastosUSD || 0);
+                    // Usa la tasa histórica grabada, sino usa la global actual
+                    const tasaUsoVES = rev.tasaCambioVES || window.tasaReventaBCV;
+                    const ventaVES = ((rev.ventaUSD || 0) * tasaUsoVES).toFixed(2);
+                    const netaVES = ((rev.gananciaNetaUSD || 0) * tasaUsoVES).toFixed(2);
+                    
+                    totalNeta += (rev.gananciaNetaUSD || 0);
+                    
+                    html += `
+                        <tr>
+                            <td>${rev.fecha}</td>
+                            <td><strong>${rev.descripcion}</strong><br><span style="font-size:11px; color:#555;">Cliente: ${rev.cliente || 'N/A'}</span></td>
+                            <td>$${(rev.ventaUSD || 0).toFixed(2)}<br><span style="font-size:10px; color:#666;">Bs.${ventaVES}</span></td>
+                            <td>$${costoTotal.toFixed(2)}</td>
+                            <td>${rev.intermediario || 'N/A'}<br><span style="color: #d9534f; font-weight: bold;">$${(rev.comisionTerceroUSD || 0).toFixed(2)}</span></td>
+                            <td><span style="color: #385723; font-weight: bold;">$${(rev.gananciaNetaUSD || 0).toFixed(2)}</span><br><span style="font-size:10px; color:#666;">Bs.${netaVES}</span></td>
+                            <td style="text-align: center; vertical-align: middle;">
+                                <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
+                                    <button type="button" onclick="editarReventa('${rev.id}')" style="background:#1d6fa5; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;" title="Editar"><i class="fas fa-edit"></i></button>
+                                    <button type="button" onclick="eliminarReventa('${rev.id}')" style="background:#d9534f; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;" title="Eliminar"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                // Añadir fila de totales
+                html += `
+                    <tr style="background: #f4f8f5; font-weight: bold; border-top: 2px solid #385723;">
+                        <td colspan="5" style="text-align: right; color: #385723;">TOTAL GANANCIA NETA GLOBAL:</td>
+                        <td colspan="2" style="color: #385723; font-size: 16px;">$${totalNeta.toFixed(2)}</td>
+                    </tr>
+                `;
+                
+                tbody.innerHTML = html;
+                
+            } catch (error) {
+                console.error("Error cargando reventas:", error);
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: red;">Error al cargar el historial: ${error.message}</td></tr>`;
+            }
+        };
+

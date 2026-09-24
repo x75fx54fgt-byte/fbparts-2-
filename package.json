@@ -17,8 +17,10 @@
   "author": "F&B Parts",
   "license": "ISC",
   "dependencies": {
+    "acorn": "^8.15.0",
     "dotenv": "^16.4.5",
     "firebase-admin": "^12.1.0",
+    "jsdom": "^29.1.1",
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.13"
   }
