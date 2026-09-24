@@ -4228,12 +4228,20 @@ window.cargarHistorialFacturas = async function() {
         // 🚀 CREADOR DE DESCRIPCIONES (PLANTILLA FIJA FB PARTS)
         // ==========================================
         window.generarDescripcionIA = async function() {
-            const nombre = document.getElementById('edit-nombre').value.trim();
-            const categoriaElement = document.getElementById('edit-categoria');
-            const categoria = categoriaElement.options[categoriaElement.selectedIndex]?.text || 'Repuestos Automotrices';
-            const numParte = document.getElementById('edit-numero-parte').value.trim() || 'No especificado / Varios';
-            const textArea = document.getElementById('edit-descripcion');
-            const btn = document.getElementById('btn-ia-desc');
+            const nombre    = (document.getElementById('edit-nombre')?.value || '').trim();
+            const categoria = (document.getElementById('edit-categoria')?.value || 'Repuestos Automotrices').trim();
+            const marca     = (document.getElementById('edit-marca')?.value || '').trim();
+            const modelo    = (document.getElementById('edit-modelo')?.value || '').trim();
+            const numParte  = (document.getElementById('edit-numero-parte')?.value || 'No especificado').trim();
+            const textArea  = document.getElementById('edit-descripcion');
+            const btn       = document.getElementById('btn-ia-desc');
+
+            // Recoger posiciones seleccionadas
+            const posSelec = [];
+            if (document.getElementById('edit-pos-rh')?.checked) posSelec.push('Lado Derecho (RH)');
+            if (document.getElementById('edit-pos-lh')?.checked) posSelec.push('Lado Izquierdo (LH)');
+            if (document.getElementById('edit-pos-na')?.checked) posSelec.push('Universal');
+            const posicionTxt = posSelec.length ? posSelec.join(' y ') : 'Universal';
 
             if (!nombre) {
                 alert("Por favor, escribe primero el 'Nombre del Repuesto' para que la IA pueda rellenar la plantilla.");
@@ -4250,37 +4258,59 @@ window.cargarHistorialFacturas = async function() {
             btn.disabled = true;
 
             // 🚀 PROMPT ESTRICTO CON PLANTILLA BASE
-            let promptTexto = `Eres el asistente de publicaciones de "Inversiones FB Parts, C.A.".
-            Tu única tarea es copiar LA PLANTILLA EXACTA que te daré abajo y rellenar los espacios indicados entre corchetes [ ] con la información técnica del repuesto. 
-            NO cambies la estructura, NO borres los emojis, y NO uses asteriscos (**) de markdown.
+            const promptTexto = `Eres el asistente de publicaciones de "Inversiones FB Parts, C.A.", empresa venezolana de repuestos automotrices.
+Tu única tarea es copiar LA PLANTILLA EXACTA que te daré y rellenar los espacios indicados entre corchetes [ ] con información técnica del repuesto.
+NO cambies la estructura, NO borres los emojis, NO uses asteriscos (**) de markdown.
 
-            DATOS DEL REPUESTO:
-            - Nombre: ${nombre}
-            - Categoría: ${categoria}
-            - Nro de Parte: ${numParte}
+DATOS DEL REPUESTO:
+- Nombre: ${nombre}
+- Categoría: ${categoria}
+- Marca del vehículo: ${marca || 'No especificada'}
+- Modelo / Motorización: ${modelo || 'No especificado'}
+- Lado / Posición: ${posicionTxt}
+- Número de Parte OEM: ${numParte}
 
-            --- COPIA Y RELLENA ESTA PLANTILLA EXACTA DESDE AQUÍ ---
+--- COPIA Y RELLENA ESTA PLANTILLA EXACTA DESDE AQUÍ ---
 
-            ✅ FUNCIÓN Y BENEFICIOS:
-            [Redacta aquí 2 o 3 líneas atractivas explicando brevemente para qué sirve esta pieza en el vehículo y por qué es importante cambiarla a tiempo. Usa un tono experto y vendedor].
+✅ FUNCIÓN Y BENEFICIOS:
+[Redacta 2 o 3 líneas atractivas explicando para qué sirve esta pieza y por qué es importante cambiarla a tiempo. Usa tono experto y vendedor].
 
-            🔧 COMPATIBILIDAD SUGERIDA:
-            - [Menciona aquí 2 o 3 vehículos o motores compatibles que conozcas para este repuesto. Si no los conoces con seguridad, escribe: "Aplica para varios modelos. Por favor consultar compatibilidad indicando el modelo y año de su vehículo"].`
-            
+🔧 COMPATIBILIDAD:
+- Marca: ${marca || '[Indica la marca del vehículo si la conoces]'}
+- Modelo / Motorización: ${modelo || '[Indica modelos compatibles que conozcas]'}
+- Lado / Posición: ${posicionTxt}
+- Número OEM: ${numParte}
+
+📦 CONDICIONES:
+- Repuesto nuevo, en perfecta condición.
+- [Si aplica, menciona el material o acabado del repuesto].
+- Disponible para retiro en tienda o envío a domicilio en Caracas.`;
 
             try {
-                // Llamada a la IA
                 const respuesta = await puter.ai.chat(promptTexto);
-                const textoFinal = typeof respuesta === 'string' ? respuesta : respuesta.message.content;
-                
-                // Limpieza de seguridad por si la IA devuelve formato Markdown
-                const textoLimpio = textoFinal.replace(/\*\*/g, '').replace(/\*/g, '•');
-                
-                textArea.value = textoLimpio.trim();
-                
+
+                // Manejo robusto de la respuesta de Puter (puede cambiar de formato)
+                let textoFinal = '';
+                if (typeof respuesta === 'string') {
+                    textoFinal = respuesta;
+                } else if (respuesta?.message?.content) {
+                    const c = respuesta.message.content;
+                    textoFinal = Array.isArray(c) ? c.map(b => b.text || b).join('') : String(c);
+                } else if (respuesta?.content) {
+                    textoFinal = Array.isArray(respuesta.content)
+                        ? respuesta.content.map(b => b.text || b).join('')
+                        : String(respuesta.content);
+                } else {
+                    textoFinal = JSON.stringify(respuesta);
+                }
+
+                // Limpieza de markdown
+                const textoLimpio = textoFinal.replace(/\*\*/g, '').replace(/\*/g, '•').trim();
+                textArea.value = textoLimpio;
+
             } catch (error) {
                 console.error("Error Puter Descripciones:", error);
-                alert("⚠️ Error al generar la descripción: " + error.message);
+                alert("⚠️ Error al generar la descripción: " + (error.message || error));
             }
 
             btn.innerHTML = textoBotonOriginal;
