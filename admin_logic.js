@@ -1498,7 +1498,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
             document.getElementById('edit-marca').value = prod.marca || '';
             document.getElementById('edit-modelo').value = prod.modelo || '';
             document.getElementById('edit-subcategoria').value = prod.subcategoria || '';
-            document.getElementById('edit-posicion').value = prod.posicion || 'N/A';
+            // Posiciones (array o string legacy)
+            const posArr = Array.isArray(prod.posiciones) ? prod.posiciones
+                : (prod.posicion && prod.posicion !== 'N/A' ? [prod.posicion] : []);
+            document.getElementById('edit-pos-rh').checked = posArr.includes('RH');
+            document.getElementById('edit-pos-lh').checked = posArr.includes('LH');
+            document.getElementById('edit-pos-na').checked = posArr.includes('N/A') || posArr.length === 0;
             
             const modalidad = prod.modalidad || 'Entrega Inmediata';
             const selectModalidad = document.getElementById('edit-modalidad');
@@ -1520,7 +1525,11 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
             }
             
             document.getElementById('edit-estado').value = prod.estado || 'activo';
-            document.getElementById('edit-imagen').value = prod.imagen || '';
+            // Poblar galería: usa array imagenes si existe, si no usa el campo imagen antiguo
+            const imagenesExistentes = Array.isArray(prod.imagenes) && prod.imagenes.length > 0
+                ? prod.imagenes
+                : (prod.imagen ? [prod.imagen] : []);
+            window._poblarGaleria(imagenesExistentes);
             document.getElementById('edit-numero-parte').value = (prod.numero_parte && prod.numero_parte !== 'undefined') ? prod.numero_parte : '';
             document.getElementById('edit-descripcion').value = (prod.descripcion && prod.descripcion !== 'undefined') ? prod.descripcion.replace(/\\n/g, '\n') : '';
             
@@ -1528,6 +1537,76 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
         };
 
         window.cerrarModalEdicion = function() { document.getElementById('modal-edicion').style.display = 'none'; };
+
+        // ==========================================
+        // 📷 GALERÍA DE IMÁGENES - HELPERS
+        // ==========================================
+        window._galeriaEditCounter = 0;
+
+        window.agregarCampoImagen = function(url) {
+            const contenedor = document.getElementById('galeria-imagenes-edit');
+            if (!contenedor) return;
+            const idx = window._galeriaEditCounter++;
+            const esPrimera = contenedor.children.length === 0;
+            const div = document.createElement('div');
+            div.id = `galeria-row-${idx}`;
+            div.style.cssText = 'display:flex; align-items:center; gap:8px;';
+            div.innerHTML = `
+                ${esPrimera ? '<span title="Foto principal" style="font-size:16px; flex-shrink:0;">⭐</span>' : '<span style="font-size:16px; flex-shrink:0; opacity:0.3;">📷</span>'}
+                <input type="text" value="${url || ''}" placeholder="Pega link de Google Drive, Imgur, Wix..." 
+                    style="flex:1; padding:7px 10px; border:1px solid #ccc; border-radius:6px; font-size:12px;"
+                    oninput="window._actualizarPreviewGaleria(this)"
+                    onblur="window._actualizarPreviewGaleria(this)">
+                <img src="" style="width:40px; height:40px; object-fit:cover; border-radius:4px; border:1px solid #eee; background:#f5f5f5; display:none;" 
+                    id="prev-${idx}" onerror="this.style.display='none'">
+                ${esPrimera ? '' : `<button type="button" onclick="window._eliminarCampoImagen('galeria-row-${idx}')" style="background:#d9534f; color:white; border:none; width:28px; height:28px; border-radius:4px; cursor:pointer; flex-shrink:0;"><i class='fas fa-trash'></i></button>`}
+            `;
+            contenedor.appendChild(div);
+            if (url) {
+                const img = div.querySelector(`#prev-${idx}`);
+                const displayUrl = SecuritySanitizer.formatImageUrl(url, 500);
+                if (img && displayUrl) { img.src = displayUrl; img.style.display = 'block'; }
+            }
+        };
+
+        window._actualizarPreviewGaleria = function(input) {
+            const row = input.closest('div[id^="galeria-row-"]');
+            if (!row) return;
+            const img = row.querySelector('img');
+            if (!img) return;
+            const url = SecuritySanitizer.formatImageUrl(input.value.trim(), 500);
+            if (url) { img.src = url; img.style.display = 'block'; }
+            else { img.style.display = 'none'; }
+        };
+
+        window._eliminarCampoImagen = function(rowId) {
+            const row = document.getElementById(rowId);
+            if (row) row.remove();
+        };
+
+        window._obtenerUrlsGaleria = function() {
+            const contenedor = document.getElementById('galeria-imagenes-edit');
+            if (!contenedor) return [];
+            const urls = [];
+            contenedor.querySelectorAll('input[type="text"]').forEach(inp => {
+                const raw = inp.value.trim();
+                if (raw) urls.push(SecuritySanitizer.formatImageUrl(raw, 500));
+            });
+            return urls;
+        };
+
+        window._poblarGaleria = function(imagenes) {
+            const contenedor = document.getElementById('galeria-imagenes-edit');
+            if (!contenedor) return;
+            contenedor.innerHTML = '';
+            window._galeriaEditCounter = 0;
+            const arr = Array.isArray(imagenes) ? imagenes : (imagenes ? [imagenes] : []);
+            if (arr.length === 0) {
+                window.agregarCampoImagen('');
+            } else {
+                arr.forEach(url => window.agregarCampoImagen(url));
+            }
+        };
 
         window.guardarCambiosProducto = async function() {
             const docId = document.getElementById('edit-id').value;
@@ -1558,10 +1637,22 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                 marca: SecuritySanitizer.cleanText(document.getElementById('edit-marca').value, 50),
                 modelo: SecuritySanitizer.cleanText(document.getElementById('edit-modelo').value, 100),
                 subcategoria: SecuritySanitizer.cleanText(document.getElementById('edit-subcategoria').value, 50),
-                posicion: SecuritySanitizer.cleanText(document.getElementById('edit-posicion').value, 10),
+                posicion: (() => { // legacy: first selected or N/A
+                    if(document.getElementById('edit-pos-rh').checked) return 'RH';
+                    if(document.getElementById('edit-pos-lh').checked) return 'LH';
+                    return 'N/A';
+                })(),
+                posiciones: (() => {
+                    const p = [];
+                    if(document.getElementById('edit-pos-rh').checked) p.push('RH');
+                    if(document.getElementById('edit-pos-lh').checked) p.push('LH');
+                    if(document.getElementById('edit-pos-na').checked) p.push('N/A');
+                    return p.length ? p : ['N/A'];
+                })(),
                 modalidad: modalidadVal,
                 estado: SecuritySanitizer.cleanText(document.getElementById('edit-estado').value, 30),
-                imagen: SecuritySanitizer.formatImageUrl(document.getElementById('edit-imagen').value, 500),
+                imagen: window._obtenerUrlsGaleria()[0] || '',
+                imagenes: window._obtenerUrlsGaleria(),
                 numero_parte: SecuritySanitizer.cleanText(document.getElementById('edit-numero-parte').value, 50),
                 descripcion: SecuritySanitizer.cleanNote(document.getElementById('edit-descripcion').value, 1000)
             };

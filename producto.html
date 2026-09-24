@@ -29,9 +29,9 @@
         .breadcrumb-nav a { color: #5e8877; text-decoration: none; font-weight: bold; }
         .breadcrumb-nav a:hover { text-decoration: underline; }
         .breadcrumb-nav span { color: #555; }
-        .product-container { max-width: 1100px; margin: 20px auto; padding: 0 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; width: 100%; box-sizing: border-box; background: white; padding: 40px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,.05); }
-        .product-img-box { width: 100%; height: 400px; background: #fff; display: flex; align-items: center; justify-content: center; border: 1px solid #eee; border-radius: 6px; overflow: hidden; }
-        .product-img-box img { width: 100%; height: 100%; object-fit: contain; }
+        .product-container { max-width: 1100px; margin: 20px auto; padding: 0 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; width: 100%; box-sizing: border-box; background: white; padding: 40px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,.05); }
+        .product-img-box { width: 100%; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; border: 1px solid #eee; border-radius: 6px; padding: 10px; box-sizing: border-box; align-self: flex-start; }
+        .product-img-box img#img-principal { width: 100%; height: auto; max-height: 450px; object-fit: contain; display: block; }
         .product-details h1 { font-family: 'Oswald', sans-serif; color: #5e8877; font-size: 28px; margin-top: 0; margin-bottom: 15px; }
         .product-price { font-size: 26px; color: #5e8877; font-weight: bold; font-family: 'Oswald', sans-serif; margin-bottom: 20px; }
         .product-meta { font-size: 14px; color: #555; margin-bottom: 15px; line-height: 1.6; border-top: 1px solid #eee; border-bottom: 1px solid #eee; padding: 15px 0; }
@@ -42,7 +42,7 @@
         .related-section h3 { font-family: 'Oswald', sans-serif; color: #5e8877; font-size: 22px; text-transform: uppercase; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
         .related-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
         
-        @media (max-width: 900px) { .product-container { grid-template-columns: 1fr; padding: 20px; } .product-img-box { height: 280px; } .related-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } }
+        @media (max-width: 900px) { .product-container { grid-template-columns: 1fr; padding: 20px; } .related-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } }
 
         /* ========================================== */
         /* 🚀 REGLAS DE CORRECCIÓN PARA EL HEADER MÓVIL */
@@ -557,23 +557,85 @@
                     botonML = `<a href="https://articulo.mercadolibre.com.ve/${idML}" target="_blank" class="btn-ml-large"><i class="fas fa-handshake"></i> Ver esta pieza en Mercado Libre</a>`;
                 }
 
-                const safeName = prod.nombre.replace(/'/g, "\\\'").replace(/"/g, '&quot;');
+                const safeName = prod.nombre.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                 const stockTxt = prod.stock > 0 ? `<span style="color: #27ae60; font-weight: bold;">En Stock (${prod.stock} disponibles)</span>` : `<span style="color: #c0392b; font-weight: bold;">Agotado</span>`;
                 const numParteTxt = prod.numero_parte ? `<p style="margin: 5px 0;"><strong>Número de Parte / OEM:</strong> ${prod.numero_parte}</p>` : '';
                 const descTxt = prod.descripcion ? `<div style="margin: 15px 0; color: #444; font-size: 14px; line-height: 1.6; white-space: pre-wrap; font-family: inherit;">${prod.descripcion}</div>` : '<p style="margin: 10px 0; color: #888; font-size: 13px;">Sin descripción detallada para este repuesto. Contáctanos para mayor información de compatibilidad.</p>';
                 const catSubtitle = prod.categoria ? `F&B PARTS • ${prod.categoria.toUpperCase()}` : `F&B PARTS • AUTOPARTES ORIGINALES`;
 
+                // Galería de imágenes
+                const toUrl = (u) => {
+                    if(!u) return '';
+                    const m = u.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+                    if(m) return `https://lh3.googleusercontent.com/d/${m[1]}`;
+                    return u;
+                };
+                const imagenes = Array.isArray(prod.imagenes) && prod.imagenes.length > 0
+                    ? prod.imagenes.map(toUrl)
+                    : [toUrl(prod.imagen)].filter(Boolean);
+                const logoFallback = "https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png";
+
+                const galeriaHTML = imagenes.length > 1 ? `
+                    <div id="galeria-thumbs" style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+                        ${imagenes.map((url, i) => `<img src="${url}" data-idx="${i}" onclick="cambiarFotoPrincipal(this)" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:2px solid ${i===0?'#5B8266':'#ddd'}; cursor:pointer; transition:border 0.2s;" onerror="this.style.display='none'">`).join('')}
+                    </div>` : '';
+
+                // Badges de info técnica
+                const badgeMarca = prod.marca && prod.marca !== '' && prod.marca !== 'Universal/Multi-marca'
+                    ? `<span style="background:#e8f4f8; color:#1d6fa5; border:1px solid #bee3f8; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:bold; display:inline-flex; align-items:center; gap:5px;"><i class="fas fa-car-side"></i> ${prod.marca}</span>` : '';
+                const badgeModelo = prod.modelo
+                    ? `<span style="background:#f0f4ff; color:#3c4fa8; border:1px solid #c3cff8; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:bold; display:inline-flex; align-items:center; gap:5px;"><i class="fas fa-cogs"></i> ${prod.modelo}</span>` : '';
+                // Posiciones disponibles (array nuevo o legacy string)
+                const posiciones = Array.isArray(prod.posiciones) && prod.posiciones.length > 0
+                    ? prod.posiciones.filter(p => p !== 'N/A')
+                    : (prod.posicion && prod.posicion !== 'N/A' ? [prod.posicion] : []);
+
+                let badgePosicion = '';
+                let selectorPosicion = '';
+                if (posiciones.length > 1) {
+                    // Selector interactivo cuando hay RH y LH disponibles
+                    selectorPosicion = `
+                        <div style="margin: 12px 0;">
+                            <p style="font-size:13px; font-weight:bold; margin-bottom:8px; color:#333;">Selecciona el lado:</p>
+                            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                ${posiciones.map(p => `
+                                    <button type="button" onclick="seleccionarPosicion(this, '${p}')"
+                                        class="btn-pos-var"
+                                        style="padding:8px 18px; border:2px solid #ddd; border-radius:8px; background:#fff; font-size:13px; font-weight:bold; cursor:pointer; transition:all 0.2s;">
+                                        ${p === 'RH' ? '→ RH (Derecho)' : p === 'LH' ? '← LH (Izquierdo)' : p}
+                                    </button>`).join('')}
+                            </div>
+                        </div>`;
+                } else if (posiciones.length === 1) {
+                    badgePosicion = `<span style="background:#fff7e6; color:#c07800; border:1px solid #ffe0a0; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:bold;">${posiciones[0]}</span>`;
+                }
+
+                const badgeSubcat = prod.subcategoria
+                    ? `<span style="background:#f5f0ff; color:#6b46c1; border:1px solid #d6bcfa; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:bold;">${prod.subcategoria}</span>` : '';
+
+                const badgesHTML = (badgeMarca || badgeModelo || badgePosicion || badgeSubcat)
+                    ? `<div style="display:flex; flex-wrap:wrap; gap:8px; margin: 10px 0;">${badgeMarca}${badgeModelo}${badgePosicion}${badgeSubcat}</div>` : '';
+
+                const modalidadHTML = prod.modalidad
+                    ? `<p style="margin: 8px 0; font-size:13px;"><strong>Disponibilidad:</strong> 
+                        <span style="background:#fff3cd; color:#856404; border:1px solid #ffd970; padding:2px 8px; border-radius:4px; font-size:12px; font-weight:bold;">${prod.modalidad}</span></p>`
+                    : '';
+
                 container.innerHTML = `
                     <div class="product-img-box">
-                        <img src="${prod.imagen}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png'">
+                        <img id="img-principal" src="${imagenes[0] || logoFallback}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='${logoFallback}'">
+                        ${galeriaHTML}
                     </div>
                     <div class="product-details">
                         <span style="font-size: 12px; color: #888; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">${catSubtitle}</span>
                         <h1>${prod.nombre}</h1>
+                        ${badgesHTML}
+                        ${selectorPosicion}
                         <div class="product-price">$${Number(prod.precio).toFixed(2)}</div>
                         
                         <div class="product-meta">
-                            <p style="margin: 5px 0;"><strong>Disponibilidad:</strong> ${stockTxt}</p>
+                            <p style="margin: 5px 0;"><strong>Disponibilidad de stock:</strong> ${stockTxt}</p>
+                            ${modalidadHTML}
                             ${numParteTxt}
                             ${descTxt}
                         </div>
@@ -796,6 +858,44 @@
         });
 
         window.addEventListener('DOMContentLoaded', cargarDetalleProducto);
+
+        window.cambiarFotoPrincipal = function(thumb) {
+            const principal = document.getElementById('img-principal');
+            if (principal) principal.src = thumb.src;
+            document.querySelectorAll('#galeria-thumbs img').forEach(t => {
+                t.style.border = '2px solid #ddd';
+            });
+            thumb.style.border = '2px solid #5B8266';
+        };
+
+        window._posicionSeleccionada = null;
+        window.seleccionarPosicion = function(btn, valor) {
+            window._posicionSeleccionada = valor;
+            document.querySelectorAll('.btn-pos-var').forEach(b => {
+                b.style.border = '2px solid #ddd';
+                b.style.background = '#fff';
+                b.style.color = '#333';
+            });
+            btn.style.border = '2px solid #5B8266';
+            btn.style.background = '#5B8266';
+            btn.style.color = '#fff';
+        };
+
+        // Validar que se seleccionó lado antes de añadir al pedido
+        const _origAgregarAlCarrito = window.agregarAlCarrito;
+        window.agregarAlCarrito = function(id, nombre, precio) {
+            const haySelector = document.querySelectorAll('.btn-pos-var').length > 0;
+            if (haySelector && !window._posicionSeleccionada) {
+                alert('Por favor selecciona el lado (RH o LH) antes de añadir al pedido.');
+                return;
+            }
+            const nombreFinal = window._posicionSeleccionada
+                ? `${nombre} (${window._posicionSeleccionada})`
+                : nombre;
+            if (typeof _origAgregarAlCarrito === 'function') {
+                _origAgregarAlCarrito(id, nombreFinal, precio);
+            }
+        };
     </script>
 </body>
 </html>

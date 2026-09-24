@@ -1973,12 +1973,21 @@
 
             <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                 <div>
-                    <label>Lado / Posición</label>
-                    <select id="edit-posicion" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                        <option value="N/A">N/A (Universal / Central)</option>
-                        <option value="RH">RH (Derecho)</option>
-                        <option value="LH">LH (Izquierdo)</option>
-                    </select>
+                    <label>Lado / Posición disponible</label>
+                    <div style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">
+                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
+                            <input type="checkbox" id="edit-pos-rh" value="RH" style="width:16px; height:16px; cursor:pointer; flex-shrink:0;">
+                            <span>→ RH (Lado Derecho)</span>
+                        </label>
+                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
+                            <input type="checkbox" id="edit-pos-lh" value="LH" style="width:16px; height:16px; cursor:pointer; flex-shrink:0;">
+                            <span>← LH (Lado Izquierdo)</span>
+                        </label>
+                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
+                            <input type="checkbox" id="edit-pos-na" value="N/A" style="width:16px; height:16px; cursor:pointer; flex-shrink:0;">
+                            <span>⬤ Universal / N/A</span>
+                        </label>
+                    </div>
                 </div>
                 <div>
                     <label>Disponibilidad</label>
@@ -2014,7 +2023,20 @@
                 <textarea id="edit-descripcion" rows="6" placeholder="Especifica compatibilidad, material, detalles..."></textarea>
             </div>
             
-            <div class="form-group"><label>URL de la Imagen</label><textarea id="edit-imagen" style="height: 50px;"></textarea></div>
+            <div class="form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <label style="margin-bottom: 0;">📷 Galería de Fotos</label>
+                    <button type="button" onclick="agregarCampoImagen()" style="background:#5B8266; color:white; border:none; padding:5px 12px; border-radius:6px; font-size:12px; cursor:pointer; font-weight:bold;">
+                        <i class="fas fa-plus"></i> Agregar foto
+                    </button>
+                </div>
+                <div id="galeria-imagenes-edit" style="display:flex; flex-direction:column; gap:8px;">
+                    <!-- Los campos de imagen se insertan aquí dinámicamente -->
+                </div>
+                <small style="color:#888; font-size:11px; margin-top:4px; display:block;">
+                    ⭐ La <strong>primera foto</strong> es la principal. Puedes pegar links de Google Drive, Imgur, Wix, etc.
+                </small>
+            </div>
             
             <div class="modal-actions">
                 <button type="button" class="btn-delete" onclick="eliminarProducto()"><i class="fas fa-trash"></i> Eliminar</button>
