@@ -193,11 +193,13 @@
         </div>
     </header>
 
-    <section id="inicio" class="hero">
+    <section id="inicio" class="hero" style="min-height: 80vh; position: relative; overflow: hidden;">
         <div class="hero-carousel" id="heroCarousel">
             <div class="hero-track">
-                <div class="hero-slide active" style="background-image: linear-gradient(rgba(0,0,0,.32), rgba(0,0,0,.32)), url('img/fotoportada.png');" role="img" aria-label="Almacén de repuestos automotrices originales en Caracas">
-                    <div class="hero-overlay">
+                <div class="hero-slide active" role="img" aria-label="Almacén de repuestos automotrices originales en Caracas">
+                    <img src="img/fotoportada.png" fetchpriority="high" loading="eager" alt="Repuestos originales en Caracas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;">
+                    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.32); z-index: 1;"></div>
+                    <div class="hero-overlay" style="position: relative; z-index: 2;">
                         <h1 style="margin: 0 0 10px 0; color: var(--title); font-size: 24px; font-weight: 700; letter-spacing: .08em; line-height: 1.1; font-family: 'Oswald', sans-serif;">
                             REPUESTOS Y AUTOPARTES ORIGINALES EN CARACAS
                         </h1>
