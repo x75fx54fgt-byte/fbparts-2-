@@ -253,7 +253,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 
             if(id === 'dashboard') { window.cargarDashboard(); }
             if(id === 'finanzas') { window.cargarFinanzas(); }
-            if(id === 'pedidos') { window.cargarPedidos(); }
+            if(id === 'pedidos') { window._pedidosTodosCache = null; if(document.getElementById('pedidos-mes-filtro')) document.getElementById('pedidos-mes-filtro').innerHTML = ''; window.cargarPedidos(); }
             if(id === 'catalogo') { window.cargarCatalogoAdmin(); }
             if(id === 'clientes') { window.cargarBaseClientes(); }
             if(id === 'cotizaciones') { window.cargarBaseClientes(); window.actualizarPreview(); }
@@ -816,7 +816,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                 document.getElementById('pedidos-items-container').innerHTML = '';
                 document.getElementById('ped-total-general').innerText = '0.00';
                 window.mostrarOpcionesMotorizadoCreacion();
-                window.cargarPedidos();
+                window._pedidosTodosCache = null; if(document.getElementById('pedidos-mes-filtro')) document.getElementById('pedidos-mes-filtro').innerHTML = ''; window.cargarPedidos();
             } catch (error) { console.error(error); alert("Error al registrar."); }
             btn.innerHTML = "Registrar Pedido"; btn.disabled = false;
         };
@@ -889,22 +889,108 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
         window.cargarPedidos = async function() {
             const tbody = document.getElementById('orders-table-body');
             if(!tbody) return;
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Buscando pedidos...</td></tr>';
-            window.pedidosDBLocal = {}; 
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Buscando pedidos...</td></tr>';
 
             try {
-                const snap = await getDocs(collection(db, "pedidos"));
+                // Carga TODOS los pedidos una sola vez
+                if (!window._pedidosTodosCache) {
+                    const snap = await getDocs(collection(db, "pedidos"));
+                    window._pedidosTodosCache = [];
+                    window.pedidosDBLocal = {};
+                    snap.forEach(docSnap => {
+                        const ped = docSnap.data();
+                        window.pedidosDBLocal[docSnap.id] = ped;
+                        window._pedidosTodosCache.push({ id: docSnap.id, ...ped });
+                    });
+                }
+
+                // Poblar selector de meses disponibles
+                const selectMes = document.getElementById('pedidos-mes-filtro');
+                if (selectMes && selectMes.options.length === 0) {
+                    // Recolectar todos los meses/años presentes en los pedidos
+                    const mesesSet = new Set();
+                    window._pedidosTodosCache.forEach(p => {
+                        if (p.fecha) {
+                            // fecha puede ser "DD/MM/YYYY" o "YYYY-MM-DD" o similar
+                            const partes = p.fecha.split('/');
+                            if (partes.length === 3) mesesSet.add(`${partes[2]}-${partes[1].padStart(2,'0')}`); // YYYY-MM
+                            else {
+                                const d = new Date(p.fecha);
+                                if (!isNaN(d)) mesesSet.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+                            }
+                        }
+                    });
+
+                    const ahora = new Date();
+                    const mesActual = `${ahora.getFullYear()}-${String(ahora.getMonth()+1).padStart(2,'0')}`;
+                    mesesSet.add(mesActual); // Siempre incluir el mes actual aunque esté vacío
+
+                    // Ordenar desc y construir options
+                    const mesesOrdenados = Array.from(mesesSet).sort().reverse();
+                    const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+                    selectMes.innerHTML = '';
+
+                    // Opción "Todos"
+                    const optTodos = document.createElement('option');
+                    optTodos.value = 'todos';
+                    optTodos.textContent = '📚 Ver Archivo Completo';
+                    selectMes.appendChild(optTodos);
+
+                    mesesOrdenados.forEach(ym => {
+                        const [y, m] = ym.split('-');
+                        const opt = document.createElement('option');
+                        opt.value = ym;
+                        opt.textContent = `${meses[parseInt(m)-1]} ${y}`;
+                        if (ym === mesActual) opt.selected = true;
+                        selectMes.appendChild(opt);
+                    });
+                }
+
+                // Determinar filtro activo
+                const filtroMes = selectMes ? selectMes.value : 'todos';
+
+                // Filtrar y ordenar DESCENDENTE por fecha
+                let pedidosFiltrados = [...window._pedidosTodosCache];
+
+                if (filtroMes !== 'todos') {
+                    pedidosFiltrados = pedidosFiltrados.filter(p => {
+                        if (!p.fecha) return false;
+                        const partes = p.fecha.split('/');
+                        let ym = '';
+                        if (partes.length === 3) ym = `${partes[2]}-${partes[1].padStart(2,'0')}`;
+                        else {
+                            const d = new Date(p.fecha);
+                            if (!isNaN(d)) ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+                        }
+                        return ym === filtroMes;
+                    });
+                }
+
+                // Orden descendente: más nuevo primero
+                pedidosFiltrados.sort((a, b) => {
+                    const parseFecha = f => {
+                        if (!f) return 0;
+                        const p = f.split('/');
+                        if (p.length === 3) return new Date(`${p[2]}-${p[1]}-${p[0]}`).getTime();
+                        return new Date(f).getTime() || 0;
+                    };
+                    return parseFecha(b.fecha) - parseFecha(a.fecha);
+                });
+
                 tbody.innerHTML = '';
-                
-                if(snap.empty) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No hay pedidos registrados en la base de datos.</td></tr>';
+                const contador = document.getElementById('pedidos-contador');
+
+                if (pedidosFiltrados.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No hay pedidos en este período.</td></tr>';
+                    if (contador) contador.textContent = '(0 pedidos)';
                     return;
                 }
 
-                snap.forEach(docSnap => {
-                    const ped = docSnap.data();
-                    const docId = docSnap.id;
-                    window.pedidosDBLocal[docId] = ped;
+                if (contador) contador.textContent = `(${pedidosFiltrados.length} pedido${pedidosFiltrados.length !== 1 ? 's' : ''})`;
+
+                pedidosFiltrados.forEach((ped, idx) => {
+                    const docId = ped.id;
+                    const numOrden = idx + 1;
 
                     let badgeClass = 'badge-status-activo';
                     if(ped.estado === 'Pendiente' || ped.estado === 'Procesando') badgeClass = 'badge-status-inactivo';
@@ -918,11 +1004,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 
                     let trackingHtml = '';
                     if (ped.envio && ped.envio.includes('Motorizado')) {
-                        // Si es moto directa, usamos la guía del motorizado (o la vieja si se quedó trabada)
                         let guiaReal = ped.trackingMotorizado || ped.tracking || 'Pendiente';
                         trackingHtml = `<span style="font-size:11px; color:#1d6fa5;">🏍️ Guía Moto: <b>${guiaReal}</b></span><br>`;
                     } else if (ped.envio && ped.envio.includes('Encomienda')) {
-                        // Si es encomienda, se muestran los dos viajes
                         if (ped.trackingMotorizado) trackingHtml += `<span style="font-size:11px; color:#1d6fa5;">🏍️ Traslado Agencia: <b>${ped.trackingMotorizado}</b></span><br>`;
                         if (ped.tracking) trackingHtml += `<span style="font-size:11px; color:#d35400;">📦 Guía Tealca/Zoom: <b>${ped.tracking}</b></span><br>`;
                         if (!ped.tracking && !ped.trackingMotorizado) trackingHtml += `<span style="font-size:11px; color:#999;">Sin guías asignadas</span><br>`;
@@ -930,32 +1014,46 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                         trackingHtml = `<span style="font-size:11px; color:#999;">Sin guía (Retiro en Local)</span><br>`;
                     }
 
+                    // Badge de cambio/devolución
+                    const esCambio = ped.esCambio ? `<span style="background:#e67e22;color:#fff;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:bold;display:inline-block;margin-bottom:3px;">🔁 ${ped.etiquetaCambio || 'CAMBIO'}</span><br>` : '';
+
                     tbody.innerHTML += `
                         <tr>
+                            <td style="font-weight:bold; color:#5B8266; font-size:13px;">#${numOrden}</td>
                             <td>${ped.fecha || 'N/A'}</td>
                             <td><strong>${ped.cliente}</strong><br><span style="font-size:11px;color:#666;">${ped.email}</span></td>
                             <td><div style="font-size:12px; line-height:1.4;">${productosStr}</div></td>
                             <td><strong>$${Number(ped.total || 0).toFixed(2)}</strong></td>
                             <td>
+                                ${esCambio}
                                 <span class="badge-shipping">${ped.envio}</span><br>
                                 ${trackingHtml}
                                 <span class="${badgeClass}" style="margin-top:4px; display:inline-block;">${ped.estado || 'Pendiente'}</span>
                             </td>
-                            <td style="display: flex; gap: 5px; justify-content: center; align-items: center;">
+                            <td style="display: flex; gap: 5px; justify-content: center; align-items: center; flex-wrap:wrap;">
                                 <button type="button" onclick="abrirModalPedido('${docId}')" style="background:#1d6fa5; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="Editar Envío"><i class="fas fa-edit"></i></button>
                                 <button type="button" onclick="enviarPedidoAFacturacion('${docId}')" style="background:#28a745; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="Facturar / Nota de Entrega"><i class="fas fa-file-invoice"></i></button>
-                                <!-- 🖨️ NUEVO BOTÓN: ETIQUETA TÉRMICA -->
                                 <button type="button" onclick="imprimirEtiquetaEnvio('${docId}')" style="background:#333; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="Imprimir Etiqueta (58mm)"><i class="fas fa-print"></i></button>
+                                <button type="button" onclick="abrirModalCambioDev('${docId}')" style="background:#e67e22; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="Generar Cambio / Devolución"><i class="fas fa-exchange-alt"></i></button>
                             </td>
                         </tr>
                     `;
                 });
             } catch(e) {
                 console.error("Error cargando pedidos:", e);
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: red;">Error al conectar con la base de datos de pedidos.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: red;">Error al conectar con la base de datos de pedidos.</td></tr>';
             }
             if (typeof window.cargarSelectorPedidosRuta === 'function') window.cargarSelectorPedidosRuta();
         };
+
+        // Forzar recarga limpia (borra caché local)
+        window.refrescarPedidos = function() {
+            window._pedidosTodosCache = null;
+            const sel = document.getElementById('pedidos-mes-filtro');
+            if (sel) sel.innerHTML = '';
+            window._pedidosTodosCache = null; if(document.getElementById('pedidos-mes-filtro')) document.getElementById('pedidos-mes-filtro').innerHTML = ''; window.cargarPedidos();
+        };
+
 
         window.abrirModalPedido = function(docId) {
             const ped = window.pedidosDBLocal[docId];
@@ -1080,7 +1178,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
             try {
                 await updateDoc(doc(db, "pedidos", docId), datosActualizados);
                 window.cerrarModalPedido();
-                window.cargarPedidos();
+                window._pedidosTodosCache = null; if(document.getElementById('pedidos-mes-filtro')) document.getElementById('pedidos-mes-filtro').innerHTML = ''; window.cargarPedidos();
             } catch (error) { 
                 console.error(error); 
                 alert("Error al actualizar la información del pedido."); 
@@ -1094,7 +1192,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
             try {
                 await deleteDoc(doc(db, "pedidos", docId));
                 window.cerrarModalPedido();
-                window.cargarPedidos();
+                window._pedidosTodosCache = null; if(document.getElementById('pedidos-mes-filtro')) document.getElementById('pedidos-mes-filtro').innerHTML = ''; window.cargarPedidos();
             } catch (error) {
                 console.error(error);
                 alert("No se pudo eliminar el pedido.");
@@ -2452,13 +2550,24 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                     return; 
                 }
 
+                const facturasArr = [];
                 snap.forEach(docSnap => {
                     const fac = docSnap.data();
                     const docId = docSnap.id;
                     window.facturasDBLocal[docId] = fac;
-                    
-                    const currNro = parseInt(fac.nro);
-                    if (!isNaN(currNro) && currNro > maxNro) maxNro = currNro;
+                    const currNro = parseInt(String(fac.nro).replace(/\D/g,'')) || 0;
+                    if (currNro > maxNro) maxNro = currNro;
+                    facturasArr.push({ fac, docId });
+                });
+                // Orden descendente por número de factura (635, 634, 633...)
+                facturasArr.sort((a,b) => {
+                    const na = parseInt(String(a.fac.nro).replace(/\D/g,'')) || 0;
+                    const nb = parseInt(String(b.fac.nro).replace(/\D/g,'')) || 0;
+                    return nb - na;
+                });
+                facturasArr.forEach(({ fac, docId }) => {
+                    const currNro = parseInt(String(fac.nro).replace(/\D/g,'')) || 0;
+                    if (currNro > maxNro) maxNro = currNro;
 
                     const tr = document.createElement('tr');
                     const simbolo = fac.simbolo || '$';
@@ -2809,8 +2918,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                         <div>
                             <p style="margin: 0 0 2px 0; font-weight: bold; color: #333;">MÉTODO DE PAGOS:</p>
                             <ul style="margin: 0; padding-left: 12px;">
-                                <li>Transferencias (Banesco y BNC). Internacionales (BOA).</li>
-                                <li>Zelle, Pago móvil y Efectivo.</li>
+                                <li>Pago Móvil, efectivo en divisas, transferencias bancarias (Banesco, BNC, BVC, Bancamiga) y Binance.</li>
                             </ul>
                         </div>
                         <div>
@@ -2936,14 +3044,24 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                     return;
                 }
 
+                const cotizacionesArr = [];
                 snap.forEach(docSnap => {
                     const cot = docSnap.data();
                     const docId = docSnap.id;
-                    
-                    window.cotizacionesDBLocal[docId] = cot; 
-                    
-                    const currNro = parseInt(cot.nro);
-                    if (!isNaN(currNro) && currNro > maxNro) maxNro = currNro;
+                    window.cotizacionesDBLocal[docId] = cot;
+                    const currNro = parseInt(String(cot.nro).replace(/\D/g,'')) || 0;
+                    if (currNro > maxNro) maxNro = currNro;
+                    cotizacionesArr.push({ cot, docId });
+                });
+                // Orden descendente por número de cotización (#1841, #1840, #1839...)
+                cotizacionesArr.sort((a,b) => {
+                    const na = parseInt(String(a.cot.nro).replace(/\D/g,'')) || 0;
+                    const nb = parseInt(String(b.cot.nro).replace(/\D/g,'')) || 0;
+                    return nb - na;
+                });
+                cotizacionesArr.forEach(({ cot, docId }) => {
+                    const currNro = parseInt(String(cot.nro).replace(/\D/g,'')) || 0;
+                    if (currNro > maxNro) maxNro = currNro;
                     
                     const tr = document.createElement('tr');
                     const estatus = cot.estatusComercial || 'En espera';
@@ -4628,7 +4746,7 @@ DATOS DEL REPUESTO:
             try {
                 await updateDoc(doc(db, "pedidos", docId), datosActualizados);
                 window.cerrarModalPedido();
-                window.cargarPedidos();
+                window._pedidosTodosCache = null; if(document.getElementById('pedidos-mes-filtro')) document.getElementById('pedidos-mes-filtro').innerHTML = ''; window.cargarPedidos();
             } catch (error) {
                 console.error(error);
                 alert("Error al actualizar la información del pedido.");
@@ -4642,7 +4760,7 @@ DATOS DEL REPUESTO:
             try {
                 await deleteDoc(doc(db, "pedidos", docId));
                 window.cerrarModalPedido();
-                window.cargarPedidos();
+                window._pedidosTodosCache = null; if(document.getElementById('pedidos-mes-filtro')) document.getElementById('pedidos-mes-filtro').innerHTML = ''; window.cargarPedidos();
             } catch (error) {
                 console.error(error);
                 alert("No se pudo eliminar el pedido.");
@@ -4712,7 +4830,7 @@ DATOS DEL REPUESTO:
                     }
                 }
                 alert(`¡Semana liquidada para ${nombreChofer} exitosamente!`);
-                window.cargarPedidos(); // Recargar datos frescos
+                window._pedidosTodosCache = null; if(document.getElementById('pedidos-mes-filtro')) document.getElementById('pedidos-mes-filtro').innerHTML = ''; window.cargarPedidos(); // Recargar datos frescos
                 document.getElementById('modal-liquidar-motorizados').style.display = 'none';
             } catch (error) {
                 console.error(error);
@@ -5092,7 +5210,7 @@ DATOS DEL REPUESTO:
                 }
                 
                 window.cerrarModalPedido();
-                window.cargarPedidos();
+                window._pedidosTodosCache = null; if(document.getElementById('pedidos-mes-filtro')) document.getElementById('pedidos-mes-filtro').innerHTML = ''; window.cargarPedidos();
                 window.cargarDashboard();
             } catch (error) { 
                 console.error(error); 
@@ -5319,12 +5437,19 @@ DATOS DEL REPUESTO:
             const select = document.getElementById('ruta-pedido-asociado');
             if (!select) return;
             const valorPrevio = select.value;
-            select.innerHTML = '<option value="">-- Selecciona un Pedido o Factura --</option>';
+            select.innerHTML = '<option value="">-- Selecciona un Pedido Activo --</option>';
+
+            // Estados que EXCLUIR del selector GPS (ya entregados/completados)
+            const estadosExcluidos = ['Entregado', 'Enviado', 'Completado', 'Cancelado'];
 
             if (window.pedidosDBLocal) {
                 Object.keys(window.pedidosDBLocal).forEach(docId => {
                     const ped = window.pedidosDBLocal[docId];
                     if (ped.cliente === "📍 RUTA MAESTRA MULTIPARADA") return;
+
+                    // Filtro estricto: excluir pedidos ya cerrados
+                    const estadoPed = (ped.estado || 'Pendiente').trim();
+                    if (estadosExcluidos.includes(estadoPed)) return;
 
                     let productosStr = '';
                     if (ped.productos && Array.isArray(ped.productos)) {
@@ -5334,7 +5459,7 @@ DATOS DEL REPUESTO:
                     }
 
                     const rutaAsignada = (ped.trackingMotorizado && ped.motorizado) ? ` (🏍️ ${ped.motorizado})` : '';
-                    const texto = `📦 [Pedido] ${ped.cliente || 'Sin nombre'} ($${Number(ped.total || 0).toFixed(2)}) - ${ped.fecha || ''} [${ped.envio || 'Delivery'}]${rutaAsignada}`;
+                    const texto = `📦 [${estadoPed}] ${ped.cliente || 'Sin nombre'} ($${Number(ped.total || 0).toFixed(2)}) - ${ped.fecha || ''} [${ped.envio || 'Delivery'}]${rutaAsignada}`;
                     const opt = document.createElement('option');
                     opt.value = docId;
                     opt.textContent = texto;
@@ -5516,7 +5641,7 @@ DATOS DEL REPUESTO:
 
                 window.cancelarEdicionRuta(); 
                 window.cargarPuntosRuta(); 
-                if (typeof window.cargarPedidos === 'function') await window.cargarPedidos(); 
+                if (typeof window.cargarPedidos === 'function') await (async () => { window._pedidosTodosCache = null; if(document.getElementById('pedidos-mes-filtro')) document.getElementById('pedidos-mes-filtro').innerHTML = ''; await window.cargarPedidos(); })() 
 
                 const telefonosChoferes = { "Jhon": "584120000000", "Bryan": "584120161036" };
                 const numeroDestino = telefonosChoferes[chofer] || "";
@@ -5580,7 +5705,54 @@ DATOS DEL REPUESTO:
                         }
                     });
 
-                    Object.values(window.rutasAgrupadasLocal).forEach(ruta => {
+                    // ── Filtro mensual de rutas ──
+                    const selectRutasMes = document.getElementById('rutas-mes-filtro');
+                    const ahora = new Date();
+                    const mesActualR = `${ahora.getFullYear()}-${String(ahora.getMonth()+1).padStart(2,'0')}`;
+
+                    // Poblar selector de meses si está vacío
+                    if (selectRutasMes && selectRutasMes.options.length === 0) {
+                        const mesesSetR = new Set();
+                        Object.values(window.rutasAgrupadasLocal).forEach(r => {
+                            if (r.fecha) {
+                                const p = r.fecha.split('/');
+                                if (p.length === 3) mesesSetR.add(`${p[2]}-${p[1].padStart(2,'0')}`);
+                                else { const d = new Date(r.fecha); if(!isNaN(d)) mesesSetR.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`); }
+                            }
+                        });
+                        mesesSetR.add(mesActualR);
+                        const mesesR = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+                        selectRutasMes.innerHTML = '<option value="todos">📚 Ver Archivo Completo</option>';
+                        Array.from(mesesSetR).sort().reverse().forEach(ym => {
+                            const [y,m] = ym.split('-');
+                            const opt = document.createElement('option');
+                            opt.value = ym; opt.textContent = `${mesesR[parseInt(m)-1]} ${y}`;
+                            if (ym === mesActualR) opt.selected = true;
+                            selectRutasMes.appendChild(opt);
+                        });
+                    }
+                    const filtroRutasMes = selectRutasMes ? selectRutasMes.value : 'todos';
+
+                    // Filtrar rutas por mes seleccionado
+                    let rutasFiltradas = Object.values(window.rutasAgrupadasLocal);
+                    if (filtroRutasMes !== 'todos') {
+                        rutasFiltradas = rutasFiltradas.filter(r => {
+                            if (!r.fecha) return false;
+                            const p = r.fecha.split('/');
+                            const ym = p.length === 3 ? `${p[2]}-${p[1].padStart(2,'0')}` : '';
+                            return ym === filtroRutasMes;
+                        });
+                    }
+
+                    const contadorR = document.getElementById('rutas-contador');
+                    if (contadorR) contadorR.textContent = `(${rutasFiltradas.length} ruta${rutasFiltradas.length !== 1?'s':''})`;
+                    if (rutasFiltradas.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No hay rutas en este período.</td></tr>';
+                        if(btnActualizar) btnActualizar.innerHTML = '<i class="fas fa-sync-alt"></i> Actualizar';
+                        return;
+                    }
+
+                    rutasFiltradas.forEach(ruta => {
                         ruta.puntos.sort((a,b) => (a.orden || 0) - (b.orden || 0));
                         
                         const colorChofer = window.coloresMotorizados[ruta.chofer] || "#333";
@@ -5728,7 +5900,7 @@ DATOS DEL REPUESTO:
                 try { await deleteDoc(doc(db, "rutas_puntos", rutaId)); } catch(e){}
 
                 window.cargarPuntosRuta(); 
-                if (typeof window.cargarPedidos === 'function') await window.cargarPedidos(); 
+                if (typeof window.cargarPedidos === 'function') await (async () => { window._pedidosTodosCache = null; if(document.getElementById('pedidos-mes-filtro')) document.getElementById('pedidos-mes-filtro').innerHTML = ''; await window.cargarPedidos(); })() 
             } catch(e) { console.error(e); alert("Error borrando la ruta."); }
         };
 
@@ -6388,5 +6560,85 @@ DATOS DEL REPUESTO:
         };
 
     
+
+
+        // =====================================================
+        // 🔁 SISTEMA DE CAMBIOS Y DEVOLUCIONES
+        // =====================================================
+
+        window.abrirModalCambioDev = function(docId) {
+            const ped = window.pedidosDBLocal[docId];
+            if (!ped) return alert('No se encontró el pedido.');
+            document.getElementById('cambio-pedido-original-id').value = docId;
+            document.getElementById('cambio-cliente').value = ped.cliente || '';
+            document.getElementById('cambio-direccion').value = ped.direccion || ped.municipio || '';
+            document.getElementById('cambio-envio').value = ped.envio || 'Motorizado';
+            document.getElementById('cambio-motivo').value = '';
+            const numOrden = Object.keys(window.pedidosDBLocal).indexOf(docId) + 1;
+            document.getElementById('cambio-etiqueta').value = 'CAMBIO - Orden #' + numOrden;
+            const container = document.getElementById('cambio-productos-container');
+            container.innerHTML = '';
+            const prods = Array.isArray(ped.productos) ? ped.productos
+                : [{ nombre: ped.producto || '', cantidad: ped.cantidad || 1, precio: ped.total || 0 }];
+            prods.forEach(p => window.agregarFilaCambioProducto(p.nombre, p.cantidad, p.precio));
+            document.getElementById('modal-cambio-dev').style.display = 'flex';
+        };
+
+        window._cambioRowCount = 0;
+        window.agregarFilaCambioProducto = function(nombre, cantidad, precio) {
+            nombre = nombre || ''; cantidad = cantidad || 1; precio = precio || 0;
+            const container = document.getElementById('cambio-productos-container');
+            const rowId = 'cambio-row-' + (++window._cambioRowCount);
+            const div = document.createElement('div');
+            div.id = rowId;
+            div.style = 'display:flex; gap:6px; align-items:center; margin-bottom:6px;';
+            div.innerHTML = '<input type="text" placeholder="Nombre del producto" value="' + nombre + '" style="flex:3; padding:6px; border:1px solid #ccc; border-radius:4px; font-size:12px;" class="cambio-prod-nombre">'
+                + '<input type="number" placeholder="Cant" value="' + cantidad + '" min="1" style="flex:1; padding:6px; border:1px solid #ccc; border-radius:4px; font-size:12px;" class="cambio-prod-cant">'
+                + '<input type="number" placeholder="Precio $" value="' + precio + '" min="0" step="0.01" style="flex:1; padding:6px; border:1px solid #ccc; border-radius:4px; font-size:12px;" class="cambio-prod-precio">'
+                + '<button type="button" onclick="document.getElementById(\'' + rowId + '\').remove()" style="background:#c0392b; color:#fff; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;">✕</button>';
+            container.appendChild(div);
+        };
+
+        window.guardarCambioDev = async function() {
+            const originalId = document.getElementById('cambio-pedido-original-id').value;
+            const pedOriginal = window.pedidosDBLocal[originalId] || {};
+            const etiqueta = document.getElementById('cambio-etiqueta').value.trim();
+            const cliente = document.getElementById('cambio-cliente').value.trim();
+            const direccion = document.getElementById('cambio-direccion').value.trim();
+            const envio = document.getElementById('cambio-envio').value.trim();
+            const motivo = document.getElementById('cambio-motivo').value.trim();
+            if (!etiqueta || !cliente) { alert('Por favor, completa la etiqueta y el cliente.'); return; }
+            const filas = document.querySelectorAll('#cambio-productos-container > div');
+            const productos = [];
+            let total = 0;
+            filas.forEach(fila => {
+                const nombre = fila.querySelector('.cambio-prod-nombre') ? fila.querySelector('.cambio-prod-nombre').value.trim() : '';
+                const cant = parseFloat(fila.querySelector('.cambio-prod-cant') ? fila.querySelector('.cambio-prod-cant').value : 1) || 1;
+                const prec = parseFloat(fila.querySelector('.cambio-prod-precio') ? fila.querySelector('.cambio-prod-precio').value : 0) || 0;
+                if (nombre) { productos.push({ nombre, cantidad: cant, precio: prec }); total += cant * prec; }
+            });
+            const hoy = new Date();
+            const fechaStr = String(hoy.getDate()).padStart(2,'0') + '/' + String(hoy.getMonth()+1).padStart(2,'0') + '/' + hoy.getFullYear();
+            const nuevoPedido = {
+                cliente, email: pedOriginal.email || '', telefono: pedOriginal.telefono || '',
+                direccion, municipio: pedOriginal.municipio || '', envio, productos, total,
+                estado: 'Pendiente', fecha: fechaStr, esCambio: true, etiquetaCambio: etiqueta,
+                pedidoOriginalId: originalId, motivo,
+                moneda: pedOriginal.moneda || 'USD', tasaBCV: pedOriginal.tasaBCV || 0,
+            };
+            try {
+                await addDoc(collection(db, "pedidos"), nuevoPedido);
+                document.getElementById('modal-cambio-dev').style.display = 'none';
+                window._pedidosTodosCache = null;
+                const sel = document.getElementById('pedidos-mes-filtro');
+                if (sel) sel.innerHTML = '';
+                window.cargarPedidos();
+                alert('Cambio/Devolución registrado correctamente con la etiqueta: ' + etiqueta);
+            } catch(err) {
+                console.error('Error guardando cambio:', err);
+                alert('Error al guardar: ' + err.message);
+            }
+        };
+
 window.moduleLoaded = true;
 console.log('Modulo admin_logic cargado exitosamente.');
