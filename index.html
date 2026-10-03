@@ -18,7 +18,8 @@
 
     <!-- 4. Librerías diferidas (Cargan de fondo sin congelar la pantalla) -->
 
-    <script defer src="https://js.puter.com/v2/"></script>
+    
+        <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preload" href="styles.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="styles.css"></noscript>
 
@@ -83,11 +84,11 @@
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" media="print" onload="this.media='all'" />
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" /></noscript>
+        <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preload" href="styles.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="styles.css"></noscript>
 
-    <!-- 🚀 LIBRERÍA PUTER.JS (EL CEREBRO DEL MECÁNICO) -->
-    <script defer src="https://js.puter.com/v2/"></script>
+    
 
     <style>
         .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: stretch; }
@@ -150,9 +151,6 @@
             .category-card:last-child:nth-child(odd) { grid-column: 1 / -1; }
         }
 </style>
-    <!-- Vercel Analytics & Speed Insights -->
-    <script defer src="/_vercel/insights/script.js"></script>
-    <script defer src="/_vercel/speed-insights/script.js"></script>
 </head>
 <body>
 
@@ -802,79 +800,7 @@
     </script>
     <!-- ========================================== -->
 
-    <!-- Script de Firebase, Destacados y Carrusel -->
-    <script type="module" defer>
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, getDocs, query, where, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
-            authDomain: "fb-parts-app.firebaseapp.com",
-            projectId: "fb-parts-app",
-            storageBucket: "fb-parts-app.firebasestorage.app",
-            messagingSenderId: "21714159445",
-            appId: "1:21714159445:web:8f4946cd1c98d9b95dd1dc"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        onAuthStateChanged(auth, (user) => {
-            const navBtn = document.getElementById('nav-cuenta-btn');
-            if (user) {
-                navBtn.href = "mi-cuenta.html";
-                navBtn.innerHTML = `<i class="fas fa-user-check"></i> Mi Cuenta`;
-            } else {
-                navBtn.href = "login.html";
-                navBtn.innerHTML = `<i class="fas fa-user"></i> Iniciar Sesión`;
-            }
-        });
-
-        async function cargarDestacados() {
-            const grid = document.getElementById('destacados-grid');
-            if(!grid) return;
-            try {
-                const q = query(collection(db, "productos"), where("estado", "==", "activo"), limit(8));
-                const snap = await getDocs(q);
-
-                if(snap.empty) {
-                    grid.innerHTML = '<p style="text-align:center; color:#666; grid-column: 1/-1;">Inventario en actualización...</p>';
-                    return;
-                }
-
-                grid.innerHTML = '';
-
-                snap.forEach(docSnap => {
-                    const prod = docSnap.data();
-                    const slug = prod.nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '-').replace(/(^-|-$)/g, '');
-                    const productUrl = `producto.html?id=${docSnap.id}&pieza=${slug}`;
-
-                    grid.innerHTML += `
-                    <div style="background: white; border: 1px solid #eee; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,.05); display: flex; flex-direction: column; transition: transform 0.2s;">
-                        <a href="${productUrl}" style="text-decoration: none; color: inherit; display: contents;">
-                            <div style="width: 100%; height: 180px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                                <img src="${prod.imagen}" alt="Repuesto ${prod.nombre} en Caracas" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: contain;">
-                            </div>
-                            <div style="padding: 12px; display: flex; flex-direction: column; flex: 1;">
-                                <h4 style="font-size: 13px; color: #333; margin: 0 0 8px 0; font-weight: bold; flex: 1; line-height: 1.3;">${prod.nombre}</h4>
-                        </a>
-                                <div style="font-size: 18px; color: #5e8877; font-weight: bold; font-family: 'Oswald', sans-serif; margin-bottom: 10px;">$${Number(prod.precio).toFixed(2)}</div>
-                                <div style="margin-top: auto;">
-                                    <button type="button" onclick="window.location.href='${productUrl}'" style="background: #5e8877; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; font-size: 13px; transition: 0.2s;"><i class="fas fa-eye"></i> Ver Detalles</button>
-                                </div>
-                            </div>
-                    </div>`;
-                });
-            } catch(e) {
-                console.error("Error cargando destacados:", e);
-                grid.innerHTML = '<p style="text-align:center; color:red; grid-column: 1/-1;">Error de conexión.</p>';
-            }
-        }
-
-        window.addEventListener('DOMContentLoaded', cargarDestacados);
-    </script>
+    
 
     <!-- Script del Carrusel Principal -->
     <script>
@@ -950,7 +876,85 @@
         }
     </script>
 
-    <!-- Tailwind (Deferred for Performance) -->
-    <script defer src="https://cdn.tailwindcss.com"></script>
+    <!-- ========================================== -->
+    <!-- SCRIPTS DIFERIDOS (Rendimiento y Lógica) -->
+    <!-- Script de Firebase, Destacados y Carrusel -->
+    <script type="module" defer>
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, getDocs, query, where, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC9bOFYHL68yoksRU9G2dwLSxCfMrSW-ew",
+            authDomain: "fb-parts-app.firebaseapp.com",
+            projectId: "fb-parts-app",
+            storageBucket: "fb-parts-app.firebasestorage.app",
+            messagingSenderId: "21714159445",
+            appId: "1:21714159445:web:8f4946cd1c98d9b95dd1dc"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        onAuthStateChanged(auth, (user) => {
+            const navBtn = document.getElementById('nav-cuenta-btn');
+            if (user) {
+                navBtn.href = "mi-cuenta.html";
+                navBtn.innerHTML = `<i class="fas fa-user-check"></i> Mi Cuenta`;
+            } else {
+                navBtn.href = "login.html";
+                navBtn.innerHTML = `<i class="fas fa-user"></i> Iniciar Sesión`;
+            }
+        });
+
+        async function cargarDestacados() {
+            const grid = document.getElementById('destacados-grid');
+            if(!grid) return;
+            try {
+                const q = query(collection(db, "productos"), where("estado", "==", "activo"), limit(8));
+                const snap = await getDocs(q);
+
+                if(snap.empty) {
+                    grid.innerHTML = '<p style="text-align:center; color:#666; grid-column: 1/-1;">Inventario en actualización...</p>';
+                    return;
+                }
+
+                grid.innerHTML = '';
+
+                snap.forEach(docSnap => {
+                    const prod = docSnap.data();
+                    const slug = prod.nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '-').replace(/(^-|-$)/g, '');
+                    const productUrl = `producto.html?id=${docSnap.id}&pieza=${slug}`;
+
+                    grid.innerHTML += `
+                    <div style="background: white; border: 1px solid #eee; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,.05); display: flex; flex-direction: column; transition: transform 0.2s;">
+                        <a href="${productUrl}" style="text-decoration: none; color: inherit; display: contents;">
+                            <div style="width: 100%; height: 180px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                                <img src="${prod.imagen}" alt="Repuesto ${prod.nombre} en Caracas" loading="lazy" decoding="async" style="width: 100%; height: 100%; object-fit: contain;">
+                            </div>
+                            <div style="padding: 12px; display: flex; flex-direction: column; flex: 1;">
+                                <h4 style="font-size: 13px; color: #333; margin: 0 0 8px 0; font-weight: bold; flex: 1; line-height: 1.3;">${prod.nombre}</h4>
+                        </a>
+                                <div style="font-size: 18px; color: #5e8877; font-weight: bold; font-family: 'Oswald', sans-serif; margin-bottom: 10px;">$${Number(prod.precio).toFixed(2)}</div>
+                                <div style="margin-top: auto;">
+                                    <button type="button" onclick="window.location.href='${productUrl}'" style="background: #5e8877; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; font-size: 13px; transition: 0.2s;"><i class="fas fa-eye"></i> Ver Detalles</button>
+                                </div>
+                            </div>
+                    </div>`;
+                });
+            } catch(e) {
+                console.error("Error cargando destacados:", e);
+                grid.innerHTML = '<p style="text-align:center; color:red; grid-column: 1/-1;">Error de conexión.</p>';
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', cargarDestacados);
+    </script>
+    
+    <!-- Librerías de Terceros (Diferidas) -->
+    <script defer src="https://js.puter.com/v2/"></script>
+    <script defer src="/_vercel/insights/script.js"></script>
+    <script defer src="/_vercel/speed-insights/script.js"></script>
 </body>
 </html>
