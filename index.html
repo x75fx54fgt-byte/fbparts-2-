@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 
     <!-- 2. Precarga forzada de la imagen de portada (Soluciona el LCP) -->
-    <link rel="preload" as="image" href="img/fotoportada.png" fetchpriority="high">
+    <link rel="preload" as="image" href="img/fotoportada.webp" fetchpriority="high">
 
     <!-- 3. Carga asíncrona de Iconos (Evita el bloqueo de renderizado) -->
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -75,8 +75,8 @@
     }
     </script>
 
-    <link rel="icon" type="image/png" href="img/favicon.png">
-    <link rel="preload" as="image" href="img/fotoportada.png" fetchpriority="high">
+    <link rel="icon" type="image/webp" href="img/favicon.webp">
+    <link rel="preload" as="image" href="img/fotoportada.webp" fetchpriority="high">
 
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"></noscript>
@@ -197,7 +197,7 @@
         <div class="hero-carousel" id="heroCarousel">
             <div class="hero-track">
                 <div class="hero-slide active" role="img" aria-label="Almacén de repuestos automotrices originales en Caracas">
-                    <img src="img/fotoportada.png" fetchpriority="high" loading="eager" alt="Repuestos originales en Caracas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;">
+                    <img src="img/fotoportada.webp" fetchpriority="high" loading="eager" alt="Repuestos originales en Caracas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;">
                     <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.32); z-index: 1;"></div>
                     <div class="hero-overlay" style="position: relative; z-index: 2;">
                         <h1 style="margin: 0 0 10px 0; color: var(--title); font-size: 24px; font-weight: 700; letter-spacing: .08em; line-height: 1.1; font-family: 'Oswald', sans-serif;">
@@ -210,7 +210,7 @@
                     </div>
                 </div>
 
-                <div class="hero-slide" style="background-image: linear-gradient(rgba(0,0,0,.32), rgba(0,0,0,.32)), url('img/fotoportada2.png');" role="img" aria-label="Servicio de delivery rápido de repuestos de carros">
+                <div class="hero-slide" style="background-image: linear-gradient(rgba(0,0,0,.32), rgba(0,0,0,.32)), url('img/fotoportada2.webp');" role="img" aria-label="Servicio de delivery rápido de repuestos de carros">
                     <div class="hero-overlay">
                         <h3>ENVÍO RÁPIDO Y SEGURO</h3>
                         <div class="sub">ATENCIÓN Y DESPACHO EFICIENTE A TODA VENEZUELA</div>
@@ -218,7 +218,7 @@
                     </div>
                 </div>
 
-                <div class="hero-slide" style="background-image: linear-gradient(rgba(0,0,0,.32), rgba(0,0,0,.32)), url('img/fotoportada3.png');" role="img" aria-label="Variedad de partes de motor y frenos">
+                <div class="hero-slide" style="background-image: linear-gradient(rgba(0,0,0,.32), rgba(0,0,0,.32)), url('img/fotoportada3.webp');" role="img" aria-label="Variedad de partes de motor y frenos">
                     <div class="hero-overlay">
                         <h3>VARIEDAD DE REPUESTOS</h3>
                         <div class="sub">MOTOR, FRENOS, CARROCERÍA Y MÁS</div>
@@ -316,39 +316,39 @@
             <h2 class="section-title" style="text-align: center;">CATEGORÍAS DE REPUESTOS</h2>
             <div class="category-grid">
                 <a class="category-card" href="tienda.html?cat=frenos">
-                    <div class="category-img-wrap"><img src="img/freno.jpg" alt="Venta de repuestos para sistema de frenos automotrices" loading="lazy" width="440" height="430"></div>
+                    <div class="category-img-wrap"><img src="img/freno.webp" alt="Venta de repuestos para sistema de frenos automotrices" loading="lazy" width="440" height="430"></div>
                     <span>SISTEMA DE FRENO</span>
                 </a>
                 <a class="category-card" href="tienda.html?cat=bombas">
-                    <div class="category-img-wrap"><img src="img/bomba-gasolina.jpg" alt="Bombas de gasolina para vehículos en Caracas" loading="lazy" width="440" height="430"></div>
+                    <div class="category-img-wrap"><img src="img/bomba-gasolina.webp" alt="Bombas de gasolina para vehículos en Caracas" loading="lazy" width="440" height="430"></div>
                     <span>BOMBAS DE GASOLINA</span>
                 </a>
                 <a class="category-card" href="tienda.html?cat=filtros">
-                    <div class="category-img-wrap"><img src="img/filtro-aire.jpg" alt="Filtros de aire para todo tipo de carros" loading="lazy" width="440" height="430"></div>
+                    <div class="category-img-wrap"><img src="img/filtro-aire.webp" alt="Filtros de aire para todo tipo de carros" loading="lazy" width="440" height="430"></div>
                     <span>FILTROS DE AIRES</span>
                 </a>
                 <a class="category-card" href="tienda.html?cat=faros">
-                    <div class="category-img-wrap"><img src="img/faros.jpg" alt="Faros, micas e iluminación automotriz" loading="lazy" width="440" height="430"></div>
+                    <div class="category-img-wrap"><img src="img/faros.webp" alt="Faros, micas e iluminación automotriz" loading="lazy" width="440" height="430"></div>
                     <span>FAROS Y MICAS</span>
                 </a>
                 <a class="category-card" href="tienda.html?cat=bombas">
-                    <div class="category-img-wrap"><img src="img/bomba-agua.jpg" alt="Bombas de agua y sistema de enfriamiento" loading="lazy" width="440" height="430"></div>
+                    <div class="category-img-wrap"><img src="img/bomba-agua.webp" alt="Bombas de agua y sistema de enfriamiento" loading="lazy" width="440" height="430"></div>
                     <span>BOMBAS DE AGUA</span>
                 </a>
                 <a class="category-card" href="tienda.html?cat=todos">
-                    <div class="category-img-wrap"><img src="img/bomba-aceite.jpg" alt="Bombas de aceite para motor" loading="lazy" width="440" height="430"></div>
+                    <div class="category-img-wrap"><img src="img/bomba-aceite.webp" alt="Bombas de aceite para motor" loading="lazy" width="440" height="430"></div>
                     <span>BOMBAS DE ACEITE</span>
                 </a>
                 <a class="category-card" href="tienda.html?cat=todos">
-                    <div class="category-img-wrap"><img src="img/multiple-admision.jpg" alt="Múltiple de admisión de motor" loading="lazy" width="440" height="430"></div>
+                    <div class="category-img-wrap"><img src="img/multiple-admision.webp" alt="Múltiple de admisión de motor" loading="lazy" width="440" height="430"></div>
                     <span>MULTIPLE ADMISION</span>
                 </a>
                 <a class="category-card" href="tienda.html?cat=todos">
-                    <div class="category-img-wrap"><img src="img/carroceria.jpg" alt="Repuestos de carrocería, parachoques y latonería" loading="lazy" width="440" height="430"></div>
+                    <div class="category-img-wrap"><img src="img/carroceria.webp" alt="Repuestos de carrocería, parachoques y latonería" loading="lazy" width="440" height="430"></div>
                     <span>CARROCERIA</span>
                 </a>
                 <a class="category-card" href="tienda.html?cat=todos">
-                    <div class="category-img-wrap"><img src="img/otras-categorias.jpg" alt="Catálogo completo de repuestos de automóviles" loading="lazy" width="1024" height="672"></div>
+                    <div class="category-img-wrap"><img src="img/otras-categorias.webp" alt="Catálogo completo de repuestos de automóviles" loading="lazy" width="1024" height="672"></div>
                     <span>OTRAS CATEGORIAS</span>
                 </a>
             </div>
