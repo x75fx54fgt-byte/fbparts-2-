@@ -3049,18 +3049,34 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                     const cot = docSnap.data();
                     const docId = docSnap.id;
                     window.cotizacionesDBLocal[docId] = cot;
-                    const currNro = parseInt(String(cot.nro).replace(/\D/g,'')) || 0;
+                    const partes = String(cot.nro || cot.nroCotizacion || '').replace('#', '').trim().split('-');
+                    const currNro = parseInt(partes[0]) || 0;
                     if (currNro > maxNro) maxNro = currNro;
                     cotizacionesArr.push({ cot, docId });
                 });
-                // Orden descendente por número de cotización (#1841, #1840, #1839...)
-                cotizacionesArr.sort((a,b) => {
-                    const na = parseInt(String(a.cot.nro).replace(/\D/g,'')) || 0;
-                    const nb = parseInt(String(b.cot.nro).replace(/\D/g,'')) || 0;
-                    return nb - na;
+                // Orden descendente por número de cotización (#1852, #1834-2, #1834-1, #1834...)
+                cotizacionesArr.sort((a, b) => {
+                    const numA_str = String(a.cot?.nro || a.cot?.nroCotizacion || a.cot?.id || a.docId || '').replace('#', '').trim();
+                    const numB_str = String(b.cot?.nro || b.cot?.nroCotizacion || b.cot?.id || b.docId || '').replace('#', '').trim();
+
+                    const partesA = numA_str.split('-');
+                    const partesB = numB_str.split('-');
+
+                    const baseA = parseInt(partesA[0]) || 0;
+                    const baseB = parseInt(partesB[0]) || 0;
+
+                    if (baseB !== baseA) {
+                        return baseB - baseA; 
+                    }
+
+                    const subA = parseInt(partesA[1]) || 0; 
+                    const subB = parseInt(partesB[1]) || 0;
+
+                    return subB - subA; 
                 });
                 cotizacionesArr.forEach(({ cot, docId }) => {
-                    const currNro = parseInt(String(cot.nro).replace(/\D/g,'')) || 0;
+                    const partes = String(cot.nro || cot.nroCotizacion || '').replace('#', '').trim().split('-');
+                    const currNro = parseInt(partes[0]) || 0;
                     if (currNro > maxNro) maxNro = currNro;
                     
                     const tr = document.createElement('tr');
