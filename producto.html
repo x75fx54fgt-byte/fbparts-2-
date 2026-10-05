@@ -482,14 +482,22 @@
                 
                 document.getElementById('breadcrumb-current').textContent = prod.nombre;
 
-                const tituloSEO = `${prod.nombre} | F&B Parts Caracas`;
-                const descripcionSEO = `Compra ${prod.nombre} original en Caracas. Precio: $${Number(prod.precio).toFixed(2)}. Envíos a toda Venezuela.`;
+                // 🚀 INYECCIÓN DINÁMICA DE SEO PARA GOOGLE Y REDES SOCIALES
+                // Actualizar el Título de la página
+                document.title = `${prod.nombre} - F&B Parts`;
 
-                // 🚀 INYECCIÓN DINÁMICA DE SEO PARA GOOGLE Y WHATSAPP
-                document.title = tituloSEO;
-                if(document.getElementById('meta-desc')) document.getElementById('meta-desc').setAttribute("content", descripcionSEO);
-                if(document.getElementById('og-title')) document.getElementById('og-title').setAttribute("content", tituloSEO);
-                if(document.getElementById('og-desc')) document.getElementById('og-desc').setAttribute("content", descripcionSEO);
+                // Actualizar o crear la Meta Descripción
+                let metaDescription = document.querySelector('meta[name="description"]');
+                if (!metaDescription) {
+                    metaDescription = document.createElement('meta');
+                    metaDescription.name = "description";
+                    document.head.appendChild(metaDescription);
+                }
+                const marcaAuto = prod.marca || 'tu vehículo';
+                metaDescription.content = `Compra ${prod.nombre} para ${marcaAuto}. Repuestos originales en Caracas con delivery gratis. Disponible en F&B Parts.`;
+
+                if(document.getElementById('og-title')) document.getElementById('og-title').setAttribute("content", document.title);
+                if(document.getElementById('og-desc')) document.getElementById('og-desc').setAttribute("content", metaDescription.content);
                 if(document.getElementById('og-image')) document.getElementById('og-image').setAttribute("content", prod.imagen);
                 if(document.getElementById('og-url')) document.getElementById('og-url').setAttribute("content", window.location.href);
 
