@@ -472,8 +472,13 @@
                 
                 snap.forEach(docSnap => {
                     const prod = docSnap.data();
-                    const slug = prod.nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '-').replace(/(^-|-$)/g, '');
-                    const productUrl = `producto.html?id=${docSnap.id}&pieza=${slug}`;
+                    const slug = (prod.nombre || 'repuesto')
+                        .toLowerCase()
+                        .normalize("NFD")
+                        .replace(/[\u0300-\u036f]/g, "")
+                        .replace(/[^a-z0-9]+/g, '-')
+                        .replace(/^-+|-+$/g, '');
+                    const productUrl = `${slug}.html`;
 
                     grid.innerHTML += `
                     <div style="background: white; border: 1px solid #eee; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,.05); display: flex; flex-direction: column; transition: transform 0.2s;">

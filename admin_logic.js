@@ -3281,8 +3281,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                         // 🚀 CREAR "SLUG" AMIGABLE (Ej: Bomba de Agua -> bomba-de-agua)
                         const slug = (data.nombre || 'repuesto').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '-').replace(/(^-|-$)/g, '').replace(/-+/g, '-');
                         
-                        // NOTA: En XML, el símbolo "&" debe escribirse como "&amp;" obligatoriamente
-                        xml += `  <url>\n    <loc>${baseUrl}producto.html?id=${docSnap.id}&amp;pieza=${slug}</loc>\n    <lastmod>${fechaHoy}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+                        xml += `  <url>\n    <loc>${baseUrl}${slug}.html</loc>\n    <lastmod>${fechaHoy}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
                     }
                 });
                 xml += '</urlset>';

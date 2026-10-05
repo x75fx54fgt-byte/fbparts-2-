@@ -623,8 +623,13 @@
                 const nombreCat = mapaCategorias[prod.categoria] || 'General';
                 const safeName = prod.nombre.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                 
-                const slug = prod.nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '-').replace(/(^-|-$)/g, '');
-                const urlProducto = `producto.html?id=${prod.id}&pieza=${slug}`;
+                const slug = (prod.nombre || 'repuesto')
+                    .toLowerCase()
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "")
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/^-+|-+$/g, '');
+                const urlProducto = `${slug}.html`;
 
                 let botonML = "";
                 if(prod.ml_id && prod.ml_id.trim() !== "") {

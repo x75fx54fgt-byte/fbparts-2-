@@ -5,7 +5,8 @@
   "main": "cobranza-bot.js",
   "scripts": {
     "start": "node cobranza-bot.js",
-    "test-run": "node cobranza-bot.js --run-now"
+    "test-run": "node cobranza-bot.js --run-now",
+    "build:seo": "node generar.mjs"
   },
   "keywords": [
     "firebase",
@@ -19,9 +20,19 @@
   "dependencies": {
     "acorn": "^8.15.0",
     "dotenv": "^16.4.5",
+    "firebase": "^12.19.0",
     "firebase-admin": "^12.1.0",
     "jsdom": "^29.1.1",
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.13"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/x75fx54fgt-byte/fbparts-2-.git"
+  },
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/x75fx54fgt-byte/fbparts-2-/issues"
+  },
+  "homepage": "https://github.com/x75fx54fgt-byte/fbparts-2-#readme"
 }
