@@ -200,52 +200,81 @@
 </head>
 <body style="background-color: #f8f8f8; display: flex; flex-direction: column; height: 100vh; overflow: hidden;">
 
-    <!-- 📈 TICKER DE TASAS DE CAMBIO (VENEZUELA BCV & BINANCE) -->
+    <!-- 📈 TICKER DE TASAS DE CAMBIO (VENEZUELA BCV & BINANCE - SEAMLESS INFINITE MARQUEE) -->
     <div id="ticker-tasas-container" class="w-full bg-gray-900 text-green-400 text-xs sm:text-sm py-1.5 font-mono overflow-hidden whitespace-nowrap z-40 border-b border-gray-800 shrink-0 relative flex items-center shadow-sm select-none">
         <style>
-            @keyframes marqueeAnim {
-                0% { transform: translateX(100vw); }
-                100% { transform: translateX(-100%); }
+            @keyframes marqueeSeamless {
+                0% { transform: translateX(0); }
+                100% { transform: translateX(-50%); }
             }
-            .ticker-marquee-track {
-                display: inline-flex;
-                align-items: center;
-                gap: 2rem;
+            .ticker-marquee-wrapper {
+                display: flex;
+                width: max-content;
                 white-space: nowrap;
                 will-change: transform;
-                animation: marqueeAnim 30s linear infinite;
+                animation: marqueeSeamless 35s linear infinite;
             }
-            #ticker-tasas-container:hover .ticker-marquee-track {
+            #ticker-tasas-container:hover .ticker-marquee-wrapper {
                 animation-play-state: paused;
             }
         </style>
-        <div class="ticker-marquee-track">
-            <span class="text-gray-300 font-bold tracking-wider">
-                <i class="fas fa-chart-line text-green-400 mr-1"></i> MERCADO CAMBIARIO VENEZUELA:
-            </span>
-            <span class="inline-flex items-center gap-1">
-                <span class="text-gray-400">💵 Dólar BCV:</span>
-                <span id="ticker-usd" class="font-bold text-white tracking-wide">Cargando...</span>
-            </span>
-            <span class="inline-flex items-center gap-1">
-                <span class="text-gray-400">💶 Euro BCV:</span>
-                <span id="ticker-eur" class="font-bold text-white tracking-wide">Cargando...</span>
-            </span>
-            <span class="inline-flex items-center gap-1">
-                <span class="text-yellow-400">🪙 Binance USDT:</span>
-                <span id="ticker-usdt" class="font-bold text-yellow-300 tracking-wide">Cargando...</span>
-            </span>
-            <span class="inline-flex items-center gap-1">
-                <span class="text-gray-400">📊 Brecha USD:</span>
-                <span id="ticker-brecha-usd" class="font-bold text-orange-400">--</span>
-            </span>
-            <span class="inline-flex items-center gap-1">
-                <span class="text-gray-400">📊 Brecha EUR:</span>
-                <span id="ticker-brecha-eur" class="font-bold text-blue-400">--</span>
-            </span>
-            <span class="text-gray-500 text-xs">
-                • <i class="fas fa-sync-alt fa-spin text-gray-500 mr-1"></i> Auto-actualiza cada 15 min
-            </span>
+        <div id="ticker-wrapper" class="ticker-marquee-wrapper">
+            <div class="flex-shrink-0 flex items-center gap-6 px-6">
+                <span class="text-gray-300 font-bold tracking-wider inline-flex items-center gap-1.5">
+                    <i class="fas fa-chart-line text-green-400"></i> MERCADO CAMBIARIO VENEZUELA:
+                </span>
+                <span class="inline-flex items-center gap-1">
+                    <span class="text-gray-400">💵 Dólar BCV:</span>
+                    <span id="ticker-usd" class="font-bold text-white tracking-wide">Cargando...</span>
+                </span>
+                <span class="inline-flex items-center gap-1">
+                    <span class="text-gray-400">💶 Euro BCV:</span>
+                    <span id="ticker-eur" class="font-bold text-white tracking-wide">Cargando...</span>
+                </span>
+                <span class="inline-flex items-center gap-1">
+                    <span class="text-yellow-400">🪙 Binance USDT:</span>
+                    <span id="ticker-usdt" class="font-bold text-yellow-300 tracking-wide">Cargando...</span>
+                </span>
+                <span class="inline-flex items-center gap-1">
+                    <span class="text-gray-400">📊 Brecha USD:</span>
+                    <span id="ticker-brecha-usd" class="font-bold text-orange-400">--</span>
+                </span>
+                <span class="inline-flex items-center gap-1">
+                    <span class="text-gray-400">📊 Brecha EUR:</span>
+                    <span id="ticker-brecha-eur" class="font-bold text-blue-400">--</span>
+                </span>
+                <span class="text-gray-500 text-xs inline-flex items-center">
+                    • <i class="fas fa-sync-alt fa-spin text-gray-500 mr-1 ml-1"></i> Auto-actualiza cada 15 min
+                </span>
+            </div>
+            <div class="flex-shrink-0 flex items-center gap-6 px-6">
+                <span class="text-gray-300 font-bold tracking-wider inline-flex items-center gap-1.5">
+                    <i class="fas fa-chart-line text-green-400"></i> MERCADO CAMBIARIO VENEZUELA:
+                </span>
+                <span class="inline-flex items-center gap-1">
+                    <span class="text-gray-400">💵 Dólar BCV:</span>
+                    <span class="font-bold text-white tracking-wide">Cargando...</span>
+                </span>
+                <span class="inline-flex items-center gap-1">
+                    <span class="text-gray-400">💶 Euro BCV:</span>
+                    <span class="font-bold text-white tracking-wide">Cargando...</span>
+                </span>
+                <span class="inline-flex items-center gap-1">
+                    <span class="text-yellow-400">🪙 Binance USDT:</span>
+                    <span class="font-bold text-yellow-300 tracking-wide">Cargando...</span>
+                </span>
+                <span class="inline-flex items-center gap-1">
+                    <span class="text-gray-400">📊 Brecha USD:</span>
+                    <span class="font-bold text-orange-400">--</span>
+                </span>
+                <span class="inline-flex items-center gap-1">
+                    <span class="text-gray-400">📊 Brecha EUR:</span>
+                    <span class="font-bold text-blue-400">--</span>
+                </span>
+                <span class="text-gray-500 text-xs inline-flex items-center">
+                    • <i class="fas fa-sync-alt fa-spin text-gray-500 mr-1 ml-1"></i> Auto-actualiza cada 15 min
+                </span>
+            </div>
         </div>
     </div>
 
@@ -1568,6 +1597,23 @@
                                     <option value="Pagado">Sí, pagado</option>
                                     <option value="Por Pagar">No (Pagar allá)</option>
                                 </select>
+                                <!-- 🧾 Subida de Comprobante de Pago (Condicional) -->
+                                <div id="contenedor-comprobante" class="mt-1.5 transition-all">
+                                    <input type="file" id="archivoComprobante" accept="image/*,application/pdf" class="hidden">
+                                    <label for="archivoComprobante" class="flex items-center justify-center gap-1.5 px-2 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] font-medium rounded border border-dashed border-blue-300 cursor-pointer text-center transition" title="Adjuntar imagen o PDF del comprobante de pago">
+                                        <i class="fas fa-file-invoice-dollar text-blue-600"></i>
+                                        <span id="label-comprobante-texto">Subir Comprobante</span>
+                                    </label>
+                                    <div id="preview-archivo-comprobante" style="display: none;" class="mt-1 flex items-center justify-between text-[10px] text-gray-600 bg-gray-100 rounded px-1.5 py-0.5 border border-gray-200">
+                                        <span id="nombre-archivo-comprobante" class="truncate max-w-[90px] font-mono"></span>
+                                        <button type="button" onclick="limpiarArchivoComprobante()" class="text-red-500 hover:text-red-700 ml-1" title="Quitar archivo">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                    <div id="spinner-subiendo-comprobante" style="display: none;" class="text-[10px] text-blue-600 font-semibold mt-1">
+                                        <i class="fas fa-spinner fa-spin mr-1"></i> Subiendo a Storage...
+                                    </div>
+                                </div>
                             </div>
                             <div>
                                 <label>Confianza</label>
@@ -2372,7 +2418,7 @@
             }
         }, 8000);
     </script>
-    <script type="module" src="admin_logic.js?v=014151"></script>
+    <script type="module" src="admin_logic.js?v=014153"></script>
 
 
     <!-- MODAL AUDITORIA INTERNA -->

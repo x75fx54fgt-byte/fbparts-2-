@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, collection, getDocs, getDoc, setDoc, addDoc, doc, updateDoc, deleteDoc, query, where, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
         // ==========================================
         // 🛡️ MÓDULO DE SANITIZACIÓN AUTÓNOMO (INLINE PARA COMPATIBILIDAD TOTAL)
@@ -77,8 +78,13 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        const storage = getStorage(app);
 
         // Variables Locales de Memoria
+        window.storage = storage;
+        window.storageRef = storageRef;
+        window.uploadBytes = uploadBytes;
+        window.getDownloadURL = getDownloadURL;
         window.SecuritySanitizer = SecuritySanitizer;
         window.mapaCategorias = {};
         window.clientesDBLocal = {}; 
@@ -4132,6 +4138,7 @@ window.cargarHistorialFacturas = async function() {
             
             await runSafe('cargarTasaBCV');
             await runSafe('cargarPuntosRuta');
+            runSafe('inicializarEventosComprobante');
             
             setTimeout(() => { 
                 runSafe('cargarCxCPersonal');
@@ -5371,22 +5378,136 @@ DATOS DEL REPUESTO:
             }, 5000);
         };
 
-        window.agregarParadaTemporal = function() {
+        // ==========================================
+        // 🧾 GESTIÓN DE COMPROBANTES DE PAGO (FIREBASE STORAGE)
+        // ==========================================
+        window._comprobanteUrlEnEdicion = '';
+
+        window.limpiarArchivoComprobante = function() {
+            const input = document.getElementById('archivoComprobante');
+            if (input) input.value = '';
+            const preview = document.getElementById('preview-archivo-comprobante');
+            if (preview) preview.style.display = 'none';
+            const nombre = document.getElementById('nombre-archivo-comprobante');
+            if (nombre) nombre.textContent = '';
+            const labelTexto = document.getElementById('label-comprobante-texto');
+            if (labelTexto) labelTexto.textContent = 'Subir Comprobante';
+            window._comprobanteUrlEnEdicion = '';
+        };
+
+        window.subirComprobanteStorage = async function(archivo) {
+            if (!archivo) return '';
+            try {
+                const timestamp = Date.now();
+                const extension = archivo.name ? archivo.name.split('.').pop() : 'jpg';
+                const cleanName = archivo.name ? archivo.name.replace(/[^a-zA-Z0-9._-]/g, '_') : 'comprobante.jpg';
+                const fileRef = storageRef(storage, `comprobantes/${timestamp}_${cleanName}`);
+                
+                const metadata = {
+                    contentType: archivo.type || (extension.toLowerCase() === 'pdf' ? 'application/pdf' : 'image/jpeg')
+                };
+                
+                const snapshot = await uploadBytes(fileRef, archivo, metadata);
+                const downloadURL = await getDownloadURL(snapshot.ref);
+                return downloadURL;
+            } catch (error) {
+                console.error("Error al subir comprobante a Firebase Storage:", error);
+                throw error;
+            }
+        };
+
+        window.inicializarEventosComprobante = function() {
+            const selectPago = document.getElementById('stop-pago');
+            const contComprobante = document.getElementById('contenedor-comprobante');
+            const inputArchivo = document.getElementById('archivoComprobante');
+
+            if (selectPago && contComprobante) {
+                const toggleVisibility = () => {
+                    if (selectPago.value === 'Pagado') {
+                        contComprobante.style.display = 'block';
+                    } else {
+                        contComprobante.style.display = 'none';
+                        window.limpiarArchivoComprobante();
+                    }
+                };
+                selectPago.addEventListener('change', toggleVisibility);
+                toggleVisibility(); // Comprobar estado inicial
+            }
+
+            if (inputArchivo) {
+                inputArchivo.addEventListener('change', function() {
+                    const preview = document.getElementById('preview-archivo-comprobante');
+                    const nombre = document.getElementById('nombre-archivo-comprobante');
+                    const labelTexto = document.getElementById('label-comprobante-texto');
+                    if (this.files && this.files[0]) {
+                        const file = this.files[0];
+                        if (nombre) nombre.textContent = file.name;
+                        if (preview) preview.style.display = 'flex';
+                        if (labelTexto) labelTexto.textContent = 'Cambiar archivo';
+                    } else {
+                        if (preview) preview.style.display = 'none';
+                        if (nombre) nombre.textContent = '';
+                        if (labelTexto) labelTexto.textContent = 'Subir Comprobante';
+                    }
+                });
+            }
+        };
+        try { window.inicializarEventosComprobante(); } catch(e){}
+
+        window.agregarParadaTemporal = async function() {
             const lat = document.getElementById('ruta-lat').value;
             const lng = document.getElementById('ruta-lng').value;
             const nota = document.getElementById('stop-nota').value.trim();
             const pagoDinero = parseFloat(document.getElementById('stop-pago-dinero').value) || 0; 
+            const estadoPago = document.getElementById('stop-pago').value;
             
             if(!lat || !lng || !nota) { alert("⚠️ Haz clic en el mapa y escribe qué hará el motorizado."); return; }
+
+            const inputArchivo = document.getElementById('archivoComprobante');
+            const archivo = inputArchivo && inputArchivo.files && inputArchivo.files[0] ? inputArchivo.files[0] : null;
+            let comprobanteUrl = window._comprobanteUrlEnEdicion || '';
+
+            // 🛡️ PROTOCOLO DE SEGURIDAD: Manejo de estado "Cargando..." durante subida
+            if (estadoPago === 'Pagado' && archivo) {
+                const btnAgregar = document.querySelector('button[onclick="agregarParadaTemporal()"]');
+                const spinnerStatus = document.getElementById('spinner-subiendo-comprobante');
+                
+                if (btnAgregar) {
+                    btnAgregar.disabled = true;
+                    btnAgregar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subiendo comprobante a Storage...';
+                }
+                if (spinnerStatus) spinnerStatus.style.display = 'block';
+
+                try {
+                    comprobanteUrl = await window.subirComprobanteStorage(archivo);
+                } catch (error) {
+                    alert("❌ Error al subir el comprobante a Storage: " + (error.message || error));
+                    if (btnAgregar) {
+                        btnAgregar.disabled = false;
+                        btnAgregar.innerHTML = '<i class="fas fa-plus"></i> Agregar Parada a la Ruta';
+                    }
+                    if (spinnerStatus) spinnerStatus.style.display = 'none';
+                    return;
+                } finally {
+                    if (btnAgregar) {
+                        btnAgregar.disabled = false;
+                        btnAgregar.innerHTML = '<i class="fas fa-plus"></i> Agregar Parada a la Ruta';
+                    }
+                    if (spinnerStatus) spinnerStatus.style.display = 'none';
+                }
+            } else if (estadoPago !== 'Pagado') {
+                comprobanteUrl = '';
+            }
 
             const parada = {
                 lat: parseFloat(lat), lng: parseFloat(lng),
                 tipo: document.getElementById('stop-tipo').value,
-                pago: document.getElementById('stop-pago').value,
+                pago: estadoPago,
                 tlf: document.getElementById('stop-tlf').value.trim() || 'Sin teléfono',
                 confianza: document.getElementById('stop-confianza').value,
                 pagoDinero: pagoDinero,
-                nota: nota
+                nota: nota,
+                comprobanteUrl: comprobanteUrl
             };
 
             window.rutaEnConstruccion.push(parada);
@@ -5404,6 +5525,9 @@ DATOS DEL REPUESTO:
             document.getElementById('ruta-lat').value = '';
             document.getElementById('ruta-lng').value = '';
             document.getElementById('stop-pago-dinero').value = '';
+            
+            window.limpiarArchivoComprobante();
+            window._comprobanteUrlEnEdicion = '';
         };
 
         window.actualizarListaRutaUI = function() {
@@ -5422,6 +5546,9 @@ DATOS DEL REPUESTO:
                 const icon = p.tipo === 'Retiro' ? '🟢' : '🔵';
                 totalAuto += (p.pagoDinero || 0); 
 
+                const comprobanteLink = p.comprobanteUrl ? 
+                    `<a href="${p.comprobanteUrl}" target="_blank" style="color:#0284c7; text-decoration:underline; font-weight:bold; font-size:10px; margin-left:4px;" title="Ver Comprobante"><i class="fas fa-receipt"></i> Comprobante</a>` : '';
+
                 const btnSubir = i > 0 
                     ? `<button type="button" onclick="moverParadaSubir(${i})" style="background:#6c757d; color:white; border:none; padding:4px 7px; border-radius:4px; cursor:pointer; font-size:10px; transition:background 0.2s;" title="Subir parada"><i class="fas fa-arrow-up"></i></button>` 
                     : '';
@@ -5437,7 +5564,7 @@ DATOS DEL REPUESTO:
                 html += `<div style="margin-bottom:6px; border-bottom: 1px solid #eee; padding-bottom: 6px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
                             <div style="flex:1; min-width:0;">
                                 <strong style="font-size:11px;">${icon} Parada ${i+1}:</strong> <span style="font-size:11px; color:#222;">${p.nota}</span><br>
-                                <span style="color:#666; font-size:10px;">📞 ${p.tlf} | Estatus: ${p.pago}</span>
+                                <span style="color:#666; font-size:10px;">📞 ${p.tlf} | Estatus: ${p.pago}${comprobanteLink}</span>
                             </div>
                             <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
                                 <strong style="color:#28a745; font-size:11px; margin-right:4px;">$${(p.pagoDinero || 0).toFixed(2)}</strong>
@@ -5507,6 +5634,23 @@ DATOS DEL REPUESTO:
 
             const elPago = document.getElementById('stop-pago');
             if (elPago) elPago.value = parada.pago || 'Pagado';
+
+            // Restaurar estado de comprobante si aplica
+            if (parada.pago === 'Pagado') {
+                const contComprobante = document.getElementById('contenedor-comprobante');
+                if (contComprobante) contComprobante.style.display = 'block';
+                if (parada.comprobanteUrl) {
+                    window._comprobanteUrlEnEdicion = parada.comprobanteUrl;
+                    const preview = document.getElementById('preview-archivo-comprobante');
+                    if (preview) preview.style.display = 'flex';
+                    const nombre = document.getElementById('nombre-archivo-comprobante');
+                    if (nombre) nombre.textContent = 'Comprobante guardado';
+                    const labelTexto = document.getElementById('label-comprobante-texto');
+                    if (labelTexto) labelTexto.textContent = 'Cambiar comprobante';
+                }
+            } else {
+                window.limpiarArchivoComprobante();
+            }
 
             const elConfianza = document.getElementById('stop-confianza');
             if (elConfianza) elConfianza.value = parada.confianza || 'Conocido';
@@ -5657,6 +5801,8 @@ DATOS DEL REPUESTO:
             document.getElementById('titulo-ruta').innerHTML = '<i class="fas fa-route"></i> Armar Ruta Multiparada';
             document.getElementById('btn-cancelar-ruta').style.display = 'none';
             document.getElementById('btn-guardar-ruta').innerHTML = '<i class="fab fa-whatsapp"></i> Guardar y Enviar';
+            window.limpiarArchivoComprobante();
+            window._comprobanteUrlEnEdicion = '';
         };
 
         window.guardarRutaCompleta = async function() {
@@ -5695,6 +5841,7 @@ DATOS DEL REPUESTO:
                     pagoDinero: SecuritySanitizer.sanitizeAmount(p.pagoDinero),
                     lat: typeof p.lat === 'number' ? p.lat : parseFloat(p.lat) || 0,
                     lng: typeof p.lng === 'number' ? p.lng : parseFloat(p.lng) || 0,
+                    comprobanteUrl: p.comprobanteUrl ? SecuritySanitizer.cleanText(p.comprobanteUrl, 1000) : '',
                     estado: "Activa"
                 }));
 
@@ -5720,6 +5867,7 @@ DATOS DEL REPUESTO:
                         pagoDinero: p.pagoDinero,
                         lat: p.lat,
                         lng: p.lng,
+                        comprobanteUrl: p.comprobanteUrl || '',
                         fecha: new Date().toLocaleDateString("es-VE"),
                         timestamp: Date.now(),
                         estado: "Activa"
@@ -5751,7 +5899,8 @@ DATOS DEL REPUESTO:
                 let waText = `🛵 *RUTA ASIGNADA A PEDIDO* 🛵\n*Cliente:* ${pedOriginal.cliente || 'Cliente'}\n*Chofer:* ${chofer}\n*Total Servicio:* $${pagoTotal}\n\n`;
                 window.rutaEnConstruccion.forEach((p, i) => {
                     const icon = p.tipo === 'Retiro' ? '🟢' : '🔵';
-                    waText += `*${icon} PARADA ${i+1}: ${p.tipo.toUpperCase()} ($${p.pagoDinero})*\n📦 Tarea: ${p.nota}\n📞 Tlf: ${p.tlf}\n💰 Estatus: ${p.pago}\n🛡️ Zona: ${p.confianza}\n📍 GPS: https://maps.google.com/?q=${p.lat},${p.lng}\n\n`;
+                    const comprobanteTexto = p.comprobanteUrl ? `\n🧾 Comprobante: ${p.comprobanteUrl}` : '';
+                    waText += `*${icon} PARADA ${i+1}: ${p.tipo.toUpperCase()} ($${p.pagoDinero})*\n📦 Tarea: ${p.nota}\n📞 Tlf: ${p.tlf}\n💰 Estatus: ${p.pago}${comprobanteTexto}\n🛡️ Zona: ${p.confianza}\n📍 GPS: https://maps.google.com/?q=${p.lat},${p.lng}\n\n`;
                 });
                 waText += `*(Ingresa al Portal de Motorizados para ver tu entrega y navegar)*`;
 
@@ -5882,7 +6031,15 @@ DATOS DEL REPUESTO:
                             const icon = isDone ? '<i class="fas fa-check-circle" style="color:#28a745;"></i>' : '<i class="fas fa-clock" style="color:#f0ad4e;"></i>';
                             const style = isDone ? 'text-decoration: line-through; color: #999;' : 'color: #555;';
                             const delegadoStr = p.subChofer ? ` <span style="background:#1d6fa5; color:white; padding:2px 4px; border-radius:3px; font-size:9px;">Delegado a ${p.subChofer}</span>` : '';
-                            return `<div style="font-size:11px; margin-bottom:3px; ${style}"><b>${i+1}.</b> ${icon} ${p.rawTipo||'Punto'}: ${p.rawNota || p.nota} ${delegadoStr}</div>`;
+                            
+                            let comprobanteHtml = '';
+                            if (p.comprobanteUrl) {
+                                comprobanteHtml = ` <a href="${p.comprobanteUrl}" target="_blank" style="color:#0284c7; text-decoration:underline; font-weight:bold; font-size:10px; margin-left:4px;" title="Ver comprobante de pago"><i class="fas fa-receipt"></i> Comprobante</a>`;
+                            } else if (p.pago === 'Por Pagar' || p.rawPago === 'Por Pagar') {
+                                comprobanteHtml = ` <button type="button" onclick="window.abrirModalPagoEnVivo('${ruta.rutaId}', ${i})" style="background:#10b981; color:white; border:none; padding:1px 6px; border-radius:3px; font-size:9px; cursor:pointer; margin-left:4px; font-weight:bold;" title="Subir comprobante y marcar Pagado"><i class="fas fa-upload"></i> Pagar en vivo</button>`;
+                            }
+
+                            return `<div style="font-size:11px; margin-bottom:3px; ${style}"><b>${i+1}.</b> ${icon} ${p.rawTipo||'Punto'}: ${p.rawNota || p.nota} (${p.rawPago || p.pago || 'N/A'})${comprobanteHtml}${delegadoStr}</div>`;
                         }).join('');
 
                         const clienteTitulo = ruta.cliente ? `👤 ${ruta.cliente} - ` : '';
@@ -5920,7 +6077,8 @@ DATOS DEL REPUESTO:
                 tlf: p.rawTlf || '',
                 confianza: p.rawConfianza || 'Conocido',
                 pagoDinero: p.pagoDinero || 0,
-                nota: p.rawNota || p.nota
+                nota: p.rawNota || p.nota,
+                comprobanteUrl: p.comprobanteUrl || ''
             }));
 
             document.getElementById('edit-ruta-id').value = ruta.rutaId;
@@ -6018,6 +6176,166 @@ DATOS DEL REPUESTO:
                 window.cargarPuntosRuta(); 
                 if (typeof window.cargarPedidos === 'function') await (async () => { window._pedidosTodosCache = null; if(document.getElementById('pedidos-mes-filtro')) document.getElementById('pedidos-mes-filtro').innerHTML = ''; await window.cargarPedidos(); })() 
             } catch(e) { console.error(e); alert("Error borrando la ruta."); }
+        };
+
+        // ==========================================
+        // 🚀 ACTUALIZACIÓN DE PAGO EN VIVO (RUTAS EN PROGRESO)
+        // ==========================================
+        window.actualizarPagoEnVivo = async function(idRuta, indexParada, archivoImagen) {
+            if (!idRuta) throw new Error("idRuta es obligatorio.");
+            if (indexParada === undefined || indexParada === null) throw new Error("indexParada es obligatorio.");
+            if (!archivoImagen) throw new Error("archivoImagen es obligatorio.");
+
+            // 1. Subir la nueva imagen a Storage en carpeta comprobantes/
+            const timestamp = Date.now();
+            const extension = archivoImagen.name ? archivoImagen.name.split('.').pop() : 'jpg';
+            const cleanName = archivoImagen.name ? archivoImagen.name.replace(/[^a-zA-Z0-9._-]/g, '_') : 'comprobante.jpg';
+            const fileRef = storageRef(storage, `comprobantes/${timestamp}_${cleanName}`);
+
+            const metadata = {
+                contentType: archivoImagen.type || (extension.toLowerCase() === 'pdf' ? 'application/pdf' : 'image/jpeg')
+            };
+
+            const snapshot = await uploadBytes(fileRef, archivoImagen, metadata);
+            const comprobanteUrl = await getDownloadURL(snapshot.ref);
+
+            // 2. Hacer updateDoc a la base de datos apuntando a esa ruta específica
+            // A) Colección directa 'rutas/{idRuta}' si existe
+            try {
+                const rutaDocRef = doc(db, "rutas", idRuta);
+                const rutaSnap = await getDoc(rutaDocRef);
+                if (rutaSnap.exists()) {
+                    const dataRuta = rutaSnap.data();
+                    const paradas = Array.isArray(dataRuta.paradas) ? [...dataRuta.paradas] : (Array.isArray(dataRuta.rutaPuntos) ? [...dataRuta.rutaPuntos] : []);
+                    if (paradas[indexParada]) {
+                        paradas[indexParada].pago = "Pagado";
+                        paradas[indexParada].comprobanteUrl = comprobanteUrl;
+                    }
+                    const campoP = Array.isArray(dataRuta.paradas) ? "paradas" : "rutaPuntos";
+                    await updateDoc(rutaDocRef, {
+                        [campoP]: paradas,
+                        fechaActualizacionPago: new Date().toLocaleDateString("es-VE"),
+                        timestampActualizacionPago: Date.now()
+                    });
+                }
+            } catch(e) { console.warn("Aviso colección rutas:", e); }
+
+            // B) Colección 'pedidos' vinculada a la ruta (trackingMotorizado, rutaId o id directo)
+            try {
+                let pedidoRef = null;
+                let pedData = null;
+
+                const directPedSnap = await getDoc(doc(db, "pedidos", idRuta));
+                if (directPedSnap.exists()) {
+                    pedidoRef = directPedSnap.ref;
+                    pedData = directPedSnap.data();
+                } else {
+                    const qP1 = query(collection(db, "pedidos"), where("trackingMotorizado", "==", idRuta));
+                    const sP1 = await getDocs(qP1);
+                    if (!sP1.empty) {
+                        pedidoRef = sP1.docs[0].ref;
+                        pedData = sP1.docs[0].data();
+                    } else {
+                        const qP2 = query(collection(db, "pedidos"), where("rutaId", "==", idRuta));
+                        const sP2 = await getDocs(qP2);
+                        if (!sP2.empty) {
+                            pedidoRef = sP2.docs[0].ref;
+                            pedData = sP2.docs[0].data();
+                        }
+                    }
+                }
+
+                if (pedidoRef && pedData && Array.isArray(pedData.rutaPuntos)) {
+                    const paradasPed = [...pedData.rutaPuntos];
+                    if (paradasPed[indexParada]) {
+                        paradasPed[indexParada].pago = "Pagado";
+                        paradasPed[indexParada].comprobanteUrl = comprobanteUrl;
+                    }
+                    await updateDoc(pedidoRef, {
+                        rutaPuntos: paradasPed
+                    });
+                }
+            } catch(e) { console.warn("Aviso colección pedidos:", e); }
+
+            // C) Colección 'rutas_puntos' (paradas individuales activas)
+            try {
+                const ordenBusqueda = indexParada + 1;
+                const qPunto = query(
+                    collection(db, "rutas_puntos"),
+                    where("rutaId", "==", idRuta),
+                    where("orden", "==", ordenBusqueda)
+                );
+                const sPunto = await getDocs(qPunto);
+                if (!sPunto.empty) {
+                    for (const d of sPunto.docs) {
+                        await updateDoc(d.ref, {
+                            pago: "Pagado",
+                            rawPago: "Pagado",
+                            comprobanteUrl: comprobanteUrl
+                        });
+                    }
+                }
+            } catch(e) { console.warn("Aviso colección rutas_puntos:", e); }
+
+            // 3. Sincronizar memoria local
+            if (window.rutasAgrupadasLocal && window.rutasAgrupadasLocal[idRuta]) {
+                const r = window.rutasAgrupadasLocal[idRuta];
+                if (r.puntos && r.puntos[indexParada]) {
+                    r.puntos[indexParada].pago = "Pagado";
+                    r.puntos[indexParada].rawPago = "Pagado";
+                    r.puntos[indexParada].comprobanteUrl = comprobanteUrl;
+                }
+            }
+
+            // 4. Refrescar tabla en la vista del administrador
+            if (typeof window.cargarPuntosRuta === 'function') {
+                await window.cargarPuntosRuta();
+            }
+
+            return {
+                success: true,
+                comprobanteUrl: comprobanteUrl
+            };
+        };
+
+        window.abrirModalPagoEnVivo = function(idRuta, indexParada) {
+            let inputTemp = document.getElementById('input-pago-en-vivo-temp');
+            if (!inputTemp) {
+                inputTemp = document.createElement('input');
+                inputTemp.type = 'file';
+                inputTemp.id = 'input-pago-en-vivo-temp';
+                inputTemp.accept = 'image/*,application/pdf';
+                inputTemp.style.display = 'none';
+                document.body.appendChild(inputTemp);
+            }
+            inputTemp.value = '';
+            inputTemp.onchange = async function() {
+                if (!this.files || !this.files[0]) return;
+                const archivo = this.files[0];
+                
+                const confirmar = confirm(`¿Subir comprobante "${archivo.name}" y marcar la Parada ${indexParada + 1} como PAGADA?`);
+                if (!confirmar) return;
+
+                const loadingToast = document.createElement('div');
+                loadingToast.id = 'toast-subiendo-pago';
+                loadingToast.style.cssText = 'position:fixed; bottom:20px; right:20px; background:#1e293b; color:#fff; padding:12px 18px; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.3); z-index:99999; display:flex; align-items:center; gap:10px; font-size:12px; font-weight:bold;';
+                loadingToast.innerHTML = '<i class="fas fa-spinner fa-spin text-blue-400"></i> Subiendo comprobante a Storage y actualizando parada...';
+                document.body.appendChild(loadingToast);
+
+                try {
+                    await window.actualizarPagoEnVivo(idRuta, indexParada, archivo);
+                    loadingToast.style.background = '#065f46';
+                    loadingToast.innerHTML = '<i class="fas fa-check-circle text-emerald-400"></i> ¡Comprobante subido y parada marcada como Pagada!';
+                    setTimeout(() => { if (loadingToast) loadingToast.remove(); }, 3500);
+                } catch (error) {
+                    console.error(error);
+                    loadingToast.style.background = '#991b1b';
+                    loadingToast.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Error: ${error.message}`;
+                    setTimeout(() => { if (loadingToast) loadingToast.remove(); }, 4000);
+                    alert("❌ Error al actualizar pago en vivo: " + error.message);
+                }
+            };
+            inputTemp.click();
         };
 
         // 🚀 LÓGICA PARA OCULTAR/MOSTRAR EL SIDEBAR
@@ -6757,106 +7075,139 @@ DATOS DEL REPUESTO:
         };
 
         // ==========================================
-        // 📈 TICKER DE TASAS DE CAMBIO (BCV / BINANCE / BRECHAS)
+        // 📈 TICKER DE TASAS DE CAMBIO (BCV / BINANCE / BRECHAS - SEAMLESS LOOP)
         // ==========================================
-        window.iniciarTickerTasas = async function() {
-            const elUsd = document.getElementById('ticker-usd');
-            const elEur = document.getElementById('ticker-eur');
-            const elUsdt = document.getElementById('ticker-usdt');
-            const elBrechaUsd = document.getElementById('ticker-brecha-usd');
-            const elBrechaEur = document.getElementById('ticker-brecha-eur');
+        window.actualizarTasas = async function() {
+            const wrapper = document.getElementById('ticker-wrapper');
+            if (!wrapper) return;
 
-            if (!elUsd && !elEur && !elUsdt) return;
+            try {
+                let usdBcv = null;
+                let eurBcv = null;
+                let usdtBinance = null;
 
-            async function obtenerTasas() {
+                // 1. Obtener USD Oficial (BCV)
                 try {
-                    let usdBcv = null;
-                    let eurBcv = null;
-                    let usdtBinance = null;
+                    const resBcv = await fetch('https://ve.dolarapi.com/v1/dolares/oficial');
+                    if (resBcv.ok) {
+                        const dataBcv = await resBcv.json();
+                        usdBcv = parseFloat(dataBcv.promedio) || parseFloat(dataBcv.precio);
+                    }
+                } catch(e) { console.warn("Error consultando Dólar BCV:", e); }
 
-                    // 1. Obtener USD Oficial (BCV)
+                // 2. Obtener EUR Oficial (BCV)
+                try {
+                    const resEur = await fetch('https://ve.dolarapi.com/v1/euros/oficial');
+                    if (resEur.ok) {
+                        const dataEur = await resEur.json();
+                        eurBcv = parseFloat(dataEur.promedio) || parseFloat(dataEur.precio);
+                    }
+                } catch(e) { console.warn("Error consultando Euro BCV:", e); }
+
+                // 3. Obtener USDT (Binance P2P) con respaldo en Paralelo
+                try {
+                    const resBinance = await fetch('https://criptoya.com/api/binancep2p/usdt/ves');
+                    if (resBinance.ok) {
+                        const dataBinance = await resBinance.json();
+                        usdtBinance = parseFloat(dataBinance.ask) || parseFloat(dataBinance.totalAsk) || parseFloat(dataBinance.bid);
+                    }
+                } catch(e) { console.warn("Error consultando Binance P2P, aplicando respaldo:", e); }
+
+                if (!usdtBinance) {
                     try {
-                        const resBcv = await fetch('https://ve.dolarapi.com/v1/dolares/oficial');
-                        if (resBcv.ok) {
-                            const dataBcv = await resBcv.json();
-                            usdBcv = parseFloat(dataBcv.promedio) || parseFloat(dataBcv.precio);
+                        const resParalelo = await fetch('https://ve.dolarapi.com/v1/dolares/paralelo');
+                        if (resParalelo.ok) {
+                            const dataPar = await resParalelo.json();
+                            usdtBinance = parseFloat(dataPar.promedio) || parseFloat(dataPar.precio);
                         }
-                    } catch(e) { console.warn("Error consultando Dólar BCV:", e); }
-
-                    // 2. Obtener EUR Oficial (BCV)
-                    try {
-                        const resEur = await fetch('https://ve.dolarapi.com/v1/euros/oficial');
-                        if (resEur.ok) {
-                            const dataEur = await resEur.json();
-                            eurBcv = parseFloat(dataEur.promedio) || parseFloat(dataEur.precio);
-                        }
-                    } catch(e) { console.warn("Error consultando Euro BCV:", e); }
-
-                    // 3. Obtener USDT (Binance P2P) con respaldo en Paralelo
-                    try {
-                        const resBinance = await fetch('https://criptoya.com/api/binancep2p/usdt/ves');
-                        if (resBinance.ok) {
-                            const dataBinance = await resBinance.json();
-                            usdtBinance = parseFloat(dataBinance.ask) || parseFloat(dataBinance.totalAsk) || parseFloat(dataBinance.bid);
-                        }
-                    } catch(e) { console.warn("Error consultando Binance P2P, aplicando respaldo:", e); }
-
-                    if (!usdtBinance) {
-                        try {
-                            const resParalelo = await fetch('https://ve.dolarapi.com/v1/dolares/paralelo');
-                            if (resParalelo.ok) {
-                                const dataPar = await resParalelo.json();
-                                usdtBinance = parseFloat(dataPar.promedio) || parseFloat(dataPar.precio);
-                            }
-                        } catch(e) { console.warn("Error consultando Paralelo:", e); }
-                    }
-
-                    // Si no se obtuvo ninguna tasa, lanzar error controlado
-                    if (!usdBcv && !usdtBinance) {
-                        throw new Error("Servicio de tasas temporalmente no disponible.");
-                    }
-
-                    // Formato en moneda venezolana
-                    const formatoVES = (num) => Number(num).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-                    // Inyectar en elementos del DOM
-                    if (elUsd) elUsd.textContent = usdBcv ? `Bs. ${formatoVES(usdBcv)}` : 'N/D';
-                    if (elEur) elEur.textContent = eurBcv ? `Bs. ${formatoVES(eurBcv)}` : 'N/D';
-                    if (elUsdt) elUsdt.textContent = usdtBinance ? `Bs. ${formatoVES(usdtBinance)}` : 'N/D';
-
-                    // Calcular Brecha USD: ((USDT - Oficial) / Oficial) * 100
-                    if (elBrechaUsd && usdBcv && usdtBinance) {
-                        const brechaUsd = ((usdtBinance - usdBcv) / usdBcv) * 100;
-                        const flecha = brechaUsd >= 0 ? '🔺' : '🔻';
-                        const signo = brechaUsd >= 0 ? '+' : '';
-                        elBrechaUsd.textContent = `${flecha} ${signo}${brechaUsd.toFixed(2)}%`;
-                        elBrechaUsd.style.color = brechaUsd > 10 ? '#fb923c' : (brechaUsd >= 0 ? '#4ade80' : '#f87171');
-                    }
-
-                    // Calcular Brecha EUR: ((USDT - Oficial) / Oficial) * 100
-                    if (elBrechaEur && eurBcv && usdtBinance) {
-                        const brechaEur = ((usdtBinance - eurBcv) / eurBcv) * 100;
-                        const flecha = brechaEur >= 0 ? '🔺' : '🔻';
-                        const signo = brechaEur >= 0 ? '+' : '';
-                        elBrechaEur.textContent = `${flecha} ${signo}${brechaEur.toFixed(2)}%`;
-                        elBrechaEur.style.color = brechaEur > 10 ? '#fb923c' : (brechaEur >= 0 ? '#60a5fa' : '#f87171');
-                    }
-
-                } catch(error) {
-                    console.warn("⚠️ [Ticker de Tasas]:", error);
-                    if (elUsd) elUsd.textContent = "Tasas no disponibles";
-                    if (elEur) elEur.textContent = "--";
-                    if (elUsdt) elUsdt.textContent = "--";
-                    if (elBrechaUsd) elBrechaUsd.textContent = "--";
-                    if (elBrechaEur) elBrechaEur.textContent = "--";
+                    } catch(e) { console.warn("Error consultando Paralelo:", e); }
                 }
+
+                // Si no se obtuvo ninguna tasa, lanzar error controlado
+                if (!usdBcv && !usdtBinance) {
+                    throw new Error("Servicio de tasas temporalmente no disponible.");
+                }
+
+                // Formato en moneda venezolana
+                const formatoVES = (num) => Number(num).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                // Calcular Brecha USD: ((USDT - Oficial) / Oficial) * 100
+                let textoBrechaUsd = '--';
+                let colorBrechaUsd = '#9ca3af';
+                if (usdBcv && usdtBinance) {
+                    const brechaUsd = ((usdtBinance - usdBcv) / usdBcv) * 100;
+                    const flecha = brechaUsd >= 0 ? '🔺' : '🔻';
+                    const signo = brechaUsd >= 0 ? '+' : '';
+                    textoBrechaUsd = `${flecha} ${signo}${brechaUsd.toFixed(2)}%`;
+                    colorBrechaUsd = brechaUsd > 10 ? '#fb923c' : (brechaUsd >= 0 ? '#4ade80' : '#f87171');
+                }
+
+                // Calcular Brecha EUR: ((USDT - Oficial) / Oficial) * 100
+                let textoBrechaEur = '--';
+                let colorBrechaEur = '#9ca3af';
+                if (eurBcv && usdtBinance) {
+                    const brechaEur = ((usdtBinance - eurBcv) / eurBcv) * 100;
+                    const flecha = brechaEur >= 0 ? '🔺' : '🔻';
+                    const signo = brechaEur >= 0 ? '+' : '';
+                    textoBrechaEur = `${flecha} ${signo}${brechaEur.toFixed(2)}%`;
+                    colorBrechaEur = brechaEur > 10 ? '#fb923c' : (brechaEur >= 0 ? '#60a5fa' : '#f87171');
+                }
+
+                // Armar string de tasas formateadas
+                const textoTasas = `
+                    <span class="text-gray-300 font-bold tracking-wider inline-flex items-center gap-1.5">
+                        <i class="fas fa-chart-line text-green-400"></i> MERCADO CAMBIARIO VENEZUELA:
+                    </span>
+                    <span class="inline-flex items-center gap-1">
+                        <span class="text-gray-400">💵 Dólar BCV:</span>
+                        <span class="font-bold text-white tracking-wide">${usdBcv ? `Bs. ${formatoVES(usdBcv)}` : 'N/D'}</span>
+                    </span>
+                    <span class="inline-flex items-center gap-1">
+                        <span class="text-gray-400">💶 Euro BCV:</span>
+                        <span class="font-bold text-white tracking-wide">${eurBcv ? `Bs. ${formatoVES(eurBcv)}` : 'N/D'}</span>
+                    </span>
+                    <span class="inline-flex items-center gap-1">
+                        <span class="text-yellow-400">🪙 Binance USDT:</span>
+                        <span class="font-bold text-yellow-300 tracking-wide">${usdtBinance ? `Bs. ${formatoVES(usdtBinance)}` : 'N/D'}</span>
+                    </span>
+                    <span class="inline-flex items-center gap-1">
+                        <span class="text-gray-400">📊 Brecha USD:</span>
+                        <span class="font-bold" style="color: ${colorBrechaUsd};">${textoBrechaUsd}</span>
+                    </span>
+                    <span class="inline-flex items-center gap-1">
+                        <span class="text-gray-400">📊 Brecha EUR:</span>
+                        <span class="font-bold" style="color: ${colorBrechaEur};">${textoBrechaEur}</span>
+                    </span>
+                    <span class="text-gray-500 text-xs inline-flex items-center">
+                        • <i class="fas fa-sync-alt fa-spin text-gray-500 mr-1 ml-1"></i> Auto-actualiza cada 15 min
+                    </span>
+                `;
+
+                // 🔄 Inyección clonada para marquee infinito continuo de 0 a -50%
+                wrapper.innerHTML = `
+                    <div class="flex-shrink-0 flex items-center gap-6 px-6">${textoTasas}</div>
+                    <div class="flex-shrink-0 flex items-center gap-6 px-6">${textoTasas}</div>
+                `;
+
+            } catch(error) {
+                console.warn("⚠️ [Ticker de Tasas]:", error);
+                const textoError = `
+                    <span class="text-red-400 font-bold inline-flex items-center gap-1">
+                        <i class="fas fa-exclamation-triangle"></i> Tasas temporalmente no disponibles
+                    </span>
+                    <span class="text-gray-500 text-xs">Reintentando en breve...</span>
+                `;
+                wrapper.innerHTML = `
+                    <div class="flex-shrink-0 flex items-center gap-6 px-6">${textoError}</div>
+                    <div class="flex-shrink-0 flex items-center gap-6 px-6">${textoError}</div>
+                `;
             }
+        };
 
-            // Ejecución inmediata al cargar
-            await obtenerTasas();
-
+        window.iniciarTickerTasas = async function() {
+            await window.actualizarTasas();
             // Actualización automática cada 15 minutos (900000 ms)
-            setInterval(obtenerTasas, 900000);
+            setInterval(window.actualizarTasas, 900000);
         };
 
         window.iniciarTickerTasas();
