@@ -6756,5 +6756,110 @@ DATOS DEL REPUESTO:
             }
         };
 
+        // ==========================================
+        // 📈 TICKER DE TASAS DE CAMBIO (BCV / BINANCE / BRECHAS)
+        // ==========================================
+        window.iniciarTickerTasas = async function() {
+            const elUsd = document.getElementById('ticker-usd');
+            const elEur = document.getElementById('ticker-eur');
+            const elUsdt = document.getElementById('ticker-usdt');
+            const elBrechaUsd = document.getElementById('ticker-brecha-usd');
+            const elBrechaEur = document.getElementById('ticker-brecha-eur');
+
+            if (!elUsd && !elEur && !elUsdt) return;
+
+            async function obtenerTasas() {
+                try {
+                    let usdBcv = null;
+                    let eurBcv = null;
+                    let usdtBinance = null;
+
+                    // 1. Obtener USD Oficial (BCV)
+                    try {
+                        const resBcv = await fetch('https://ve.dolarapi.com/v1/dolares/oficial');
+                        if (resBcv.ok) {
+                            const dataBcv = await resBcv.json();
+                            usdBcv = parseFloat(dataBcv.promedio) || parseFloat(dataBcv.precio);
+                        }
+                    } catch(e) { console.warn("Error consultando Dólar BCV:", e); }
+
+                    // 2. Obtener EUR Oficial (BCV)
+                    try {
+                        const resEur = await fetch('https://ve.dolarapi.com/v1/euros/oficial');
+                        if (resEur.ok) {
+                            const dataEur = await resEur.json();
+                            eurBcv = parseFloat(dataEur.promedio) || parseFloat(dataEur.precio);
+                        }
+                    } catch(e) { console.warn("Error consultando Euro BCV:", e); }
+
+                    // 3. Obtener USDT (Binance P2P) con respaldo en Paralelo
+                    try {
+                        const resBinance = await fetch('https://criptoya.com/api/binancep2p/usdt/ves');
+                        if (resBinance.ok) {
+                            const dataBinance = await resBinance.json();
+                            usdtBinance = parseFloat(dataBinance.ask) || parseFloat(dataBinance.totalAsk) || parseFloat(dataBinance.bid);
+                        }
+                    } catch(e) { console.warn("Error consultando Binance P2P, aplicando respaldo:", e); }
+
+                    if (!usdtBinance) {
+                        try {
+                            const resParalelo = await fetch('https://ve.dolarapi.com/v1/dolares/paralelo');
+                            if (resParalelo.ok) {
+                                const dataPar = await resParalelo.json();
+                                usdtBinance = parseFloat(dataPar.promedio) || parseFloat(dataPar.precio);
+                            }
+                        } catch(e) { console.warn("Error consultando Paralelo:", e); }
+                    }
+
+                    // Si no se obtuvo ninguna tasa, lanzar error controlado
+                    if (!usdBcv && !usdtBinance) {
+                        throw new Error("Servicio de tasas temporalmente no disponible.");
+                    }
+
+                    // Formato en moneda venezolana
+                    const formatoVES = (num) => Number(num).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                    // Inyectar en elementos del DOM
+                    if (elUsd) elUsd.textContent = usdBcv ? `Bs. ${formatoVES(usdBcv)}` : 'N/D';
+                    if (elEur) elEur.textContent = eurBcv ? `Bs. ${formatoVES(eurBcv)}` : 'N/D';
+                    if (elUsdt) elUsdt.textContent = usdtBinance ? `Bs. ${formatoVES(usdtBinance)}` : 'N/D';
+
+                    // Calcular Brecha USD: ((USDT - Oficial) / Oficial) * 100
+                    if (elBrechaUsd && usdBcv && usdtBinance) {
+                        const brechaUsd = ((usdtBinance - usdBcv) / usdBcv) * 100;
+                        const flecha = brechaUsd >= 0 ? '🔺' : '🔻';
+                        const signo = brechaUsd >= 0 ? '+' : '';
+                        elBrechaUsd.textContent = `${flecha} ${signo}${brechaUsd.toFixed(2)}%`;
+                        elBrechaUsd.style.color = brechaUsd > 10 ? '#fb923c' : (brechaUsd >= 0 ? '#4ade80' : '#f87171');
+                    }
+
+                    // Calcular Brecha EUR: ((USDT - Oficial) / Oficial) * 100
+                    if (elBrechaEur && eurBcv && usdtBinance) {
+                        const brechaEur = ((usdtBinance - eurBcv) / eurBcv) * 100;
+                        const flecha = brechaEur >= 0 ? '🔺' : '🔻';
+                        const signo = brechaEur >= 0 ? '+' : '';
+                        elBrechaEur.textContent = `${flecha} ${signo}${brechaEur.toFixed(2)}%`;
+                        elBrechaEur.style.color = brechaEur > 10 ? '#fb923c' : (brechaEur >= 0 ? '#60a5fa' : '#f87171');
+                    }
+
+                } catch(error) {
+                    console.warn("⚠️ [Ticker de Tasas]:", error);
+                    if (elUsd) elUsd.textContent = "Tasas no disponibles";
+                    if (elEur) elEur.textContent = "--";
+                    if (elUsdt) elUsdt.textContent = "--";
+                    if (elBrechaUsd) elBrechaUsd.textContent = "--";
+                    if (elBrechaEur) elBrechaEur.textContent = "--";
+                }
+            }
+
+            // Ejecución inmediata al cargar
+            await obtenerTasas();
+
+            // Actualización automática cada 15 minutos (900000 ms)
+            setInterval(obtenerTasas, 900000);
+        };
+
+        window.iniciarTickerTasas();
+
 window.moduleLoaded = true;
 console.log('Modulo admin_logic cargado exitosamente.');

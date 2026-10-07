@@ -198,7 +198,56 @@
     <script defer src="/_vercel/insights/script.js"></script>
     <script defer src="/_vercel/speed-insights/script.js"></script>
 </head>
-<body style="background-color: #f8f8f8;">
+<body style="background-color: #f8f8f8; display: flex; flex-direction: column; height: 100vh; overflow: hidden;">
+
+    <!-- 📈 TICKER DE TASAS DE CAMBIO (VENEZUELA BCV & BINANCE) -->
+    <div id="ticker-tasas-container" class="w-full bg-gray-900 text-green-400 text-xs sm:text-sm py-1.5 font-mono overflow-hidden whitespace-nowrap z-40 border-b border-gray-800 shrink-0 relative flex items-center shadow-sm select-none">
+        <style>
+            @keyframes marqueeAnim {
+                0% { transform: translateX(100vw); }
+                100% { transform: translateX(-100%); }
+            }
+            .ticker-marquee-track {
+                display: inline-flex;
+                align-items: center;
+                gap: 2rem;
+                white-space: nowrap;
+                will-change: transform;
+                animation: marqueeAnim 30s linear infinite;
+            }
+            #ticker-tasas-container:hover .ticker-marquee-track {
+                animation-play-state: paused;
+            }
+        </style>
+        <div class="ticker-marquee-track">
+            <span class="text-gray-300 font-bold tracking-wider">
+                <i class="fas fa-chart-line text-green-400 mr-1"></i> MERCADO CAMBIARIO VENEZUELA:
+            </span>
+            <span class="inline-flex items-center gap-1">
+                <span class="text-gray-400">💵 Dólar BCV:</span>
+                <span id="ticker-usd" class="font-bold text-white tracking-wide">Cargando...</span>
+            </span>
+            <span class="inline-flex items-center gap-1">
+                <span class="text-gray-400">💶 Euro BCV:</span>
+                <span id="ticker-eur" class="font-bold text-white tracking-wide">Cargando...</span>
+            </span>
+            <span class="inline-flex items-center gap-1">
+                <span class="text-yellow-400">🪙 Binance USDT:</span>
+                <span id="ticker-usdt" class="font-bold text-yellow-300 tracking-wide">Cargando...</span>
+            </span>
+            <span class="inline-flex items-center gap-1">
+                <span class="text-gray-400">📊 Brecha USD:</span>
+                <span id="ticker-brecha-usd" class="font-bold text-orange-400">--</span>
+            </span>
+            <span class="inline-flex items-center gap-1">
+                <span class="text-gray-400">📊 Brecha EUR:</span>
+                <span id="ticker-brecha-eur" class="font-bold text-blue-400">--</span>
+            </span>
+            <span class="text-gray-500 text-xs">
+                • <i class="fas fa-sync-alt fa-spin text-gray-500 mr-1"></i> Auto-actualiza cada 15 min
+            </span>
+        </div>
+    </div>
 
     <!-- PANTALLA DE CARGA DE SEGURIDAD (PREVIENE FLASH Y ACCESO NO AUTORIZADO AL DOM) -->
     <div id="auth-loading-screen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Helvetica Neue', Arial, sans-serif;">
@@ -233,7 +282,7 @@
     </script>
 
     <!-- ENVOLTORIO PRINCIPAL DEL PANEL (PROTEGIDO HASTA VERIFICACIÓN) -->
-    <div id="app-wrapper" class="flex h-screen bg-[#f8fafc] overflow-hidden font-sans">
+    <div id="app-wrapper" class="flex flex-1 min-h-0 bg-[#f8fafc] overflow-hidden font-sans">
         
         <!-- SIDEBAR (NUEVO DISEÑO) -->
         <aside id="main-sidebar" class="w-[280px] bg-white border-r border-gray-200 flex flex-col shrink-0 shadow-sm z-20 transition-all duration-300 ease-in-out overflow-hidden relative">
@@ -2323,7 +2372,7 @@
             }
         }, 8000);
     </script>
-    <script type="module" src="admin_logic.js?v=014150"></script>
+    <script type="module" src="admin_logic.js?v=014151"></script>
 
 
     <!-- MODAL AUDITORIA INTERNA -->
