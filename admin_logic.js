@@ -5416,22 +5416,123 @@ DATOS DEL REPUESTO:
                 return;
             }
             let html = '';
+            const totalParadas = window.rutaEnConstruccion.length;
+
             window.rutaEnConstruccion.forEach((p, i) => {
                 const icon = p.tipo === 'Retiro' ? '🟢' : '🔵';
-                totalAuto += p.pagoDinero; 
-                html += `<div style="margin-bottom:5px; border-bottom: 1px solid #eee; padding-bottom: 5px; display:flex; justify-content:space-between; align-items:center;">
-                            <div style="flex:1;">
-                                <strong>${icon} Parada ${i+1}:</strong> ${p.nota} <br>
-                                <span style="color:#666;">📞 ${p.tlf} | Estatus: ${p.pago}</span>
+                totalAuto += (p.pagoDinero || 0); 
+
+                const btnSubir = i > 0 
+                    ? `<button type="button" onclick="moverParadaSubir(${i})" style="background:#6c757d; color:white; border:none; padding:4px 7px; border-radius:4px; cursor:pointer; font-size:10px; transition:background 0.2s;" title="Subir parada"><i class="fas fa-arrow-up"></i></button>` 
+                    : '';
+
+                const btnBajar = i < totalParadas - 1 
+                    ? `<button type="button" onclick="moverParadaBajar(${i})" style="background:#6c757d; color:white; border:none; padding:4px 7px; border-radius:4px; cursor:pointer; font-size:10px; transition:background 0.2s;" title="Bajar parada"><i class="fas fa-arrow-down"></i></button>` 
+                    : '';
+
+                const btnEditar = `<button type="button" onclick="editarParada(${i})" style="background:#1d6fa5; color:white; border:none; padding:4px 7px; border-radius:4px; cursor:pointer; font-size:10px; transition:background 0.2s;" title="Editar parada"><i class="fas fa-pencil-alt"></i></button>`;
+
+                const btnEliminar = `<button type="button" onclick="eliminarParadaTemporal(${i})" style="background:#d9534f; color:white; border:none; padding:4px 7px; border-radius:4px; cursor:pointer; font-size:10px; transition:background 0.2s;" title="Borrar parada"><i class="fas fa-times"></i></button>`;
+
+                html += `<div style="margin-bottom:6px; border-bottom: 1px solid #eee; padding-bottom: 6px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                            <div style="flex:1; min-width:0;">
+                                <strong style="font-size:11px;">${icon} Parada ${i+1}:</strong> <span style="font-size:11px; color:#222;">${p.nota}</span><br>
+                                <span style="color:#666; font-size:10px;">📞 ${p.tlf} | Estatus: ${p.pago}</span>
                             </div>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <strong style="color:#28a745;">$${p.pagoDinero.toFixed(2)}</strong>
-                                <button type="button" onclick="eliminarParadaTemporal(${i})" style="background:#d9534f; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:10px;" title="Borrar parada"><i class="fas fa-times"></i></button>
+                            <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+                                <strong style="color:#28a745; font-size:11px; margin-right:4px;">$${(p.pagoDinero || 0).toFixed(2)}</strong>
+                                ${btnSubir}
+                                ${btnBajar}
+                                ${btnEditar}
+                                ${btnEliminar}
                             </div>
                          </div>`;
             });
             container.innerHTML = html;
             document.getElementById('ruta-pago').value = totalAuto.toFixed(2);
+        };
+
+        window.moverParadaSubir = function(index) {
+            if (index <= 0 || index >= window.rutaEnConstruccion.length) return;
+            const temp = window.rutaEnConstruccion[index];
+            window.rutaEnConstruccion[index] = window.rutaEnConstruccion[index - 1];
+            window.rutaEnConstruccion[index - 1] = temp;
+
+            if (window.mapaAdmin) {
+                window.marcadoresConstruccion.forEach(m => window.mapaAdmin.removeLayer(m));
+                window.marcadoresConstruccion = [];
+                window.rutaEnConstruccion.forEach((p, i) => {
+                    const marker = L.marker([p.lat, p.lng]).addTo(window.mapaAdmin).bindPopup(`<b>Parada ${i+1}</b><br>${p.tipo}: ${p.nota}`);
+                    window.marcadoresConstruccion.push(marker);
+                });
+            }
+
+            window.actualizarListaRutaUI();
+        };
+
+        window.moverParadaBajar = function(index) {
+            if (index < 0 || index >= window.rutaEnConstruccion.length - 1) return;
+            const temp = window.rutaEnConstruccion[index];
+            window.rutaEnConstruccion[index] = window.rutaEnConstruccion[index + 1];
+            window.rutaEnConstruccion[index + 1] = temp;
+
+            if (window.mapaAdmin) {
+                window.marcadoresConstruccion.forEach(m => window.mapaAdmin.removeLayer(m));
+                window.marcadoresConstruccion = [];
+                window.rutaEnConstruccion.forEach((p, i) => {
+                    const marker = L.marker([p.lat, p.lng]).addTo(window.mapaAdmin).bindPopup(`<b>Parada ${i+1}</b><br>${p.tipo}: ${p.nota}`);
+                    window.marcadoresConstruccion.push(marker);
+                });
+            }
+
+            window.actualizarListaRutaUI();
+        };
+
+        window.editarParada = function(index) {
+            const parada = window.rutaEnConstruccion[index];
+            if (!parada) return;
+
+            // Rellenar formulario superior con los datos de la parada
+            const elTipo = document.getElementById('stop-tipo');
+            if (elTipo) elTipo.value = parada.tipo || 'Retiro';
+
+            const elPagoDinero = document.getElementById('stop-pago-dinero');
+            if (elPagoDinero) elPagoDinero.value = (parada.pagoDinero !== undefined && parada.pagoDinero !== null) ? parada.pagoDinero : '';
+
+            const elNota = document.getElementById('stop-nota');
+            if (elNota) elNota.value = parada.nota || '';
+
+            const elTlf = document.getElementById('stop-tlf');
+            if (elTlf) elTlf.value = (parada.tlf && parada.tlf !== 'Sin teléfono') ? parada.tlf : '';
+
+            const elPago = document.getElementById('stop-pago');
+            if (elPago) elPago.value = parada.pago || 'Pagado';
+
+            const elConfianza = document.getElementById('stop-confianza');
+            if (elConfianza) elConfianza.value = parada.confianza || 'Conocido';
+
+            const elLat = document.getElementById('ruta-lat');
+            if (elLat) elLat.value = parada.lat !== undefined ? parada.lat : '';
+
+            const elLng = document.getElementById('ruta-lng');
+            if (elLng) elLng.value = parada.lng !== undefined ? parada.lng : '';
+
+            // Mostrar u orientar marcador en el mapa temporal si tiene coordenadas
+            if (window.mapaAdmin && parada.lat && parada.lng) {
+                if (window.marcadorTemporal) window.mapaAdmin.removeLayer(window.marcadorTemporal);
+                window.marcadorTemporal = L.marker([parada.lat, parada.lng]).addTo(window.mapaAdmin)
+                    .bindPopup(`<b>Editando Parada</b><br>${parada.tipo}: ${parada.nota}`).openPopup();
+                window.mapaAdmin.setView([parada.lat, parada.lng], 14);
+            }
+
+            // Eliminar la parada del arreglo y re-renderizar lista, mapa y total
+            window.eliminarParadaTemporal(index);
+
+            // Foco en la nota para editar de inmediato
+            if (elNota) {
+                elNota.focus();
+                elNota.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
         };
 
         window.eliminarParadaTemporal = function(index) {
