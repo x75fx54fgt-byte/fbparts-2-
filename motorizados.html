@@ -319,6 +319,7 @@
                                 pagoDinero: r.pagoDinero || 0,
                                 lat: r.lat,
                                 lng: r.lng,
+                                comprobanteUrl: r.comprobanteUrl || "",
                                 estado: r.estado || "Activa",
                                 id: docSnap.id
                             });
@@ -351,6 +352,7 @@
                             pagoDinero: r.pagoDinero || 0,
                             lat: r.lat,
                             lng: r.lng,
+                            comprobanteUrl: r.comprobanteUrl || "",
                             estado: r.estado || "Activa",
                             id: docSnap.id
                         });
@@ -446,6 +448,13 @@
                                         </div>
                                         <div style="font-size:11px; color:#555; margin-top:2px;">${p.nota || ''}</div>
                                         ${p.tlf ? `<div style="font-size:10px; color:#777; margin-top:1px;"><i class="fas fa-phone-alt"></i> ${p.tlf}</div>` : ''}
+                                        ${p.comprobanteUrl ? `
+                                            <div>
+                                                <a href="${p.comprobanteUrl}" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 px-2.5 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 rounded text-xs font-semibold transition-colors">
+                                                    👁️ Ver Comprobante
+                                                </a>
+                                            </div>
+                                        ` : ''}
                                     </div>
                                     <div style="display:flex; gap:5px; flex-shrink:0;">
                                         ${(p.lat && p.lng) ? `

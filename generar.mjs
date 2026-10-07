@@ -110,10 +110,21 @@ async function generarPaginasEstaticas() {
             `<meta property="og:url" content="https://www.fybparts.com/${slug}.html" id="og-url">`
         );
 
-        // 5. Inyección del ID para evitar fallos: Justo antes del cierre de </head>
+        // 5. Inyección de datos precargados e ID para carga instantánea (Zero-Delay) y SEO
+        const datosProducto = {
+            id: docId,
+            ...prod
+        };
+        // Serialización segura para evitar caracteres conflictivos o romper la etiqueta <script>
+        const jsonSeguro = JSON.stringify(datosProducto)
+            .replace(/</g, '\\u003c')
+            .replace(/>/g, '\\u003e')
+            .replace(/\u2028/g, '\\u2028')
+            .replace(/\u2029/g, '\\u2029');
+
         nuevoHtml = nuevoHtml.replace(
             '</head>',
-            `    <!-- ID de Firebase inyectado para carga directa -->\n    <script>window.FIREBASE_PRODUCT_ID = "${docId}";</script>\n</head>`
+            `    <!-- Datos precargados del repuesto para carga instantánea (Zero-Delay) y SEO -->\n    <script>window.FIREBASE_PRODUCT_ID = "${docId}"; window.PRODUCTO_PRECARGADO = ${jsonSeguro};</script>\n</head>`
         );
 
         // 6. Guardar archivo físico [slug].html

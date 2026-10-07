@@ -148,8 +148,8 @@
     <!-- Vercel Analytics & Speed Insights -->
     <script defer src="/_vercel/insights/script.js"></script>
     <script defer src="/_vercel/speed-insights/script.js"></script>
-    <!-- ID de Firebase inyectado para carga directa -->
-    <script>window.FIREBASE_PRODUCT_ID = "jGDfDHfOURl30rbd9Ipr";</script>
+    <!-- Datos precargados del repuesto para carga instantánea (Zero-Delay) y SEO -->
+    <script>window.FIREBASE_PRODUCT_ID = "jGDfDHfOURl30rbd9Ipr"; window.PRODUCTO_PRECARGADO = {"id":"jGDfDHfOURl30rbd9Ipr","posicion":"RH","nombre":"FARO RICH 7","marca":"Dongfeng","imagen":"https://lh3.googleusercontent.com/d/1sGHfXHN_yjK1A-kSFmB48EF-sOTWRUIj","estado":"activo","numero_parte":"","descripcion":"✅ FUNCIÓN Y BENEFICIOS:\nEl Faro RICH 7 garantiza una visibilidad clara y segura al conducir, mejorando el alcance y la iluminación tanto en carretera como en condiciones de baja luz. Cambiarlo a tiempo ayuda a mantener el rendimiento óptico, mejorar la seguridad y evitar fallas por daño o desalineación del sistema de iluminación.\n\n🔧 COMPATIBILIDAD:\n- Marca: Dongfeng\n- Modelo / Motorización: RICH 7\n- Lado / Posición: Lado Derecho (RH) y Lado Izquierdo (LH)","imagenes":["https://lh3.googleusercontent.com/d/1sGHfXHN_yjK1A-kSFmB48EF-sOTWRUIj","https://lh3.googleusercontent.com/d/1QtuYBTwFx7lzXzeRur5aFhDkOvaPY9M_"],"subcategoria":"Carrocería","posiciones":["RH","LH"],"stock":2,"precio":590.79,"modalidad":"Bajo Importación - China (45-90 días)","ml_id":"","categoria":"faros-y-micas","modelo":"RICH 7"};</script>
 </head>
 <body>
 
@@ -453,27 +453,58 @@
             }
         });
 
+        let productoCargado = false;
+
         async function cargarDetalleProducto() {
+            if (productoCargado) return;
+
             const params = new URLSearchParams(window.location.search);
             const pathId = window.location.pathname.split('/').pop().replace(/\.html$/i, '');
             const productId = window.FIREBASE_PRODUCT_ID || params.get('id') || (pathId && pathId !== 'producto' ? pathId : null);
             const container = document.getElementById('product-details-container');
 
-            if (!productId) {
-                container.innerHTML = '<div style="text-align:center; grid-column: 1/-1; padding: 40px;">Repuesto no especificado. <a href="tienda.html" style="color:#5e8877; font-weight:bold;">Volver a la tienda</a></div>';
-                return;
-            }
+            let prod = null;
+            let activeId = productId;
 
-            try {
-                const docRef = doc(db, "productos", productId);
-                const docSnap = await getDoc(docRef);
-
-                if (!docSnap.exists()) {
-                    container.innerHTML = '<div style="text-align:center; grid-column: 1/-1; padding: 40px;">El repuesto solicitado no existe o fue retirado. <a href="tienda.html" style="color:#5e8877; font-weight:bold;">Ir a la tienda</a></div>';
+            // 1. ⚡ OPTIMIZACIÓN INSTANTÁNEA (Zero-Delay): Usar datos precargados en páginas estáticas
+            if (window.PRODUCTO_PRECARGADO && typeof window.PRODUCTO_PRECARGADO === 'object') {
+                prod = window.PRODUCTO_PRECARGADO;
+                activeId = prod.id || productId || window.FIREBASE_PRODUCT_ID;
+            } else {
+                // 2. Fallback dinámico si no hay datos precargados (visita directa a producto.html?id=...)
+                if (!productId) {
+                    if (container) {
+                        container.innerHTML = '<div style="text-align:center; grid-column: 1/-1; padding: 40px;">Repuesto no especificado. <a href="tienda.html" style="color:#5e8877; font-weight:bold;">Volver a la tienda</a></div>';
+                    }
                     return;
                 }
 
-                const prod = docSnap.data();
+                try {
+                    const docRef = doc(db, "productos", productId);
+                    const docSnap = await getDoc(docRef);
+
+                    if (!docSnap.exists()) {
+                        if (container) {
+                            container.innerHTML = '<div style="text-align:center; grid-column: 1/-1; padding: 40px;">El repuesto solicitado no existe o fue retirado. <a href="tienda.html" style="color:#5e8877; font-weight:bold;">Ir a la tienda</a></div>';
+                        }
+                        return;
+                    }
+
+                    prod = docSnap.data();
+                    activeId = productId;
+                } catch (error) {
+                    console.error("Error al cargar producto desde Firestore:", error);
+                    if (container) {
+                        container.innerHTML = '<div style="text-align:center; grid-column: 1/-1; color: red; padding: 40px;">Error al cargar los datos del repuesto.</div>';
+                    }
+                    return;
+                }
+            }
+
+            if (!prod || !container) return;
+            productoCargado = true;
+
+            try {
                 
                 if (prod.categoria) {
                     const catLink = document.getElementById('breadcrumb-category');
@@ -510,7 +541,7 @@
                     "name": prod.nombre,
                     "image": prod.imagen,
                     "description": prod.descripcion || `Repuesto automotriz ${prod.nombre} disponible en F&B Parts Caracas.`,
-                    "sku": prod.numero_parte || productId,
+                    "sku": prod.numero_parte || activeId,
                     "mpn": prod.numero_parte || "",
                     "brand": { "@type": "Brand", "name": "F&B Parts" },
                     "offers": {
@@ -655,7 +686,7 @@
                         </div>
 
                         <div>
-                            <button type="button" class="btn-add-cart-large" onclick="agregarAlCarrito('${productId}', '${safeName}', ${prod.precio})">
+                            <button type="button" class="btn-add-cart-large" onclick="agregarAlCarrito('${activeId}', '${safeName}', ${prod.precio})">
                                 <i class="fas fa-cart-plus"></i> Añadir al Pedido
                             </button>
                             ${botonML}
@@ -678,7 +709,7 @@
                     </div>
                 `;
 
-                await cargarProductosRelacionadosPorOEMyNombre(productId, prod.categoria, prod.nombre, prod.numero_parte || "");
+                await cargarProductosRelacionadosPorOEMyNombre(activeId, prod.categoria, prod.nombre, prod.numero_parte || "");
 
             } catch (error) {
                 console.error("Error al cargar producto:", error);
@@ -871,12 +902,16 @@
             document.getElementById('cart-panel-overlay').classList.add('active');
         };
 
-        window.addEventListener('DOMContentLoaded', () => {
+        // ⚡ INICIALIZACIÓN INMEDIATA (Zero-Delay): Renderizar ya mismo si el contenedor existe en el DOM
+        if (document.getElementById('product-details-container')) {
             cargarDetalleProducto();
+        } else {
+            window.addEventListener('DOMContentLoaded', cargarDetalleProducto);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
             window.actualizarBadgeCarrito();
         });
-
-        window.addEventListener('DOMContentLoaded', cargarDetalleProducto);
 
         window.cambiarFotoPrincipal = function(thumb) {
             const principal = document.getElementById('img-principal');
