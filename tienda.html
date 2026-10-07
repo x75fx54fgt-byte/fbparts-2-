@@ -576,54 +576,167 @@
         });
 
         async function cargarCategorias() {
-            const listaCat = document.getElementById('categorias-list');
-            const listaCatMovil = document.getElementById('categorias-list-movil');
-            
-            const snap = await getDocs(collection(db, "categorias"));
-            snap.forEach(docSnap => {
-                const cat = docSnap.data();
-                mapaCategorias[cat.id] = cat.nombre;
-                
-                listaCat.innerHTML += `<li><button data-cat="${cat.id}" onclick="filtrarPorCategoria('${cat.id}', this)">${cat.nombre}</button></li>`;
-                listaCatMovil.innerHTML += `<li><button data-cat="${cat.id}" onclick="filtrarPorCategoriaMovil('${cat.id}', this, '${cat.nombre}')">${cat.nombre}</button></li>`;
-            });
+            // 1. Cargar categorías de caché si existen (0 ms)
+            try {
+                const cacheCat = localStorage.getItem('categoriasCatalogo');
+                if (cacheCat) {
+                    const cats = JSON.parse(cacheCat);
+                    if (Array.isArray(cats) && cats.length > 0) {
+                        poblarCategoriasDOM(cats);
+                    }
+                }
+            } catch(e) {}
+
+            // 2. Consulta a Firestore en segundo plano para sincronizar categorías
+            try {
+                const snap = await getDocs(collection(db, "categorias"));
+                const catsNuevas = [];
+                snap.forEach(docSnap => {
+                    const data = docSnap.data();
+                    catsNuevas.push({ id: data.id || docSnap.id, ...data });
+                });
+
+                const catJson = JSON.stringify(catsNuevas);
+                if (catJson !== localStorage.getItem('categoriasCatalogo')) {
+                    try {
+                        localStorage.setItem('categoriasCatalogo', catJson);
+                    } catch(e) {}
+                    poblarCategoriasDOM(catsNuevas);
+                    if (todosLosProductos.length > 0) {
+                        aplicarFiltroActual();
+                    }
+                }
+            } catch (err) {
+                console.warn("Aviso: No se pudieron sincronizar categorías en segundo plano:", err);
+            }
         }
 
-        async function cargarInventario() {
-            const grid = document.getElementById('productos-grid');
-            const q = query(collection(db, "productos"), where("estado", "==", "activo"));
-            const snap = await getDocs(q);
-            snap.forEach(docSnap => todosLosProductos.push({ id: docSnap.id, ...docSnap.data() }));
-            
+        function poblarCategoriasDOM(categoriasArr) {
+            const listaCat = document.getElementById('categorias-list');
+            const listaCatMovil = document.getElementById('categorias-list-movil');
+            if (!listaCat || !listaCatMovil) return;
+
+            const params = new URLSearchParams(window.location.search);
+            const catUrl = params.get('cat') || 'todos';
+
+            let htmlEscritorio = `<li><button class="${catUrl === 'todos' ? 'active' : ''}" onclick="filtrarPorCategoria('todos', this)">Todos los Repuestos</button></li>`;
+            let htmlMovil = `<li><button class="${catUrl === 'todos' ? 'active' : ''}" onclick="filtrarPorCategoriaMovil('todos', this)">Todos los Repuestos</button></li>`;
+
+            categoriasArr.forEach(cat => {
+                const catId = cat.id || cat.slug;
+                mapaCategorias[catId] = cat.nombre;
+                const esActiva = catUrl === catId ? 'active' : '';
+                htmlEscritorio += `<li><button data-cat="${catId}" class="${esActiva}" onclick="filtrarPorCategoria('${catId}', this)">${cat.nombre}</button></li>`;
+                htmlMovil += `<li><button data-cat="${catId}" class="${esActiva}" onclick="filtrarPorCategoriaMovil('${catId}', this, '${cat.nombre}')">${cat.nombre}</button></li>`;
+                if (catUrl === catId) {
+                    const txtFiltro = document.getElementById('texto-filtro-activo');
+                    if (txtFiltro) txtFiltro.innerHTML = `<i class="fas fa-filter"></i> ${cat.nombre}`;
+                }
+            });
+
+            listaCat.innerHTML = htmlEscritorio;
+            listaCatMovil.innerHTML = htmlMovil;
+        }
+
+        function aplicarFiltroActual() {
             const params = new URLSearchParams(window.location.search);
             const catUrl = params.get('cat');
+            const busqueda = (document.getElementById('buscador-tienda')?.value || document.getElementById('buscador-tienda-movil')?.value || '').trim().toLowerCase();
+
+            let filtrados = todosLosProductos;
+
             if (catUrl && catUrl !== 'todos') {
-                const filtrados = todosLosProductos.filter(p => p.categoria === catUrl);
-                renderizarProductos(filtrados);
+                filtrados = filtrados.filter(p => p.categoria === catUrl);
                 const btnSidebar = document.querySelector(`.sidebar button[data-cat="${catUrl}"]`);
                 if (btnSidebar) {
                     document.querySelectorAll('.sidebar .cat-list button').forEach(b => b.classList.remove('active'));
                     btnSidebar.classList.add('active');
                 }
-            } else {
-                renderizarProductos(todosLosProductos);
+            }
+
+            if (busqueda) {
+                filtrados = filtrados.filter(p => (p.nombre || '').toLowerCase().includes(busqueda));
+            }
+
+            renderizarProductos(filtrados);
+        }
+
+        async function cargarInventario() {
+            let tieneCacheValido = false;
+
+            // 1. Lectura del Caché: Verificar clave productosCatalogo en localStorage
+            try {
+                const cacheRaw = localStorage.getItem('productosCatalogo');
+                if (cacheRaw) {
+                    const cacheProductos = JSON.parse(cacheRaw);
+                    if (Array.isArray(cacheProductos) && cacheProductos.length > 0) {
+                        todosLosProductos = cacheProductos;
+                        tieneCacheValido = true;
+                        // 2. Renderizado Instantáneo (Percepción de 0 segundos, oculta loader de inmediato)
+                        aplicarFiltroActual();
+                    }
+                }
+            } catch (errCache) {
+                console.warn("Aviso: No se pudo leer la caché local de productos:", errCache);
+            }
+
+            // 3. Actualización Silenciosa (Background Fetch asíncrono sin bloquear la interfaz)
+            actualizarInventarioSegundoPlano(tieneCacheValido);
+        }
+
+        async function actualizarInventarioSegundoPlano(tieneCacheValido) {
+            try {
+                const q = query(collection(db, "productos"), where("estado", "==", "activo"));
+                const snap = await getDocs(q);
+
+                const nuevosProductos = [];
+                snap.forEach(docSnap => {
+                    nuevosProductos.push({ id: docSnap.id, ...docSnap.data() });
+                });
+
+                const nuevoJson = JSON.stringify(nuevosProductos);
+                const cacheRaw = localStorage.getItem('productosCatalogo');
+
+                // 4. Actualización Inteligente: Compara datos nuevos con el caché
+                if (!tieneCacheValido || nuevoJson !== cacheRaw) {
+                    todosLosProductos = nuevosProductos;
+                    try {
+                        localStorage.setItem('productosCatalogo', nuevoJson);
+                    } catch (errStorage) {
+                        console.warn("Aviso: No se pudo actualizar productosCatalogo en localStorage:", errStorage);
+                    }
+                    // Actualiza silenciosamente el DOM con los datos más recientes
+                    aplicarFiltroActual();
+                }
+            } catch (error) {
+                // 5. Manejo de Errores Silencioso (Protocolo de Seguridad)
+                console.warn("Aviso: Error en sincronización de inventario en segundo plano:", error);
+                if (!tieneCacheValido) {
+                    const grid = document.getElementById('productos-grid');
+                    if (grid) {
+                        grid.innerHTML = '<div style="text-align:center; padding: 40px; color:#c0392b; grid-column: 1/-1;">Error al cargar los repuestos. Por favor recarga la página o verifica tu conexión.</div>';
+                    }
+                }
             }
         }
 
         function renderizarProductos(productosArray) {
             const grid = document.getElementById('productos-grid');
-            grid.innerHTML = '';
+            if (!grid) return;
             
-            if(productosArray.length === 0) {
+            if (!productosArray || productosArray.length === 0) {
                 grid.innerHTML = '<div style="text-align:center; padding: 40px; color:#666; grid-column: 1/-1;">No se encontraron repuestos.</div>';
                 return;
             }
 
+            let cardsHTML = '';
+
             productosArray.forEach(prod => {
                 const nombreCat = mapaCategorias[prod.categoria] || 'General';
-                const safeName = prod.nombre.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                const nombreProd = prod.nombre || 'Repuesto Automotriz';
+                const safeName = nombreProd.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                 
-                const slug = (prod.nombre || 'repuesto')
+                const slug = nombreProd
                     .toLowerCase()
                     .normalize("NFD")
                     .replace(/[\u0300-\u036f]/g, "")
@@ -632,30 +745,34 @@
                 const urlProducto = `${slug}.html`;
 
                 let botonML = "";
-                if(prod.ml_id && prod.ml_id.trim() !== "") {
+                if (prod.ml_id && prod.ml_id.trim() !== "") {
                     let idML = prod.ml_id.trim();
                     if (idML.startsWith("MLV") && !idML.startsWith("MLV-")) idML = idML.replace("MLV", "MLV-");
                     botonML = `<a href="https://articulo.mercadolibre.com.ve/${idML}" target="_blank" class="btn-ml"><i class="fas fa-handshake"></i> Ver en Mercado Libre</a>`;
                 }
 
-                grid.innerHTML += `
+                const precioNum = Number(prod.precio || 0);
+
+                cardsHTML += `
                     <div class="prod-card">
                         <a href="${urlProducto}" style="text-decoration: none; color: inherit; display: contents;">
                             <div class="prod-img-wrap">
-                                <img src="${prod.imagen}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png'">
+                                <img src="${prod.imagen || ''}" alt="Repuesto original ${nombreProd} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png'">
                             </div>
                             <div class="prod-info">
                                 <div class="prod-cat">${nombreCat}</div>
-                                <h4 class="prod-title">${prod.nombre}</h4>
+                                <h4 class="prod-title">${nombreProd}</h4>
                         </a>
-                                <div class="prod-price">$${Number(prod.precio).toFixed(2)}</div>
+                                <div class="prod-price">$${precioNum.toFixed(2)}</div>
                                 <div style="margin-top: auto;">
-                                    <button type="button" class="btn-add-cart" onclick="agregarAlCarrito('${prod.id}', '${safeName}', ${prod.precio})"><i class="fas fa-cart-plus"></i> Añadir</button>
+                                    <button type="button" class="btn-add-cart" onclick="agregarAlCarrito('${prod.id}', '${safeName}', ${precioNum})"><i class="fas fa-cart-plus"></i> Añadir</button>
                                     ${botonML}
                                 </div>
                             </div>
                     </div>`;
             });
+
+            grid.innerHTML = cardsHTML;
         }
 
         window.toggleFiltrosMovil = function() {
@@ -924,10 +1041,12 @@
             btn.disabled = false;
         };
 
-        window.addEventListener('DOMContentLoaded', async () => {
-            actualizarUICarrito(); 
-            await cargarCategorias();
-            await cargarInventario();
+        // ⚡ CARGA INSTANTÁNEA (Zero-Delay con localStorage)
+        cargarCategorias();
+        cargarInventario();
+
+        window.addEventListener('DOMContentLoaded', () => {
+            actualizarUICarrito();
         });
     </script>
 </body>
