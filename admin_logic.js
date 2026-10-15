@@ -267,6 +267,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
             if(id === 'facturacion') { window.cargarBaseClientes(); window.actualizarPreviewFactura(); }
             if(id === 'historial-facturas') { window.cargarHistorialFacturas(); }
             if(id === 'importacion') { window.cargarHistorialImportaciones(); }
+            if(id === 'reventas') { window.cargarHistorialReventas(); if(window.actualizarEstadoModoBsReventas) window.actualizarEstadoModoBsReventas(); }
             if(id === 'rutas') { setTimeout(() => { window.iniciarMapaAdmin(); window.cargarPuntosRuta(); window.cargarSelectorPedidosRuta(); }, 200); }
         };
 
@@ -6515,20 +6516,186 @@ DATOS DEL REPUESTO:
         window.tasaReventaBCV = 42.00;
         window.tasaReventaEUR = 1.08;
 
+        // Estado del conversor de monedas para inputs de reventas (USD o VES)
+        window.monedaReventas = {
+            'rev-venta': 'USD',
+            'rev-costo': 'USD',
+            'rev-gastos': 'USD'
+        };
+
+        window.obtenerTasaBCVActual = function() {
+            let t = window.tasaVivaBCV || window.tasaReventaBCV || 0;
+            if (t > 0) return t;
+            if (window._ultimoUsdBcv && window._ultimoUsdBcv > 0) return window._ultimoUsdBcv;
+            return 0;
+        };
+
+        window.actualizarEstadoModoBsReventas = function() {
+            const tasa = window.obtenerTasaBCVActual();
+            const campos = ['rev-venta', 'rev-costo', 'rev-gastos'];
+            campos.forEach(id => {
+                const btnVes = document.getElementById(`btn-curr-${id}-ves`);
+                if (btnVes) {
+                    if (tasa <= 0) {
+                        btnVes.disabled = true;
+                        btnVes.style.opacity = '0.4';
+                        btnVes.style.cursor = 'not-allowed';
+                        btnVes.title = 'Tasa BCV cargando...';
+                    } else {
+                        btnVes.disabled = false;
+                        btnVes.style.opacity = '1';
+                        btnVes.style.cursor = 'pointer';
+                        btnVes.title = `Ingresar en Bolívares (Tasa BCV: Bs. ${tasa.toFixed(2)})`;
+                    }
+                }
+            });
+        };
+
+        window.setMonedaReventa = function(fieldId, targetCurrency) {
+            const tasa = window.obtenerTasaBCVActual();
+            if (targetCurrency === 'VES' && (!tasa || tasa <= 0)) {
+                alert("⚠️ La tasa oficial del BCV aún no está disponible. Por favor espera unos momentos a que se sincronice.");
+                return;
+            }
+
+            const monedaActual = (window.monedaReventas && window.monedaReventas[fieldId]) || 'USD';
+            if (monedaActual === targetCurrency) return;
+
+            window.monedaReventas[fieldId] = targetCurrency;
+
+            const btnUsd = document.getElementById(`btn-curr-${fieldId}-usd`);
+            const btnVes = document.getElementById(`btn-curr-${fieldId}-ves`);
+            const tag = document.getElementById(`tag-moneda-${fieldId}`);
+            const pfx = document.getElementById(`pfx-${fieldId}`);
+            const input = document.getElementById(fieldId);
+            const helpEl = document.getElementById(`help-${fieldId}`);
+
+            // Limpiar limpiamente el campo al cambiar de moneda para evitar números residuales o divisiones por cero
+            if (input) {
+                input.value = '';
+            }
+            if (helpEl) {
+                helpEl.innerHTML = '';
+            }
+
+            if (targetCurrency === 'VES') {
+                if (btnUsd) { btnUsd.style.background = 'transparent'; btnUsd.style.color = '#4b5563'; }
+                if (btnVes) { btnVes.style.background = '#1d6fa5'; btnVes.style.color = 'white'; }
+                if (tag) tag.textContent = `(en Bs. - Tasa BCV: ${tasa.toFixed(2)})`;
+                if (pfx) { pfx.textContent = 'Bs.'; pfx.style.fontSize = '11px'; }
+                if (input) {
+                    input.style.paddingLeft = '32px';
+                    input.placeholder = 'Ej: 8505';
+                    input.focus();
+                }
+            } else {
+                if (btnUsd) { btnUsd.style.background = '#385723'; btnUsd.style.color = 'white'; }
+                if (btnVes) { btnVes.style.background = 'transparent'; btnVes.style.color = '#4b5563'; }
+                if (tag) tag.textContent = '(en $)';
+                if (pfx) { pfx.textContent = '$'; pfx.style.fontSize = '13px'; }
+                if (input) {
+                    input.style.paddingLeft = '24px';
+                    input.placeholder = fieldId === 'rev-venta' ? 'Ej: 1000' : (fieldId === 'rev-costo' ? 'Ej: 600' : 'Ej: 50');
+                    input.focus();
+                }
+            }
+
+            window.calcularReventa();
+        };
+
+        window.manejarInputReventa = function(fieldId) {
+            const input = document.getElementById(fieldId);
+            const helpEl = document.getElementById(`help-${fieldId}`);
+            if (!input || !helpEl) return;
+
+            const val = parseFloat(input.value);
+            const tasa = window.obtenerTasaBCVActual();
+            const moneda = (window.monedaReventas && window.monedaReventas[fieldId]) || 'USD';
+
+            if (isNaN(val) || val <= 0) {
+                helpEl.innerHTML = '';
+                window.calcularReventa();
+                return;
+            }
+
+            if (moneda === 'VES') {
+                if (tasa > 0) {
+                    const equivUSD = val / tasa;
+                    const bsFormato = val.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    helpEl.innerHTML = `<span style="color: #15803d; font-weight: 600; font-size: 11.5px;"><i class="fas fa-hand-point-right"></i> Equivalente: $${equivUSD.toFixed(2)} (Calculado desde Bs. ${bsFormato} a tasa BCV)</span>`;
+                } else {
+                    helpEl.innerHTML = `<span style="color: #dc2626; font-size: 11px;"><i class="fas fa-exclamation-triangle"></i> Tasa BCV no disponible</span>`;
+                }
+            } else {
+                if (tasa > 0) {
+                    const equivVES = (val * tasa).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    helpEl.innerHTML = `<span style="color: #15803d; font-weight: 600; font-size: 11.5px;"><i class="fas fa-hand-point-right"></i> Equivalente: Bs. ${equivVES} (Calculado a tasa BCV)</span>`;
+                } else {
+                    helpEl.innerHTML = '';
+                }
+            }
+
+            window.calcularReventa();
+        };
+
+        window.manejarBlurReventa = function(fieldId) {
+            // El valor del input NO se altera al perder el foco (se conserva intacto)
+            window.manejarInputReventa(fieldId);
+        };
+
+        window.obtenerMontoEnUSD = function(fieldId) {
+            const input = document.getElementById(fieldId);
+            if (!input) return 0;
+            const rawVal = parseFloat(input.value);
+            if (isNaN(rawVal) || rawVal <= 0) return 0;
+
+            const moneda = (window.monedaReventas && window.monedaReventas[fieldId]) || 'USD';
+            if (moneda === 'VES') {
+                const tasa = window.obtenerTasaBCVActual();
+                if (tasa > 0) {
+                    return Number((rawVal / tasa).toFixed(2));
+                }
+                return 0;
+            }
+            return Number(rawVal.toFixed(2));
+        };
+
+        window.resetMonedasReventa = function() {
+            ['rev-venta', 'rev-costo', 'rev-gastos'].forEach(id => {
+                window.monedaReventas[id] = 'USD';
+                const btnUsd = document.getElementById(`btn-curr-${id}-usd`);
+                const btnVes = document.getElementById(`btn-curr-${id}-ves`);
+                const tag = document.getElementById(`tag-moneda-${id}`);
+                const pfx = document.getElementById(`pfx-${id}`);
+                const input = document.getElementById(id);
+                const help = document.getElementById(`help-${id}`);
+
+                if (btnUsd) { btnUsd.style.background = '#385723'; btnUsd.style.color = 'white'; }
+                if (btnVes) { btnVes.style.background = 'transparent'; btnVes.style.color = '#4b5563'; }
+                if (tag) tag.textContent = '(en $)';
+                if (pfx) { pfx.textContent = '$'; pfx.style.fontSize = '13px'; }
+                if (input) {
+                    input.style.paddingLeft = '24px';
+                    input.placeholder = id === 'rev-venta' ? 'Ej: 1000' : (id === 'rev-costo' ? 'Ej: 600' : 'Ej: 50');
+                }
+                if (help) help.innerHTML = '';
+            });
+            window.actualizarEstadoModoBsReventas();
+        };
+
         window.calcularReventa = function() {
-            const venta = parseFloat(document.getElementById('rev-venta').value) || 0;
-            const costo = parseFloat(document.getElementById('rev-costo').value) || 0;
-            const gastos = parseFloat(document.getElementById('rev-gastos').value) || 0;
-            const porcentaje = parseFloat(document.getElementById('rev-porcentaje').value) || 0;
+            const venta = window.obtenerMontoEnUSD('rev-venta');
+            const costo = window.obtenerMontoEnUSD('rev-costo');
+            const gastos = window.obtenerMontoEnUSD('rev-gastos');
+            const porcentaje = parseFloat(document.getElementById('rev-porcentaje')?.value) || 0;
+
+            const tasaVES = window.obtenerTasaBCVActual() || window.tasaReventaBCV || 42.00;
+            const tasaEUR = window.tasaReventaEUR || 1.08;
 
             const gananciaBruta = venta - costo - gastos;
             const comisionTercero = gananciaBruta * (porcentaje / 100);
             const gananciaNeta = gananciaBruta - comisionTercero;
 
-            // Reutilizamos la lógica y variables de tasas BCV y EUR leídas del sistema
-            const tasaVES = window.tasaReventaBCV;
-            const tasaEUR = window.tasaReventaEUR;
-            
             const renderMonedas = (montoUSD) => {
                 const ves = (montoUSD * tasaVES).toFixed(2);
                 let eurMonto = 0;
@@ -6541,9 +6708,13 @@ DATOS DEL REPUESTO:
                 return `$${montoUSD.toFixed(2)} | Bs.${ves} | €${eur}`;
             };
 
-            document.getElementById('rev-res-bruta').textContent = renderMonedas(gananciaBruta);
-            document.getElementById('rev-res-tercero').textContent = renderMonedas(comisionTercero);
-            document.getElementById('rev-res-neta').textContent = renderMonedas(gananciaNeta);
+            const elBruta = document.getElementById('rev-res-bruta');
+            const elTercero = document.getElementById('rev-res-tercero');
+            const elNeta = document.getElementById('rev-res-neta');
+
+            if (elBruta) elBruta.textContent = renderMonedas(gananciaBruta);
+            if (elTercero) elTercero.textContent = renderMonedas(comisionTercero);
+            if (elNeta) elNeta.textContent = renderMonedas(gananciaNeta);
             
             return {
                 venta, costo, gastos, porcentaje,
@@ -6552,12 +6723,15 @@ DATOS DEL REPUESTO:
             };
         };
 
-                window.editarReventa = async function(id) {
+        window.editarReventa = async function(id) {
             try {
                 const docRef = doc(db, "reventas_gastos", id);
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                     const rev = docSnap.data();
+                    if (window.resetMonedasReventa) {
+                        window.resetMonedasReventa();
+                    }
                     document.getElementById('rev-desc').value = rev.descripcion || "";
                     document.getElementById('rev-cliente').value = rev.cliente || "";
                     document.getElementById('rev-intermediario').value = rev.intermediario || "";
@@ -6566,6 +6740,12 @@ DATOS DEL REPUESTO:
                     document.getElementById('rev-gastos').value = rev.gastosUSD || "";
                     document.getElementById('rev-porcentaje').value = rev.porcentajeComision || 50;
                     
+                    if (window.manejarInputReventa) {
+                        window.manejarInputReventa('rev-venta');
+                        window.manejarInputReventa('rev-costo');
+                        window.manejarInputReventa('rev-gastos');
+                    }
+
                     window.calcularReventa();
                     window.idReventaEditando = id;
                     
@@ -6707,6 +6887,10 @@ DATOS DEL REPUESTO:
                 document.getElementById('rev-gastos').value = "";
                 document.getElementById('rev-porcentaje').value = "50";
                 
+                if (window.resetMonedasReventa) {
+                    window.resetMonedasReventa();
+                }
+
                 window.calcularReventa();
                 window.cargarHistorialReventas();
                 
@@ -7003,7 +7187,15 @@ DATOS DEL REPUESTO:
             try {
                 const bcvSnap = await getDoc(doc(db, "configuracion", "tasa_bcv"));
                 if(bcvSnap.exists()) {
-                    window.tasaReventaBCV = parseFloat(bcvSnap.data().Valor) || parseFloat(bcvSnap.data().valor) || window.tasaReventaBCV;
+                    const val = parseFloat(bcvSnap.data().Valor) || parseFloat(bcvSnap.data().valor);
+                    if (val > 0) {
+                        window.tasaReventaBCV = val;
+                        if (!window.tasaVivaBCV) window.tasaVivaBCV = val;
+                        window._ultimoUsdBcv = val;
+                        if (window.actualizarEstadoModoBsReventas) {
+                            window.actualizarEstadoModoBsReventas();
+                        }
+                    }
                 }
                 const eurSnap = await getDoc(doc(db, "configuracion", "tasa_euro"));
                 if(eurSnap.exists()) {
@@ -7204,6 +7396,14 @@ DATOS DEL REPUESTO:
                     if (resBcv.ok) {
                         const dataBcv = await resBcv.json();
                         usdBcv = parseFloat(dataBcv.promedio) || parseFloat(dataBcv.precio);
+                        if (usdBcv && usdBcv > 0) {
+                            window.tasaVivaBCV = usdBcv;
+                            window.tasaReventaBCV = usdBcv;
+                            window._ultimoUsdBcv = usdBcv;
+                            if (window.actualizarEstadoModoBsReventas) {
+                                window.actualizarEstadoModoBsReventas();
+                            }
+                        }
                     }
                 } catch(e) { console.warn("Error consultando Dólar BCV:", e); }
 
@@ -7213,6 +7413,10 @@ DATOS DEL REPUESTO:
                     if (resEur.ok) {
                         const dataEur = await resEur.json();
                         eurBcv = parseFloat(dataEur.promedio) || parseFloat(dataEur.precio);
+                        if (eurBcv && eurBcv > 0) {
+                            window.tasaVivaEUR = eurBcv;
+                            window.tasaReventaEUR = eurBcv;
+                        }
                     }
                 } catch(e) { console.warn("Error consultando Euro BCV:", e); }
 

@@ -1830,17 +1830,67 @@
                                 <input type="text" id="rev-cliente" placeholder="Ej: Transporte ABC" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label>Precio de Venta en $</label>
-                            <input type="number" id="rev-venta" placeholder="Ej: 1000" step="0.01" oninput="calcularReventa()" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+                        <!-- Campo: Precio de Venta -->
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <label style="margin: 0; font-weight: 600; font-size: 13px; color: #374151;">
+                                    Precio de Venta <span id="tag-moneda-rev-venta" style="font-size: 11px; color: #6b7280; font-weight: normal;">(en $)</span>
+                                </label>
+                                <div class="inline-flex rounded-md p-0.5 bg-gray-200 border border-gray-300">
+                                    <button type="button" id="btn-curr-rev-venta-usd" onclick="setMonedaReventa('rev-venta', 'USD')"
+                                        style="padding: 2px 8px; font-size: 11px; font-weight: 700; border: none; border-radius: 4px; cursor: pointer; background: #385723; color: white; transition: all 0.15s;">USD</button>
+                                    <button type="button" id="btn-curr-rev-venta-ves" onclick="setMonedaReventa('rev-venta', 'VES')"
+                                        style="padding: 2px 8px; font-size: 11px; font-weight: 700; border: none; border-radius: 4px; cursor: pointer; background: transparent; color: #4b5563; transition: all 0.15s;">Bs</button>
+                                </div>
+                            </div>
+                            <div style="position: relative;">
+                                <span id="pfx-rev-venta" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-weight: bold; color: #6b7280; font-size: 13px; pointer-events: none;">$</span>
+                                <input type="number" id="rev-venta" placeholder="Ej: 1000" step="any" oninput="manejarInputReventa('rev-venta')"
+                                    style="width: 100%; padding: 8px 8px 8px 24px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 13.5px;">
+                            </div>
+                            <div id="help-rev-venta" style="min-height: 16px; font-size: 11px; color: #6b7280; margin-top: 3px;"></div>
                         </div>
-                        <div class="form-group">
-                            <label>Costo de Compra al Proveedor en $</label>
-                            <input type="number" id="rev-costo" placeholder="Ej: 600" step="0.01" oninput="calcularReventa()" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+
+                        <!-- Campo: Costo de Compra al Proveedor -->
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <label style="margin: 0; font-weight: 600; font-size: 13px; color: #374151;">
+                                    Costo de Compra al Proveedor <span id="tag-moneda-rev-costo" style="font-size: 11px; color: #6b7280; font-weight: normal;">(en $)</span>
+                                </label>
+                                <div class="inline-flex rounded-md p-0.5 bg-gray-200 border border-gray-300">
+                                    <button type="button" id="btn-curr-rev-costo-usd" onclick="setMonedaReventa('rev-costo', 'USD')"
+                                        style="padding: 2px 8px; font-size: 11px; font-weight: 700; border: none; border-radius: 4px; cursor: pointer; background: #385723; color: white; transition: all 0.15s;">USD</button>
+                                    <button type="button" id="btn-curr-rev-costo-ves" onclick="setMonedaReventa('rev-costo', 'VES')"
+                                        style="padding: 2px 8px; font-size: 11px; font-weight: 700; border: none; border-radius: 4px; cursor: pointer; background: transparent; color: #4b5563; transition: all 0.15s;">Bs</button>
+                                </div>
+                            </div>
+                            <div style="position: relative;">
+                                <span id="pfx-rev-costo" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-weight: bold; color: #6b7280; font-size: 13px; pointer-events: none;">$</span>
+                                <input type="number" id="rev-costo" placeholder="Ej: 600" step="any" oninput="manejarInputReventa('rev-costo')"
+                                    style="width: 100%; padding: 8px 8px 8px 24px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 13.5px;">
+                            </div>
+                            <div id="help-rev-costo" style="min-height: 16px; font-size: 11px; color: #6b7280; margin-top: 3px;"></div>
                         </div>
-                        <div class="form-group">
-                            <label>Gastos Operativos (envío, banco) en $</label>
-                            <input type="number" id="rev-gastos" placeholder="Ej: 50" step="0.01" oninput="calcularReventa()" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+
+                        <!-- Campo: Gastos Operativos -->
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <label style="margin: 0; font-weight: 600; font-size: 13px; color: #374151;">
+                                    Gastos Operativos (envío, banco) <span id="tag-moneda-rev-gastos" style="font-size: 11px; color: #6b7280; font-weight: normal;">(en $)</span>
+                                </label>
+                                <div class="inline-flex rounded-md p-0.5 bg-gray-200 border border-gray-300">
+                                    <button type="button" id="btn-curr-rev-gastos-usd" onclick="setMonedaReventa('rev-gastos', 'USD')"
+                                        style="padding: 2px 8px; font-size: 11px; font-weight: 700; border: none; border-radius: 4px; cursor: pointer; background: #385723; color: white; transition: all 0.15s;">USD</button>
+                                    <button type="button" id="btn-curr-rev-gastos-ves" onclick="setMonedaReventa('rev-gastos', 'VES')"
+                                        style="padding: 2px 8px; font-size: 11px; font-weight: 700; border: none; border-radius: 4px; cursor: pointer; background: transparent; color: #4b5563; transition: all 0.15s;">Bs</button>
+                                </div>
+                            </div>
+                            <div style="position: relative;">
+                                <span id="pfx-rev-gastos" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-weight: bold; color: #6b7280; font-size: 13px; pointer-events: none;">$</span>
+                                <input type="number" id="rev-gastos" placeholder="Ej: 50" step="any" oninput="manejarInputReventa('rev-gastos')"
+                                    style="width: 100%; padding: 8px 8px 8px 24px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 13.5px;">
+                            </div>
+                            <div id="help-rev-gastos" style="min-height: 16px; font-size: 11px; color: #6b7280; margin-top: 3px;"></div>
                         </div>
                         <div class="form-group" style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
                             <div>
