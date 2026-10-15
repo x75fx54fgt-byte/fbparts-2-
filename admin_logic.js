@@ -3032,6 +3032,52 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
             setTimeout(() => { ventanaPDF.focus(); ventanaPDF.print(); }, 800);
         };
 
+        window.actualizarMetricasCotizaciones = function() {
+            let aprobadas = 0;
+            let espera = 0;
+            let noAprobadas = 0;
+
+            const rows = document.querySelectorAll('#cotizaciones-table-body tr');
+            rows.forEach(tr => {
+                const select = tr.querySelector('.select-status');
+                if (select) {
+                    const val = (select.value || '').trim();
+                    if (val === 'Aprobada') {
+                        aprobadas++;
+                    } else if (val === 'En espera' || val === 'Pendiente') {
+                        espera++;
+                    } else if (val === 'No aprobada' || val.toLowerCase().includes('rechaz') || val.toLowerCase().includes('anula')) {
+                        noAprobadas++;
+                    } else {
+                        espera++;
+                    }
+                }
+            });
+
+            const elAprobadas = document.getElementById('met-cot-aprobadas');
+            const elEspera = document.getElementById('met-cot-espera');
+            const elNoAprobadas = document.getElementById('met-cot-no-aprobadas');
+
+            if (elAprobadas) elAprobadas.textContent = aprobadas;
+            if (elEspera) elEspera.textContent = espera;
+            if (elNoAprobadas) elNoAprobadas.textContent = noAprobadas;
+        };
+
+        window.filtrarCotizaciones = function() {
+            const input = document.getElementById('buscador-cotizaciones');
+            const term = input ? input.value.trim().toLowerCase() : '';
+            const rows = document.querySelectorAll('#cotizaciones-table-body tr');
+
+            rows.forEach(row => {
+                if (!row.dataset.searchable) return;
+                if (!term || row.dataset.searchable.includes(term)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        };
+
         window.cargarHistorialCotizaciones = async function() {
             const tbody = document.getElementById('cotizaciones-table-body');
             if(!tbody) return;
@@ -3047,6 +3093,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                     tbody.innerHTML = `<tr><td colspan="6" style="text-align: center;">No hay cotizaciones guardadas.</td></tr>`;
                     document.getElementById('cot-nro').value = "1000";
                     window.actualizarPreview();
+                    if (window.actualizarMetricasCotizaciones) {
+                        window.actualizarMetricasCotizaciones();
+                    }
                     return;
                 }
 
@@ -3092,6 +3141,45 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                     if (estatus === "Aprobada") colorClase = 'status-pagado';
                     else if (estatus === "En espera" || estatus === "Pendiente") colorClase = 'status-credito';
                     else if (estatus === "No aprobada") colorClase = 'status-inactivo';
+
+                    // Indexar texto de búsqueda (Nro, Cliente, RIF, Repuestos/Ítems)
+                    let itemsTexto = [];
+                    if (Array.isArray(cot.items)) {
+                        cot.items.forEach(it => {
+                            if (typeof it === 'string') itemsTexto.push(it);
+                            else if (it && typeof it === 'object') {
+                                if (it.descripcion) itemsTexto.push(it.descripcion);
+                                if (it.repuesto) itemsTexto.push(it.repuesto);
+                                if (it.nombre) itemsTexto.push(it.nombre);
+                                if (it.codigo) itemsTexto.push(it.codigo);
+                            }
+                        });
+                    } else if (typeof cot.items === 'string') {
+                        itemsTexto.push(cot.items);
+                    }
+                    if (Array.isArray(cot.repuestos)) {
+                        cot.repuestos.forEach(r => {
+                            if (typeof r === 'string') itemsTexto.push(r);
+                            else if (r && typeof r === 'object') {
+                                if (r.descripcion) itemsTexto.push(r.descripcion);
+                                if (r.repuesto) itemsTexto.push(r.repuesto);
+                                if (r.nombre) itemsTexto.push(r.nombre);
+                                if (r.codigo) itemsTexto.push(r.codigo);
+                            }
+                        });
+                    } else if (typeof cot.repuestos === 'string') {
+                        itemsTexto.push(cot.repuestos);
+                    }
+                    if (cot.vehiculo) itemsTexto.push(cot.vehiculo);
+
+                    const textoBuscable = [
+                        cot.nro || cot.nroCotizacion || '',
+                        cot.cliente || '',
+                        cot.rif || '',
+                        itemsTexto.join(' ')
+                    ].join(' ').toLowerCase();
+
+                    tr.dataset.searchable = textoBuscable;
 
                     tr.innerHTML = `
                         <td><strong>#${cot.nro}</strong></td>
@@ -3150,6 +3238,21 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                 const nextNro = maxNro > 0 ? maxNro + 1 : 1000;
                 document.getElementById('cot-nro').value = String(nextNro).padStart(4, '0');
                 window.actualizarPreview();
+
+                // Actualizar métricas y aplicar filtro si hay búsqueda activa
+                if (window.actualizarMetricasCotizaciones) {
+                    window.actualizarMetricasCotizaciones();
+                }
+                if (window.filtrarCotizaciones) {
+                    window.filtrarCotizaciones();
+                }
+
+                // Asegurar event listener del buscador
+                const inputBuscador = document.getElementById('buscador-cotizaciones');
+                if (inputBuscador && !inputBuscador.dataset.listenerBound) {
+                    inputBuscador.dataset.listenerBound = "true";
+                    inputBuscador.addEventListener('input', window.filtrarCotizaciones);
+                }
                 
             } catch (error) { console.error(error); }
         };
@@ -3832,6 +3935,15 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
             else if (nuevoEstatus === "No aprobada" || nuevoEstatus === "Anulada") { colorClase = 'status-inactivo'; }
             
             selectElement.className = 'select-status ' + colorClase;
+
+            if (tipoDocumento === 'cotizaciones') {
+                if (window.cotizacionesDBLocal && window.cotizacionesDBLocal[docId]) {
+                    window.cotizacionesDBLocal[docId].estatusComercial = nuevoEstatus;
+                }
+                if (window.actualizarMetricasCotizaciones) {
+                    window.actualizarMetricasCotizaciones();
+                }
+            }
 
             let dataUpdate = { estatusComercial: nuevoEstatus };
 
