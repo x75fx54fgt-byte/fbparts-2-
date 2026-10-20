@@ -182,8 +182,23 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                         document.getElementById('admin-nombre-txt').textContent = SecuritySanitizer.cleanText(nombreAdmin, 50);
                         document.getElementById('admin-cargo-txt').textContent = SecuritySanitizer.cleanText(cargoAdmin, 50);
                         
+                        const defaultAvatar = "https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png";
+                        let fotoValida = defaultAvatar;
                         if (adminData.Foto && adminData.Foto.trim() !== "") {
-                            document.getElementById('admin-avatar').src = adminData.Foto;
+                            const fotoTrim = adminData.Foto.trim();
+                            if (fotoTrim === "https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png" || fotoTrim.endsWith('~mv2.png')) {
+                                fotoValida = defaultAvatar;
+                            } else {
+                                fotoValida = fotoTrim;
+                            }
+                        }
+                        const avatarEl = document.getElementById('admin-avatar');
+                        if (avatarEl) {
+                            avatarEl.src = fotoValida;
+                            avatarEl.onerror = function() {
+                                this.onerror = null;
+                                this.src = defaultAvatar;
+                            };
                         }
                     }
                 } catch (e) {
@@ -228,7 +243,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
             document.getElementById('edit-admin-nombre').value = document.getElementById('admin-nombre-txt').textContent;
             document.getElementById('edit-admin-cargo').value = document.getElementById('admin-cargo-txt').textContent;
             const fotoActual = document.getElementById('admin-avatar').src;
-            document.getElementById('edit-admin-foto').value = fotoActual.includes('mv2.png') ? '' : fotoActual;
+            const defaultAvatar = "https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png";
+            document.getElementById('edit-admin-foto').value = (fotoActual.includes('mv2.png') || fotoActual === defaultAvatar) ? '' : fotoActual;
             document.getElementById('modal-admin-perfil').style.display = 'flex';
         };
 
@@ -241,10 +257,19 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
             if (!window.currentAdminDocId) return;
 
             btn.innerHTML = "Guardando..."; btn.disabled = true;
+            const defaultAvatar = "https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png";
+            const fotoParaGuardar = (!nuevaFoto || nuevaFoto.endsWith('~mv2.png')) ? defaultAvatar : nuevaFoto;
             try {
-                await updateDoc(doc(db, "administradores", window.currentAdminDocId), { Nombre: nuevoNombre, Foto: nuevaFoto });
+                await updateDoc(doc(db, "administradores", window.currentAdminDocId), { Nombre: nuevoNombre, Foto: fotoParaGuardar });
                 document.getElementById('admin-nombre-txt').textContent = nuevoNombre;
-                if (nuevaFoto !== "") document.getElementById('admin-avatar').src = nuevaFoto;
+                const avatarEl = document.getElementById('admin-avatar');
+                if (avatarEl) {
+                    avatarEl.src = fotoParaGuardar;
+                    avatarEl.onerror = function() {
+                        this.onerror = null;
+                        this.src = defaultAvatar;
+                    };
+                }
                 alert("¡Perfil actualizado con éxito!");
                 window.cerrarModalPerfil();
             } catch (error) { console.error(error); }
@@ -2056,8 +2081,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                         </div>
                     </div>
 
-                    <div style="border-top: 1px solid #ddd; padding-top: 8px; font-size: 9px; color: #555;">
+                    <div style="border-top: 1px solid #ddd; padding-top: 6px; font-size: 8.5px; color: #555;">
                         <p style="margin: 0 0 2px 0; font-weight: bold; color: #333;">Representado en ${moneda}. Tasa Referencial de la Operación: ${tasaGuardada}. El documento fiscal original se emite por caja registradora.</p>
+                        <p class="text-[7.5px] text-gray-500" style="margin: 2px 0 0 0; font-size: 7.5px; color: #6b7280; line-height: 1.2;">La recepción, retiro de mercancía o firma del presente documento convalida la aceptación íntegra de nuestras Políticas de Garantía, Devolución y Envíos consultables en: <a href="https://www.fybparts.com/politicas-devoluciones.html" target="_blank" style="color: inherit; text-decoration: none;">www.fybparts.com/politicas-devoluciones.html</a></p>
                     </div>
                 </div>
             `;
@@ -2230,9 +2256,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                         <div style="font-weight: 700;">Tasa: <strong>${tasaGuardada}</strong>${refCruzadaHTML}</div>
                         <div style="margin-top: 3px; font-weight: 900; font-size: 12px;">¡GRACIAS POR SU PREFERENCIA!</div>
                         <div style="margin-top: 2px; color: #444; font-size: 8.5px;">Documento de control y entrega interna.</div>
+                        <div style="margin-top: 3px; color: #555; font-size: 7px; line-height: 1.15; word-break: break-all;">Recepción del pedido convalida términos y garantías en: <a href="https://www.fybparts.com/politicas-devoluciones.html" target="_blank" style="color: inherit; text-decoration: none;">www.fybparts.com/politicas-devoluciones.html</a></div>
                     </div>
                     <!-- Espacio seguro para barra de corte / tear-off -->
-                    <div style="height: 12mm;"></div>
+                    <div style="height: 10mm;"></div>
                 </div>
             `;
         }
@@ -2921,16 +2948,16 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                         </div>
                     </div>
 
-                    <div style="border-top: 1px solid #ddd; padding-top: 8px; font-size: 9px; color: #555; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div style="border-top: 1px solid #ddd; padding-top: 6px; font-size: 9px; color: #555; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                         <div>
                             <p style="margin: 0 0 2px 0; font-weight: bold; color: #333;">MÉTODO DE PAGOS:</p>
-                            <ul style="margin: 0; padding-left: 12px;">
+                            <ul style="margin: 0; padding-left: 12px; font-size: 8.5px; line-height: 1.3;">
                                 <li>Pago Móvil, efectivo en divisas, transferencias bancarias (Banesco, BNC, BVC, Bancamiga) y Binance.</li>
                             </ul>
                         </div>
                         <div>
                             <p style="margin: 0 0 2px 0; font-weight: bold; color: #333;">TÉRMINOS:</p>
-                            <p style="margin: 0;">Representado en USD. Válida por 7 días. https://www.fybparts.com</p>
+                            <p style="margin: 0; font-size: 7.5px; color: #6b7280; line-height: 1.25;">Representado en USD. Válida por 7 días. La confirmación o pago constituye aceptación de términos y garantías en: <a href="https://www.fybparts.com/politicas-devoluciones.html" target="_blank" style="color: inherit; text-decoration: none;">www.fybparts.com/politicas-devoluciones.html</a></p>
                         </div>
                     </div>
                 </div>
