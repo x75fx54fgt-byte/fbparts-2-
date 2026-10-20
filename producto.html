@@ -152,26 +152,38 @@
 <body>
 
     <div class="topbar">
-        <p style="margin:0; font-weight: bold; font-size: 14px; letter-spacing: 1px;">DELIVERY GRATIS EN CARACAS</p><span>(CIERTAS CONDICIONES APLICAN)</span>
+        <h2>DELIVERY GRATIS EN CARACAS</h2>
+        <span>(CIERTAS CONDICIONES APLICAN)</span>
     </div>
 
-    <!-- 🚀 HEADER MÓVIL CORREGIDO -->
-    <header style="background: white; border-bottom: 1px solid #eee;">
-        <div class="container header-wrap" style="padding: 15px 20px; max-width: 1350px; display: flex; justify-content: space-between; align-items: center;">
+    <!-- 🚀 HEADER ESTANDARIZADO CORPORATIVO (3 BLOQUES: LOGO | NAV | LLAMA AHORA + REDES) -->
+    <header>
+        <div class="container px-4 md:px-8 header-wrap">
             <a class="logo" href="index.html">
-                <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logotipo F&B PARTS" decoding="async" style="height: 60px;">
+                <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logotipo Oficial F&B PARTS" decoding="async">
             </a>
-            
+
             <nav id="nav-principal">
                 <a href="index.html" onclick="toggleMenuMobile()">Inicio</a>
-                <a href="tienda.html" onclick="toggleMenuMobile()" style="color: #5e8877; font-weight: bold;">Tienda</a>
+                <a href="tienda.html" onclick="toggleMenuMobile()">Repuestos</a>
                 <a href="quienes-somos.html" onclick="toggleMenuMobile()">Quienes somos</a>
                 <a href="index.html#mercadolibre" onclick="toggleMenuMobile()">Mercado Libre</a>
                 <a href="index.html#contacto" onclick="toggleMenuMobile()">Contacto</a>
-                <a href="login.html" id="nav-cuenta-btn" style="color: var(--green); font-weight: bold;"><i class="fas fa-user"></i> Mi Cuenta</a>
+                <a href="login.html" id="nav-cuenta-btn" style="color: var(--green, #5e8877); font-weight: bold;"><i class="fas fa-user-check"></i> Mi Cuenta</a>
             </nav>
 
-            <button class="mobile-menu" aria-label="Menú" onclick="toggleMenuMobile()" style="display: none;">
+            <div class="header-right">
+                <a class="call-btn" href="https://api.whatsapp.com/send?phone=584120161036" target="_blank">
+                    LLAMA AHORA <i class="fas fa-phone"></i>
+                </a>
+                <div class="social">
+                    <a href="https://instagram.com/fybparts" target="_blank" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                    <a href="https://www.facebook.com/FB-PARTS-109647624743542/" target="_blank" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                    <a href="https://api.whatsapp.com/send?phone=584120161036" target="_blank" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+                </div>
+            </div>
+
+            <button class="mobile-menu" aria-label="Menú" onclick="toggleMenuMobile()">
                 <i class="fas fa-bars"></i>
             </button>
         </div>
@@ -195,9 +207,26 @@
         <div class="related-grid" id="related-products-grid"></div>
     </section>
 
-    <footer style="background-color: #000; color: #fff; text-align: center; padding: 25px 0; margin-top: auto;">
-        <p class="oswald" style="margin: 0; font-size: 16px; letter-spacing: 1px;">&copy;<span id="year-footer">2026</span> por F&B PARTS.</p>
-        <script> document.getElementById('year-footer').textContent = new Date().getFullYear(); </script>
+    <footer style="background-color: #000; color: #fff; text-align: center; padding: 30px 15px; margin-top: auto;">
+        <div style="max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 14px;">
+            <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px 25px; font-size: 14px;">
+                <a href="index.html" style="color: #bbb; text-decoration: none;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#bbb'">Inicio</a>
+                <a href="tienda.html" style="color: #bbb; text-decoration: none;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#bbb'">Tienda</a>
+                <a href="quienes-somos.html" style="color: #bbb; text-decoration: none;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#bbb'">Quiénes Somos</a>
+                <a href="politicas-devoluciones.html" style="color: #5e8877; text-decoration: none; font-weight: bold;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#5e8877'">
+                    <i class="fas fa-shield-alt" style="margin-right: 5px;"></i>Políticas de Garantía y Devolución
+                </a>
+                <a href="index.html#mercadolibre" style="color: #bbb; text-decoration: none;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#bbb'">Mercado Libre</a>
+                <a href="index.html#contacto" style="color: #bbb; text-decoration: none;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#bbb'">Contacto</a>
+                <a href="admin-login.html" style="color: #c9b065; text-decoration: none; font-size: 13px;" title="Acceso Interno"><i class="fas fa-lock"></i></a>
+            </div>
+            <p class="oswald" style="margin: 0; font-size: 15px; letter-spacing: 1px; color: #888;">
+                &copy;<span id="year-footer">2026</span> por F&B PARTS (Inversiones FB Parts, C.A. RIF: J-503971118). Todos los derechos reservados.
+            </p>
+        </div>
+        <script>
+            if(document.getElementById('year-footer')) document.getElementById('year-footer').textContent = new Date().getFullYear();
+        </script>
     </footer>
 
         <!-- Botón Flotante del Carrito (CORREGIDO) -->

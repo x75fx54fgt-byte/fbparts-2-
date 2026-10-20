@@ -173,12 +173,12 @@
             </a>
 
             <nav id="nav-principal">
-                <a href="#inicio" onclick="toggleMenuMobile()">Inicio</a>
+                <a href="#inicio" onclick="toggleMenuMobile()" style="color: var(--green, #5e8877); font-weight: bold; border-bottom: 2px solid var(--green, #5e8877); padding-bottom: 5px;">Inicio</a>
                 <a href="tienda.html" onclick="toggleMenuMobile()">Repuestos</a>
                 <a href="quienes-somos.html" onclick="toggleMenuMobile()">Quienes somos</a>
                 <a href="#mercadolibre" onclick="toggleMenuMobile()">Mercado Libre</a>
                 <a href="#contacto" onclick="toggleMenuMobile()">Contacto</a>
-                <a href="login.html" id="nav-cuenta-btn" style="color: var(--green); font-weight: bold;"><i class="fas fa-user"></i> Mi Cuenta</a>
+                <a href="login.html" id="nav-cuenta-btn" style="color: var(--green, #5e8877); font-weight: bold;"><i class="fas fa-user-check"></i> Mi Cuenta</a>
             </nav>
 
             <div class="header-right">
@@ -631,11 +631,23 @@
     </section>
 
     <!-- FOOTER GLOBAL -->
-    <footer style="background-color: #000; color: #fff; text-align: center; padding: 25px 0; position: relative; margin-top: 50px;">
-        <p class="oswald" style="margin: 0; font-size: 16px; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 5px;">
-            &copy;<span id="year-footer">2026</span> por F&B PARTS. 
-            <a href="admin-login.html" style="color: #c9b065; text-decoration: none; font-size: 14px; margin-left: 8px;" title="Acceso Interno"><i class="fas fa-lock"></i></a>
-        </p>
+    <footer style="background-color: #000; color: #fff; text-align: center; padding: 30px 15px; position: relative; margin-top: 50px;">
+        <div style="max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 14px;">
+            <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px 25px; font-size: 14px;">
+                <a href="index.html" style="color: #bbb; text-decoration: none;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#bbb'">Inicio</a>
+                <a href="tienda.html" style="color: #bbb; text-decoration: none;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#bbb'">Tienda</a>
+                <a href="quienes-somos.html" style="color: #bbb; text-decoration: none;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#bbb'">Quiénes Somos</a>
+                <a href="politicas-devoluciones.html" style="color: #5e8877; text-decoration: none; font-weight: bold;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#5e8877'">
+                    <i class="fas fa-shield-alt" style="margin-right: 5px;"></i>Políticas de Garantía y Devolución
+                </a>
+                <a href="index.html#mercadolibre" style="color: #bbb; text-decoration: none;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#bbb'">Mercado Libre</a>
+                <a href="index.html#contacto" style="color: #bbb; text-decoration: none;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#bbb'">Contacto</a>
+                <a href="admin-login.html" style="color: #c9b065; text-decoration: none; font-size: 13px;" title="Acceso Interno"><i class="fas fa-lock"></i></a>
+            </div>
+            <p class="oswald" style="margin: 0; font-size: 15px; letter-spacing: 1px; color: #888;">
+                &copy;<span id="year-footer">2026</span> por F&B PARTS (Inversiones FB Parts, C.A. RIF: J-503971118). Todos los derechos reservados.
+            </p>
+        </div>
         <script>
             document.getElementById('year-footer').textContent = new Date().getFullYear();
         </script>

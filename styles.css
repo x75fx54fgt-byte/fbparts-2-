@@ -1,4 +1,6 @@
 
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap');
+
 :root{
     --green:#5e8877;
     --green-dark:#4d7162;
@@ -109,16 +111,19 @@ nav{
     align-items: center;
 }
 
-nav a{
+header nav a, nav a{
     text-decoration: none;
-    color: var(--green);
-    font-family: 'Oswald', sans-serif;
+    color: var(--green, #5e8877) !important;
+    font-family: 'Oswald', sans-serif !important;
     font-size: 20px;
     font-weight: 600;
     letter-spacing: .04em;
 }
 
-nav a:hover{ color: #000; transform: translateY(-1px); }
+header nav a:hover, nav a:hover{ 
+    color: #2e2e2e !important; 
+    transform: translateY(-1px); 
+}
 
 .header-right{
     display: flex;
@@ -680,8 +685,10 @@ footer{
     display: none;
 }
 
-@media (max-width: 1100px){
-    nav{ display: none; }
+@media (max-width: 1024px){
+    header nav{ display: none; flex-direction: column; position: absolute; top: 100%; left: 0; width: 100%; background: white; box-shadow: 0 10px 15px rgba(0,0,0,0.1); border-top: 1px solid #eee; z-index: 9999; padding-bottom: 20px; }
+    header nav.menu-activo{ display: flex !important; }
+    header nav a{ padding: 15px 20px !important; border-bottom: 1px solid #f0f0f0; width: 100%; text-align: left; display: block; font-size: 18px !important; }
     
     .mobile-menu{ 
         display: inline-flex !important; 
@@ -704,15 +711,14 @@ footer{
     .contact-grid{ grid-template-columns: 1fr; }
     
     .header-wrap{
-        flex-direction: column !important;
+        flex-direction: row !important;
         align-items: center !important;
-        justify-content: center !important;
-        text-align: center !important;
+        justify-content: space-between !important;
+        flex-wrap: nowrap !important;
     }
 
     .header-right{ 
-        align-items: center !important; 
-        width: 100% !important;
+        display: none !important;
     }
 }
 

@@ -80,22 +80,34 @@
         <span>TUS DATOS Y SEGUIMIENTO DE ENVIOS</span>
     </div>
 
-        <header style="background: white; border-bottom: 1px solid #eee; position: relative;">
-        <div class="container header-wrap" style="padding: 15px 20px; max-width: 1350px; display: flex; justify-content: space-between; align-items: center;">
-            <a class="logo" href="index.html" style="display: flex; align-items: center;">
-                <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logotipo F&B PARTS" decoding="async" style="height: 60px;">
+    <!-- 🚀 HEADER ESTANDARIZADO CORPORATIVO (3 BLOQUES: LOGO | NAV | LLAMA AHORA + REDES) -->
+    <header>
+        <div class="container px-4 md:px-8 header-wrap">
+            <a class="logo" href="index.html">
+                <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logotipo Oficial F&B PARTS" decoding="async">
             </a>
-            
+
             <nav id="nav-principal">
                 <a href="index.html" onclick="toggleMenuMobile()">Inicio</a>
                 <a href="tienda.html" onclick="toggleMenuMobile()">Repuestos</a>
                 <a href="quienes-somos.html" onclick="toggleMenuMobile()">Quienes somos</a>
                 <a href="index.html#mercadolibre" onclick="toggleMenuMobile()">Mercado Libre</a>
                 <a href="index.html#contacto" onclick="toggleMenuMobile()">Contacto</a>
-                <a href="login.html" id="nav-cuenta-btn" style="color: var(--green); font-weight: bold; border-bottom: 2px solid var(--green); padding-bottom: 5px;"><i class="fas fa-user"></i> Mi Cuenta</a>
+                <a href="login.html" id="nav-cuenta-btn" style="color: var(--green, #5e8877); font-weight: bold; border-bottom: 2px solid var(--green, #5e8877); padding-bottom: 5px;"><i class="fas fa-user-check"></i> Mi Cuenta</a>
             </nav>
 
-            <button class="mobile-menu" aria-label="Menú" onclick="toggleMenuMobile()" style="margin: 0; margin-left: auto;">
+            <div class="header-right">
+                <a class="call-btn" href="https://api.whatsapp.com/send?phone=584120161036" target="_blank">
+                    LLAMA AHORA <i class="fas fa-phone"></i>
+                </a>
+                <div class="social">
+                    <a href="https://instagram.com/fybparts" target="_blank" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                    <a href="https://www.facebook.com/FB-PARTS-109647624743542/" target="_blank" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                    <a href="https://api.whatsapp.com/send?phone=584120161036" target="_blank" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+                </div>
+            </div>
+
+            <button class="mobile-menu" aria-label="Menú" onclick="toggleMenuMobile()">
                 <i class="fas fa-bars"></i>
             </button>
         </div>
