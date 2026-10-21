@@ -4362,17 +4362,28 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
         };
 
         window.imprimirContrato = function() {
+            const canvas = document.getElementById('contrato-documento-imprimible');
+            if (!canvas) {
+                alert("No se encontró el documento a imprimir.");
+                return;
+            }
+
+            const nroCot = (document.getElementById('contrato-nro')?.value || 'S_N').trim().replace(/[^a-zA-Z0-9_-]/g, '_');
+            const tituloDoc = `Contrato_Procura_${nroCot}`;
+
             document.body.classList.add('imprimiendo-contrato');
             const originalTitle = document.title;
-            document.title = ""; // Suprime el título/URL en la cabecera automática del navegador
+            document.title = tituloDoc;
+
             const limpiar = () => {
                 document.body.classList.remove('imprimiendo-contrato');
                 document.title = originalTitle;
                 window.removeEventListener('afterprint', limpiar);
             };
+
             window.addEventListener('afterprint', limpiar);
             window.print();
-            setTimeout(limpiar, 1500);
+            setTimeout(limpiar, 2500);
         };
 
         window.copiarTextoContrato = function() {

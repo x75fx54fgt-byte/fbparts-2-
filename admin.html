@@ -139,22 +139,11 @@
             #print-container { display: none; }
         }
         @media print {
-            /* 1. NORMALIZACIÓN DE MÁRGENES Y HOJA (LETTER) SIN ENCABEZADOS DE NAVEGADOR */
+            /* 1. NORMALIZACIÓN DE MÁRGENES Y HOJA (LETTER) */
             @page {
                 size: letter;
                 margin: 10mm 15mm 10mm 15mm;
-                @top-left { content: none !important; }
-                @top-center { content: none !important; }
-                @top-right { content: none !important; }
-                @bottom-left { content: none !important; }
-                @bottom-center { content: none !important; }
-                @bottom-right { content: none !important; }
             }
-            /* Ocultar elementos automáticos de cabecera/pie del navegador */
-            @top-left { content: none !important; }
-            @top-right { content: none !important; }
-            @bottom-left { content: none !important; }
-            @bottom-right { content: none !important; }
 
             html, body {
                 width: 100% !important;
@@ -172,10 +161,41 @@
             body:not(.imprimiendo-contrato) #app-wrapper { display: none !important; }
             body:not(.imprimiendo-contrato) #print-container { display: block !important; width: 100%; }
 
-            /* 2. TOTAL UI LOCKOUT EN MODO CONTRATO */
+            /* 2. SUPRESIÓN UNIVERSAL: Elementos de interfaz que NUNCA deben imprimirse */
+            #ticker-tasas-container,
+            #ticker-wrapper,
+            .ticker-marquee-wrapper,
+            #auth-loading-screen,
+            .floating-action-btn,
+            .btn-flotante {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                height: 0 !important;
+                max-height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: hidden !important;
+            }
+
+            /* 3. TOTAL UI LOCKOUT EN MODO CONTRATO */
+            body.imprimiendo-contrato > *:not(#modal-generador-contrato) {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                height: 0 !important;
+                max-height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: hidden !important;
+            }
+
             body.imprimiendo-contrato #app-wrapper,
             body.imprimiendo-contrato #print-container,
             body.imprimiendo-contrato #main-sidebar,
+            body.imprimiendo-contrato #ticker-tasas-container,
+            body.imprimiendo-contrato #ticker-wrapper,
+            body.imprimiendo-contrato #auth-loading-screen,
             body.imprimiendo-contrato #bcv-bar,
             body.imprimiendo-contrato .bcv-ticker,
             body.imprimiendo-contrato .modal-overlay:not(#modal-generador-contrato),
@@ -190,6 +210,7 @@
                 visibility: hidden !important;
                 opacity: 0 !important;
                 height: 0 !important;
+                max-height: 0 !important;
                 width: 0 !important;
                 margin: 0 !important;
                 padding: 0 !important;
@@ -2690,7 +2711,7 @@
             }
         }, 8000);
     </script>
-    <script type="module" src="admin_logic.js?v=20261020_print_noheader"></script>
+    <script type="module" src="admin_logic.js?v=20261020_print_noticker"></script>
 
 
     <!-- MODAL AUDITORIA INTERNA -->
