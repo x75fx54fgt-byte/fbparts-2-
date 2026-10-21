@@ -128,10 +128,177 @@
         @media screen {
             #print-container { display: none; }
         }
+        /* =========================================================
+           🖨️ REGLAS MÁGICAS DE IMPRESIÓN CROSS-BROWSER (CHROME & WEBKIT/SAFARI)
+           ========================================================= */
+        @media screen {
+            #print-container { display: none; }
+        }
         @media print {
-            body { background-color: white; margin: 0; padding: 0; }
-            #app-wrapper { display: none !important; }
-            #print-container { display: block !important; width: 100%; }
+            /* 1. NORMALIZACIÓN DE MÁRGENES Y HOJA (LETTER) SIN ENCABEZADOS DE NAVEGADOR */
+            @page {
+                size: letter;
+                margin: 10mm 15mm 10mm 15mm;
+                @top-left { content: none !important; }
+                @top-center { content: none !important; }
+                @top-right { content: none !important; }
+                @bottom-left { content: none !important; }
+                @bottom-center { content: none !important; }
+                @bottom-right { content: none !important; }
+            }
+            /* Ocultar elementos automáticos de cabecera/pie del navegador */
+            @top-left { content: none !important; }
+            @top-right { content: none !important; }
+            @bottom-left { content: none !important; }
+            @bottom-right { content: none !important; }
+
+            html, body {
+                width: 100% !important;
+                height: auto !important;
+                min-height: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* MODO NORMAL (IMPRESIÓN REGULAR COTIZACIÓN / FACTURA / PEDIDO) */
+            body:not(.imprimiendo-contrato) #app-wrapper { display: none !important; }
+            body:not(.imprimiendo-contrato) #print-container { display: block !important; width: 100%; }
+
+            /* 2. TOTAL UI LOCKOUT EN MODO CONTRATO */
+            body.imprimiendo-contrato #app-wrapper,
+            body.imprimiendo-contrato #print-container,
+            body.imprimiendo-contrato #main-sidebar,
+            body.imprimiendo-contrato #bcv-bar,
+            body.imprimiendo-contrato .bcv-ticker,
+            body.imprimiendo-contrato .modal-overlay:not(#modal-generador-contrato),
+            body.imprimiendo-contrato .contrato-no-print,
+            body.imprimiendo-contrato .contrato-panel-controles,
+            body.imprimiendo-contrato button,
+            body.imprimiendo-contrato .btn-flotante,
+            body.imprimiendo-contrato .floating-action-btn,
+            body.imprimiendo-contrato header,
+            body.imprimiendo-contrato nav {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                height: 0 !important;
+                width: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: hidden !important;
+            }
+
+            /* 3. CONTENEDOR Y HOJA DEL CONTRATO LEGAL */
+            body.imprimiendo-contrato #modal-generador-contrato {
+                display: block !important;
+                position: static !important;
+                width: 100% !important;
+                height: auto !important;
+                min-height: auto !important;
+                max-height: none !important;
+                background: #ffffff !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                overflow: visible !important;
+                box-shadow: none !important;
+                border: none !important;
+                z-index: 999999 !important;
+            }
+            body.imprimiendo-contrato #modal-generador-contrato > div {
+                display: block !important;
+                position: static !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                height: auto !important;
+                min-height: auto !important;
+                max-height: none !important;
+                box-shadow: none !important;
+                border: none !important;
+                border-radius: 0 !important;
+                overflow: visible !important;
+                background: #ffffff !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            body.imprimiendo-contrato #modal-generador-contrato > div > div {
+                display: block !important;
+                position: static !important;
+                width: 100% !important;
+                height: auto !important;
+                min-height: auto !important;
+                max-height: none !important;
+                background: transparent !important;
+                overflow: visible !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            body.imprimiendo-contrato .contrato-panel-preview {
+                display: block !important;
+                position: static !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                background: #ffffff !important;
+                overflow: visible !important;
+                height: auto !important;
+                max-height: none !important;
+                width: 100% !important;
+            }
+            body.imprimiendo-contrato #contrato-documento-imprimible {
+                display: block !important;
+                position: static !important;
+                box-shadow: none !important;
+                border: none !important;
+                border-radius: 0 !important;
+                padding: 0 !important;
+                margin: 0 auto !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-height: auto !important;
+                height: auto !important;
+                overflow: visible !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+                font-family: 'Times New Roman', Times, Georgia, serif !important;
+                font-size: 9.5pt !important;
+                line-height: 1.35 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* Asegurar que el contrato comience exactamente en el margen superior de la hoja */
+            body.imprimiendo-contrato #modal-generador-contrato,
+            body.imprimiendo-contrato #modal-generador-contrato > div,
+            body.imprimiendo-contrato #modal-generador-contrato > div > div,
+            body.imprimiendo-contrato .contrato-panel-preview,
+            body.imprimiendo-contrato #contrato-documento-imprimible,
+            body.imprimiendo-contrato #contrato-documento-imprimible > *:first-child,
+            body.imprimiendo-contrato #contrato-documento-imprimible table:first-child {
+                margin-top: 0 !important;
+                padding-top: 0 !important;
+                border-top: none !important;
+                top: 0 !important;
+            }
+
+            /* 4. PREVENCIÓN DE CORTES EN BLOQUES CRÍTICOS (SAFARI Y CHROME) */
+            .contrato-bloque-firmas,
+            .contrato-bloque-vin,
+            .contrato-evitar-corte,
+            #contrato-documento-imprimible table,
+            #contrato-documento-imprimible tr {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                -webkit-column-break-inside: avoid !important;
+            }
+
+            /* Forzar nitidez exacta en tablas y bordes para WebKit */
+            #contrato-documento-imprimible * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
         }
 
         /* 🚀 HABILITAR SALTOS DE LÍNEA EN EL CHAT DE LA IA */
@@ -1103,8 +1270,15 @@
             <!-- PESTAÑA 6: CREAR COTIZACIÓN -->
             <div id="tab-cotizaciones" class="tab-content">
                 <div class="admin-header">
-                    <h2>Generador Oficial de Cotizaciones</h2>
-                    <span style="font-size: 13px; color: #666;">F&B PARTS • RIF: J-503971118</span>
+                    <div>
+                        <h2>Generador Oficial de Cotizaciones</h2>
+                        <span style="font-size: 13px; color: #666;">F&B PARTS • RIF: J-503971118</span>
+                    </div>
+                    <div>
+                        <button type="button" onclick="abrirGeneradorContratoManual()" style="background:#2c441b; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow: 0 1px 3px rgba(0,0,0,0.15);" title="Abrir generador para redactar o imprimir contrato en blanco">
+                            <i class="fas fa-file-contract"></i> 📄 Crear Contrato en Blanco / Manual
+                        </button>
+                    </div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: start;">
@@ -1238,7 +1412,12 @@
             <div id="tab-historial-cotizaciones" class="tab-content">
                 <div class="admin-header">
                     <h2>Historial y Base de Datos de Cotizaciones</h2>
-                    <button class="refresh-btn" onclick="cargarHistorialCotizaciones()"><i class="fas fa-sync-alt"></i> Actualizar</button>
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <button type="button" onclick="abrirGeneradorContratoManual()" style="background:#2c441b; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow: 0 1px 3px rgba(0,0,0,0.15);" title="Abrir generador para redactar o imprimir contrato en blanco">
+                            <i class="fas fa-file-contract"></i> 📄 Crear Contrato en Blanco / Manual
+                        </button>
+                        <button class="refresh-btn" onclick="cargarHistorialCotizaciones()"><i class="fas fa-sync-alt"></i> Actualizar</button>
+                    </div>
                 </div>
 
                 <div style="overflow-x: auto;">
@@ -4919,10 +5098,18 @@
                         try { await deleteDoc(doc(db, "cotizaciones", docId)); window.cargarHistorialCotizaciones(); } catch (e) { alert("Error al eliminar."); }
                     });
 
+                    // 📜 NUEVO BOTÓN: GENERAR CONTRATO DE PROCURA
+                    const btnContrato = document.createElement('button');
+                    btnContrato.type = 'button'; btnContrato.style = 'background:#2c441b; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;';
+                    btnContrato.innerHTML = '<i class="fas fa-file-contract"></i>'; 
+                    btnContrato.title = "Crear Contrato desde esta Cotización";
+                    btnContrato.addEventListener('click', () => window.cargarContratoDesdeCotizacion(docId));
+
                     tdAcciones.appendChild(btnWhatsApp);
                     tdAcciones.appendChild(btnCorreo);
                     tdAcciones.appendChild(btnImprimir); 
-                    tdAcciones.appendChild(btnPedido); // 👈 Lo agregamos aquí
+                    tdAcciones.appendChild(btnContrato); // 👈 Contrato de Procura
+                    tdAcciones.appendChild(btnPedido); // 👈 Convertir a Pedido
                     tdAcciones.appendChild(btnEliminar);
                     tbody.appendChild(tr);
                 });
@@ -4930,6 +5117,10 @@
                 const nextNro = maxNro > 0 ? maxNro + 1 : 1000;
                 document.getElementById('cot-nro').value = String(nextNro).padStart(4, '0');
                 window.actualizarPreview();
+
+                if (window.poblarSelectorCotizacionesContrato) {
+                    window.poblarSelectorCotizacionesContrato();
+                }
                 
             } catch (error) { console.error(error); }
         };
@@ -5040,6 +5231,988 @@
             
             // Abre una pestaña nueva directo en la ventana de redactar de Gmail
             window.open(`https://mail.google.com/mail/?view=cm&fs=1&tf=1&su=${asunto}&body=${cuerpo}`, '_blank');
+        };
+
+        // =========================================================================
+        // 📜 GENERADOR OFICIAL DE CONTRATOS MERCANTILES DE PROCURA E IMPORTACIÓN
+        // =========================================================================
+
+        window.contratoItemsMemoria = [];
+
+        window.numeroALetrasUSD = function(cantidad) {
+            if (cantidad === undefined || cantidad === null || isNaN(cantidad)) return "CERO DÓLARES DE LOS ESTADOS UNIDOS DE AMÉRICA CON CERO CENTAVOS";
+            
+            const num = Math.abs(parseFloat(cantidad));
+            const enteros = Math.floor(num);
+            const centavos = Math.round((num - enteros) * 100);
+
+            function Unidades(n) {
+                switch (n) {
+                    case 1: return "UN";
+                    case 2: return "DOS";
+                    case 3: return "TRES";
+                    case 4: return "CUATRO";
+                    case 5: return "CINCO";
+                    case 6: return "SEIS";
+                    case 7: return "SIETE";
+                    case 8: return "OCHO";
+                    case 9: return "NUEVE";
+                    default: return "";
+                }
+            }
+
+            function DecenasY(strSin, numUnidades) {
+                if (numUnidades > 0) return strSin + " Y " + Unidades(numUnidades);
+                return strSin;
+            }
+
+            function Decenas(n) {
+                const decena = Math.floor(n / 10);
+                const unidad = n - (decena * 10);
+
+                switch (decena) {
+                    case 1:
+                        switch (unidad) {
+                            case 0: return "DIEZ";
+                            case 1: return "ONCE";
+                            case 2: return "DOCE";
+                            case 3: return "TRECE";
+                            case 4: return "CATORCE";
+                            case 5: return "QUINCE";
+                            default: return "DIECI" + Unidades(unidad);
+                        }
+                    case 2:
+                        switch (unidad) {
+                            case 0: return "VEINTE";
+                            case 1: return "VEINTIÚN";
+                            default: return "VEINTI" + Unidades(unidad);
+                        }
+                    case 3: return DecenasY("TREINTA", unidad);
+                    case 4: return DecenasY("CUARENTA", unidad);
+                    case 5: return DecenasY("CINCUENTA", unidad);
+                    case 6: return DecenasY("SESENTA", unidad);
+                    case 7: return DecenasY("SETENTA", unidad);
+                    case 8: return DecenasY("OCHENTA", unidad);
+                    case 9: return DecenasY("NOVENTA", unidad);
+                    case 0: return Unidades(unidad);
+                    default: return "";
+                }
+            }
+
+            function Centenas(n) {
+                const centenas = Math.floor(n / 100);
+                const decenas = n - (centenas * 100);
+
+                switch (centenas) {
+                    case 1:
+                        if (decenas > 0) return "CIENTO " + Decenas(decenas);
+                        return "CIEN";
+                    case 2: return "DOSCIENTOS " + Decenas(decenas);
+                    case 3: return "TRESCIENTOS " + Decenas(decenas);
+                    case 4: return "CUATROCIENTOS " + Decenas(decenas);
+                    case 5: return "QUINIENTOS " + Decenas(decenas);
+                    case 6: return "SEISCIENTOS " + Decenas(decenas);
+                    case 7: return "SETECIENTOS " + Decenas(decenas);
+                    case 8: return "OCHOCIENTOS " + Decenas(decenas);
+                    case 9: return "NOVECIENTOS " + Decenas(decenas);
+                    default: return Decenas(decenas);
+                }
+            }
+
+            function Miles(n) {
+                const divisor = 1000;
+                const cientos = Math.floor(n / divisor);
+                const resto = n - (cientos * divisor);
+
+                let strMiles = "";
+                let strCentenas = "";
+
+                if (cientos === 1) {
+                    strMiles = "UN MIL";
+                } else if (cientos > 1) {
+                    strMiles = Centenas(cientos) + " MIL";
+                }
+
+                strCentenas = Centenas(resto);
+
+                if (strMiles === "") return strCentenas.trim();
+                if (strCentenas === "") return strMiles.trim();
+
+                return (strMiles + " " + strCentenas).trim();
+            }
+
+            function Millones(n) {
+                const divisor = 1000000;
+                const cientos = Math.floor(n / divisor);
+                const resto = n - (cientos * divisor);
+
+                let strMillones = "";
+                let strMiles = "";
+
+                if (cientos === 1) {
+                    strMillones = "UN MILLÓN";
+                } else if (cientos > 1) {
+                    strMillones = Centenas(cientos) + " MILLONES";
+                }
+
+                strMiles = Miles(resto);
+
+                if (strMillones === "") return strMiles.trim();
+                if (strMiles === "") return strMillones.trim();
+
+                return (strMillones + " " + strMiles).trim();
+            }
+
+            let textoEnteros = "";
+            if (enteros === 0) {
+                textoEnteros = "CERO";
+            } else {
+                textoEnteros = Millones(enteros);
+            }
+
+            let conector = " ";
+            if (enteros >= 1000000 && enteros % 1000000 === 0) {
+                conector = " DE ";
+            }
+
+            const moneda = enteros === 1 ? "DÓLAR DE LOS ESTADOS UNIDOS DE AMÉRICA" : "DÓLARES DE LOS ESTADOS UNIDOS DE AMÉRICA";
+            
+            let textoCentavos = "";
+            if (centavos === 0) {
+                textoCentavos = "CON CERO CENTAVOS";
+            } else {
+                textoCentavos = "CON " + Decenas(centavos) + (centavos === 1 ? " CENTAVO" : " CENTAVOS");
+            }
+
+            return `${textoEnteros}${conector}${moneda} ${textoCentavos}`.replace(/\s+/g, ' ').trim();
+        };
+
+        window.poblarSelectorCotizacionesContrato = function(selectedId = '') {
+            const sel = document.getElementById('contrato-selector-cotizaciones');
+            if (!sel) return;
+
+            sel.innerHTML = '<option value="">-- Selecciona una cotización guardada... --</option>';
+
+            const cotizaciones = [];
+            for (const docId in window.cotizacionesDBLocal) {
+                cotizaciones.push({ docId, ...window.cotizacionesDBLocal[docId] });
+            }
+
+            cotizaciones.sort((a, b) => {
+                const numA_str = String(a.nro || a.nroCotizacion || '').replace('#', '').trim();
+                const numB_str = String(b.nro || b.nroCotizacion || '').replace('#', '').trim();
+                const partesA = numA_str.split('-');
+                const partesB = numB_str.split('-');
+                const baseA = parseInt(partesA[0]) || 0;
+                const baseB = parseInt(partesB[0]) || 0;
+                if (baseB !== baseA) return baseB - baseA;
+                const subA = parseInt(partesA[1]) || 0;
+                const subB = parseInt(partesB[1]) || 0;
+                return subB - subA;
+            });
+
+            cotizaciones.forEach(c => {
+                const nroStr = String(c.nro || c.nroCotizacion || 'S/N').replace('#', '');
+                const clienteStr = c.cliente || 'Sin Cliente';
+                const vehiculoPartes = [c.vehiculo, c.anio ? `Año ${c.anio}` : ''].filter(Boolean).join(' ');
+                const totalNum = parseFloat(c.total) || 0;
+                const totalStr = totalNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                const textoOpcion = vehiculoPartes 
+                    ? `#${nroStr} - ${clienteStr} - ${vehiculoPartes} - $${totalStr}`
+                    : `#${nroStr} - ${clienteStr} - $${totalStr}`;
+
+                const opt = document.createElement('option');
+                opt.value = c.docId;
+                opt.textContent = textoOpcion;
+                if (selectedId && (c.docId === selectedId || String(c.nro).replace('#', '').trim() === String(selectedId).replace('#', '').trim())) {
+                    opt.selected = true;
+                }
+                sel.appendChild(opt);
+            });
+        };
+
+        window.cargarContratoDesdeCotizacion = async function(cotizacionId) {
+            if (!cotizacionId) return;
+
+            let cot = null;
+            let docIdEncontrado = '';
+
+            if (typeof cotizacionId === 'object' && cotizacionId !== null) {
+                cot = cotizacionId;
+                docIdEncontrado = cot.id || cot.docId || '';
+            } else {
+                docIdEncontrado = String(cotizacionId);
+                cot = window.cotizacionesDBLocal[docIdEncontrado];
+
+                if (!cot) {
+                    for (const id in window.cotizacionesDBLocal) {
+                        const item = window.cotizacionesDBLocal[id];
+                        if (String(item.nro || item.nroCotizacion).replace('#', '').trim() === docIdEncontrado.replace('#', '').trim()) {
+                            cot = item;
+                            docIdEncontrado = id;
+                            break;
+                        }
+                    }
+                }
+
+                if (!cot && typeof getDoc !== 'undefined' && typeof doc !== 'undefined' && typeof db !== 'undefined') {
+                    try {
+                        const docRef = doc(db, "cotizaciones", docIdEncontrado);
+                        const docSnap = await getDoc(docRef);
+                        if (docSnap.exists()) {
+                            cot = docSnap.data();
+                            window.cotizacionesDBLocal[docIdEncontrado] = cot;
+                        }
+                    } catch (e) {
+                        console.error("Error al buscar cotización en Firestore:", e);
+                    }
+                }
+            }
+
+            if (!cot) {
+                alert("⚠️ No se encontró la información de la cotización seleccionada.");
+                return;
+            }
+
+            // Asegurar apertura del modal
+            const modal = document.getElementById('modal-generador-contrato');
+            if (modal) modal.style.display = 'flex';
+
+            // Desactivar modo plantilla en blanco
+            const chkBlanco = document.getElementById('contrato-modo-blanco');
+            if (chkBlanco) chkBlanco.checked = false;
+
+            // Actualizar selector desplegable
+            window.poblarSelectorCotizacionesContrato(docIdEncontrado);
+
+            const hoy = new Date();
+            const meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+            const fechaStr = `Caracas, ${hoy.getDate()} de ${meses[hoy.getMonth()]} de ${hoy.getFullYear()}`;
+
+            // 1. Inyectar datos generales
+            document.getElementById('contrato-nro').value = String(cot.nro || cot.nroCotizacion || '').replace('#', '').trim();
+            document.getElementById('contrato-fecha').value = cot.fecha ? (cot.fecha.includes('Caracas') ? cot.fecha : `Caracas, ${cot.fecha}`) : fechaStr;
+            document.getElementById('contrato-cliente').value = cot.cliente || '';
+            document.getElementById('contrato-rif').value = cot.rif || '';
+            document.getElementById('contrato-domicilio').value = cot.direccion || 'Caracas, Venezuela';
+            document.getElementById('contrato-telefono').value = cot.telefono || '';
+
+            const vehiculoTxt = [cot.vehiculo || '', cot.anio ? `Año ${cot.anio}` : ''].filter(Boolean).join(' - ');
+            document.getElementById('contrato-vehiculo').value = vehiculoTxt;
+            document.getElementById('contrato-vin').value = (cot.vin || cot.chasis || '').toUpperCase();
+
+            // 2. Mapear renglones de repuestos
+            window.contratoItemsMemoria = [];
+            const rawItems = (Array.isArray(cot.items) && cot.items.length > 0) ? cot.items : ((Array.isArray(cot.repuestos) && cot.repuestos.length > 0) ? cot.repuestos : []);
+            if (rawItems.length > 0) {
+                rawItems.forEach(it => {
+                    window.contratoItemsMemoria.push({
+                        cantidad: parseFloat(it.cantidad) || 1,
+                        descripcion: it.descripcion || it.repuesto || it.nombre || '',
+                        condicion: it.condicion || 'NUEVO / OEM',
+                        precioUnitario: parseFloat(it.precioUnitario) || parseFloat(it.precio) || 0
+                    });
+                });
+            } else {
+                window.contratoItemsMemoria.push({
+                    cantidad: 1,
+                    descripcion: 'REPUESTO IMPORTADO BAJO PEDIDO',
+                    condicion: 'NUEVO / OEM',
+                    precioUnitario: parseFloat(cot.subtotal || cot.total || 0)
+                });
+            }
+
+            // 3. Montos Financieros
+            const subtotal = parseFloat(cot.subtotal) || 0;
+            const iva = parseFloat(cot.iva) || (subtotal * 0.16);
+            const total = parseFloat(cot.total) || (subtotal + iva);
+
+            document.getElementById('contrato-subtotal').value = subtotal.toFixed(2);
+            document.getElementById('contrato-iva').value = iva.toFixed(2);
+            document.getElementById('contrato-total').value = total.toFixed(2);
+
+            // 4. Recalcular montos anticipo / saldo
+            const pctAnt = parseFloat(document.getElementById('contrato-pct-anticipo')?.value) || 80;
+            const montoAnt = total * (pctAnt / 100);
+            const montoSal = total - montoAnt;
+
+            const inpMontoAnt = document.getElementById('contrato-monto-anticipo');
+            const inpMontoSal = document.getElementById('contrato-monto-saldo');
+            if (inpMontoAnt) inpMontoAnt.value = montoAnt.toFixed(2);
+            if (inpMontoSal) inpMontoSal.value = montoSal.toFixed(2);
+
+            // 5. Renderizar inputs y vista previa en tiempo real
+            window.renderizarItemsContratoInputs();
+            window.actualizarContratoPreview();
+        };
+
+        window.abrirGeneradorContrato = function(cot = null) {
+            const modal = document.getElementById('modal-generador-contrato');
+            if (!modal) return;
+
+            if (cot) {
+                window.cargarContratoDesdeCotizacion(cot);
+            } else {
+                // Modo manual vacío
+                const hoy = new Date();
+                const meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+                const fechaStr = `Caracas, ${hoy.getDate()} de ${meses[hoy.getMonth()]} de ${hoy.getFullYear()}`;
+
+                const chkBlanco = document.getElementById('contrato-modo-blanco');
+                if (chkBlanco) chkBlanco.checked = false;
+
+                window.cambiarModalidadContrato('fraccionado');
+
+                document.getElementById('contrato-nro').value = document.getElementById('cot-nro')?.value || '1000';
+                document.getElementById('contrato-fecha').value = fechaStr;
+                document.getElementById('contrato-cliente').value = '';
+                document.getElementById('contrato-rif').value = '';
+                document.getElementById('contrato-domicilio').value = 'Caracas, Venezuela';
+                document.getElementById('contrato-telefono').value = '';
+                document.getElementById('contrato-vehiculo').value = '';
+                document.getElementById('contrato-vin').value = '';
+
+                window.contratoItemsMemoria = [
+                    { cantidad: 1, descripcion: '', condicion: 'NUEVO / OEM', precioUnitario: 0 }
+                ];
+
+                document.getElementById('contrato-subtotal').value = '0.00';
+                document.getElementById('contrato-iva').value = '0.00';
+                document.getElementById('contrato-total').value = '0.00';
+
+                window.aplicarPresetFraccion(80, 20);
+                document.getElementById('contrato-recargo-almacenaje').value = '5.00';
+                document.getElementById('contrato-dias-retiro').value = '5';
+
+                window.poblarSelectorCotizacionesContrato('');
+                window.renderizarItemsContratoInputs();
+                window.actualizarContratoPreview();
+            }
+
+            modal.style.display = 'flex';
+        };
+
+        window.abrirGeneradorContratoManual = function() {
+            window.abrirGeneradorContrato(null);
+        };
+
+        window.cerrarGeneradorContrato = function() {
+            const modal = document.getElementById('modal-generador-contrato');
+            if (modal) modal.style.display = 'none';
+        };
+
+        window.cambiarModalidadContrato = function(modo) {
+            const radioUnico = document.querySelector('input[name="contrato-modalidad"][value="unico"]');
+            const radioFraccionado = document.querySelector('input[name="contrato-modalidad"][value="fraccionado"]');
+            const lblUnico = document.getElementById('lbl-modalidad-unico');
+            const lblFraccionado = document.getElementById('lbl-modalidad-fraccionado');
+            const bloque = document.getElementById('bloque-controles-fraccionado');
+
+            if (modo === 'unico') {
+                if (radioUnico) radioUnico.checked = true;
+                if (lblUnico) {
+                    lblUnico.style.borderColor = '#2c441b';
+                    lblUnico.style.background = '#f0f7f1';
+                    lblUnico.style.color = '#1e3a1e';
+                }
+                if (lblFraccionado) {
+                    lblFraccionado.style.borderColor = '#cbd5e1';
+                    lblFraccionado.style.background = '#fff';
+                    lblFraccionado.style.color = '#475569';
+                }
+                if (bloque) bloque.style.display = 'none';
+            } else {
+                if (radioFraccionado) radioFraccionado.checked = true;
+                if (lblFraccionado) {
+                    lblFraccionado.style.borderColor = '#2c441b';
+                    lblFraccionado.style.background = '#f0f7f1';
+                    lblFraccionado.style.color = '#1e3a1e';
+                }
+                if (lblUnico) {
+                    lblUnico.style.borderColor = '#cbd5e1';
+                    lblUnico.style.background = '#fff';
+                    lblUnico.style.color = '#475569';
+                }
+                if (bloque) bloque.style.display = 'block';
+            }
+            window.actualizarContratoPreview();
+        };
+
+        window.aplicarPresetFraccion = function(anticipo, saldo) {
+            const inpAnt = document.getElementById('contrato-pct-anticipo');
+            const inpSal = document.getElementById('contrato-pct-saldo');
+            if (inpAnt) inpAnt.value = anticipo;
+            if (inpSal) inpSal.value = saldo;
+
+            const total = parseFloat(document.getElementById('contrato-total')?.value) || 0;
+            const montoAnt = total * (anticipo / 100);
+            const montoSal = total - montoAnt;
+
+            const inpMontoAnt = document.getElementById('contrato-monto-anticipo');
+            const inpMontoSal = document.getElementById('contrato-monto-saldo');
+            if (inpMontoAnt) inpMontoAnt.value = montoAnt.toFixed(2);
+            if (inpMontoSal) inpMontoSal.value = montoSal.toFixed(2);
+
+            window.actualizarContratoPreview();
+        };
+
+        window.ajustarPorcentajeAnticipo = function(val) {
+            let pct = parseFloat(val);
+            if (isNaN(pct)) pct = 80;
+            if (pct < 1) pct = 1;
+            if (pct > 99) pct = 99;
+
+            const saldo = 100 - pct;
+            const inpSal = document.getElementById('contrato-pct-saldo');
+            if (inpSal) inpSal.value = saldo;
+
+            const total = parseFloat(document.getElementById('contrato-total')?.value) || 0;
+            const montoAnt = total * (pct / 100);
+            const montoSal = total - montoAnt;
+
+            const inpMontoAnt = document.getElementById('contrato-monto-anticipo');
+            const inpMontoSal = document.getElementById('contrato-monto-saldo');
+            if (inpMontoAnt) inpMontoAnt.value = montoAnt.toFixed(2);
+            if (inpMontoSal) inpMontoSal.value = montoSal.toFixed(2);
+
+            window.actualizarContratoPreview();
+        };
+
+        window.ajustarPorcentajeSaldo = function(val) {
+            let sal = parseFloat(val);
+            if (isNaN(sal)) sal = 20;
+            if (sal < 1) sal = 1;
+            if (sal > 99) sal = 99;
+
+            const anticipo = 100 - sal;
+            const inpAnt = document.getElementById('contrato-pct-anticipo');
+            if (inpAnt) inpAnt.value = anticipo;
+
+            const total = parseFloat(document.getElementById('contrato-total')?.value) || 0;
+            const montoAnt = total * (anticipo / 100);
+            const montoSal = total - montoAnt;
+
+            const inpMontoAnt = document.getElementById('contrato-monto-anticipo');
+            const inpMontoSal = document.getElementById('contrato-monto-saldo');
+            if (inpMontoAnt) inpMontoAnt.value = montoAnt.toFixed(2);
+            if (inpMontoSal) inpMontoSal.value = montoSal.toFixed(2);
+
+            window.actualizarContratoPreview();
+        };
+
+        window.ajustarMontoAnticipo = function(val) {
+            const montoAnt = parseFloat(val) || 0;
+            const total = parseFloat(document.getElementById('contrato-total')?.value) || 0;
+            const montoSal = Math.max(0, total - montoAnt);
+
+            const inpMontoSal = document.getElementById('contrato-monto-saldo');
+            if (inpMontoSal) inpMontoSal.value = montoSal.toFixed(2);
+
+            if (total > 0) {
+                const pctAnt = Math.min(99, Math.max(1, Math.round((montoAnt / total) * 100)));
+                const pctSal = 100 - pctAnt;
+                const inpAnt = document.getElementById('contrato-pct-anticipo');
+                const inpSal = document.getElementById('contrato-pct-saldo');
+                if (inpAnt) inpAnt.value = pctAnt;
+                if (inpSal) inpSal.value = pctSal;
+            }
+
+            window.actualizarContratoPreview();
+        };
+
+        window.ajustarMontoSaldo = function(val) {
+            const montoSal = parseFloat(val) || 0;
+            const total = parseFloat(document.getElementById('contrato-total')?.value) || 0;
+            const montoAnt = Math.max(0, total - montoSal);
+
+            const inpMontoAnt = document.getElementById('contrato-monto-anticipo');
+            if (inpMontoAnt) inpMontoAnt.value = montoAnt.toFixed(2);
+
+            if (total > 0) {
+                const pctSal = Math.min(99, Math.max(1, Math.round((montoSal / total) * 100)));
+                const pctAnt = 100 - pctSal;
+                const inpAnt = document.getElementById('contrato-pct-anticipo');
+                const inpSal = document.getElementById('contrato-pct-saldo');
+                if (inpAnt) inpAnt.value = pctAnt;
+                if (inpSal) inpSal.value = pctSal;
+            }
+
+            window.actualizarContratoPreview();
+        };
+
+        window.renderizarItemsContratoInputs = function() {
+            const container = document.getElementById('contrato-items-lista');
+            if (!container) return;
+            container.innerHTML = '';
+
+            window.contratoItemsMemoria.forEach((it, idx) => {
+                const row = document.createElement('div');
+                row.style = 'display: grid; grid-template-columns: 42px 1fr 65px 24px; gap: 4px; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px;';
+                row.innerHTML = `
+                    <input type="number" min="1" value="${it.cantidad}" oninput="actualizarItemContrato(${idx}, 'cantidad', this.value)" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 3px; padding: 2px 4px; font-size: 11px; text-align: center; box-sizing: border-box;" title="Cantidad">
+                    <input type="text" value="${it.descripcion}" oninput="actualizarItemContrato(${idx}, 'descripcion', this.value)" placeholder="Descripción del repuesto" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 3px; padding: 2px 4px; font-size: 11px; box-sizing: border-box;" title="Descripción">
+                    <input type="number" step="0.01" value="${it.precioUnitario}" oninput="actualizarItemContrato(${idx}, 'precioUnitario', this.value)" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 3px; padding: 2px 4px; font-size: 11px; text-align: right; box-sizing: border-box;" title="Precio Unitario ($)">
+                    <button type="button" onclick="eliminarItemContrato(${idx})" style="background: transparent; border: none; color: #ef4444; font-size: 14px; cursor: pointer; padding: 0; line-height: 1;" title="Eliminar renglón">&times;</button>
+                `;
+                container.appendChild(row);
+            });
+        };
+
+        window.agregarItemContrato = function() {
+            window.contratoItemsMemoria.push({
+                cantidad: 1,
+                descripcion: '',
+                condicion: 'NUEVO / OEM',
+                precioUnitario: 0
+            });
+            window.renderizarItemsContratoInputs();
+            window.recalcularTotalesContrato();
+        };
+
+        window.eliminarItemContrato = function(idx) {
+            if (window.contratoItemsMemoria.length <= 1) {
+                window.contratoItemsMemoria[0] = { cantidad: 1, descripcion: '', condicion: 'NUEVO / OEM', precioUnitario: 0 };
+            } else {
+                window.contratoItemsMemoria.splice(idx, 1);
+            }
+            window.renderizarItemsContratoInputs();
+            window.recalcularTotalesContrato();
+        };
+
+        window.actualizarItemContrato = function(idx, campo, val) {
+            if (window.contratoItemsMemoria[idx]) {
+                if (campo === 'cantidad') window.contratoItemsMemoria[idx].cantidad = parseFloat(val) || 1;
+                else if (campo === 'precioUnitario') window.contratoItemsMemoria[idx].precioUnitario = parseFloat(val) || 0;
+                else window.contratoItemsMemoria[idx][campo] = val;
+            }
+            window.recalcularTotalesContrato();
+        };
+
+        window.recalcularTotalesContrato = function() {
+            let subtotal = 0;
+            window.contratoItemsMemoria.forEach(it => {
+                const c = parseFloat(it.cantidad) || 1;
+                const p = parseFloat(it.precioUnitario) || 0;
+                subtotal += (c * p);
+            });
+            const iva = subtotal * 0.16;
+            const total = subtotal + iva;
+
+            const inpSub = document.getElementById('contrato-subtotal');
+            const inpIva = document.getElementById('contrato-iva');
+            const inpTot = document.getElementById('contrato-total');
+
+            if (inpSub) inpSub.value = subtotal.toFixed(2);
+            if (inpIva) inpIva.value = iva.toFixed(2);
+            if (inpTot) inpTot.value = total.toFixed(2);
+
+            const pctAnt = parseFloat(document.getElementById('contrato-pct-anticipo')?.value) || 80;
+            const montoAnt = total * (pctAnt / 100);
+            const montoSal = total - montoAnt;
+
+            const inpMontoAnt = document.getElementById('contrato-monto-anticipo');
+            const inpMontoSal = document.getElementById('contrato-monto-saldo');
+            if (inpMontoAnt) inpMontoAnt.value = montoAnt.toFixed(2);
+            if (inpMontoSal) inpMontoSal.value = montoSal.toFixed(2);
+
+            window.actualizarContratoPreview();
+        };
+
+        window.recalcularDesdeTotalesManuales = function() {
+            const sub = parseFloat(document.getElementById('contrato-subtotal')?.value) || 0;
+            const iva = parseFloat(document.getElementById('contrato-iva')?.value) || 0;
+            const tot = sub + iva;
+            const inpTot = document.getElementById('contrato-total');
+            if (inpTot) inpTot.value = tot.toFixed(2);
+
+            const pctAnt = parseFloat(document.getElementById('contrato-pct-anticipo')?.value) || 80;
+            const montoAnt = tot * (pctAnt / 100);
+            const montoSal = tot - montoAnt;
+
+            const inpMontoAnt = document.getElementById('contrato-monto-anticipo');
+            const inpMontoSal = document.getElementById('contrato-monto-saldo');
+            if (inpMontoAnt) inpMontoAnt.value = montoAnt.toFixed(2);
+            if (inpMontoSal) inpMontoSal.value = montoSal.toFixed(2);
+
+            window.actualizarContratoPreview();
+        };
+
+        window.ajustarTotalContrato = function(val) {
+            const tot = parseFloat(val) || 0;
+            const sub = tot / 1.16;
+            const iva = tot - sub;
+
+            const inpSub = document.getElementById('contrato-subtotal');
+            const inpIva = document.getElementById('contrato-iva');
+            if (inpSub) inpSub.value = sub.toFixed(2);
+            if (inpIva) inpIva.value = iva.toFixed(2);
+
+            const pctAnt = parseFloat(document.getElementById('contrato-pct-anticipo')?.value) || 80;
+            const montoAnt = tot * (pctAnt / 100);
+            const montoSal = tot - montoAnt;
+
+            const inpMontoAnt = document.getElementById('contrato-monto-anticipo');
+            const inpMontoSal = document.getElementById('contrato-monto-saldo');
+            if (inpMontoAnt) inpMontoAnt.value = montoAnt.toFixed(2);
+            if (inpMontoSal) inpMontoSal.value = montoSal.toFixed(2);
+
+            window.actualizarContratoPreview();
+        };
+
+        window.actualizarContratoPreview = function() {
+            const canvas = document.getElementById('contrato-documento-imprimible');
+            if (!canvas) return;
+
+            const modoBlanco = document.getElementById('contrato-modo-blanco')?.checked || false;
+            const radioFraccionado = document.querySelector('input[name="contrato-modalidad"][value="fraccionado"]');
+            const esFraccionado = radioFraccionado ? radioFraccionado.checked : true;
+
+            const nro = modoBlanco ? '____________________' : (document.getElementById('contrato-nro')?.value.trim() || 'S/N');
+            const fecha = modoBlanco ? 'Caracas, ________ de ________________ de 20____' : (document.getElementById('contrato-fecha')?.value.trim() || 'Caracas, Venezuela');
+            const cliente = modoBlanco ? '____________________________________________________________' : (document.getElementById('contrato-cliente')?.value.trim() || 'CLIENTE NO DEFINIDO');
+            const rif = modoBlanco ? '________________________' : (document.getElementById('contrato-rif')?.value.trim() || 'V-00000000-0');
+            const domicilio = modoBlanco ? '____________________________________________________________' : (document.getElementById('contrato-domicilio')?.value.trim() || 'Caracas, Venezuela');
+            const telefono = modoBlanco ? '________________________' : (document.getElementById('contrato-telefono')?.value.trim() || '0412-0000000');
+            const vehiculo = modoBlanco ? '____________________________________________________________' : (document.getElementById('contrato-vehiculo')?.value.trim() || 'VEHÍCULO NO ESPECIFICADO');
+            const rawVin = (document.getElementById('contrato-vin')?.value || '').toUpperCase().trim();
+
+            // 17 casillas del VIN (Bloques estáticos sin flex para total nitidez en WebKit y Chrome)
+            let casillasVIN = '';
+            for (let i = 0; i < 17; i++) {
+                const char = (!modoBlanco && rawVin.length > i) ? rawVin[i] : '&nbsp;';
+                casillasVIN += `<span style="display: inline-block; width: 20px; height: 24px; line-height: 22px; text-align: center; border: 1.5px solid #222; font-family: 'Courier New', monospace; font-size: 11.5px; font-weight: bold; background: #ffffff; color: #000000; margin: 0 1px; box-sizing: border-box; vertical-align: middle;">${char}</span>`;
+            }
+
+            const totalNum = parseFloat(document.getElementById('contrato-total')?.value) || 0;
+            const subtotalNum = parseFloat(document.getElementById('contrato-subtotal')?.value) || 0;
+            const ivaNum = parseFloat(document.getElementById('contrato-iva')?.value) || 0;
+
+            const totalStr = modoBlanco ? '$__________________' : `$${totalNum.toFixed(2)}`;
+            const subtotalStr = modoBlanco ? '$__________________' : `$${subtotalNum.toFixed(2)}`;
+            const ivaStr = modoBlanco ? '$__________________' : `$${ivaNum.toFixed(2)}`;
+            const totalLetras = modoBlanco ? '________________________________________________________________________________' : window.numeroALetrasUSD(totalNum);
+
+            const pctAnticipo = parseInt(document.getElementById('contrato-pct-anticipo')?.value) || 80;
+            const pctSaldo = 100 - pctAnticipo;
+            const montoAnticipoNum = parseFloat(document.getElementById('contrato-monto-anticipo')?.value) || (totalNum * (pctAnticipo / 100));
+            const montoSaldoNum = parseFloat(document.getElementById('contrato-monto-saldo')?.value) || (totalNum - montoAnticipoNum);
+
+            const pctAnticipoStr = modoBlanco ? '____%' : `${pctAnticipo}%`;
+            const pctSaldoStr = modoBlanco ? '____%' : `${pctSaldo}%`;
+            const montoAnticipoStr = modoBlanco ? '$__________________' : `$${montoAnticipoNum.toFixed(2)}`;
+            const montoSaldoStr = modoBlanco ? '$__________________' : `$${montoSaldoNum.toFixed(2)}`;
+            const montoAnticipoLetras = modoBlanco ? '________________________________________________________________________________' : window.numeroALetrasUSD(montoAnticipoNum);
+            const montoSaldoLetras = modoBlanco ? '________________________________________________________________________________' : window.numeroALetrasUSD(montoSaldoNum);
+
+            const recargoDiario = modoBlanco ? '$______' : `$${(parseFloat(document.getElementById('contrato-recargo-almacenaje')?.value) || 5).toFixed(2)}`;
+            const diasRetiro = modoBlanco ? '____' : String(document.getElementById('contrato-dias-retiro')?.value || 5);
+
+            // Tabla de Repuestos
+            let filasRepuestos = '';
+            if (modoBlanco) {
+                for (let r = 1; r <= 4; r++) {
+                    filasRepuestos += `
+                        <tr style="border-bottom: 1px solid #ccc;">
+                            <td style="padding: 6px 8px; text-align: center; width: 35px;">${r}</td>
+                            <td style="padding: 6px 8px; width: 55px; text-align: center;">____</td>
+                            <td style="padding: 6px 8px;">__________________________________________________</td>
+                            <td style="padding: 6px 8px; text-align: center; width: 85px;">NUEVO / OEM</td>
+                            <td style="padding: 6px 8px; text-align: right; width: 85px;">$__________</td>
+                            <td style="padding: 6px 8px; text-align: right; width: 95px;">$__________</td>
+                        </tr>
+                    `;
+                }
+            } else {
+                const itemsValidos = window.contratoItemsMemoria.filter(i => (i.descripcion && i.descripcion.trim() !== '') || i.precioUnitario > 0);
+                const items = itemsValidos.length > 0 ? itemsValidos : [
+                    { cantidad: 1, descripcion: 'REPUESTO IMPORTADO SEGÚN ESPECIFICACIÓN TÉCNICA', precioUnitario: totalNum, condicion: 'NUEVO / OEM' }
+                ];
+                items.forEach((it, idx) => {
+                    const cant = parseFloat(it.cantidad) || 1;
+                    const precio = parseFloat(it.precioUnitario) || 0;
+                    const descLinea = (cant * precio).toFixed(2);
+                    filasRepuestos += `
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 5px 8px; text-align: center; width: 35px;">${idx + 1}</td>
+                            <td style="padding: 5px 8px; text-align: center; width: 55px;">${cant}</td>
+                            <td style="padding: 5px 8px; font-weight: 500;">${it.descripcion || 'REPUESTO'}</td>
+                            <td style="padding: 5px 8px; text-align: center; width: 85px; font-size: 8.5pt;">${it.condicion || 'NUEVO / OEM'}</td>
+                            <td style="padding: 5px 8px; text-align: right; width: 85px;">$${precio.toFixed(2)}</td>
+                            <td style="padding: 5px 8px; text-align: right; width: 95px; font-weight: bold;">$${descLinea}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            // Título y Cláusulas según modalidad
+            let tituloContrato = '';
+            let clausulaTercera = '';
+            let clausulasRestantes = '';
+
+            if (!esFraccionado) {
+                tituloContrato = 'CONTRATO MERCANTIL DE PROCURA INTERNACIONAL E IMPORTACIÓN DE AUTOPARTES BAJO PEDIDO<br><span style="font-size: 10pt; font-weight: bold; color: #2c441b;">(MODALIDAD PAGO ÚNICO 100%)</span>';
+                
+                clausulaTercera = `
+                    <p style="margin: 6px 0; text-align: justify;">
+                        <strong>CLÁUSULA TERCERA (Modalidad de Pago Único 100% y Trazabilidad Fiscal):</strong> EL CLIENTE conviene y liquida en este acto la totalidad del cien por ciento (100%) del valor estipulado de la operación, por un monto definitivo de <strong>${totalStr} (${totalLetras})</strong>. Dicha liquidación integral congela de forma inmediata e inmutable los costos de fábrica, seguro internacional de carga y fletes marítimos o aéreos. Las partes reconocen que el presente contrato, vinculado a la cotización <strong>#${nro}</strong> y a la correspondiente emisión fiscal, constituye título legítimo de trazabilidad, transparencia y auditoría frente a empresas aseguradoras, peritos y organismos tributarios.
+                    </p>
+                `;
+
+                clausulasRestantes = `
+                    <p style="margin: 6px 0; text-align: justify;">
+                        <strong>CLÁUSULA CUARTA (Carácter Irrevocable del Encargo y No Reembolso en Tránsito):</strong> Por tratarse de un encargo especial de procura sobre piezas que no forman parte del inventario regular disponible en plaza de EL PROVEEDOR, la orden de importación adquiere fuerza obligatoria e irrevocable una vez confirmado el pedido ante los fabricantes internacionales. En consecuencia, no se admitirán revocaciones unilaterales, solicitudes de rescisión ni devoluciones de dinero mientras la mercancía se encuentre en fase de fabricación, trámites aduanales en puerto de embarque o en tránsito internacional marítimo o aéreo.
+                    </p>
+                    <p style="margin: 6px 0; text-align: justify;">
+                        <strong>CLÁUSULA QUINTA (Lapsos de Tránsito Marítimo de 45 a 90 Días y Eximentes de Fuerza Mayor):</strong> El lapso estimado para el arribo de las autopartes a los almacenes de EL PROVEEDOR en la ciudad de Caracas se establece en un periodo referencial de <strong>cuarenta y cinco (45) a noventa (90) días continuos</strong>, contados a partir del despacho y confirmación del conocimiento de embarque marítimo. Ambas partes reconocen que este lapso podrá verse razonablemente prorrogado por contingencias de fuerza mayor, caso fortuito, demoras portuarias en puertos de transbordo, inspecciones aduaneras extraordinarias o alta congestión estacional logística (incluyendo temporada decembrina o recesos fabriles de origen), sin que tales demoras imputables a la cadena logística internacional generen penalizaciones, indemnizaciones ni derecho a resolución contractual.
+                    </p>
+                    <p style="margin: 6px 0; text-align: justify;">
+                        <strong>CLÁUSULA SEXTA (Regla Estricta de Compatibilidad VIN, Daños Ocultos e Impericia - Art. 1.184 CC):</strong> EL CLIENTE asume la total responsabilidad sobre la veracidad y exactitud del Serial de Carrocería o Chasis (VIN de 17 dígitos) y especificaciones técnicas suministradas. En el evento de que la pieza importada coincida técnicamente con la referencia de catálogo oficial para dicho VIN, pero no calce debido a modificaciones previas, adaptaciones, cambios de motor o carrocería ajenos a la ficha técnica original de fábrica, no habrá lugar a reintegros ni reemplazos gratuitos. Asimismo, de conformidad con el <strong>Artículo 1.184 del Código Civil</strong>, EL PROVEEDOR queda exonerado de responsabilidad por daños originados por impericia, mala praxis de talleres mecánicos o manipulación forzada durante la instalación.
+                    </p>
+                    <p style="margin: 6px 0; text-align: justify;">
+                        <strong>CLÁUSULA SÉPTIMA (Recepción Física, Piezas de Carrocería / Iluminación y Caducidad de 24 Horas):</strong> Al momento de la entrega material de los repuestos en las dependencias de EL PROVEEDOR o su retiro ante empresa de encomiendas, EL CLIENTE inspeccionará minuciosamente el estado externo de los mismos. Tratándose de piezas de carrocería, vidrios, retrovisores, faros o luminarias, la conformidad sobre integridad estética se otorgará en el acto de recepción física. Para cualquier otra discrepancia técnica o vicio aparente, se fija un lapso improrrogable de caducidad de <strong>veinticuatro (24) horas continuas</strong>; transcurrido el cual sin objeción motivada por escrito, la entrega se considerará perfecta, definitiva y convalidada a entera satisfacción.
+                    </p>
+                    <p style="margin: 6px 0; text-align: justify;">
+                        <strong>CLÁUSULA OCTAVA (Adhesión Normativa a Políticas Oficiales y Jurisdicción Especial):</strong> El presente documento se integra y somete a las Políticas de Garantía, Cambios, Devoluciones, Importaciones y Envíos de Inversiones FB Parts, C.A., publicadas de forma permanente e íntegra en el sitio web oficial: <strong>https://www.fybparts.com/politicas-devoluciones.html</strong>, las cuales EL CLIENTE declara conocer, aceptar y acatar expresamente. Para todas las controversias, interpretaciones o requerimientos dimanantes del presente instrumento, las partes eligen como domicilio especial, exclusivo y excluyente a los tribunales competentes de la ciudad de <strong>Caracas, Distrito Capital, República Bolivariana de Venezuela</strong>.
+                    </p>
+                `;
+            } else {
+                const pctTitulo = modoBlanco ? '____/____' : `${pctAnticipo}/${pctSaldo}`;
+                tituloContrato = `CONTRATO MERCANTIL DE PROCURA INTERNACIONAL E IMPORTACIÓN DE AUTOPARTES BAJO PEDIDO<br><span style="font-size: 10pt; font-weight: bold; color: #2c441b;">(MODALIDAD FRACCIONADA ${pctTitulo} CON RESERVA DE DOMINIO)</span>`;
+
+                clausulaTercera = `
+                    <div style="margin: 6px 0; text-align: justify;">
+                        <p style="margin: 0 0 4px 0;">
+                            <strong>CLÁUSULA TERCERA (Esquema Fraccionado Excepcional ${pctAnticipoStr} / ${pctSaldoStr} y Reserva de Dominio):</strong> Las partes convienen en estructurar el pago de la presente operación de procura bajo un esquema fraccionado excepcional compuesto por dos etapas vinculantes:
+                        </p>
+                        <div style="padding-left: 12px; margin: 4px 0;">
+                            <p style="margin: 2px 0;">
+                                <strong>1. Anticipo de Activación y Procura (${pctAnticipoStr}):</strong> Por la suma de <strong>${montoAnticipoStr} (${montoAnticipoLetras})</strong>, cancelada por EL CLIENTE en este acto como condición sine qua non para procesar la orden ante el fabricante extranjero y afianzar la reserva de flete internacional.
+                            </p>
+                            <p style="margin: 2px 0;">
+                                <strong>2. Saldo Contra Entrega y Nacionalización (${pctSaldoStr}):</strong> Por la suma de <strong>${montoSaldoStr} (${montoSaldoLetras})</strong>, la cual deberá ser liquidada íntegramente por EL CLIENTE al momento de notificarse el arribo de la carga a Caracas y previo a la entrega material del repuesto.
+                            </p>
+                            <p style="margin: 2px 0;">
+                                <strong>3. Reserva de Dominio y Derecho de Retención:</strong> De conformidad con la legislación mercantil, EL PROVEEDOR se reserva el pleno dominio y la titularidad jurídica de las piezas importadas, así como el legítimo derecho de retención sobre las mismas en almacén, hasta tanto EL CLIENTE liquide el cien por ciento (100%) del saldo restante de <strong>${montoSaldoStr}</strong>.
+                            </p>
+                            <p style="margin: 2px 0;">
+                                <strong>4. Transparencia y Auditoría de Seguros:</strong> El recibo emitido por el anticipo del ${pctAnticipoStr} (${montoAnticipoStr}) acredita el inicio de la procura, emitiéndose la constancia fiscal definitiva por el saldo del ${pctSaldoStr} (${montoSaldoStr}) contra su pago efectivo, conservando la estricta trazabilidad requerida por firmas aseguradoras y peritos.
+                            </p>
+                        </div>
+                    </div>
+                `;
+
+                clausulasRestantes = `
+                    <p style="margin: 6px 0; text-align: justify;">
+                        <strong>CLÁUSULA CUARTA (Plazo Perentorio de Retiro, Mora del Acreedor, Almacenaje y Abandono):</strong> Una vez notificado EL CLIENTE sobre la disponibilidad física de los repuestos en Caracas (mediante comunicación por correo electrónico, WhatsApp o vía telefónica), éste dispondrá de un término perentorio de <strong>${diasRetiro} días hábiles</strong> para liquidar el saldo del ${pctSaldoStr} (${montoSaldoStr}) y retirar los repuestos.
+                        <br>
+                        <em>Régimen de Custodia y Almacenaje:</em> Vencido dicho término sin que EL CLIENTE haya cancelado el saldo o retirado el producto, se devengará automáticamente a partir del día siguiente un recargo diario por concepto de guarda y custodia equivalente a <strong>${recargoDiario} diarios</strong> por cada día continuo de retraso.
+                        <br>
+                        <em>Cláusula Penal por Abandono Definitivo (Art. 1.257 Código Civil):</em> Transcurridos treinta (30) días continuos desde la fecha de notificación de arribo sin que EL CLIENTE salde la totalidad adeudada (saldo del ${pctSaldoStr} más almacenaje acumulado), operará de pleno derecho y sin necesidad de intimación judicial la declaratoria de <strong>ABANDONO DEFINITIVO</strong>. En consecuencia, el anticipo del ${pctAnticipoStr} (${montoAnticipoStr}) quedará consolidado en favor de EL PROVEEDOR como indemnización fija y punitiva por concepto de fletes impagados, gastos logísticos y daños contractuales, quedando EL PROVEEDOR plenamente facultado para disponer, reasignar o enajenar las autopartes a terceros para mitigar el detrimento patrimonial.
+                    </p>
+                    <p style="margin: 6px 0; text-align: justify;">
+                        <strong>CLÁUSULA QUINTA (Carácter Irrevocable del Encargo y No Reembolso del Anticipo de ${pctAnticipoStr} en Tránsito):</strong> El pago del anticipo de procura del ${pctAnticipoStr} (${montoAnticipoStr}) posee carácter definitivo e irrevocable. Toda vez que dichos recursos se transfieren a los fabricantes internacionales para el mecanizado y despacho a medida del vehículo, no se aceptarán cancelaciones unilaterales, reintegros ni desistimientos mientras las piezas se encuentren en fase de producción o tránsito internacional.
+                    </p>
+                    <p style="margin: 6px 0; text-align: justify;">
+                        <strong>CLÁUSULA SEXTA (Lapsos de Tránsito Marítimo de 45 a 90 Días y Eximentes):</strong> El lapso estimado de tránsito marítimo internacional oscila entre <strong>cuarenta y cinco (45) a noventa (90) días continuos</strong>. Las posibles demoras ocasionadas por inspecciones en aduanas foráneas, contingencias climáticas marítimas, congestión portuaria o temporadas decembrinas no alteran, extinguen ni relevan la obligación jurídica de EL CLIENTE de saldar el ${pctSaldoStr} restante (${montoSaldoStr}) una vez arribada la mercancía.
+                    </p>
+                    <p style="margin: 6px 0; text-align: justify;">
+                        <strong>CLÁUSULA SÉPTIMA (Regla Estricta de Compatibilidad VIN y Daños Ocultos):</strong> La exactitud en el suministro del Serial VIN de 17 dígitos es de la exclusiva incumbencia de EL CLIENTE. Cuando las autopartes suministradas correspondan estrictamente a la ficha técnica oficial para el VIN reportado, EL CLIENTE no podrá excusarse en adaptaciones, injertos o siniestros ocultos no manifestados para postergar o rehusar el pago del saldo restante del ${pctSaldoStr} (${montoSaldoStr}) contra entrega.
+                    </p>
+                    <p style="margin: 6px 0; text-align: justify;">
+                        <strong>CLÁUSULA OCTAVA (Recepción Física en el Acto de Entrega y Caducidad de 24 Horas):</strong> La entrega material de los repuestos queda expresamente supeditada al previo pago del cien por ciento (100%) del saldo de ${montoSaldoStr} y de los costos de almacenaje devengados, si los hubiere. En el acto de entrega se verificará la integridad física exterior (piezas de carrocería o faros se convalidan en el acto); para cualquier otra inconformidad técnica rige el plazo perentorio de caducidad de veinticuatro (24) horas continuas.
+                    </p>
+                    <p style="margin: 6px 0; text-align: justify;">
+                        <strong>CLÁUSULA NOVENA (Adhesión Normativa a Políticas Oficiales y Jurisdicción Especial):</strong> Este contrato se complementa de forma vinculante con las Políticas de Garantía, Cambios, Devoluciones, Importaciones y Envíos de Inversiones FB Parts, C.A., publicadas en <strong>https://www.fybparts.com/politicas-devoluciones.html</strong>. Las partes fijan como jurisdicción especial, única y excluyente la ciudad de <strong>Caracas, República Bolivariana de Venezuela</strong>, renunciando formalmente a cualquier otro fuero.
+                    </p>
+                `;
+            }
+
+            canvas.innerHTML = `
+                <!-- MEMBRETE Y ENCABEZADO (TABLA ESTÁTICA PARA COMPATIBILIDAD TOTAL SAFARI/CHROME) -->
+                <table style="width: 100%; border-collapse: collapse; border-bottom: 2px solid #2c441b; padding-bottom: 6px; margin-bottom: 10px;">
+                    <tr>
+                        <td style="vertical-align: middle; width: 68%;">
+                            <table style="border-collapse: collapse;">
+                                <tr>
+                                    <td style="vertical-align: middle; padding-right: 12px; width: 135px;">
+                                        <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="F&B Parts Logo" style="height: 42px; object-fit: contain; display: block;">
+                                    </td>
+                                    <td style="vertical-align: middle;">
+                                        <h2 style="margin: 0; font-family: 'Arial', sans-serif; font-size: 12.5pt; color: #2c441b; letter-spacing: 0.5px; font-weight: bold; line-height: 1.15;">INVERSIONES FB PARTS, C.A.</h2>
+                                        <span style="font-size: 7.5pt; color: #444; font-weight: bold; display: block; margin-top: 2px;">RIF: J-50397111-8 • División de Procura Internacional e Importación</span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                        <td style="vertical-align: middle; width: 32%; text-align: right; font-size: 8pt; color: #333; line-height: 1.3;">
+                            <div><strong>EXPEDIENTE:</strong> #${nro}</div>
+                            <div><strong>FECHA:</strong> ${fecha}</div>
+                            <div><strong>SEDE:</strong> Caracas, D.C.</div>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- TÍTULO -->
+                <div style="text-align: center; margin: 8px 0 12px 0;">
+                    <h1 style="margin: 0; font-size: 10pt; font-weight: bold; text-transform: uppercase; line-height: 1.35; color: #111;">
+                        ${tituloContrato}
+                    </h1>
+                </div>
+
+                <!-- COMPARECENCIA -->
+                <p style="margin: 6px 0; text-align: justify; line-height: 1.32;">
+                    Entre la sociedad mercantil <strong>INVERSIONES FB PARTS, C.A.</strong>, inscrita en el Registro de Información Fiscal bajo el Nro. <strong>J-50397111-8</strong>, con domicilio fiscal en Caracas, Distrito Capital, República Bolivariana de Venezuela, debidamente representada en este acto por su Gerencia de Ventas y Procura Internacional, quien en lo sucesivo y a los únicos efectos del presente contrato se denominará <strong>"EL PROVEEDOR"</strong>, por una parte; y por la otra parte, la persona natural o jurídica debidamente identificada a continuación:
+                </p>
+
+                <!-- CUADRO DE IDENTIFICACIÓN (TABLA HTML CON ANCHOS PORCENTUALES) -->
+                <table style="width: 100%; border-collapse: collapse; background: #fbfbfb; border: 1px solid #ddd; border-radius: 4px; margin: 6px 0; font-size: 8pt; line-height: 1.35;">
+                    <tr>
+                        <td style="width: 62%; padding: 4px 8px; vertical-align: top;"><strong>EL CLIENTE / ADQUIRENTE:</strong> ${cliente}</td>
+                        <td style="width: 38%; padding: 4px 8px; vertical-align: top;"><strong>C.I. / RIF:</strong> ${rif}</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 62%; padding: 4px 8px; vertical-align: top;"><strong>DOMICILIO (CIUDAD/ESTADO):</strong> ${domicilio}</td>
+                        <td style="width: 38%; padding: 4px 8px; vertical-align: top;"><strong>TELÉFONO DE CONTACTO:</strong> ${telefono}</td>
+                    </tr>
+                </table>
+
+                <p style="margin: 6px 0; text-align: justify; line-height: 1.32;">
+                    Quien en lo sucesivo se denominará <strong>"EL CLIENTE"</strong>; ambas partes convienen de mutuo y pleno acuerdo en suscribir el presente <em>Contrato Mercantil de Procura Internacional e Importación de Autopartes bajo Pedido</em>, el cual se regirá de forma vinculante por las siguientes cláusulas y estipulaciones:
+                </p>
+
+                <!-- CLÁUSULA PRIMERA -->
+                <div style="margin: 6px 0;">
+                    <p style="margin: 0 0 5px 0; text-align: justify;">
+                        <strong>CLÁUSULA PRIMERA (Objeto y Detalle de Procura):</strong> EL PROVEEDOR se compromete ante EL CLIENTE a realizar la procura, gestión aduanal y logística de importación internacional de las autopartes automotrices solicitadas bajo encargo especial, detalladas a continuación:
+                    </p>
+
+                    <table style="width: 100%; border-collapse: collapse; margin: 5px 0; font-size: 8pt;">
+                        <thead>
+                            <tr style="background: #2c441b; color: white;">
+                                <th style="padding: 4px 6px; text-align: center; border: 1px solid #2c441b; width: 28px;">#</th>
+                                <th style="padding: 4px 6px; text-align: center; border: 1px solid #2c441b; width: 45px;">CANT.</th>
+                                <th style="padding: 4px 6px; text-align: left; border: 1px solid #2c441b;">DESCRIPCIÓN DE LA AUTOPARTE</th>
+                                <th style="padding: 4px 6px; text-align: center; border: 1px solid #2c441b; width: 80px;">CONDICIÓN</th>
+                                <th style="padding: 4px 6px; text-align: right; border: 1px solid #2c441b; width: 80px;">PRECIO ($)</th>
+                                <th style="padding: 4px 6px; text-align: right; border: 1px solid #2c441b; width: 85px;">TOTAL ($)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${filasRepuestos}
+                        </tbody>
+                    </table>
+
+                    <p style="margin: 3px 0; text-align: justify; font-size: 8pt;">
+                        Dichas piezas se destinan exclusivamente al vehículo automotor declarado por EL CLIENTE: <strong>${vehiculo}</strong>.
+                    </p>
+                </div>
+
+                <!-- CLÁUSULA SEGUNDA -->
+                <p style="margin: 6px 0; text-align: justify;">
+                    <strong>CLÁUSULA SEGUNDA (Valor de Operación, Inmutabilidad y Régimen Cambiario):</strong> El valor total y definitivo acordado para la presente operación asciende a la suma de <strong>${totalStr} (${totalLetras})</strong>, desglosado en: Subtotal Procura y Logística: <strong>${subtotalStr}</strong>; I.V.A. (16%): <strong>${ivaStr}</strong>; Monto Total Definitivo: <strong>${totalStr}</strong>.
+                    <br>
+                    <strong>Parágrafo Primero (Ausencia de Descuentos Posteriores):</strong> El monto integral acordado comprende la totalidad de los costos logísticos, arancelarios y flete internacional pactados, no admitiendo retenciones, descuentos unilaterales ni rebajas posteriores a la suscripción.
+                    <br>
+                    <strong>Parágrafo Segundo (Régimen Cambiario y Principio Nominalista - Art. 1.737 Código Civil):</strong> Toda cancelación efectuada en moneda de curso legal (Bolívares) se calculará a la tasa oficial del Banco Central de Venezuela (BCV) del día de pago. Conforme al <strong>Artículo 1.737 del Código Civil Venezolano</strong>, cualquier eventual reintegro que procediere legalmente se regirá por el estricto principio nominalista sobre el monto efectivamente recibido en la fecha de la transacción.
+                </p>
+
+                <!-- CLÁUSULA TERCERA -->
+                ${clausulaTercera}
+
+                <!-- CLÁUSULAS 4 EN ADELANTE -->
+                ${clausulasRestantes}
+
+                <!-- BLOQUE FINAL DE FIRMAS Y VIN (page-break-inside: avoid; break-inside: avoid;) -->
+                <div class="contrato-bloque-firmas contrato-evitar-corte" style="page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid; margin-top: 12px; border-top: 1.5px solid #2c441b; padding-top: 8px;">
+                    
+                    <!-- Declaración de Conformidad y VIN -->
+                    <div class="contrato-bloque-vin contrato-evitar-corte" style="background: #fdfdfd; border: 1px solid #d1d5db; border-radius: 4px; padding: 6px 8px; margin-bottom: 8px; font-size: 7.5pt; page-break-inside: avoid; break-inside: avoid;">
+                        <p style="margin: 0 0 4px 0; text-align: justify; font-style: italic;">
+                            "Declaro bajo fe de juramento que he revisado las especificaciones, condiciones de procura y régimen de pago acordado en este documento, aceptando en su totalidad las cláusulas precedentes y certificando que el Serial de Carrocería / Chasis (VIN) de mi vehículo es el siguiente:"
+                        </p>
+                        <table style="margin: 2px auto; border-collapse: collapse; text-align: center;">
+                            <tr>
+                                <td style="vertical-align: middle; font-weight: bold; font-size: 8pt; padding-right: 6px; white-space: nowrap;">SERIAL VIN (17 DÍGITOS):</td>
+                                <td style="vertical-align: middle; white-space: nowrap;">${casillasVIN}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- Firmas en 2 columnas mediante TABLA HTML estándar (100% compatible Safari/Chrome) -->
+                    <table class="contrato-evitar-corte" style="width: 100%; border-collapse: separate; border-spacing: 14px 0; margin-top: 8px; page-break-inside: avoid; break-inside: avoid; -webkit-column-break-inside: avoid;">
+                        <tr>
+                            <!-- Columna Proveedor -->
+                            <td style="width: 48%; vertical-align: top; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px 6px; text-align: center; background: #ffffff;">
+                                <div style="height: 44px; border-bottom: 1px solid #333; margin-bottom: 4px; text-align: center; padding-top: 22px; box-sizing: border-box;">
+                                    <span style="font-family: 'Courier New', monospace; font-size: 9pt; color: #2c441b; font-weight: bold;">
+                                        INVERSIONES FB PARTS, C.A.
+                                    </span>
+                                </div>
+                                <strong style="display: block; font-size: 8pt; color: #2c441b;">POR EL PROVEEDOR</strong>
+                                <span style="display: block; font-size: 7pt; color: #444;">Gerencia de Ventas y Procura Internacional</span>
+                                <span style="display: block; font-size: 7pt; color: #555;">RIF: J-50397111-8</span>
+                                <span style="display: block; font-size: 6.5pt; color: #777; margin-top: 1px;">Sello y Firma Autorizada</span>
+                            </td>
+
+                            <!-- Columna Cliente con recuadro para Huella Dactilar -->
+                            <td style="width: 52%; vertical-align: top; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px 6px; background: #ffffff;">
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <tr>
+                                        <td style="vertical-align: top; text-align: center; padding-right: 6px;">
+                                            <div style="height: 44px; border-bottom: 1px solid #333; margin-bottom: 4px; text-align: center; padding-top: 22px; box-sizing: border-box;">
+                                                <span style="font-size: 7pt; color: #888;">(Firma del Cliente)</span>
+                                            </div>
+                                            <strong style="display: block; font-size: 8pt; color: #111;">POR EL CLIENTE / ADQUIRENTE</strong>
+                                            <span style="display: block; font-size: 7pt; color: #333; word-break: break-word;">${cliente}</span>
+                                            <span style="display: block; font-size: 7pt; color: #555;">C.I. / RIF: ${rif}</span>
+                                            <span style="display: block; font-size: 7pt; color: #555;">Telf: ${telefono}</span>
+                                        </td>
+                                        <td style="width: 62px; vertical-align: middle; text-align: center;">
+                                            <div style="width: 62px; height: 82px; border: 1.5px dashed #666; border-radius: 4px; padding: 3px 2px; box-sizing: border-box; background: #fafafa; text-align: center;">
+                                                <div style="font-size: 5pt; color: #666; font-weight: bold; line-height: 1.1; text-transform: uppercase;">HUELLA PULGAR DERECHO</div>
+                                                <div style="margin: 3px 0;"><i class="fas fa-fingerprint" style="font-size: 20px; color: #bbb;"></i></div>
+                                                <div style="font-size: 5pt; color: #999;">(Exclusivo Cliente)</div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <!-- Pie del documento legal -->
+                    <div style="text-align: center; margin-top: 8px; font-size: 6.5pt; color: #777; border-top: 1px dotted #ccc; padding-top: 3px;">
+                        Documento mercantil vinculante conforme a los Artículos 144 y 145 del Código de Comercio y Artículos 1.184, 1.257, 1.518 al 1.525 y 1.737 del Código Civil Venezolano. Términos integrados en www.fybparts.com/politicas-devoluciones.html
+                    </div>
+
+                </div>
+            `;
+        };
+
+        window.imprimirContrato = function() {
+            document.body.classList.add('imprimiendo-contrato');
+            const originalTitle = document.title;
+            document.title = ""; // Suprime el título/URL en la cabecera automática del navegador
+            const limpiar = () => {
+                document.body.classList.remove('imprimiendo-contrato');
+                document.title = originalTitle;
+                window.removeEventListener('afterprint', limpiar);
+            };
+            window.addEventListener('afterprint', limpiar);
+            window.print();
+            setTimeout(limpiar, 1500);
+        };
+
+        window.copiarTextoContrato = function() {
+            const canvas = document.getElementById('contrato-documento-imprimible');
+            if (!canvas) return;
+            const texto = canvas.innerText;
+            navigator.clipboard.writeText(texto).then(() => {
+                alert("📋 Texto legal del contrato copiado al portapapeles con éxito.");
+            }).catch(() => {
+                alert("No se pudo copiar automáticamente. Por favor selecciónalo manualmente.");
+            });
         };
 
         // ==========================================
@@ -8127,7 +9300,251 @@ window.cargarHistorialFacturas = async function() {
                         <p style="margin-top:20px;">Firma Resp.</p>
                         <p style="margin-top:30px;">__________________</p>
                     </div>
-                </body>
+                    <!-- 📜 MODAL GENERADOR OFICIAL DE CONTRATOS MERCANTILES DE PROCURA -->
+    <div id="modal-generador-contrato" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 99999; justify-content: center; align-items: center; padding: 12px; box-sizing: border-box;">
+        <div style="background: white; border-radius: 12px; width: 98%; max-width: 1460px; height: 96vh; max-height: 96vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.35);">
+            
+            <!-- HEADER DEL MODAL (NO PRINT) -->
+            <div class="contrato-no-print" style="background: #2c441b; color: white; padding: 10px 18px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #385723; flex-shrink: 0;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="background: rgba(255,255,255,0.18); width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px;">📜</span>
+                    <div>
+                        <h2 style="margin: 0; font-family: 'Oswald', sans-serif; font-size: 19px; letter-spacing: 0.5px; color: #fff; line-height: 1.2;">
+                            Generador Oficial de Contratos de Procura Internacional e Importación
+                        </h2>
+                        <span style="font-size: 11px; color: #d4e8d4; opacity: 0.95;">
+                            Inversiones FB Parts, C.A. • RIF: J-50397111-8 • Documentos Mercantiles Vinculantes
+                        </span>
+                    </div>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button type="button" onclick="imprimirContrato()" style="background: #1d6fa5; color: white; border: none; padding: 7px 15px; border-radius: 6px; font-weight: bold; font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" title="Imprimir o guardar como PDF en tamaño Carta">
+                        <i class="fas fa-print"></i> 🖨️ Imprimir / Guardar PDF
+                    </button>
+                    <button type="button" onclick="copiarTextoContrato()" style="background: #4b5563; color: white; border: none; padding: 7px 13px; border-radius: 6px; font-weight: bold; font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 5px;" title="Copiar texto legal al portapapeles">
+                        <i class="fas fa-copy"></i> Copiar
+                    </button>
+                    <button type="button" onclick="cerrarGeneradorContrato()" style="background: transparent; border: none; color: white; font-size: 24px; line-height: 1; cursor: pointer; padding: 0 6px; margin-left: 4px;" title="Cerrar modal">&times;</button>
+                </div>
+            </div>
+
+            <!-- CUERPO PRINCIPAL: CONTROLES A LA IZQUIERDA Y PREVIEW A LA DERECHA -->
+            <div style="display: flex; flex: 1; overflow: hidden; background: #eaedf0;">
+                
+                <!-- COLUMNA IZQUIERDA: CONTROLES EDITABLES (NO PRINT) -->
+                <div class="contrato-panel-controles contrato-no-print" style="width: 440px; min-width: 380px; max-width: 460px; background: #f8fafc; border-right: 1px solid #cbd5e1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 12px; box-sizing: border-box;">
+                    
+                    <!-- 📥 CARGAR COTIZACIÓN EXISTENTE -->
+                    <div style="background: #e2f0d9; border: 1.5px solid #2c441b; border-radius: 8px; padding: 10px 12px; box-shadow: 0 1px 3px rgba(44,68,27,0.12);">
+                        <label for="contrato-selector-cotizaciones" style="display: block; font-weight: bold; color: #155724; font-size: 11.5px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.3px;">
+                            <i class="fas fa-file-import"></i> 📥 Cargar datos de Cotización existente...
+                        </label>
+                        <select id="contrato-selector-cotizaciones" onchange="cargarContratoDesdeCotizacion(this.value)" style="width: 100%; padding: 8px 10px; border: 1px solid #a3cfbb; border-radius: 5px; font-size: 12px; background: white; color: #1e293b; font-weight: 500; outline: none; cursor: pointer;">
+                            <option value="">-- Selecciona una cotización guardada... --</option>
+                        </select>
+                    </div>
+
+                    <!-- 1. MODO EN BLANCO -->
+                    <div style="background: #ffffff; border: 2px dashed #94a3b8; border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.04);" onclick="const chk=document.getElementById('contrato-modo-blanco'); chk.checked=!chk.checked; actualizarContratoPreview();">
+                        <div>
+                            <span style="font-weight: bold; color: #1e293b; font-size: 12.5px; display: flex; align-items: center; gap: 6px;">
+                                <i class="fas fa-edit" style="color: #2c441b;"></i> Modo Plantilla en Blanco
+                            </span>
+                            <span style="font-size: 10.5px; color: #64748b; display: block; margin-top: 1px;">
+                                Sustituye variables por líneas para llenar a mano o bolígrafo.
+                            </span>
+                        </div>
+                        <input type="checkbox" id="contrato-modo-blanco" onchange="actualizarContratoPreview()" onclick="event.stopPropagation();" style="width: 18px; height: 18px; cursor: pointer; accent-color: #2c441b;">
+                    </div>
+
+                    <!-- 2. SELECTOR DE MODALIDAD -->
+                    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px;">
+                        <label style="display: block; font-weight: bold; font-size: 11px; color: #475569; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <i class="fas fa-file-invoice-dollar" style="color: #2c441b;"></i> Modalidad del Contrato
+                        </label>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <label id="lbl-modalidad-unico" style="display: flex; align-items: center; gap: 6px; padding: 7px 8px; border-radius: 6px; border: 2px solid #2c441b; background: #f0f7f1; cursor: pointer; font-size: 11.5px; font-weight: bold; color: #1e3a1e;">
+                                <input type="radio" name="contrato-modalidad" value="unico" checked onchange="cambiarModalidadContrato('unico')" style="accent-color: #2c441b;">
+                                Pago Único (100%)
+                            </label>
+                            <label id="lbl-modalidad-fraccionado" style="display: flex; align-items: center; gap: 6px; padding: 7px 8px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff; cursor: pointer; font-size: 11.5px; font-weight: bold; color: #475569;">
+                                <input type="radio" name="contrato-modalidad" value="fraccionado" onchange="cambiarModalidadContrato('fraccionado')" style="accent-color: #2c441b;">
+                                Fraccionado (% / %)
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 3. CONTROLES EXCLUSIVOS DE MODALIDAD FRACCIONADA -->
+                    <div id="bloque-controles-fraccionado" style="display: none; background: #ffffff; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 12px; border-left: 4px solid #2c441b;">
+                        <label style="display: block; font-weight: bold; font-size: 11px; color: #166534; margin-bottom: 6px; text-transform: uppercase;">
+                            <i class="fas fa-sliders-h"></i> Esquema Fraccionado Personalizado
+                        </label>
+                        
+                        <!-- Presets de porcentajes -->
+                        <div style="display: flex; gap: 5px; margin-bottom: 8px;">
+                            <button type="button" onclick="aplicarPresetFraccion(80, 20)" style="flex: 1; padding: 3px 4px; font-size: 10.5px; font-weight: bold; background: #f0fdf4; border: 1px solid #86efac; border-radius: 4px; color: #166534; cursor: pointer;">80 / 20</button>
+                            <button type="button" onclick="aplicarPresetFraccion(90, 10)" style="flex: 1; padding: 3px 4px; font-size: 10.5px; font-weight: bold; background: #f0fdf4; border: 1px solid #86efac; border-radius: 4px; color: #166534; cursor: pointer;">90 / 10</button>
+                            <button type="button" onclick="aplicarPresetFraccion(70, 30)" style="flex: 1; padding: 3px 4px; font-size: 10.5px; font-weight: bold; background: #f0fdf4; border: 1px solid #86efac; border-radius: 4px; color: #166534; cursor: pointer;">70 / 30</button>
+                            <button type="button" onclick="aplicarPresetFraccion(50, 50)" style="flex: 1; padding: 3px 4px; font-size: 10.5px; font-weight: bold; background: #f0fdf4; border: 1px solid #86efac; border-radius: 4px; color: #166534; cursor: pointer;">50 / 50</button>
+                        </div>
+
+                        <!-- Porcentajes -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                            <div>
+                                <label style="font-size: 10.5px; font-weight: bold; color: #334155; display: block; margin-bottom: 2px;">% Anticipo Inicial</label>
+                                <div style="display: flex; align-items: center; border: 1px solid #cbd5e1; border-radius: 5px; overflow: hidden; background: white;">
+                                    <input type="number" id="contrato-pct-anticipo" value="80" min="1" max="99" oninput="ajustarPorcentajeAnticipo(this.value)" style="width: 100%; border: none; padding: 5px 6px; font-size: 12px; font-weight: bold; outline: none;">
+                                    <span style="padding: 5px 6px; background: #f1f5f9; color: #64748b; font-size: 11px; font-weight: bold;">%</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label style="font-size: 10.5px; font-weight: bold; color: #334155; display: block; margin-bottom: 2px;">% Saldo Contra Entrega</label>
+                                <div style="display: flex; align-items: center; border: 1px solid #cbd5e1; border-radius: 5px; overflow: hidden; background: white;">
+                                    <input type="number" id="contrato-pct-saldo" value="20" min="1" max="99" oninput="ajustarPorcentajeSaldo(this.value)" style="width: 100%; border: none; padding: 5px 6px; font-size: 12px; font-weight: bold; outline: none;">
+                                    <span style="padding: 5px 6px; background: #f1f5f9; color: #64748b; font-size: 11px; font-weight: bold;">%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Montos Calculados / Editables -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                            <div>
+                                <label style="font-size: 10.5px; font-weight: bold; color: #334155; display: block; margin-bottom: 2px;">Monto Anticipo ($)</label>
+                                <div style="display: flex; align-items: center; border: 1px solid #cbd5e1; border-radius: 5px; overflow: hidden; background: white;">
+                                    <span style="padding: 5px 6px; background: #f1f5f9; color: #64748b; font-size: 11px; font-weight: bold;">$</span>
+                                    <input type="number" id="contrato-monto-anticipo" step="0.01" oninput="ajustarMontoAnticipo(this.value)" style="width: 100%; border: none; padding: 5px 6px; font-size: 12px; font-weight: bold; outline: none;">
+                                </div>
+                            </div>
+                            <div>
+                                <label style="font-size: 10.5px; font-weight: bold; color: #334155; display: block; margin-bottom: 2px;">Monto Saldo ($)</label>
+                                <div style="display: flex; align-items: center; border: 1px solid #cbd5e1; border-radius: 5px; overflow: hidden; background: white;">
+                                    <span style="padding: 5px 6px; background: #f1f5f9; color: #64748b; font-size: 11px; font-weight: bold;">$</span>
+                                    <input type="number" id="contrato-monto-saldo" step="0.01" oninput="ajustarMontoSaldo(this.value)" style="width: 100%; border: none; padding: 5px 6px; font-size: 12px; font-weight: bold; outline: none;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Parámetros de Almacenaje y Retiro -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <div>
+                                <label style="font-size: 10.5px; font-weight: bold; color: #334155; display: block; margin-bottom: 2px;">Almacenaje ($/día)</label>
+                                <input type="number" id="contrato-recargo-almacenaje" value="5.00" step="0.50" oninput="actualizarContratoPreview()" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 5px; padding: 5px 6px; font-size: 12px; outline: none; box-sizing: border-box;">
+                            </div>
+                            <div>
+                                <label style="font-size: 10.5px; font-weight: bold; color: #334155; display: block; margin-bottom: 2px;">Días Hábiles Retiro</label>
+                                <input type="number" id="contrato-dias-retiro" value="5" min="1" max="60" oninput="actualizarContratoPreview()" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 5px; padding: 5px 6px; font-size: 12px; outline: none; box-sizing: border-box;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. DATOS GENERALES DEL CLIENTE -->
+                    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;">
+                        <span style="font-weight: bold; font-size: 11px; color: #475569; text-transform: uppercase;">
+                            <i class="fas fa-user-tie" style="color: #2c441b;"></i> Comparecencia y Partes
+                        </span>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <div>
+                                <label style="font-size: 10.5px; font-weight: bold; color: #64748b; display: block; margin-bottom: 2px;">Nro. Cotización / Exp.</label>
+                                <input type="text" id="contrato-nro" oninput="actualizarContratoPreview()" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 5px; padding: 5px 6px; font-size: 12px; font-weight: bold; color: #2c441b; box-sizing: border-box;">
+                            </div>
+                            <div>
+                                <label style="font-size: 10.5px; font-weight: bold; color: #64748b; display: block; margin-bottom: 2px;">Lugar y Fecha</label>
+                                <input type="text" id="contrato-fecha" oninput="actualizarContratoPreview()" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 5px; padding: 5px 6px; font-size: 12px; box-sizing: border-box;">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style="font-size: 10.5px; font-weight: bold; color: #64748b; display: block; margin-bottom: 2px;">Nombre o Razón Social</label>
+                            <input type="text" id="contrato-cliente" oninput="actualizarContratoPreview()" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 5px; padding: 5px 6px; font-size: 12px; font-weight: bold; box-sizing: border-box;">
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <div>
+                                <label style="font-size: 10.5px; font-weight: bold; color: #64748b; display: block; margin-bottom: 2px;">C.I. / RIF</label>
+                                <input type="text" id="contrato-rif" oninput="actualizarContratoPreview()" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 5px; padding: 5px 6px; font-size: 12px; box-sizing: border-box;">
+                            </div>
+                            <div>
+                                <label style="font-size: 10.5px; font-weight: bold; color: #64748b; display: block; margin-bottom: 2px;">Teléfono</label>
+                                <input type="text" id="contrato-telefono" oninput="actualizarContratoPreview()" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 5px; padding: 5px 6px; font-size: 12px; box-sizing: border-box;">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style="font-size: 10.5px; font-weight: bold; color: #64748b; display: block; margin-bottom: 2px;">Domicilio (Ciudad / Estado)</label>
+                            <input type="text" id="contrato-domicilio" oninput="actualizarContratoPreview()" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 5px; padding: 5px 6px; font-size: 12px; box-sizing: border-box;">
+                        </div>
+                    </div>
+
+                    <!-- 5. VEHÍCULO Y VIN -->
+                    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;">
+                        <span style="font-weight: bold; font-size: 11px; color: #475569; text-transform: uppercase;">
+                            <i class="fas fa-car" style="color: #2c441b;"></i> Vehículo y Serial VIN
+                        </span>
+
+                        <div>
+                            <label style="font-size: 10.5px; font-weight: bold; color: #64748b; display: block; margin-bottom: 2px;">Vehículo (Marca, Modelo, Año)</label>
+                            <input type="text" id="contrato-vehiculo" oninput="actualizarContratoPreview()" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 5px; padding: 5px 6px; font-size: 12px; font-weight: bold; box-sizing: border-box;">
+                        </div>
+
+                        <div>
+                            <label style="font-size: 10.5px; font-weight: bold; color: #64748b; display: block; margin-bottom: 2px;">
+                                Serial VIN (17 Dígitos) <span style="font-weight: normal; color: #94a3b8;">(Vacío para casillas a mano)</span>
+                            </label>
+                            <input type="text" id="contrato-vin" maxlength="17" oninput="this.value = this.value.toUpperCase(); actualizarContratoPreview();" placeholder="Ej: 1HGCR2F83HA000000" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 5px; padding: 5px 6px; font-size: 12px; font-family: monospace; letter-spacing: 1.5px; font-weight: bold; box-sizing: border-box;">
+                        </div>
+                    </div>
+
+                    <!-- 6. LISTA DE REPUESTOS Y TOTALES -->
+                    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: bold; font-size: 11px; color: #475569; text-transform: uppercase;">
+                                <i class="fas fa-cogs" style="color: #2c441b;"></i> Repuestos Cotizados
+                            </span>
+                            <button type="button" onclick="agregarItemContrato()" style="background: #e2f0d9; color: #155724; border: 1px solid #c3e6cb; padding: 3px 8px; border-radius: 4px; font-size: 10.5px; font-weight: bold; cursor: pointer;">
+                                + Agregar Renglón
+                            </button>
+                        </div>
+
+                        <div id="contrato-items-lista" style="display: flex; flex-direction: column; gap: 5px; max-height: 200px; overflow-y: auto; padding-right: 2px;">
+                            <!-- Inyectado dinámicamente -->
+                        </div>
+
+                        <!-- Resumen Financiero -->
+                        <div style="border-top: 1px solid #e2e8f0; padding-top: 6px; display: flex; flex-direction: column; gap: 4px; font-size: 11.5px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color: #64748b;">Subtotal ($):</span>
+                                <input type="number" id="contrato-subtotal" step="0.01" oninput="recalcularDesdeTotalesManuales()" style="width: 85px; text-align: right; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 4px; font-size: 11.5px;">
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color: #64748b;">IVA 16% ($):</span>
+                                <input type="number" id="contrato-iva" step="0.01" oninput="recalcularDesdeTotalesManuales()" style="width: 85px; text-align: right; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 4px; font-size: 11.5px;">
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 12.5px; color: #2c441b; border-top: 1px dashed #cbd5e1; padding-top: 4px;">
+                                <span>TOTAL DEFINITIVO ($):</span>
+                                <input type="number" id="contrato-total" step="0.01" oninput="ajustarTotalContrato(this.value)" style="width: 95px; text-align: right; border: 2px solid #2c441b; border-radius: 4px; padding: 2px 6px; font-size: 12.5px; font-weight: bold; color: #2c441b;">
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- COLUMNA DERECHA: VISTA PREVIA DEL CONTRATO EN TIEMPO REAL -->
+                <div class="contrato-panel-preview" style="flex: 1; overflow-y: auto; padding: 24px 20px; display: flex; justify-content: center; align-items: flex-start; background: #e2e8f0;">
+                    
+                    <!-- HOJA DE PAPEL TAMAÑO CARTA -->
+                    <div id="contrato-documento-imprimible" style="background: white; width: 816px; min-height: 1056px; box-shadow: 0 4px 25px rgba(0,0,0,0.18); border-radius: 2px; padding: 42px 48px; box-sizing: border-box; font-family: 'Times New Roman', Times, Georgia, serif; font-size: 9.5pt; line-height: 1.38; color: #111;">
+                        <!-- Renderizado por actualizarContratoPreview() -->
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</body>
                 </html>
             `;
 

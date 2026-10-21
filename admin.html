@@ -132,14 +132,177 @@
         .dash-card .value { font-size: 28px; font-weight: bold; color: #385723; font-family: 'Oswald', sans-serif; }
         .dash-card i { font-size: 24px; color: #1d6fa5; margin-bottom: 10px; }
 
-        /* REGLAS MÁGICAS DE IMPRESIÓN */
+        /* =========================================================
+           🖨️ REGLAS MÁGICAS DE IMPRESIÓN CROSS-BROWSER (CHROME & WEBKIT/SAFARI)
+           ========================================================= */
         @media screen {
             #print-container { display: none; }
         }
         @media print {
-            body { background-color: white; margin: 0; padding: 0; }
-            #app-wrapper { display: none !important; }
-            #print-container { display: block !important; width: 100%; }
+            /* 1. NORMALIZACIÓN DE MÁRGENES Y HOJA (LETTER) SIN ENCABEZADOS DE NAVEGADOR */
+            @page {
+                size: letter;
+                margin: 10mm 15mm 10mm 15mm;
+                @top-left { content: none !important; }
+                @top-center { content: none !important; }
+                @top-right { content: none !important; }
+                @bottom-left { content: none !important; }
+                @bottom-center { content: none !important; }
+                @bottom-right { content: none !important; }
+            }
+            /* Ocultar elementos automáticos de cabecera/pie del navegador */
+            @top-left { content: none !important; }
+            @top-right { content: none !important; }
+            @bottom-left { content: none !important; }
+            @bottom-right { content: none !important; }
+
+            html, body {
+                width: 100% !important;
+                height: auto !important;
+                min-height: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* MODO NORMAL (IMPRESIÓN REGULAR COTIZACIÓN / FACTURA / PEDIDO) */
+            body:not(.imprimiendo-contrato) #app-wrapper { display: none !important; }
+            body:not(.imprimiendo-contrato) #print-container { display: block !important; width: 100%; }
+
+            /* 2. TOTAL UI LOCKOUT EN MODO CONTRATO */
+            body.imprimiendo-contrato #app-wrapper,
+            body.imprimiendo-contrato #print-container,
+            body.imprimiendo-contrato #main-sidebar,
+            body.imprimiendo-contrato #bcv-bar,
+            body.imprimiendo-contrato .bcv-ticker,
+            body.imprimiendo-contrato .modal-overlay:not(#modal-generador-contrato),
+            body.imprimiendo-contrato .contrato-no-print,
+            body.imprimiendo-contrato .contrato-panel-controles,
+            body.imprimiendo-contrato button,
+            body.imprimiendo-contrato .btn-flotante,
+            body.imprimiendo-contrato .floating-action-btn,
+            body.imprimiendo-contrato header,
+            body.imprimiendo-contrato nav {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                height: 0 !important;
+                width: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: hidden !important;
+            }
+
+            /* 3. CONTENEDOR Y HOJA DEL CONTRATO LEGAL */
+            body.imprimiendo-contrato #modal-generador-contrato {
+                display: block !important;
+                position: static !important;
+                width: 100% !important;
+                height: auto !important;
+                min-height: auto !important;
+                max-height: none !important;
+                background: #ffffff !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                overflow: visible !important;
+                box-shadow: none !important;
+                border: none !important;
+                z-index: 999999 !important;
+            }
+            body.imprimiendo-contrato #modal-generador-contrato > div {
+                display: block !important;
+                position: static !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                height: auto !important;
+                min-height: auto !important;
+                max-height: none !important;
+                box-shadow: none !important;
+                border: none !important;
+                border-radius: 0 !important;
+                overflow: visible !important;
+                background: #ffffff !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            body.imprimiendo-contrato #modal-generador-contrato > div > div {
+                display: block !important;
+                position: static !important;
+                width: 100% !important;
+                height: auto !important;
+                min-height: auto !important;
+                max-height: none !important;
+                background: transparent !important;
+                overflow: visible !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            body.imprimiendo-contrato .contrato-panel-preview {
+                display: block !important;
+                position: static !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                background: #ffffff !important;
+                overflow: visible !important;
+                height: auto !important;
+                max-height: none !important;
+                width: 100% !important;
+            }
+            body.imprimiendo-contrato #contrato-documento-imprimible {
+                display: block !important;
+                position: static !important;
+                box-shadow: none !important;
+                border: none !important;
+                border-radius: 0 !important;
+                padding: 0 !important;
+                margin: 0 auto !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-height: auto !important;
+                height: auto !important;
+                overflow: visible !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+                font-family: 'Times New Roman', Times, Georgia, serif !important;
+                font-size: 9.5pt !important;
+                line-height: 1.35 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* Asegurar que el contrato comience exactamente en el margen superior de la hoja */
+            body.imprimiendo-contrato #modal-generador-contrato,
+            body.imprimiendo-contrato #modal-generador-contrato > div,
+            body.imprimiendo-contrato #modal-generador-contrato > div > div,
+            body.imprimiendo-contrato .contrato-panel-preview,
+            body.imprimiendo-contrato #contrato-documento-imprimible,
+            body.imprimiendo-contrato #contrato-documento-imprimible > *:first-child,
+            body.imprimiendo-contrato #contrato-documento-imprimible table:first-child {
+                margin-top: 0 !important;
+                padding-top: 0 !important;
+                border-top: none !important;
+                top: 0 !important;
+            }
+
+            /* 4. PREVENCIÓN DE CORTES EN BLOQUES CRÍTICOS (SAFARI Y CHROME) */
+            .contrato-bloque-firmas,
+            .contrato-bloque-vin,
+            .contrato-evitar-corte,
+            #contrato-documento-imprimible table,
+            #contrato-documento-imprimible tr {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                -webkit-column-break-inside: avoid !important;
+            }
+
+            /* Forzar nitidez exacta en tablas y bordes para WebKit */
+            #contrato-documento-imprimible * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
         }
 
         /* 🚀 HABILITAR SALTOS DE LÍNEA EN EL CHAT DE LA IA */
@@ -1261,8 +1424,15 @@
             <!-- PESTAÑA 6: CREAR COTIZACIÓN -->
             <div id="tab-cotizaciones" class="tab-content">
                 <div class="admin-header">
-                    <h2>Generador Oficial de Cotizaciones</h2>
-                    <span style="font-size: 13px; color: #666;">F&B PARTS • RIF: J-503971118</span>
+                    <div>
+                        <h2>Generador Oficial de Cotizaciones</h2>
+                        <span style="font-size: 13px; color: #666;">F&B PARTS • RIF: J-503971118</span>
+                    </div>
+                    <div>
+                        <button type="button" onclick="abrirGeneradorContratoManual()" style="background:#2c441b; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow: 0 1px 3px rgba(0,0,0,0.15);" title="Abrir generador para redactar o imprimir contrato en blanco">
+                            <i class="fas fa-file-contract"></i> 📄 Crear Contrato en Blanco / Manual
+                        </button>
+                    </div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: start;">
@@ -1397,6 +1567,9 @@
                 <div class="admin-header">
                     <h2>Historial y Base de Datos de Cotizaciones</h2>
                     <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <button type="button" onclick="abrirGeneradorContratoManual()" style="background:#2c441b; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow: 0 1px 3px rgba(0,0,0,0.15);" title="Abrir generador para redactar o imprimir contrato en blanco">
+                            <i class="fas fa-file-contract"></i> 📄 Crear Contrato en Blanco / Manual
+                        </button>
                         <div style="position: relative; min-width: 280px;">
                             <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 14px; pointer-events: none;"></i>
                             <input type="text" id="buscador-cotizaciones" placeholder="Buscar por repuesto, cliente o Nro..."
@@ -2517,7 +2690,7 @@
             }
         }, 8000);
     </script>
-    <script type="module" src="admin_logic.js?v=20261020_avatar"></script>
+    <script type="module" src="admin_logic.js?v=20261020_print_noheader"></script>
 
 
     <!-- MODAL AUDITORIA INTERNA -->
@@ -2550,6 +2723,251 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- 📜 MODAL GENERADOR OFICIAL DE CONTRATOS MERCANTILES DE PROCURA -->
+    <div id="modal-generador-contrato" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 99999; justify-content: center; align-items: center; padding: 12px; box-sizing: border-box;">
+        <div style="background: white; border-radius: 12px; width: 98%; max-width: 1460px; height: 96vh; max-height: 96vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.35);">
+            
+            <!-- HEADER DEL MODAL (NO PRINT) -->
+            <div class="contrato-no-print" style="background: #2c441b; color: white; padding: 10px 18px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #385723; flex-shrink: 0;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="background: rgba(255,255,255,0.18); width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px;">📜</span>
+                    <div>
+                        <h2 style="margin: 0; font-family: 'Oswald', sans-serif; font-size: 19px; letter-spacing: 0.5px; color: #fff; line-height: 1.2;">
+                            Generador Oficial de Contratos de Procura Internacional e Importación
+                        </h2>
+                        <span style="font-size: 11px; color: #d4e8d4; opacity: 0.95;">
+                            Inversiones FB Parts, C.A. • RIF: J-50397111-8 • Documentos Mercantiles Vinculantes
+                        </span>
+                    </div>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button type="button" onclick="imprimirContrato()" style="background: #1d6fa5; color: white; border: none; padding: 7px 15px; border-radius: 6px; font-weight: bold; font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" title="Imprimir o guardar como PDF en tamaño Carta">
+                        <i class="fas fa-print"></i> 🖨️ Imprimir / Guardar PDF
+                    </button>
+                    <button type="button" onclick="copiarTextoContrato()" style="background: #4b5563; color: white; border: none; padding: 7px 13px; border-radius: 6px; font-weight: bold; font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 5px;" title="Copiar texto legal al portapapeles">
+                        <i class="fas fa-copy"></i> Copiar
+                    </button>
+                    <button type="button" onclick="cerrarGeneradorContrato()" style="background: transparent; border: none; color: white; font-size: 24px; line-height: 1; cursor: pointer; padding: 0 6px; margin-left: 4px;" title="Cerrar modal">&times;</button>
+                </div>
+            </div>
+
+            <!-- CUERPO PRINCIPAL: CONTROLES A LA IZQUIERDA Y PREVIEW A LA DERECHA -->
+            <div style="display: flex; flex: 1; overflow: hidden; background: #eaedf0;">
+                
+                <!-- COLUMNA IZQUIERDA: CONTROLES EDITABLES (NO PRINT) -->
+                <div class="contrato-panel-controles contrato-no-print" style="width: 440px; min-width: 380px; max-width: 460px; background: #f8fafc; border-right: 1px solid #cbd5e1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 12px; box-sizing: border-box;">
+                    
+                    <!-- 📥 CARGAR COTIZACIÓN EXISTENTE -->
+                    <div style="background: #e2f0d9; border: 1.5px solid #2c441b; border-radius: 8px; padding: 10px 12px; box-shadow: 0 1px 3px rgba(44,68,27,0.12);">
+                        <label for="contrato-selector-cotizaciones" style="display: block; font-weight: bold; color: #155724; font-size: 11.5px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.3px;">
+                            <i class="fas fa-file-import"></i> 📥 Cargar datos de Cotización existente...
+                        </label>
+                        <select id="contrato-selector-cotizaciones" onchange="cargarContratoDesdeCotizacion(this.value)" style="width: 100%; padding: 8px 10px; border: 1px solid #a3cfbb; border-radius: 5px; font-size: 12px; background: white; color: #1e293b; font-weight: 500; outline: none; cursor: pointer;">
+                            <option value="">-- Selecciona una cotización guardada... --</option>
+                        </select>
+                    </div>
+
+                    <!-- 1. MODO EN BLANCO -->
+                    <div style="background: #ffffff; border: 2px dashed #94a3b8; border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.04);" onclick="const chk=document.getElementById('contrato-modo-blanco'); chk.checked=!chk.checked; actualizarContratoPreview();">
+                        <div>
+                            <span style="font-weight: bold; color: #1e293b; font-size: 12.5px; display: flex; align-items: center; gap: 6px;">
+                                <i class="fas fa-edit" style="color: #2c441b;"></i> Modo Plantilla en Blanco
+                            </span>
+                            <span style="font-size: 10.5px; color: #64748b; display: block; margin-top: 1px;">
+                                Sustituye variables por líneas para llenar a mano o bolígrafo.
+                            </span>
+                        </div>
+                        <input type="checkbox" id="contrato-modo-blanco" onchange="actualizarContratoPreview()" onclick="event.stopPropagation();" style="width: 18px; height: 18px; cursor: pointer; accent-color: #2c441b;">
+                    </div>
+
+                    <!-- 2. SELECTOR DE MODALIDAD -->
+                    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px;">
+                        <label style="display: block; font-weight: bold; font-size: 11px; color: #475569; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <i class="fas fa-file-invoice-dollar" style="color: #2c441b;"></i> Modalidad del Contrato
+                        </label>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <label id="lbl-modalidad-unico" style="display: flex; align-items: center; gap: 6px; padding: 7px 8px; border-radius: 6px; border: 2px solid #2c441b; background: #f0f7f1; cursor: pointer; font-size: 11.5px; font-weight: bold; color: #1e3a1e;">
+                                <input type="radio" name="contrato-modalidad" value="unico" checked onchange="cambiarModalidadContrato('unico')" style="accent-color: #2c441b;">
+                                Pago Único (100%)
+                            </label>
+                            <label id="lbl-modalidad-fraccionado" style="display: flex; align-items: center; gap: 6px; padding: 7px 8px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff; cursor: pointer; font-size: 11.5px; font-weight: bold; color: #475569;">
+                                <input type="radio" name="contrato-modalidad" value="fraccionado" onchange="cambiarModalidadContrato('fraccionado')" style="accent-color: #2c441b;">
+                                Fraccionado (% / %)
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 3. CONTROLES EXCLUSIVOS DE MODALIDAD FRACCIONADA -->
+                    <div id="bloque-controles-fraccionado" style="display: none; background: #ffffff; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 12px; border-left: 4px solid #2c441b;">
+                        <label style="display: block; font-weight: bold; font-size: 11px; color: #166534; margin-bottom: 6px; text-transform: uppercase;">
+                            <i class="fas fa-sliders-h"></i> Esquema Fraccionado Personalizado
+                        </label>
+                        
+                        <!-- Presets de porcentajes -->
+                        <div style="display: flex; gap: 5px; margin-bottom: 8px;">
+                            <button type="button" onclick="aplicarPresetFraccion(80, 20)" style="flex: 1; padding: 3px 4px; font-size: 10.5px; font-weight: bold; background: #f0fdf4; border: 1px solid #86efac; border-radius: 4px; color: #166534; cursor: pointer;">80 / 20</button>
+                            <button type="button" onclick="aplicarPresetFraccion(90, 10)" style="flex: 1; padding: 3px 4px; font-size: 10.5px; font-weight: bold; background: #f0fdf4; border: 1px solid #86efac; border-radius: 4px; color: #166534; cursor: pointer;">90 / 10</button>
+                            <button type="button" onclick="aplicarPresetFraccion(70, 30)" style="flex: 1; padding: 3px 4px; font-size: 10.5px; font-weight: bold; background: #f0fdf4; border: 1px solid #86efac; border-radius: 4px; color: #166534; cursor: pointer;">70 / 30</button>
+                            <button type="button" onclick="aplicarPresetFraccion(50, 50)" style="flex: 1; padding: 3px 4px; font-size: 10.5px; font-weight: bold; background: #f0fdf4; border: 1px solid #86efac; border-radius: 4px; color: #166534; cursor: pointer;">50 / 50</button>
+                        </div>
+
+                        <!-- Porcentajes -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                            <div>
+                                <label style="font-size: 10.5px; font-weight: bold; color: #334155; display: block; margin-bottom: 2px;">% Anticipo Inicial</label>
+                                <div style="display: flex; align-items: center; border: 1px solid #cbd5e1; border-radius: 5px; overflow: hidden; background: white;">
+                                    <input type="number" id="contrato-pct-anticipo" value="80" min="1" max="99" oninput="ajustarPorcentajeAnticipo(this.value)" style="width: 100%; border: none; padding: 5px 6px; font-size: 12px; font-weight: bold; outline: none;">
+                                    <span style="padding: 5px 6px; background: #f1f5f9; color: #64748b; font-size: 11px; font-weight: bold;">%</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label style="font-size: 10.5px; font-weight: bold; color: #334155; display: block; margin-bottom: 2px;">% Saldo Contra Entrega</label>
+                                <div style="display: flex; align-items: center; border: 1px solid #cbd5e1; border-radius: 5px; overflow: hidden; background: white;">
+                                    <input type="number" id="contrato-pct-saldo" value="20" min="1" max="99" oninput="ajustarPorcentajeSaldo(this.value)" style="width: 100%; border: none; padding: 5px 6px; font-size: 12px; font-weight: bold; outline: none;">
+                                    <span style="padding: 5px 6px; background: #f1f5f9; color: #64748b; font-size: 11px; font-weight: bold;">%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Montos Calculados / Editables -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                            <div>
+                                <label style="font-size: 10.5px; font-weight: bold; color: #334155; display: block; margin-bottom: 2px;">Monto Anticipo ($)</label>
+                                <div style="display: flex; align-items: center; border: 1px solid #cbd5e1; border-radius: 5px; overflow: hidden; background: white;">
+                                    <span style="padding: 5px 6px; background: #f1f5f9; color: #64748b; font-size: 11px; font-weight: bold;">$</span>
+                                    <input type="number" id="contrato-monto-anticipo" step="0.01" oninput="ajustarMontoAnticipo(this.value)" style="width: 100%; border: none; padding: 5px 6px; font-size: 12px; font-weight: bold; outline: none;">
+                                </div>
+                            </div>
+                            <div>
+                                <label style="font-size: 10.5px; font-weight: bold; color: #334155; display: block; margin-bottom: 2px;">Monto Saldo ($)</label>
+                                <div style="display: flex; align-items: center; border: 1px solid #cbd5e1; border-radius: 5px; overflow: hidden; background: white;">
+                                    <span style="padding: 5px 6px; background: #f1f5f9; color: #64748b; font-size: 11px; font-weight: bold;">$</span>
+                                    <input type="number" id="contrato-monto-saldo" step="0.01" oninput="ajustarMontoSaldo(this.value)" style="width: 100%; border: none; padding: 5px 6px; font-size: 12px; font-weight: bold; outline: none;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Parámetros de Almacenaje y Retiro -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <div>
+                                <label style="font-size: 10.5px; font-weight: bold; color: #334155; display: block; margin-bottom: 2px;">Almacenaje ($/día)</label>
+                                <input type="number" id="contrato-recargo-almacenaje" value="5.00" step="0.50" oninput="actualizarContratoPreview()" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 5px; padding: 5px 6px; font-size: 12px; outline: none; box-sizing: border-box;">
+                            </div>
+                            <div>
+                                <label style="font-size: 10.5px; font-weight: bold; color: #334155; display: block; margin-bottom: 2px;">Días Hábiles Retiro</label>
+                                <input type="number" id="contrato-dias-retiro" value="5" min="1" max="60" oninput="actualizarContratoPreview()" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 5px; padding: 5px 6px; font-size: 12px; outline: none; box-sizing: border-box;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. DATOS GENERALES DEL CLIENTE -->
+                    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;">
+                        <span style="font-weight: bold; font-size: 11px; color: #475569; text-transform: uppercase;">
+                            <i class="fas fa-user-tie" style="color: #2c441b;"></i> Comparecencia y Partes
+                        </span>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <div>
+                                <label style="font-size: 10.5px; font-weight: bold; color: #64748b; display: block; margin-bottom: 2px;">Nro. Cotización / Exp.</label>
+                                <input type="text" id="contrato-nro" oninput="actualizarContratoPreview()" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 5px; padding: 5px 6px; font-size: 12px; font-weight: bold; color: #2c441b; box-sizing: border-box;">
+                            </div>
+                            <div>
+                                <label style="font-size: 10.5px; font-weight: bold; color: #64748b; display: block; margin-bottom: 2px;">Lugar y Fecha</label>
+                                <input type="text" id="contrato-fecha" oninput="actualizarContratoPreview()" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 5px; padding: 5px 6px; font-size: 12px; box-sizing: border-box;">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style="font-size: 10.5px; font-weight: bold; color: #64748b; display: block; margin-bottom: 2px;">Nombre o Razón Social</label>
+                            <input type="text" id="contrato-cliente" oninput="actualizarContratoPreview()" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 5px; padding: 5px 6px; font-size: 12px; font-weight: bold; box-sizing: border-box;">
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <div>
+                                <label style="font-size: 10.5px; font-weight: bold; color: #64748b; display: block; margin-bottom: 2px;">C.I. / RIF</label>
+                                <input type="text" id="contrato-rif" oninput="actualizarContratoPreview()" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 5px; padding: 5px 6px; font-size: 12px; box-sizing: border-box;">
+                            </div>
+                            <div>
+                                <label style="font-size: 10.5px; font-weight: bold; color: #64748b; display: block; margin-bottom: 2px;">Teléfono</label>
+                                <input type="text" id="contrato-telefono" oninput="actualizarContratoPreview()" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 5px; padding: 5px 6px; font-size: 12px; box-sizing: border-box;">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style="font-size: 10.5px; font-weight: bold; color: #64748b; display: block; margin-bottom: 2px;">Domicilio (Ciudad / Estado)</label>
+                            <input type="text" id="contrato-domicilio" oninput="actualizarContratoPreview()" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 5px; padding: 5px 6px; font-size: 12px; box-sizing: border-box;">
+                        </div>
+                    </div>
+
+                    <!-- 5. VEHÍCULO Y VIN -->
+                    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;">
+                        <span style="font-weight: bold; font-size: 11px; color: #475569; text-transform: uppercase;">
+                            <i class="fas fa-car" style="color: #2c441b;"></i> Vehículo y Serial VIN
+                        </span>
+
+                        <div>
+                            <label style="font-size: 10.5px; font-weight: bold; color: #64748b; display: block; margin-bottom: 2px;">Vehículo (Marca, Modelo, Año)</label>
+                            <input type="text" id="contrato-vehiculo" oninput="actualizarContratoPreview()" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 5px; padding: 5px 6px; font-size: 12px; font-weight: bold; box-sizing: border-box;">
+                        </div>
+
+                        <div>
+                            <label style="font-size: 10.5px; font-weight: bold; color: #64748b; display: block; margin-bottom: 2px;">
+                                Serial VIN (17 Dígitos) <span style="font-weight: normal; color: #94a3b8;">(Vacío para casillas a mano)</span>
+                            </label>
+                            <input type="text" id="contrato-vin" maxlength="17" oninput="this.value = this.value.toUpperCase(); actualizarContratoPreview();" placeholder="Ej: 1HGCR2F83HA000000" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 5px; padding: 5px 6px; font-size: 12px; font-family: monospace; letter-spacing: 1.5px; font-weight: bold; box-sizing: border-box;">
+                        </div>
+                    </div>
+
+                    <!-- 6. LISTA DE REPUESTOS Y TOTALES -->
+                    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: bold; font-size: 11px; color: #475569; text-transform: uppercase;">
+                                <i class="fas fa-cogs" style="color: #2c441b;"></i> Repuestos Cotizados
+                            </span>
+                            <button type="button" onclick="agregarItemContrato()" style="background: #e2f0d9; color: #155724; border: 1px solid #c3e6cb; padding: 3px 8px; border-radius: 4px; font-size: 10.5px; font-weight: bold; cursor: pointer;">
+                                + Agregar Renglón
+                            </button>
+                        </div>
+
+                        <div id="contrato-items-lista" style="display: flex; flex-direction: column; gap: 5px; max-height: 200px; overflow-y: auto; padding-right: 2px;">
+                            <!-- Inyectado dinámicamente -->
+                        </div>
+
+                        <!-- Resumen Financiero -->
+                        <div style="border-top: 1px solid #e2e8f0; padding-top: 6px; display: flex; flex-direction: column; gap: 4px; font-size: 11.5px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color: #64748b;">Subtotal ($):</span>
+                                <input type="number" id="contrato-subtotal" step="0.01" oninput="recalcularDesdeTotalesManuales()" style="width: 85px; text-align: right; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 4px; font-size: 11.5px;">
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color: #64748b;">IVA 16% ($):</span>
+                                <input type="number" id="contrato-iva" step="0.01" oninput="recalcularDesdeTotalesManuales()" style="width: 85px; text-align: right; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 4px; font-size: 11.5px;">
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 12.5px; color: #2c441b; border-top: 1px dashed #cbd5e1; padding-top: 4px;">
+                                <span>TOTAL DEFINITIVO ($):</span>
+                                <input type="number" id="contrato-total" step="0.01" oninput="ajustarTotalContrato(this.value)" style="width: 95px; text-align: right; border: 2px solid #2c441b; border-radius: 4px; padding: 2px 6px; font-size: 12.5px; font-weight: bold; color: #2c441b;">
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- COLUMNA DERECHA: VISTA PREVIA DEL CONTRATO EN TIEMPO REAL -->
+                <div class="contrato-panel-preview" style="flex: 1; overflow-y: auto; padding: 24px 20px; display: flex; justify-content: center; align-items: flex-start; background: #e2e8f0;">
+                    
+                    <!-- HOJA DE PAPEL TAMAÑO CARTA -->
+                    <div id="contrato-documento-imprimible" style="background: white; width: 816px; min-height: 1056px; box-shadow: 0 4px 25px rgba(0,0,0,0.18); border-radius: 2px; padding: 42px 48px; box-sizing: border-box; font-family: 'Times New Roman', Times, Georgia, serif; font-size: 9.5pt; line-height: 1.38; color: #111;">
+                        <!-- Renderizado por actualizarContratoPreview() -->
+                    </div>
+
+                </div>
+
+            </div>
+
         </div>
     </div>
 </body>
