@@ -158,8 +158,9 @@
             }
 
             /* MODO NORMAL (IMPRESIÓN REGULAR COTIZACIÓN / FACTURA / PEDIDO) */
-            body:not(.imprimiendo-contrato) #app-wrapper { display: none !important; }
-            body:not(.imprimiendo-contrato) #print-container { display: block !important; width: 100%; }
+            body:not(.imprimiendo-contrato):not(.imprimiendo-brochure) #app-wrapper { display: none !important; }
+            body:not(.imprimiendo-contrato):not(.imprimiendo-brochure) #print-container { display: block !important; width: 100%; }
+
 
             /* 2. SUPRESIÓN UNIVERSAL: Elementos de interfaz que NUNCA deben imprimirse */
             #ticker-tasas-container,
@@ -321,6 +322,111 @@
 
             /* Forzar nitidez exacta en tablas y bordes para WebKit */
             #contrato-documento-imprimible * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* =========================================================
+               📖 5. AISLAMIENTO Y REGLAS DE IMPRESIÓN DEL BROCHURE CORPORATIVO
+               ========================================================= */
+            body.imprimiendo-brochure > *:not(#modal-brochure-corporativo) {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                height: 0 !important;
+                max-height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: hidden !important;
+            }
+
+            body.imprimiendo-brochure #app-wrapper,
+            body.imprimiendo-brochure #print-container,
+            body.imprimiendo-brochure #main-sidebar,
+            body.imprimiendo-brochure #ticker-tasas-container,
+            body.imprimiendo-brochure #ticker-wrapper,
+            body.imprimiendo-brochure #auth-loading-screen,
+            body.imprimiendo-brochure #bcv-bar,
+            body.imprimiendo-brochure .bcv-ticker,
+            body.imprimiendo-brochure .modal-overlay:not(#modal-brochure-corporativo),
+            body.imprimiendo-brochure .modal-backdrop,
+            body.imprimiendo-brochure .brochure-toolbar,
+            body.imprimiendo-brochure .no-print,
+            body.imprimiendo-brochure header,
+            body.imprimiendo-brochure nav,
+            body.imprimiendo-brochure .btn-flotante,
+            body.imprimiendo-brochure .floating-action-btn,
+            body.imprimiendo-brochure button {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                height: 0 !important;
+                max-height: 0 !important;
+                width: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: hidden !important;
+            }
+
+            body.imprimiendo-brochure,
+            body.imprimiendo-brochure #modal-brochure-corporativo,
+            body.imprimiendo-brochure #modal-brochure-corporativo > div,
+            body.imprimiendo-brochure .brochure-canvas {
+                display: block !important;
+                position: static !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                height: auto !important;
+                min-height: auto !important;
+                max-height: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #ffffff !important;
+                box-shadow: none !important;
+                border: none !important;
+                overflow: visible !important;
+            }
+
+            body.imprimiendo-brochure .brochure-sheet {
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: space-between !important;
+                position: relative !important;
+                box-sizing: border-box !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                height: auto !important;
+                min-height: 258mm !important;
+                margin: 0 0 0 0 !important;
+                padding: 0 0 0 0 !important;
+                background: #ffffff !important;
+                box-shadow: none !important;
+                border: none !important;
+                border-radius: 0 !important;
+                overflow: visible !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+            }
+
+            body.imprimiendo-brochure .brochure-sheet:not(:last-child) {
+                break-after: page !important;
+                page-break-after: always !important;
+            }
+
+            body.imprimiendo-brochure .brochure-sheet:last-child {
+                break-after: auto !important;
+                page-break-after: auto !important;
+            }
+
+            body.imprimiendo-brochure .brochure-evitar-corte {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                -webkit-column-break-inside: avoid !important;
+            }
+
+            body.imprimiendo-brochure .brochure-sheet * {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
             }
@@ -765,6 +871,37 @@
                             <span class="flex flex-col"><span>VES</span> <b id="dash-ganancia-ves" class="text-gray-800 mt-0.5">0.00</b></span>
                             <span class="flex flex-col"><span>EUR</span> <b id="dash-ganancia-eur" class="text-gray-800 mt-0.5">0.00</b></span>
                         </div>
+                    </div>
+                </div>
+
+                <!-- 📖 TARJETA DE ACCESO RÁPIDO: BROCHURE CORPORATIVO INSTITUCIONAL -->
+                <div class="bg-gradient-to-r from-white via-[#f8faf8] to-[#edf4ee] border border-[#3b5d47]/25 rounded-2xl p-6 mb-8 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden transition-all hover:shadow-md hover:border-[#3b5d47]/40">
+                    <div class="absolute top-0 left-0 w-2 h-full bg-[#3b5d47]"></div>
+                    <div class="flex items-center gap-5">
+                        <div class="w-14 h-14 rounded-2xl bg-[#3b5d47]/10 text-[#3b5d47] border border-[#3b5d47]/20 flex items-center justify-center text-2xl shrink-0 shadow-xs">
+                            <i class="fas fa-book-open"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2.5 flex-wrap">
+                                <h3 class="text-lg font-bold text-slate-800 tracking-tight">Brochure Corporativo Institucional</h3>
+                                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                    <i class="fas fa-certificate text-emerald-600 mr-1"></i> Formato Carta
+                                </span>
+                            </div>
+                            <p class="text-sm text-slate-600 mt-1 max-w-2xl leading-relaxed">
+                                Visualiza, imprime o exporta el brochure de presentación de F&B Parts para clientes y aseguradoras.
+                            </p>
+                            <div class="flex items-center gap-4 mt-2 text-xs text-slate-500 font-medium">
+                                <span><i class="fas fa-file-pdf text-[#3b5d47] mr-1"></i> 4 Páginas Ejecutivas</span>
+                                <span><i class="fas fa-sync text-emerald-600 mr-1"></i> Sincronizado en Vivo</span>
+                                <span><i class="fas fa-shield-alt text-slate-400 mr-1"></i> RIF J-50397111-8</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="shrink-0 flex items-center">
+                        <button type="button" onclick="abrirModalBrochure()" class="bg-gradient-to-r from-[#2c441b] to-[#3b5d47] hover:from-[#233715] hover:to-[#2c441b] text-white px-6 py-3 rounded-xl text-sm font-bold transition-all shadow-md flex items-center gap-2.5 hover:shadow-lg hover:scale-[1.02] cursor-pointer">
+                            <i class="fas fa-file-pdf text-amber-300 text-base"></i> Ver / Imprimir Brochure
+                        </button>
                     </div>
                 </div>
 
@@ -2155,6 +2292,628 @@
                 </div>
             </div>
 
+            <!-- Placeholder oculto por retrocompatibilidad -->
+            <div id="tab-brochure" class="tab-content" style="display: none;"></div>
+
+            <!-- ========================================================================= -->
+            <!-- 📖 MODAL VISOR EJECUTIVO DE BROCHURE CORPORATIVO DINÁMICO                -->
+            <!-- ========================================================================= -->
+            <div id="modal-brochure-corporativo" class="modal-overlay" onclick="if(event.target === this) cerrarModalBrochure();" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); z-index: 99999; justify-content: center; align-items: flex-start; padding: 16px; box-sizing: border-box; overflow-y: auto;">
+                <div style="background: transparent; width: 100%; max-width: 960px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; position: relative;">
+                    <!-- BARRA DE HERRAMIENTAS SUPERIOR FLOTANTE (NO IMPRIMIBLE) -->
+                    <div class="brochure-toolbar no-print bg-white/95 backdrop-blur border border-slate-200 rounded-2xl p-4 mb-2 flex flex-wrap items-center justify-between gap-4 shadow-xl sticky top-0 z-30">
+                        <div class="flex items-center gap-4 flex-wrap">
+                            <div class="w-10 h-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center text-xl shrink-0">
+                                <i class="fas fa-book-open"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h2 class="text-lg font-bold text-slate-800">Brochure Corporativo Institucional</h2>
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                        Conectado en Vivo
+                                    </span>
+                                </div>
+                                <p id="brochure-bar-stats" class="text-xs text-slate-500 mt-0.5 font-medium">Sincronizando inventario, categorías y tasa cambiaria...</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2.5">
+                            <button type="button" onclick="cargarBrochureCorporativo()" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all shadow-sm flex items-center gap-2">
+                                <i class="fas fa-sync-alt text-brand"></i> Actualizar Datos
+                            </button>
+                            <button type="button" onclick="imprimirBrochure()" class="bg-gradient-to-r from-[#2c441b] to-[#3b5d47] hover:from-[#233715] hover:to-[#2c441b] text-white px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2 hover:shadow-lg">
+                                <i class="fas fa-print text-amber-300"></i> 🖨️ Imprimir / Descargar PDF
+                            </button>
+                            <button type="button" onclick="cerrarModalBrochure()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 w-8 h-8 rounded-xl font-bold transition flex items-center justify-center text-lg shadow-sm" title="Cerrar visor">
+                                &times;
+                            </button>
+                        </div>
+                    </div>
+
+                <!-- LIENZO DE VISTA PREVIA (4 HOJAS TAMAÑO CARTA) -->
+                <div class="brochure-canvas flex flex-col items-center gap-10 pb-16">
+
+                    <!-- ========================================================= -->
+                    <!-- 📄 HOJA 1: PORTADA Y PRESENTACIÓN INSTITUCIONAL          -->
+                    <!-- ========================================================= -->
+                    <div class="brochure-sheet brochure-page" id="brochure-pagina-1" style="width: 100%; max-width: 216mm; min-height: 279.4mm; background: #ffffff; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0; border-radius: 8px; padding: 14mm 16mm; position: relative; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1e293b;">
+                        <!-- Cuerpo Principal Hoja 1 -->
+                        <div class="space-y-6">
+                            <!-- Filete Bicolor Decorativo Superior -->
+                            <div style="background: linear-gradient(90deg, #2c441b 84%, #d4af37 84%); height: 5px; border-radius: 4px;"></div>
+
+                            <!-- Encabezado Institucional -->
+                            <div class="flex items-center justify-between gap-4 pb-4 border-b border-slate-200">
+                                <div class="flex items-center gap-3">
+                                    <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logo F&B Parts" class="h-14 object-contain" onerror="this.onerror=null; this.src='assets/logo.png';">
+                                    <div>
+                                        <span class="block text-[10px] font-black tracking-widest text-[#2c441b] uppercase">Inversiones FB Parts, C.A.</span>
+                                        <span class="block text-[11px] font-semibold text-slate-500">División Corporativa & Procura</span>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <span class="inline-block px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-[#f0f7f2] text-[#2c441b] border border-[#c3e6cb]">Dossier Corporativo 2026</span>
+                                    <span class="block text-xs font-bold text-slate-700 mt-1">RIF: J-50397111-8</span>
+                                </div>
+                            </div>
+
+                            <!-- Título Principal de Alto Impacto -->
+                            <div class="pt-2">
+                                <span class="inline-block text-[11px] font-black uppercase tracking-wider text-[#3b5d47] mb-1.5 bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-100">Soluciones Integrales para Talleres, Flotas y Aseguradoras</span>
+                                <h1 class="text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-snug">
+                                    INVERSIONES FB PARTS, C.A.
+                                </h1>
+                                <p class="text-base font-semibold text-[#2c441b] mt-1 leading-normal">
+                                    Soluciones Integrales en Autopartes, Procura Internacional y Logística Automotriz
+                                </p>
+                            </div>
+
+                            <!-- Cuadro Ejecutivo con Datos de la Empresa -->
+                            <div class="brochure-evitar-corte bg-gradient-to-br from-[#f8faf7] to-[#eef4ec] border border-[#2c441b]/20 rounded-xl p-6 text-xs text-slate-700 shadow-sm" style="padding: 22px 24px; box-sizing: border-box;">
+                                <div class="flex items-center justify-between border-b border-slate-200/80 pb-2.5 mb-3">
+                                    <span class="font-bold text-slate-900 flex items-center gap-2"><i class="fas fa-building text-[#3b5d47]"></i> Ficha Legal y Domicilio Fiscal:</span>
+                                    <span class="font-bold text-[#2c441b] bg-white px-2.5 py-0.5 rounded border border-slate-200 shadow-2xs">RIF: J-50397111-8</span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-x-6 gap-y-3 pb-2.5">
+                                    <div>
+                                        <span class="block text-slate-500 text-[10px] uppercase font-semibold tracking-wider">Ubicación y Almacén Central:</span>
+                                        <span class="font-medium text-slate-800 text-[11.5px] leading-snug">Av. Panteón, Caracas, Distrito Capital, Venezuela.</span>
+                                    </div>
+                                    <div>
+                                        <span class="block text-slate-500 text-[10px] uppercase font-semibold tracking-wider">Portal Web Oficial:</span>
+                                        <a href="https://www.fybparts.com" class="font-bold text-[#2c441b] hover:underline text-[11.5px]" target="_blank">https://www.fybparts.com</a>
+                                    </div>
+                                    <div>
+                                        <span class="block text-slate-500 text-[10px] uppercase font-semibold tracking-wider">Canales de Atención Oficiales:</span>
+                                        <span class="font-medium text-slate-800 text-[11.5px]">WhatsApp Corporativo • Líneas de Ventas & Procura</span>
+                                    </div>
+                                    <div>
+                                        <span class="block text-slate-500 text-[10px] uppercase font-semibold tracking-wider">Correo Electrónico Corporativo:</span>
+                                        <span class="font-medium text-slate-800 text-[11.5px]">inversionesfbparts@gmail.com</span>
+                                    </div>
+                                </div>
+                                <div class="pt-2.5 border-t border-slate-200/80 text-[11px] text-slate-600 flex items-center gap-2">
+                                    <i class="fas fa-shield-alt text-[#3b5d47] shrink-0"></i>
+                                    <span><strong>Cobertura:</strong> Despacho directo en la Gran Caracas y envíos asegurados a todo el territorio nacional (Tealca, Zoom, MRW, Liberty Express).</span>
+                                </div>
+                            </div>
+
+                            <!-- Párrafo Introductorio de Presentación Institucional -->
+                            <div class="space-y-3 text-[12.5px] text-slate-700 leading-relaxed text-justify">
+                                <p>
+                                    <strong>Inversiones FB Parts, C.A.</strong> se consolida en el mercado venezolano como el aliado estratégico y de confianza para talleres mecánicos especializados, flotas corporativas de transporte, compañías de seguros y casas de repuestos. Nuestra organización responde a la exigencia del parque automotor actual mediante un modelo logístico bidireccional: disponibilidad inmediata de repuestos de alta rotación en nuestro almacén central de Caracas, y procura internacional bajo pedido de piezas de difícil consecución con importación directa desde los principales centros de manufactura global (China, Brasil y EE.UU.).
+                                </p>
+                                <p>
+                                    Operamos con apego absoluto a la legalidad y transparencia comercial: emitimos cotizaciones formales con validez jurídica vinculante, notas de entrega, facturación fiscal en estricto cumplimiento de las providencias del SENIAT, contratos mercantiles con opciones de pago flexibles y liquidación en moneda nacional bajo la tasa oficial del Banco Central de Venezuela (BCV), salvaguardando la inversión y garantizando tiempos de respuesta eficaces.
+                                </p>
+                            </div>
+
+                            <!-- Cinta de Métricas Dinámicas del Sistema (3 Tarjetas Operativas Equitativas) -->
+                            <div class="brochure-evitar-corte grid grid-cols-3 gap-3.5 pt-2">
+                                <div class="bg-white border-2 border-emerald-900/15 rounded-xl p-3.5 text-center shadow-sm">
+                                    <i class="fas fa-boxes-stacked text-[#3b5d47] text-lg mb-1 block"></i>
+                                    <span id="brochure-stat-productos" class="block text-xl font-black text-slate-900">+500</span>
+                                    <span class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Repuestos Catalogados</span>
+                                </div>
+                                <div class="bg-white border-2 border-emerald-900/15 rounded-xl p-3.5 text-center shadow-sm">
+                                    <i class="fas fa-tags text-[#3b5d47] text-lg mb-1 block"></i>
+                                    <span id="brochure-stat-categorias" class="block text-xl font-black text-slate-900">16+ Líneas</span>
+                                    <span class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Categorías Activas</span>
+                                </div>
+                                <div class="bg-white border-2 border-emerald-900/15 rounded-xl p-3.5 text-center shadow-sm">
+                                    <i class="fas fa-globe-americas text-[#3b5d47] text-lg mb-1 block"></i>
+                                    <span class="block text-xl font-black text-slate-900">3 Orígenes</span>
+                                    <span class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">China • Brasil • USA</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pie de Página Institucional Hoja 1 -->
+                        <div class="pt-4 border-t border-slate-200 flex items-center justify-between text-[10.5px] text-slate-400 font-medium">
+                            <span>Inversiones FB Parts, C.A. • RIF: J-50397111-8 • Caracas, Venezuela</span>
+                            <span>Emisión: <strong class="brochure-fecha-emision text-slate-600">Octubre 2026</strong></span>
+                            <span class="font-bold text-slate-600">Página 1 de 4</span>
+                        </div>
+                    </div>
+
+                    <!-- ========================================================= -->
+                    <!-- 📄 HOJA 2: UNIDADES DE NEGOCIO Y ESTÁNDARES OPERATIVOS   -->
+                    <!-- ========================================================= -->
+                    <div class="brochure-sheet brochure-page" id="brochure-pagina-2" style="width: 100%; max-width: 216mm; min-height: 279.4mm; background: #ffffff; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0; border-radius: 8px; padding: 14mm 16mm; position: relative; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1e293b;">
+                        <!-- Cuerpo Principal Hoja 2 -->
+                        <div class="space-y-5">
+                            <!-- Filete Bicolor Decorativo Superior -->
+                            <div style="background: linear-gradient(90deg, #2c441b 84%, #d4af37 84%); height: 5px; border-radius: 4px;"></div>
+
+                            <!-- Encabezado Hoja 2 -->
+                            <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+                                <div class="flex items-center gap-2">
+                                    <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logo F&B Parts" class="h-8 object-contain" onerror="this.onerror=null; this.src='assets/logo.png';">
+                                    <span class="text-xs font-bold text-slate-800">INVERSIONES FB PARTS, C.A. • DOSSIER CORPORATIVO</span>
+                                </div>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Sección Operativa</span>
+                            </div>
+
+                            <!-- Título de Sección -->
+                            <div>
+                                <span class="inline-block text-[11px] font-black uppercase tracking-wider text-[#3b5d47] mb-1">Estructura Operativa & Excelencia en Logística</span>
+                                <h2 class="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
+                                    UNIDADES DE NEGOCIO Y ESTÁNDARES OPERATIVOS
+                                </h2>
+                                <p class="text-xs text-slate-600 mt-0.5">
+                                    Tres pilares integrales concebidos para eliminar tiempos muertos de vehículos y garantizar rentabilidad.
+                                </p>
+                            </div>
+
+                            <!-- Tarjetas Informativas: Los 3 Pilares -->
+                            <div class="space-y-3.5">
+                                <!-- Pilar 1 -->
+                                <div class="brochure-evitar-corte bg-slate-50 border border-slate-200/90 rounded-xl p-4 shadow-sm">
+                                    <div class="flex items-start justify-between gap-3 mb-2">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-9 h-9 rounded-lg bg-[#2c441b] text-white flex items-center justify-center text-sm font-bold shadow-sm shrink-0">
+                                                <i class="fas fa-warehouse"></i>
+                                            </div>
+                                            <div>
+                                                <h3 class="text-sm font-bold text-slate-900">1. Stock y Despacho Local en Caracas</h3>
+                                                <span class="text-[11px] font-semibold text-[#3b5d47]">Disponibilidad Inmediata & Entrega Exprés el Mismo Día</span>
+                                            </div>
+                                        </div>
+                                        <span class="px-2.5 py-0.5 rounded text-[9.5px] font-extrabold uppercase bg-emerald-100 text-emerald-800 border border-emerald-200">Entrega Inmediata</span>
+                                    </div>
+                                    <ul class="text-[11.5px] text-slate-600 space-y-1.5 pl-12 list-disc list-outside">
+                                        <li>Almacén centralizado en Caracas con inventario rotativo para mantenimiento preventivo y correctivo de alta rotación (frenos, suspensión, tren delantero, bombas, filtros y lubricación).</li>
+                                        <li>Servicio de despacho inmediato y entrega motorizada para talleres mecánicos dentro del Área Metropolitana de Caracas.</li>
+                                        <li>Garantía de piezas nuevas en empaque de fábrica original con codificación OEM verificable antes del despacho.</li>
+                                    </ul>
+                                </div>
+
+                                <!-- Pilar 2 -->
+                                <div class="brochure-evitar-corte bg-slate-50 border border-slate-200/90 rounded-xl p-4 shadow-sm">
+                                    <div class="flex items-start justify-between gap-3 mb-2">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-9 h-9 rounded-lg bg-[#3b5d47] text-white flex items-center justify-center text-sm font-bold shadow-sm shrink-0">
+                                                <i class="fas fa-ship"></i>
+                                            </div>
+                                            <div>
+                                                <h3 class="text-sm font-bold text-slate-900">2. Procura Internacional Especializada bajo Pedido</h3>
+                                                <span class="text-[11px] font-semibold text-[#3b5d47]">Importación Directa desde Origen (China, Brasil, EE.UU.)</span>
+                                            </div>
+                                        </div>
+                                        <span class="px-2.5 py-0.5 rounded text-[9.5px] font-extrabold uppercase bg-blue-100 text-blue-800 border border-blue-200">45-90 Días Hábiles</span>
+                                    </div>
+                                    <ul class="text-[11.5px] text-slate-600 space-y-1.5 pl-12 list-disc list-outside">
+                                        <li>Procura y consolidación internacional de repuestos de difícil consecución nacional: ensambles de motor, cigüeñales, árboles de leva, transmisiones, partes de colisión y carrocería.</li>
+                                        <li><strong>Lapsos de tránsito marítimo y aduanal en días hábiles:</strong> Plazo estimado y referencial de <strong>45 a 90 días hábiles</strong> contados a partir del zarpe del buque de carga consolidada, con trazabilidad de embarque.</li>
+                                        <li>Filtro técnico estricto: Validación obligatoria de compatibilidad técnica mediante muestra física, número de parte OEM y Serial de Carrocería (VIN de 17 dígitos) para erradicar errores de aplicación.</li>
+                                    </ul>
+                                </div>
+
+                                <!-- Pilar 3 -->
+                                <div class="brochure-evitar-corte bg-slate-50 border border-slate-200/90 rounded-xl p-4 shadow-sm">
+                                    <div class="flex items-start justify-between gap-3 mb-2">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-9 h-9 rounded-lg bg-[#2c441b] text-white flex items-center justify-center text-sm font-bold shadow-sm shrink-0">
+                                                <i class="fas fa-file-contract"></i>
+                                            </div>
+                                            <div>
+                                                <h3 class="text-sm font-bold text-slate-900">3. Alianzas Corporativas con Aseguradoras y Talleres</h3>
+                                                <span class="text-[11px] font-semibold text-[#3b5d47]">Seguridad Jurídica, Cumplimiento Fiscal y Modalidades Flexibles</span>
+                                            </div>
+                                        </div>
+                                        <span class="px-2.5 py-0.5 rounded text-[9.5px] font-extrabold uppercase bg-amber-100 text-amber-800 border border-amber-200">Convenios Mercantiles</span>
+                                    </div>
+                                    <ul class="text-[11.5px] text-slate-600 space-y-1.5 pl-12 list-disc list-outside">
+                                        <li>Emisión formal e inmediata de Cotizaciones Vinculantes, Notas de Entrega selladas y Facturación Fiscal con apego estricto a las providencias vigentes del SENIAT.</li>
+                                        <li>Contratos mercantiles de importación y procura bajo modalidades de <strong>Pago Único (100%)</strong> o <strong>Modalidad Fraccionada (80/20, 70/30) con reserva de dominio</strong>, blindando la operación comercial.</li>
+                                        <li>Condiciones comerciales preferenciales, listas de precios corporativas y canales de comunicación exclusivos para flotas de transporte y talleres afiliados.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Showcase Dinámico de Categorías y Líneas -->
+                            <div class="brochure-evitar-corte bg-emerald-50/50 border border-emerald-900/15 rounded-xl p-3.5">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-[11px] font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                                        <i class="fas fa-layer-group text-[#3b5d47]"></i> Líneas de Repuestos y Sistemas en Catálogo Activo:
+                                    </span>
+                                    <span class="text-[10px] text-slate-500 font-semibold">Actualizado en tiempo real</span>
+                                </div>
+                                <div id="brochure-pills-categorias" class="flex flex-wrap gap-1.5 text-[10.5px]">
+                                    <!-- Las categorías activas se inyectan dinámicamente -->
+                                    <span class="bg-white border border-slate-200 px-2.5 py-1 rounded-md font-medium text-slate-700 shadow-2xs">Motor & Distribución</span>
+                                    <span class="bg-white border border-slate-200 px-2.5 py-1 rounded-md font-medium text-slate-700 shadow-2xs">Suspensión & Dirección</span>
+                                    <span class="bg-white border border-slate-200 px-2.5 py-1 rounded-md font-medium text-slate-700 shadow-2xs">Sistema de Frenos</span>
+                                    <span class="bg-white border border-slate-200 px-2.5 py-1 rounded-md font-medium text-slate-700 shadow-2xs">Transmisión & Embragues</span>
+                                    <span class="bg-white border border-slate-200 px-2.5 py-1 rounded-md font-medium text-slate-700 shadow-2xs">Refrigeración & Radiadores</span>
+                                    <span class="bg-white border border-slate-200 px-2.5 py-1 rounded-md font-medium text-slate-700 shadow-2xs">Inyección & Sensores</span>
+                                    <span class="bg-white border border-slate-200 px-2.5 py-1 rounded-md font-medium text-slate-700 shadow-2xs">Iluminación & Carrocería</span>
+                                    <span class="bg-white border border-slate-200 px-2.5 py-1 rounded-md font-medium text-slate-700 shadow-2xs">Partes Eléctricas</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pie de Página Institucional Hoja 2 -->
+                        <div class="pt-4 border-t border-slate-200 flex items-center justify-between text-[10.5px] text-slate-400 font-medium">
+                            <span>Inversiones FB Parts, C.A. • RIF: J-50397111-8 • Caracas, Venezuela</span>
+                            <span>Emisión: <strong class="brochure-fecha-emision text-slate-600">Octubre 2026</strong></span>
+                            <span class="font-bold text-slate-600">Página 2 de 4</span>
+                        </div>
+                    </div>
+
+                    <!-- ========================================================= -->
+                    <!-- 📄 HOJA 3: VITRINA DE PROCURA Y REPUESTOS ESPECIALIZADOS  -->
+                    <!-- ========================================================= -->
+                    <div class="brochure-sheet brochure-page" id="brochure-pagina-3" style="width: 100%; max-width: 216mm; min-height: 279.4mm; background: #ffffff; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0; border-radius: 8px; padding: 14mm 16mm; position: relative; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1e293b;">
+                        <!-- Cuerpo Principal Hoja 3 -->
+                        <div class="space-y-4">
+                            <!-- Filete Bicolor Decorativo Superior -->
+                            <div style="background: linear-gradient(90deg, #2c441b 84%, #d4af37 84%); height: 5px; border-radius: 4px;"></div>
+
+                            <!-- Encabezado Hoja 3 -->
+                            <div class="flex items-center justify-between pb-2.5 border-b border-slate-200">
+                                <div class="flex items-center gap-2">
+                                    <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logo F&B Parts" class="h-8 object-contain" onerror="this.onerror=null; this.src='assets/logo.png';">
+                                    <span class="text-xs font-bold text-slate-800">INVERSIONES FB PARTS, C.A. • CATÁLOGO VISUAL</span>
+                                </div>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Vitrina de Procura OEM</span>
+                            </div>
+
+                            <!-- Título de Sección -->
+                            <div>
+                                <span class="inline-block text-[11px] font-black uppercase tracking-wider text-[#3b5d47] mb-0.5">Galería de Autopartes e Importación Directa</span>
+                                <h2 class="text-xl font-black text-slate-900 tracking-tight">
+                                    VITRINA DE PROCURA Y REPUESTOS ESPECIALIZADOS (DONGFENG, TOYOTA Y MÁS)
+                                </h2>
+                                <p class="text-[11.5px] text-slate-600 mt-0.5 leading-relaxed">
+                                    Fotografías reales de autopartes de alta rotación, componentes de motor, carrocería, colisión e iluminación importados con trazabilidad y especificaciones técnicas exactas de fábrica.
+                                </p>
+                            </div>
+
+                            <!-- Cuadrícula Visual de Repuestos Especializados (Grid 4 columnas x 2 filas = 8 ítems) -->
+                            <div id="brochure-grid-repuestos" class="brochure-evitar-corte grid grid-cols-2 md:grid-cols-4 gap-3">
+                                
+                                <!-- Item 1: Parrilla Mercedes Benz -->
+                                <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs flex flex-col justify-between transition-all hover:border-[#3b5d47]/50">
+                                    <div class="relative bg-slate-50 border-b border-slate-100" style="height: 86px; overflow: hidden;">
+                                        <img src="https://http2.mlstatic.com/D_NQ_NP_2X_649089-MLV110352942730_052026-F.webp" alt="Parrilla Frontal Mercedes Benz C180 C200 C280" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='img/PARRILAMERCEDES.webp';">
+                                        <span class="absolute top-1.5 left-1.5 bg-[#1e293b] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">MERCEDES BENZ</span>
+                                    </div>
+                                    <div class="p-2 flex flex-col justify-between flex-1">
+                                        <div>
+                                            <span class="block text-[9px] font-bold uppercase tracking-wider text-[#3b5d47]">CARROCERÍA & COLISIÓN</span>
+                                            <h4 class="text-[10.5px] font-bold text-slate-900 leading-snug line-clamp-2">Parrilla Frontal Mercedes Benz C180 C200 C280</h4>
+                                        </div>
+                                        <div class="mt-1 pt-1 border-t border-slate-100 flex items-center justify-between text-[8.5px] text-slate-500">
+                                            <span>Acabado Premium</span>
+                                            <span class="text-emerald-700 font-semibold">OEM Genuine</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Item 2: Parrilla Frontal Toyota Levin -->
+                                <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs flex flex-col justify-between transition-all hover:border-[#3b5d47]/50">
+                                    <div class="relative bg-slate-50 border-b border-slate-100" style="height: 86px; overflow: hidden;">
+                                        <img src="https://http2.mlstatic.com/D_NQ_NP_2X_832660-MLV112172736738_062026-F.webp" alt="Parrilla Frontal Toyota Levin GT" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='img/carroceria.webp';">
+                                        <span class="absolute top-1.5 left-1.5 bg-[#2c441b] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">TOYOTA</span>
+                                    </div>
+                                    <div class="p-2 flex flex-col justify-between flex-1">
+                                        <div>
+                                            <span class="block text-[9px] font-bold uppercase tracking-wider text-[#3b5d47]">CARROCERÍA & COLISIÓN</span>
+                                            <h4 class="text-[10.5px] font-bold text-slate-900 leading-snug line-clamp-2">Parrilla Frontal Toyota Levin GT</h4>
+                                        </div>
+                                        <div class="mt-1 pt-1 border-t border-slate-100 flex items-center justify-between text-[8.5px] text-slate-500">
+                                            <span>Modelos 2020-2025</span>
+                                            <span class="text-emerald-700 font-semibold">Garantía Calce</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Item 3: Empacaduras Toyota Camry / Previa -->
+                                <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs flex flex-col justify-between transition-all hover:border-[#3b5d47]/50">
+                                    <div class="relative bg-slate-50 border-b border-slate-100" style="height: 86px; overflow: hidden;">
+                                        <img src="https://http2.mlstatic.com/D_NQ_NP_2X_871316-MLV113257106786_072026-F.webp" alt="Kit Empacaduras Motor Toyota 2.4 2AZ" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='img/multiple-admision.webp';">
+                                        <span class="absolute top-1.5 left-1.5 bg-[#2c441b] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">TOYOTA</span>
+                                    </div>
+                                    <div class="p-2 flex flex-col justify-between flex-1">
+                                        <div>
+                                            <span class="block text-[9px] font-bold uppercase tracking-wider text-[#3b5d47]">Sellado & Motor</span>
+                                            <h4 class="text-[10.5px] font-bold text-slate-900 leading-snug line-clamp-2">Kit de Empacaduras Motor Toyota 2.4L 2AZ</h4>
+                                        </div>
+                                        <div class="mt-1 pt-1 border-t border-slate-100 flex items-center justify-between text-[8.5px] text-slate-500">
+                                            <span>Sellado MLS Térmico</span>
+                                            <span class="text-emerald-700 font-semibold">100% Japonés</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Item 4: Concha Biela Dongfeng Duolika -->
+                                <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs flex flex-col justify-between transition-all hover:border-[#3b5d47]/50">
+                                    <div class="relative bg-slate-50 border-b border-slate-100" style="height: 86px; overflow: hidden;">
+                                        <img src="https://http2.mlstatic.com/D_NQ_NP_2X_838920-MLV110898679164_052026-F.webp" alt="Conchas de Biela Dongfeng Duolika 5T 7T" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='img/multiple-admision.webp';">
+                                        <span class="absolute top-1.5 left-1.5 bg-[#2c441b] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">DONGFENG</span>
+                                    </div>
+                                    <div class="p-2 flex flex-col justify-between flex-1">
+                                        <div>
+                                            <span class="block text-[9px] font-bold uppercase tracking-wider text-[#3b5d47]">MOTOR & TREN DE FUERZA</span>
+                                            <h4 class="text-[10.5px] font-bold text-slate-900 leading-snug line-clamp-2">Conchas de Biela Dongfeng Duolika 5T / 7T</h4>
+                                        </div>
+                                        <div class="mt-1 pt-1 border-t border-slate-100 flex items-center justify-between text-[8.5px] text-slate-500">
+                                            <span>Motor Cummins</span>
+                                            <span class="text-emerald-700 font-semibold">Sellado Térmico</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Item 5: Cadena de Tiempo Toyota Yaris -->
+                                <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs flex flex-col justify-between transition-all hover:border-[#3b5d47]/50">
+                                    <div class="relative bg-slate-50 border-b border-slate-100" style="height: 86px; overflow: hidden;">
+                                        <img src="https://http2.mlstatic.com/D_NQ_NP_2X_965497-MLV111916737333_052026-F.webp" alt="Kit Cadena Tiempo Toyota Yaris 1NZ" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='img/bomba-aceite.webp';">
+                                        <span class="absolute top-1.5 left-1.5 bg-[#2c441b] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">TOYOTA</span>
+                                    </div>
+                                    <div class="p-2 flex flex-col justify-between flex-1">
+                                        <div>
+                                            <span class="block text-[9px] font-bold uppercase tracking-wider text-[#3b5d47]">Distribución & Tiempo</span>
+                                            <h4 class="text-[10.5px] font-bold text-slate-900 leading-snug line-clamp-2">Kit Cadena de Tiempo Yaris / Belta 1.5L 1NZ</h4>
+                                        </div>
+                                        <div class="mt-1 pt-1 border-t border-slate-100 flex items-center justify-between text-[8.5px] text-slate-500">
+                                            <span>Piñones y Tensor</span>
+                                            <span class="text-emerald-700 font-semibold">OSK Japón</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Item 6: Radiador Dongfeng Aeolus AX7 Pro -->
+                                <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs flex flex-col justify-between transition-all hover:border-[#3b5d47]/50">
+                                    <div class="relative bg-slate-50 border-b border-slate-100" style="height: 86px; overflow: hidden;">
+                                        <img src="https://http2.mlstatic.com/D_NQ_NP_2X_626820-MLV111758385301_052026-F.webp" alt="Radiador Aeolus Dongfeng AX7 Pro" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='img/bomba-agua.webp';">
+                                        <span class="absolute top-1.5 left-1.5 bg-[#2c441b] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">DONGFENG</span>
+                                    </div>
+                                    <div class="p-2 flex flex-col justify-between flex-1">
+                                        <div>
+                                            <span class="block text-[9px] font-bold uppercase tracking-wider text-[#3b5d47]">Enfriamiento Motor</span>
+                                            <h4 class="text-[10.5px] font-bold text-slate-900 leading-snug line-clamp-2">Radiador de Aluminio Dongfeng AX7 Pro</h4>
+                                        </div>
+                                        <div class="mt-1 pt-1 border-t border-slate-100 flex items-center justify-between text-[8.5px] text-slate-500">
+                                            <span>Alta Disipación</span>
+                                            <span class="text-emerald-700 font-semibold">Aeolus Original</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Item 7: Meseta Superior Toyota Hilux -->
+                                <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs flex flex-col justify-between transition-all hover:border-[#3b5d47]/50">
+                                    <div class="relative bg-slate-50 border-b border-slate-100" style="height: 86px; overflow: hidden;">
+                                        <img src="https://http2.mlstatic.com/D_NQ_NP_2X_881008-MLV111348365301_052026-F.webp" alt="Meseta Superior Toyota Hilux Fortuner" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='img/freno.webp';">
+                                        <span class="absolute top-1.5 left-1.5 bg-[#2c441b] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">TOYOTA</span>
+                                    </div>
+                                    <div class="p-2 flex flex-col justify-between flex-1">
+                                        <div>
+                                            <span class="block text-[9px] font-bold uppercase tracking-wider text-[#3b5d47]">Suspensión & Chasis</span>
+                                            <h4 class="text-[10.5px] font-bold text-slate-900 leading-snug line-clamp-2">Meseta Superior Reforzada Hilux / Fortuner</h4>
+                                        </div>
+                                        <div class="mt-1 pt-1 border-t border-slate-100 flex items-center justify-between text-[8.5px] text-slate-500">
+                                            <span>Rótula Forjada</span>
+                                            <span class="text-emerald-700 font-semibold">Servicio Pesado</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Item 8: Retrovisor Lateral Dongfeng Rich 6 / 7 -->
+                                <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs flex flex-col justify-between transition-all hover:border-[#3b5d47]/50">
+                                    <div class="relative bg-slate-50 border-b border-slate-100" style="height: 86px; overflow: hidden;">
+                                        <img src="https://lh3.googleusercontent.com/d/1wuM16Ht9SJTkq069nQxQZoMzZ_DEYseE" alt="Retrovisor Dongfeng Rich 6 Rich 7" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='img/RETROVISOR 1.webp';">
+                                        <span class="absolute top-1.5 left-1.5 bg-[#2c441b] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">DONGFENG</span>
+                                    </div>
+                                    <div class="p-2 flex flex-col justify-between flex-1">
+                                        <div>
+                                            <span class="block text-[9px] font-bold uppercase tracking-wider text-[#3b5d47]">Espejos & Confort</span>
+                                            <h4 class="text-[10.5px] font-bold text-slate-900 leading-snug line-clamp-2">Retrovisor Lateral Eléctrico Dongfeng Rich 6/7</h4>
+                                        </div>
+                                        <div class="mt-1 pt-1 border-t border-slate-100 flex items-center justify-between text-[8.5px] text-slate-500">
+                                            <span>Con Luz Direccional</span>
+                                            <span class="text-emerald-700 font-semibold">OEM Conector</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <!-- Banner Institucional de Trazabilidad y Calidad en Origen -->
+                            <div class="brochure-evitar-corte bg-gradient-to-br from-[#f8faf7] to-[#eef4ec] border border-[#2c441b]/20 rounded-xl p-3 shadow-xs">
+                                <div class="flex items-center gap-2 mb-1.5 pb-1 border-b border-slate-200/80">
+                                    <i class="fas fa-check-double text-[#3b5d47] text-xs"></i>
+                                    <span class="text-xs font-bold text-slate-900 uppercase tracking-wide">Protocolo de Calidad y Procura Internacional F&B Parts:</span>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-[10.5px] text-slate-600">
+                                    <div class="flex items-start gap-1.5">
+                                        <i class="fas fa-barcode text-[#3b5d47] mt-0.5 shrink-0"></i>
+                                        <span><strong>Validación de Serial y VIN:</strong> Cotejo previo de número de parte y ficha técnica antes de la consolidación de carga.</span>
+                                    </div>
+                                    <div class="flex items-start gap-1.5">
+                                        <i class="fas fa-camera text-[#3b5d47] mt-0.5 shrink-0"></i>
+                                        <span><strong>Auditoría Fotográfica:</strong> Envío de reporte visual del repuesto en almacén de origen previo al embarque marítimo o aéreo.</span>
+                                    </div>
+                                    <div class="flex items-start gap-1.5">
+                                        <i class="fas fa-shield-alt text-[#3b5d47] mt-0.5 shrink-0"></i>
+                                        <span><strong>Embalaje Anti-Impacto:</strong> Protección de grado industrial para partes delicadas de colisión, vidrio y componentes electrónicos.</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pie de Página Institucional Hoja 3 -->
+                        <div class="pt-3 border-t border-slate-200 flex items-center justify-between text-[10.5px] text-slate-400 font-medium">
+                            <span>Inversiones FB Parts, C.A. • RIF: J-50397111-8 • Caracas, Venezuela</span>
+                            <span>Emisión: <strong class="brochure-fecha-emision text-slate-600">Octubre 2026</strong></span>
+                            <span class="font-bold text-slate-600">Página 3 de 4</span>
+                        </div>
+                    </div>
+
+                    <!-- ========================================================= -->
+                    <!-- 📄 HOJA 4: MARCAS ALIADAS, COMPROMISO Y CONTACTO         -->
+                    <!-- ========================================================= -->
+                    <div class="brochure-sheet brochure-page" id="brochure-pagina-4" style="width: 100%; max-width: 216mm; min-height: 279.4mm; background: #ffffff; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0; border-radius: 8px; padding: 14mm 16mm; position: relative; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1e293b;">
+                        <!-- Cuerpo Principal Hoja 4 -->
+                        <div class="space-y-5">
+                            <!-- Filete Bicolor Decorativo Superior -->
+                            <div style="background: linear-gradient(90deg, #2c441b 84%, #d4af37 84%); height: 5px; border-radius: 4px;"></div>
+
+                            <!-- Encabezado Hoja 4 -->
+                            <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+                                <div class="flex items-center gap-2">
+                                    <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logo F&B Parts" class="h-8 object-contain" onerror="this.onerror=null; this.src='assets/logo.png';">
+                                    <span class="text-xs font-bold text-slate-800">INVERSIONES FB PARTS, C.A. • MARCAS Y CONTACTO</span>
+                                </div>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Alianzas & Confianza</span>
+                            </div>
+
+                            <!-- Título de Sección -->
+                            <div>
+                                <span class="inline-block text-[11px] font-black uppercase tracking-wider text-[#3b5d47] mb-1">Cobertura Multimarca & Respaldo Mercantil</span>
+                                <h2 class="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
+                                    MARCAS ATENDIDAS, COMPROMISO Y CONTACTO
+                                </h2>
+                                <p class="text-xs text-slate-600 mt-0.5">
+                                    Especialistas en vehículos nacionales e importados de origen asiático, americano y europeo.
+                                </p>
+                            </div>
+
+                            <!-- Cuadrícula de Marcas Vehiculares -->
+                            <div class="brochure-evitar-corte bg-slate-50 border border-slate-200/90 rounded-xl p-4 shadow-sm">
+                                <span class="block text-xs font-bold text-slate-900 uppercase tracking-wide mb-3 flex items-center gap-2">
+                                    <i class="fas fa-car-side text-[#3b5d47]"></i> Principales Marcas con Soporte de Inventario y Procura:
+                                </span>
+                                <div class="grid grid-cols-4 md:grid-cols-4 gap-2.5 text-center text-xs">
+                                    <div class="bg-white border border-slate-200 py-2 px-1 rounded-lg font-bold text-slate-800 shadow-2xs">TOYOTA</div>
+                                    <div class="bg-white border border-slate-200 py-2 px-1 rounded-lg font-bold text-slate-800 shadow-2xs">DONGFENG</div>
+                                    <div class="bg-white border border-slate-200 py-2 px-1 rounded-lg font-bold text-slate-800 shadow-2xs">CHEVROLET</div>
+                                    <div class="bg-white border border-slate-200 py-2 px-1 rounded-lg font-bold text-slate-800 shadow-2xs">FORD</div>
+                                    <div class="bg-white border border-slate-200 py-2 px-1 rounded-lg font-bold text-slate-800 shadow-2xs">ISUZU</div>
+                                    <div class="bg-white border border-slate-200 py-2 px-1 rounded-lg font-bold text-slate-800 shadow-2xs">CHERY</div>
+                                    <div class="bg-white border border-slate-200 py-2 px-1 rounded-lg font-bold text-slate-800 shadow-2xs">HYUNDAI</div>
+                                    <div class="bg-white border border-slate-200 py-2 px-1 rounded-lg font-bold text-slate-800 shadow-2xs">KIA</div>
+                                    <div class="bg-white border border-slate-200 py-2 px-1 rounded-lg font-bold text-slate-800 shadow-2xs">MITSUBISHI</div>
+                                    <div class="bg-white border border-slate-200 py-2 px-1 rounded-lg font-bold text-slate-800 shadow-2xs">NISSAN</div>
+                                    <div class="bg-white border border-slate-200 py-2 px-1 rounded-lg font-bold text-slate-800 shadow-2xs">JEEP</div>
+                                    <div class="bg-white border border-slate-200 py-2 px-1 rounded-lg font-bold text-slate-800 shadow-2xs">RENAULT</div>
+                                    <div class="bg-white border border-slate-200 py-2 px-1 rounded-lg font-bold text-slate-800 shadow-2xs">VOLKSWAGEN</div>
+                                    <div class="bg-white border border-slate-200 py-2 px-1 rounded-lg font-bold text-slate-800 shadow-2xs">SUZUKI</div>
+                                    <div class="bg-white border border-slate-200 py-2 px-1 rounded-lg font-bold text-slate-800 shadow-2xs">JAC</div>
+                                    <div class="bg-white border border-slate-200 py-2 px-1 rounded-lg font-bold text-slate-800 shadow-2xs">CHANGAN</div>
+                                </div>
+                            </div>
+
+                            <!-- Resumen de Políticas de Garantía, Confianza y Marco Jurídico -->
+                            <div class="brochure-evitar-corte bg-gradient-to-br from-[#f8faf7] to-[#eef4ec] border border-[#2c441b]/20 rounded-xl p-5 text-xs text-slate-700 shadow-sm space-y-2" style="padding: 18px 20px; box-sizing: border-box;">
+                                <div class="flex items-center gap-2 border-b border-slate-200/80 pb-1.5 font-bold text-slate-900">
+                                    <i class="fas fa-gavel text-[#3b5d47]"></i>
+                                    <span>Marco Jurídico, Garantía y Confianza Comercial:</span>
+                                </div>
+                                <div class="space-y-1.5 text-[11px] text-slate-600">
+                                    <p>
+                                        • <strong>Transparencia Cambiaria a Tasa BCV:</strong> Todas las cotizaciones, facturas y pagos en Bolívares se calculan estrictamente a la tasa de cambio oficial vigente emitida por el Banco Central de Venezuela.
+                                    </p>
+                                    <p>
+                                        • <strong>Principio Nominalista (Art. 1.737 Código Civil Venezolano):</strong> En caso de reembolsos o devoluciones autorizadas, el reintegro se realiza en la misma moneda y monto nominal original pagado, sin indexaciones posteriores.
+                                    </p>
+                                    <p>
+                                        • <strong>Garantía de Inventario Local:</strong> Plazo legal de 72 horas para revisión técnica en repuestos de inventario local ante defectos comprobables de fábrica, conservando su empaque original intacto.
+                                    </p>
+                                    <p>
+                                        • <strong>Políticas Públicas Vinculantes:</strong> Términos y condiciones permanentemente accesibles en: <a href="https://www.fybparts.com/politicas-devoluciones.html" target="_blank" class="text-[#2c441b] font-semibold underline">https://www.fybparts.com/politicas-devoluciones.html</a>.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Bloque Final de Contacto Oficial -->
+                            <div class="brochure-evitar-corte bg-gradient-to-r from-[#2c441b] to-[#3b5d47] text-white rounded-xl p-6 shadow-md" style="padding: 22px 24px; box-sizing: border-box;">
+                                <div class="flex items-center justify-between mb-3.5 border-b border-white/20 pb-2.5">
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-headset text-amber-300 text-base"></i>
+                                        <span class="font-bold text-sm tracking-wide">CANALES DE ATENCIÓN CORPORATIVA & VENTAS</span>
+                                    </div>
+                                    <span class="text-[10px] bg-white/15 px-2.5 py-0.5 rounded text-amber-200 font-semibold border border-white/15">Atención Inmediata</span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-x-6 gap-y-3.5 text-xs">
+                                    <div>
+                                        <span class="block text-white/70 text-[10px] uppercase font-semibold tracking-wider">Razón Social & RIF:</span>
+                                        <span class="font-bold text-white text-[11.5px]">Inversiones FB Parts, C.A. • J-50397111-8</span>
+                                    </div>
+                                    <div>
+                                        <span class="block text-white/70 text-[10px] uppercase font-semibold tracking-wider">Ubicación Física:</span>
+                                        <span class="font-medium text-white text-[11.5px]">Av. Panteón, Caracas, Dto. Capital.</span>
+                                    </div>
+                                    <div>
+                                        <span class="block text-white/70 text-[10px] uppercase font-semibold tracking-wider">Atención WhatsApp Corporativo:</span>
+                                        <span class="font-bold text-white text-[11.5px] flex items-center gap-1.5"><i class="fab fa-whatsapp text-emerald-300"></i> Cotizaciones & Procura</span>
+                                    </div>
+                                    <div>
+                                        <span class="block text-white/70 text-[10px] uppercase font-semibold tracking-wider">Portal Web Oficial:</span>
+                                        <a href="https://www.fybparts.com" class="font-bold text-amber-200 underline hover:text-white text-[11.5px]" target="_blank">https://www.fybparts.com</a>
+                                    </div>
+                                    <div>
+                                        <span class="block text-white/70 text-[10px] uppercase font-semibold tracking-wider">Correo Electrónico:</span>
+                                        <span class="font-medium text-white text-[11.5px]">inversionesfbparts@gmail.com</span>
+                                    </div>
+                                    <div>
+                                        <span class="block text-white/70 text-[10px] uppercase font-semibold tracking-wider">Horario de Operaciones:</span>
+                                        <span class="font-medium text-white text-[11.5px]">Lun-Vie: 8am-5pm | Sáb: 8:30am-2pm</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Bloque Institucional de Aprobación y Sello -->
+                            <div class="brochure-evitar-corte grid grid-cols-2 gap-6 pt-2">
+                                <div class="border border-dashed border-slate-300 rounded-lg p-3 text-center">
+                                    <div class="h-10 border-b border-slate-300 mb-1 flex items-end justify-center">
+                                        <span class="text-[9.5px] text-slate-400 italic">Firma Autorizada</span>
+                                    </div>
+                                    <span class="block text-[10px] font-bold text-slate-700">Dirección de Operaciones & Procura</span>
+                                    <span class="text-[9px] text-slate-400">Inversiones FB Parts, C.A.</span>
+                                </div>
+                                <div class="border border-dashed border-slate-300 rounded-lg p-3 text-center">
+                                    <div class="h-10 border-b border-slate-300 mb-1 flex items-end justify-center">
+                                        <span class="text-[9.5px] text-slate-400 italic">Sello Corporativo Oficial</span>
+                                    </div>
+                                    <span class="block text-[10px] font-bold text-slate-700">Inversiones FB Parts, C.A.</span>
+                                    <span class="text-[9px] text-slate-400">RIF: J-50397111-8</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pie de Página Institucional Hoja 4 -->
+                        <div class="pt-4 border-t border-slate-200 flex items-center justify-between text-[10.5px] text-slate-400 font-medium">
+                            <span>Inversiones FB Parts, C.A. • RIF: J-50397111-8 • Caracas, Venezuela</span>
+                            <span>Emisión: <strong class="brochure-fecha-emision text-slate-600">Octubre 2026</strong></span>
+                            <span class="font-bold text-slate-600">Página 4 de 4</span>
+                        </div>
+                    </div>
+
+                </div> <!-- Cierre Lienzo Brochure -->
+                </div> <!-- Cierre Contenedor Interno Modal -->
+            </div> <!-- Cierre Modal Brochure Corporativo -->
+
             
 
         </div>
@@ -2711,7 +3470,7 @@
             }
         }, 8000);
     </script>
-    <script type="module" src="admin_logic.js?v=20261020_transito_habiles"></script>
+    <script type="module" src="admin_logic.js?v=20261025_brochure_v2"></script>
 
 
     <!-- MODAL AUDITORIA INTERNA -->
