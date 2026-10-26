@@ -4511,15 +4511,23 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
             const originalTitle = document.title;
             document.title = 'Brochure_Corporativo_FB_Parts_CA';
 
+            const modal = document.getElementById('modal-brochure-corporativo');
+            if (modal) {
+                modal.style.display = 'block';
+            }
+
             const limpiar = () => {
                 document.body.classList.remove('imprimiendo-brochure', 'is-printing');
                 document.title = originalTitle;
+                if (modal) modal.style.display = 'flex';
                 window.removeEventListener('afterprint', limpiar);
             };
 
             window.addEventListener('afterprint', limpiar, { once: true });
-            window.print();
-            setTimeout(limpiar, 3000);
+            setTimeout(() => {
+                window.print();
+            }, 60);
+            setTimeout(limpiar, 4000);
         };
 
         // Soporte de respaldo preventivo para atajos de teclado (Ctrl+P / Cmd+P)
