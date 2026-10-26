@@ -141,8 +141,9 @@
         @media print {
             /* 1. NORMALIZACIÓN DE MÁRGENES Y HOJA (LETTER) */
             @page {
-                size: letter;
-                margin: 10mm 15mm 10mm 15mm;
+                size: letter portrait;
+                margin: 0;
+                /* margin: 10mm 15mm 10mm 15mm */
             }
 
             html, body {
@@ -383,16 +384,22 @@
             /* 2. Hacer visible SOLO el brochure y todos sus elementos internos */
             body.is-printing #modal-brochure-corporativo,
             body.is-printing #modal-brochure-corporativo *,
+            body.is-printing #modal-brochure,
+            body.is-printing #modal-brochure *,
             body.imprimiendo-brochure #modal-brochure-corporativo,
-            body.imprimiendo-brochure #modal-brochure-corporativo * {
+            body.imprimiendo-brochure #modal-brochure-corporativo *,
+            body.imprimiendo-brochure #modal-brochure,
+            body.imprimiendo-brochure #modal-brochure * {
                 visibility: visible;
             }
 
-            /* 3. Posicionar el brochure en la esquina superior izquierda de la hoja */
+            /* 3. Contenedor general del modal del brochure en impresión (wrapper estático) */
             body.is-printing #modal-brochure-corporativo,
-            body.imprimiendo-brochure #modal-brochure-corporativo {
+            body.is-printing #modal-brochure,
+            body.imprimiendo-brochure #modal-brochure-corporativo,
+            body.imprimiendo-brochure #modal-brochure {
                 display: block !important;
-                position: absolute !important;
+                position: static !important;
                 left: 0 !important;
                 top: 0 !important;
                 width: 100% !important;
@@ -400,27 +407,15 @@
                 padding: 0 !important;
                 box-shadow: none !important;
                 transform: none !important;
-                background: #ffffff !important;
+                background: white !important;
                 z-index: 999999 !important;
                 overflow: visible !important;
             }
 
-            /* 4. Ocultar botones de UI dentro del brochure al imprimir */
-            .boton-imprimir-brochure,
-            .boton-cerrar-modal,
-            .brochure-toolbar,
-            #modal-brochure-corporativo .no-print {
-                display: none !important;
-                visibility: hidden !important;
-                height: 0 !important;
-                max-height: 0 !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                overflow: hidden !important;
-            }
-
             body.is-printing #modal-brochure-corporativo > div,
-            body.imprimiendo-brochure #modal-brochure-corporativo > div {
+            body.is-printing #modal-brochure > div,
+            body.imprimiendo-brochure #modal-brochure-corporativo > div,
+            body.imprimiendo-brochure #modal-brochure > div {
                 display: block !important;
                 position: static !important;
                 width: 100% !important;
@@ -445,51 +440,108 @@
                 overflow: visible !important;
             }
 
-            body.is-printing .brochure-sheet,
-            body.imprimiendo-brochure .brochure-sheet {
+            /* 4. Ocultar botones de UI dentro del brochure al imprimir */
+            .boton-imprimir-brochure,
+            .boton-cerrar-modal,
+            .brochure-toolbar,
+            #modal-brochure-corporativo .no-print,
+            #modal-brochure .no-print {
+                display: none !important;
+                visibility: hidden !important;
+                height: 0 !important;
+                max-height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: hidden !important;
+            }
+
+            /* 5. CADA PÁGINA DEL BROCHURE (Medidas exactas Hoja Carta y márgenes rígidos) */
+            .brochure-page,
+            .brochure-sheet {
+                width: 216mm !important;
+                height: 279mm !important;
+                min-height: 279mm !important;
+                max-height: 279mm !important;
+                padding: 15mm 20mm !important; /* Margen interno estricto */
+                box-sizing: border-box !important;
+                page-break-after: always !important;
+                break-after: page !important;
+                overflow: hidden !important;
+                position: relative !important;
+                background: white !important;
                 display: flex !important;
                 flex-direction: column !important;
                 justify-content: space-between !important;
-                position: relative !important;
-                box-sizing: border-box !important;
-                width: 100% !important;
-                max-width: 100% !important;
-                height: auto !important;
-                min-height: 258mm !important;
-                margin: 0 0 0 0 !important;
-                padding: 0 0 0 0 !important;
-                background: #ffffff !important;
-                box-shadow: none !important;
+                margin: 0 auto !important;
                 border: none !important;
                 border-radius: 0 !important;
-                overflow: visible !important;
+                box-shadow: none !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
-                break-inside: avoid !important;
                 page-break-inside: avoid !important;
+                break-inside: avoid !important;
             }
 
-            body.is-printing .brochure-sheet:not(:last-child),
-            body.imprimiendo-brochure .brochure-sheet:not(:last-child) {
-                break-after: page !important;
-                page-break-after: always !important;
-            }
-
-            body.is-printing .brochure-sheet:last-child,
-            body.imprimiendo-brochure .brochure-sheet:last-child {
-                break-after: auto !important;
+            .brochure-page:last-child,
+            .brochure-sheet:last-child {
                 page-break-after: auto !important;
+                break-after: auto !important;
             }
 
-            body.is-printing .brochure-evitar-corte,
-            body.imprimiendo-brochure .brochure-evitar-corte {
+            /* 6. Corrección de Imágenes en la Vitrina (Página 3) */
+            .vitrina-img,
+            #brochure-grid-repuestos img {
+                width: 100% !important;
+                height: 120px !important; /* Fija una altura uniforme */
+                object-fit: contain !important; /* EVITA QUE SE ESTIREN */
+                background-color: #f9fafb !important;
+            }
+
+            /* Contenedor de la foto en la tarjeta de vitrina */
+            #brochure-grid-repuestos > div > div:first-child {
+                height: 120px !important;
+                background-color: #f9fafb !important;
+                overflow: hidden !important;
+            }
+
+            /* 7. Arreglo del Pie de Página (Footer) */
+            .brochure-footer {
+                margin-top: auto !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                padding-top: 8px !important;
+                border-top: 1px solid #e2e8f0 !important;
+                display: flex !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                font-size: 8pt !important;
+                line-height: 1.2 !important;
+                color: #94a3b8 !important;
+                flex-shrink: 0 !important;
+            }
+
+            /* 8. Ajuste del Bloque de Firmas (Página 4) */
+            .brochure-bloque-firmas {
+                display: flex !important;
+                justify-content: space-around !important;
+                align-items: stretch !important;
+                gap: 24px !important;
+                width: 100% !important;
+            }
+
+            .brochure-bloque-firmas > div {
+                flex: 1 !important;
+                max-width: 240px !important;
+            }
+
+            .brochure-evitar-corte {
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
                 -webkit-column-break-inside: avoid !important;
             }
 
-            body.is-printing .brochure-sheet *,
-            body.imprimiendo-brochure .brochure-sheet * {
+            .brochure-page *,
+            .brochure-sheet * {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
             }
@@ -2492,9 +2544,8 @@
                         </div>
 
                         <!-- Pie de Página Institucional Hoja 1 -->
-                        <div class="pt-4 border-t border-slate-200 flex items-center justify-between text-[10.5px] text-slate-400 font-medium">
-                            <span>Inversiones FB Parts, C.A. • RIF: J-50397111-8 • Caracas, Venezuela</span>
-                            <span>Emisión: <strong class="brochure-fecha-emision text-slate-600">Octubre 2026</strong></span>
+                        <div class="brochure-footer mt-auto pt-3 border-t border-slate-200 flex items-center justify-between text-[8pt] text-slate-400 font-medium">
+                            <span>Inversiones FB Parts, C.A. • RIF: J-50397111-8 • Caracas, Venezuela • Emisión: <strong class="brochure-fecha-emision text-slate-600">Octubre 2026</strong></span>
                             <span class="font-bold text-slate-600">Página 1 de 4</span>
                         </div>
                     </div>
@@ -2617,9 +2668,8 @@
                         </div>
 
                         <!-- Pie de Página Institucional Hoja 2 -->
-                        <div class="pt-4 border-t border-slate-200 flex items-center justify-between text-[10.5px] text-slate-400 font-medium">
-                            <span>Inversiones FB Parts, C.A. • RIF: J-50397111-8 • Caracas, Venezuela</span>
-                            <span>Emisión: <strong class="brochure-fecha-emision text-slate-600">Octubre 2026</strong></span>
+                        <div class="brochure-footer mt-auto pt-3 border-t border-slate-200 flex items-center justify-between text-[8pt] text-slate-400 font-medium">
+                            <span>Inversiones FB Parts, C.A. • RIF: J-50397111-8 • Caracas, Venezuela • Emisión: <strong class="brochure-fecha-emision text-slate-600">Octubre 2026</strong></span>
                             <span class="font-bold text-slate-600">Página 2 de 4</span>
                         </div>
                     </div>
@@ -2658,8 +2708,8 @@
                                 
                                 <!-- Item 1: Parrilla Mercedes Benz -->
                                 <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs flex flex-col justify-between transition-all hover:border-[#3b5d47]/50">
-                                    <div class="relative bg-slate-50 border-b border-slate-100" style="height: 86px; overflow: hidden;">
-                                        <img src="https://http2.mlstatic.com/D_NQ_NP_2X_649089-MLV110352942730_052026-F.webp" alt="Parrilla Frontal Mercedes Benz C180 C200 C280" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='img/PARRILAMERCEDES.webp';">
+                                    <div class="relative bg-slate-50 border-b border-slate-100" style="height: 120px; overflow: hidden;">
+                                        <img src="https://http2.mlstatic.com/D_NQ_NP_2X_649089-MLV110352942730_052026-F.webp" alt="Parrilla Frontal Mercedes Benz C180 C200 C280" class="vitrina-img" style="width: 100%; height: 120px; object-fit: contain; background-color: #f9fafb;" onerror="this.onerror=null; this.src='img/PARRILAMERCEDES.webp';">
                                         <span class="absolute top-1.5 left-1.5 bg-[#1e293b] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">MERCEDES BENZ</span>
                                     </div>
                                     <div class="p-2 flex flex-col justify-between flex-1">
@@ -2676,8 +2726,8 @@
 
                                 <!-- Item 2: Parrilla Frontal Toyota Levin -->
                                 <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs flex flex-col justify-between transition-all hover:border-[#3b5d47]/50">
-                                    <div class="relative bg-slate-50 border-b border-slate-100" style="height: 86px; overflow: hidden;">
-                                        <img src="https://http2.mlstatic.com/D_NQ_NP_2X_832660-MLV112172736738_062026-F.webp" alt="Parrilla Frontal Toyota Levin GT" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='img/carroceria.webp';">
+                                    <div class="relative bg-slate-50 border-b border-slate-100" style="height: 120px; overflow: hidden;">
+                                        <img src="https://http2.mlstatic.com/D_NQ_NP_2X_832660-MLV112172736738_062026-F.webp" alt="Parrilla Frontal Toyota Levin GT" class="vitrina-img" style="width: 100%; height: 120px; object-fit: contain; background-color: #f9fafb;" onerror="this.onerror=null; this.src='img/carroceria.webp';">
                                         <span class="absolute top-1.5 left-1.5 bg-[#2c441b] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">TOYOTA</span>
                                     </div>
                                     <div class="p-2 flex flex-col justify-between flex-1">
@@ -2694,8 +2744,8 @@
 
                                 <!-- Item 3: Empacaduras Toyota Camry / Previa -->
                                 <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs flex flex-col justify-between transition-all hover:border-[#3b5d47]/50">
-                                    <div class="relative bg-slate-50 border-b border-slate-100" style="height: 86px; overflow: hidden;">
-                                        <img src="https://http2.mlstatic.com/D_NQ_NP_2X_871316-MLV113257106786_072026-F.webp" alt="Kit Empacaduras Motor Toyota 2.4 2AZ" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='img/multiple-admision.webp';">
+                                    <div class="relative bg-slate-50 border-b border-slate-100" style="height: 120px; overflow: hidden;">
+                                        <img src="https://http2.mlstatic.com/D_NQ_NP_2X_871316-MLV113257106786_072026-F.webp" alt="Kit Empacaduras Motor Toyota 2.4 2AZ" class="vitrina-img" style="width: 100%; height: 120px; object-fit: contain; background-color: #f9fafb;" onerror="this.onerror=null; this.src='img/multiple-admision.webp';">
                                         <span class="absolute top-1.5 left-1.5 bg-[#2c441b] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">TOYOTA</span>
                                     </div>
                                     <div class="p-2 flex flex-col justify-between flex-1">
@@ -2712,8 +2762,8 @@
 
                                 <!-- Item 4: Concha Biela Dongfeng Duolika -->
                                 <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs flex flex-col justify-between transition-all hover:border-[#3b5d47]/50">
-                                    <div class="relative bg-slate-50 border-b border-slate-100" style="height: 86px; overflow: hidden;">
-                                        <img src="https://http2.mlstatic.com/D_NQ_NP_2X_838920-MLV110898679164_052026-F.webp" alt="Conchas de Biela Dongfeng Duolika 5T 7T" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='img/multiple-admision.webp';">
+                                    <div class="relative bg-slate-50 border-b border-slate-100" style="height: 120px; overflow: hidden;">
+                                        <img src="https://http2.mlstatic.com/D_NQ_NP_2X_838920-MLV110898679164_052026-F.webp" alt="Conchas de Biela Dongfeng Duolika 5T 7T" class="vitrina-img" style="width: 100%; height: 120px; object-fit: contain; background-color: #f9fafb;" onerror="this.onerror=null; this.src='img/multiple-admision.webp';">
                                         <span class="absolute top-1.5 left-1.5 bg-[#2c441b] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">DONGFENG</span>
                                     </div>
                                     <div class="p-2 flex flex-col justify-between flex-1">
@@ -2730,8 +2780,8 @@
 
                                 <!-- Item 5: Cadena de Tiempo Toyota Yaris -->
                                 <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs flex flex-col justify-between transition-all hover:border-[#3b5d47]/50">
-                                    <div class="relative bg-slate-50 border-b border-slate-100" style="height: 86px; overflow: hidden;">
-                                        <img src="https://http2.mlstatic.com/D_NQ_NP_2X_965497-MLV111916737333_052026-F.webp" alt="Kit Cadena Tiempo Toyota Yaris 1NZ" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='img/bomba-aceite.webp';">
+                                    <div class="relative bg-slate-50 border-b border-slate-100" style="height: 120px; overflow: hidden;">
+                                        <img src="https://http2.mlstatic.com/D_NQ_NP_2X_965497-MLV111916737333_052026-F.webp" alt="Kit Cadena Tiempo Toyota Yaris 1NZ" class="vitrina-img" style="width: 100%; height: 120px; object-fit: contain; background-color: #f9fafb;" onerror="this.onerror=null; this.src='img/bomba-aceite.webp';">
                                         <span class="absolute top-1.5 left-1.5 bg-[#2c441b] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">TOYOTA</span>
                                     </div>
                                     <div class="p-2 flex flex-col justify-between flex-1">
@@ -2748,8 +2798,8 @@
 
                                 <!-- Item 6: Radiador Dongfeng Aeolus AX7 Pro -->
                                 <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs flex flex-col justify-between transition-all hover:border-[#3b5d47]/50">
-                                    <div class="relative bg-slate-50 border-b border-slate-100" style="height: 86px; overflow: hidden;">
-                                        <img src="https://http2.mlstatic.com/D_NQ_NP_2X_626820-MLV111758385301_052026-F.webp" alt="Radiador Aeolus Dongfeng AX7 Pro" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='img/bomba-agua.webp';">
+                                    <div class="relative bg-slate-50 border-b border-slate-100" style="height: 120px; overflow: hidden;">
+                                        <img src="https://http2.mlstatic.com/D_NQ_NP_2X_626820-MLV111758385301_052026-F.webp" alt="Radiador Aeolus Dongfeng AX7 Pro" class="vitrina-img" style="width: 100%; height: 120px; object-fit: contain; background-color: #f9fafb;" onerror="this.onerror=null; this.src='img/bomba-agua.webp';">
                                         <span class="absolute top-1.5 left-1.5 bg-[#2c441b] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">DONGFENG</span>
                                     </div>
                                     <div class="p-2 flex flex-col justify-between flex-1">
@@ -2766,8 +2816,8 @@
 
                                 <!-- Item 7: Meseta Superior Toyota Hilux -->
                                 <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs flex flex-col justify-between transition-all hover:border-[#3b5d47]/50">
-                                    <div class="relative bg-slate-50 border-b border-slate-100" style="height: 86px; overflow: hidden;">
-                                        <img src="https://http2.mlstatic.com/D_NQ_NP_2X_881008-MLV111348365301_052026-F.webp" alt="Meseta Superior Toyota Hilux Fortuner" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='img/freno.webp';">
+                                    <div class="relative bg-slate-50 border-b border-slate-100" style="height: 120px; overflow: hidden;">
+                                        <img src="https://http2.mlstatic.com/D_NQ_NP_2X_881008-MLV111348365301_052026-F.webp" alt="Meseta Superior Toyota Hilux Fortuner" class="vitrina-img" style="width: 100%; height: 120px; object-fit: contain; background-color: #f9fafb;" onerror="this.onerror=null; this.src='img/freno.webp';">
                                         <span class="absolute top-1.5 left-1.5 bg-[#2c441b] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">TOYOTA</span>
                                     </div>
                                     <div class="p-2 flex flex-col justify-between flex-1">
@@ -2784,8 +2834,8 @@
 
                                 <!-- Item 8: Retrovisor Lateral Dongfeng Rich 6 / 7 -->
                                 <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs flex flex-col justify-between transition-all hover:border-[#3b5d47]/50">
-                                    <div class="relative bg-slate-50 border-b border-slate-100" style="height: 86px; overflow: hidden;">
-                                        <img src="https://lh3.googleusercontent.com/d/1wuM16Ht9SJTkq069nQxQZoMzZ_DEYseE" alt="Retrovisor Dongfeng Rich 6 Rich 7" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='img/RETROVISOR 1.webp';">
+                                    <div class="relative bg-slate-50 border-b border-slate-100" style="height: 120px; overflow: hidden;">
+                                        <img src="https://lh3.googleusercontent.com/d/1wuM16Ht9SJTkq069nQxQZoMzZ_DEYseE" alt="Retrovisor Dongfeng Rich 6 Rich 7" class="vitrina-img" style="width: 100%; height: 120px; object-fit: contain; background-color: #f9fafb;" onerror="this.onerror=null; this.src='img/RETROVISOR 1.webp';">
                                         <span class="absolute top-1.5 left-1.5 bg-[#2c441b] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs">DONGFENG</span>
                                     </div>
                                     <div class="p-2 flex flex-col justify-between flex-1">
@@ -2826,9 +2876,8 @@
                         </div>
 
                         <!-- Pie de Página Institucional Hoja 3 -->
-                        <div class="pt-3 border-t border-slate-200 flex items-center justify-between text-[10.5px] text-slate-400 font-medium">
-                            <span>Inversiones FB Parts, C.A. • RIF: J-50397111-8 • Caracas, Venezuela</span>
-                            <span>Emisión: <strong class="brochure-fecha-emision text-slate-600">Octubre 2026</strong></span>
+                        <div class="brochure-footer mt-auto pt-3 border-t border-slate-200 flex items-center justify-between text-[8pt] text-slate-400 font-medium">
+                            <span>Inversiones FB Parts, C.A. • RIF: J-50397111-8 • Caracas, Venezuela • Emisión: <strong class="brochure-fecha-emision text-slate-600">Octubre 2026</strong></span>
                             <span class="font-bold text-slate-600">Página 3 de 4</span>
                         </div>
                     </div>
@@ -2947,15 +2996,15 @@
                             </div>
 
                             <!-- Bloque Institucional de Aprobación y Sello -->
-                            <div class="brochure-evitar-corte grid grid-cols-2 gap-6 pt-2">
-                                <div class="border border-dashed border-slate-300 rounded-lg p-3 text-center">
+                            <div class="brochure-bloque-firmas brochure-evitar-corte flex justify-around items-center gap-6 pt-2 w-full" style="display: flex; justify-content: space-around; align-items: stretch; gap: 24px;">
+                                <div class="border border-dashed border-slate-300 rounded-lg p-3 text-center flex-1 max-w-[240px]" style="flex: 1; max-width: 240px;">
                                     <div class="h-10 border-b border-slate-300 mb-1 flex items-end justify-center">
                                         <span class="text-[9.5px] text-slate-400 italic">Firma Autorizada</span>
                                     </div>
                                     <span class="block text-[10px] font-bold text-slate-700">Dirección de Operaciones & Procura</span>
                                     <span class="text-[9px] text-slate-400">Inversiones FB Parts, C.A.</span>
                                 </div>
-                                <div class="border border-dashed border-slate-300 rounded-lg p-3 text-center">
+                                <div class="border border-dashed border-slate-300 rounded-lg p-3 text-center flex-1 max-w-[240px]" style="flex: 1; max-width: 240px;">
                                     <div class="h-10 border-b border-slate-300 mb-1 flex items-end justify-center">
                                         <span class="text-[9.5px] text-slate-400 italic">Sello Corporativo Oficial</span>
                                     </div>
@@ -2966,9 +3015,8 @@
                         </div>
 
                         <!-- Pie de Página Institucional Hoja 4 -->
-                        <div class="pt-4 border-t border-slate-200 flex items-center justify-between text-[10.5px] text-slate-400 font-medium">
-                            <span>Inversiones FB Parts, C.A. • RIF: J-50397111-8 • Caracas, Venezuela</span>
-                            <span>Emisión: <strong class="brochure-fecha-emision text-slate-600">Octubre 2026</strong></span>
+                        <div class="brochure-footer mt-auto pt-3 border-t border-slate-200 flex items-center justify-between text-[8pt] text-slate-400 font-medium">
+                            <span>Inversiones FB Parts, C.A. • RIF: J-50397111-8 • Caracas, Venezuela • Emisión: <strong class="brochure-fecha-emision text-slate-600">Octubre 2026</strong></span>
                             <span class="font-bold text-slate-600">Página 4 de 4</span>
                         </div>
                     </div>
