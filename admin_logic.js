@@ -4507,20 +4507,31 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
         };
 
         window.imprimirBrochure = function() {
-            document.body.classList.add('imprimiendo-brochure');
+            document.body.classList.add('imprimiendo-brochure', 'is-printing');
             const originalTitle = document.title;
             document.title = 'Brochure_Corporativo_FB_Parts_CA';
 
             const limpiar = () => {
-                document.body.classList.remove('imprimiendo-brochure');
+                document.body.classList.remove('imprimiendo-brochure', 'is-printing');
                 document.title = originalTitle;
                 window.removeEventListener('afterprint', limpiar);
             };
 
-            window.addEventListener('afterprint', limpiar);
+            window.addEventListener('afterprint', limpiar, { once: true });
             window.print();
             setTimeout(limpiar, 3000);
         };
+
+        // Soporte de respaldo preventivo para atajos de teclado (Ctrl+P / Cmd+P)
+        window.addEventListener('beforeprint', function() {
+            const modalBrochure = document.getElementById('modal-brochure-corporativo');
+            if (modalBrochure && (modalBrochure.style.display === 'flex' || modalBrochure.style.display === 'block')) {
+                document.body.classList.add('imprimiendo-brochure', 'is-printing');
+            }
+        });
+        window.addEventListener('afterprint', function() {
+            document.body.classList.remove('imprimiendo-brochure', 'is-printing');
+        });
 
         // ==========================================
         // 🚀 GENERADOR DE SITEMAP SEO PARA GOOGLE (CON URLS AMIGABLES)

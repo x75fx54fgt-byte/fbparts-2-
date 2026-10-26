@@ -158,8 +158,8 @@
             }
 
             /* MODO NORMAL (IMPRESIÓN REGULAR COTIZACIÓN / FACTURA / PEDIDO) */
-            body:not(.imprimiendo-contrato):not(.imprimiendo-brochure) #app-wrapper { display: none !important; }
-            body:not(.imprimiendo-contrato):not(.imprimiendo-brochure) #print-container { display: block !important; width: 100%; }
+            body:not(.imprimiendo-contrato):not(.imprimiendo-brochure):not(.is-printing) #app-wrapper { display: none !important; }
+            body:not(.imprimiendo-contrato):not(.imprimiendo-brochure):not(.is-printing) #print-container { display: block !important; width: 100%; }
 
 
             /* 2. SUPRESIÓN UNIVERSAL: Elementos de interfaz que NUNCA deben imprimirse */
@@ -327,66 +327,125 @@
             }
 
             /* =========================================================
-               📖 5. AISLAMIENTO Y REGLAS DE IMPRESIÓN DEL BROCHURE CORPORATIVO
+               📖 5. AISLAMIENTO Y REGLAS DE IMPRESIÓN DEL BROCHURE CORPORATIVO (ESTRATEGIA VISIBILITY)
                ========================================================= */
-            body.imprimiendo-brochure > *:not(#modal-brochure-corporativo) {
-                display: none !important;
-                visibility: hidden !important;
-                opacity: 0 !important;
-                height: 0 !important;
-                max-height: 0 !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                overflow: hidden !important;
+
+            /* 1. Ocultar todo en la página preservando la estructura */
+            body.is-printing *,
+            body.imprimiendo-brochure * {
+                visibility: hidden;
             }
 
-            body.imprimiendo-brochure #app-wrapper,
-            body.imprimiendo-brochure #print-container,
-            body.imprimiendo-brochure #main-sidebar,
-            body.imprimiendo-brochure #ticker-tasas-container,
-            body.imprimiendo-brochure #ticker-wrapper,
-            body.imprimiendo-brochure #auth-loading-screen,
-            body.imprimiendo-brochure #bcv-bar,
-            body.imprimiendo-brochure .bcv-ticker,
-            body.imprimiendo-brochure .modal-overlay:not(#modal-brochure-corporativo),
-            body.imprimiendo-brochure .modal-backdrop,
-            body.imprimiendo-brochure .brochure-toolbar,
-            body.imprimiendo-brochure .no-print,
-            body.imprimiendo-brochure header,
-            body.imprimiendo-brochure nav,
-            body.imprimiendo-brochure .btn-flotante,
-            body.imprimiendo-brochure .floating-action-btn,
-            body.imprimiendo-brochure button {
-                display: none !important;
-                visibility: hidden !important;
-                opacity: 0 !important;
-                height: 0 !important;
-                max-height: 0 !important;
-                width: 0 !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                overflow: hidden !important;
-            }
-
+            /* Respetar la estructura de los ancestros preservando el árbol DOM sin interferencias de display:none */
+            body.is-printing,
             body.imprimiendo-brochure,
-            body.imprimiendo-brochure #modal-brochure-corporativo,
-            body.imprimiendo-brochure #modal-brochure-corporativo > div,
-            body.imprimiendo-brochure .brochure-canvas {
+            body.is-printing #app-wrapper,
+            body.imprimiendo-brochure #app-wrapper,
+            body.is-printing main,
+            body.imprimiendo-brochure main,
+            body.is-printing #app-wrapper > div,
+            body.imprimiendo-brochure #app-wrapper > div {
                 display: block !important;
                 position: static !important;
-                width: 100% !important;
-                max-width: 100% !important;
+                overflow: visible !important;
                 height: auto !important;
                 min-height: auto !important;
                 max-height: none !important;
                 margin: 0 !important;
                 padding: 0 !important;
-                background: #ffffff !important;
-                box-shadow: none !important;
                 border: none !important;
+                box-shadow: none !important;
+                background: #ffffff !important;
+            }
+
+            /* Suprimir elementos hermanos y de interfaz externa */
+            body.is-printing #main-sidebar,
+            body.is-printing header,
+            body.is-printing #print-container,
+            body.is-printing #ticker-tasas-container,
+            body.is-printing #ticker-wrapper,
+            body.is-printing #auth-loading-screen,
+            body.is-printing .modal-overlay:not(#modal-brochure-corporativo),
+            body.is-printing .btn-flotante,
+            body.is-printing .floating-action-btn,
+            body.imprimiendo-brochure #main-sidebar,
+            body.imprimiendo-brochure header,
+            body.imprimiendo-brochure #print-container,
+            body.imprimiendo-brochure #ticker-tasas-container,
+            body.imprimiendo-brochure #ticker-wrapper,
+            body.imprimiendo-brochure #auth-loading-screen,
+            body.imprimiendo-brochure .modal-overlay:not(#modal-brochure-corporativo),
+            body.imprimiendo-brochure .btn-flotante,
+            body.imprimiendo-brochure .floating-action-btn {
+                display: none !important;
+            }
+
+            /* 2. Hacer visible SOLO el brochure y todos sus elementos internos */
+            body.is-printing #modal-brochure-corporativo,
+            body.is-printing #modal-brochure-corporativo *,
+            body.imprimiendo-brochure #modal-brochure-corporativo,
+            body.imprimiendo-brochure #modal-brochure-corporativo * {
+                visibility: visible;
+            }
+
+            /* 3. Posicionar el brochure en la esquina superior izquierda de la hoja */
+            body.is-printing #modal-brochure-corporativo,
+            body.imprimiendo-brochure #modal-brochure-corporativo {
+                display: block !important;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+                transform: none !important;
+                background: #ffffff !important;
+                z-index: 999999 !important;
                 overflow: visible !important;
             }
 
+            /* 4. Ocultar botones de UI dentro del brochure al imprimir */
+            .boton-imprimir-brochure,
+            .boton-cerrar-modal,
+            .brochure-toolbar,
+            #modal-brochure-corporativo .no-print {
+                display: none !important;
+                visibility: hidden !important;
+                height: 0 !important;
+                max-height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: hidden !important;
+            }
+
+            body.is-printing #modal-brochure-corporativo > div,
+            body.imprimiendo-brochure #modal-brochure-corporativo > div {
+                display: block !important;
+                position: static !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+                transform: none !important;
+                background: transparent !important;
+                overflow: visible !important;
+            }
+
+            body.is-printing .brochure-canvas,
+            body.imprimiendo-brochure .brochure-canvas {
+                display: block !important;
+                position: static !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                gap: 0 !important;
+                background: transparent !important;
+                overflow: visible !important;
+            }
+
+            body.is-printing .brochure-sheet,
             body.imprimiendo-brochure .brochure-sheet {
                 display: flex !important;
                 flex-direction: column !important;
@@ -410,22 +469,26 @@
                 page-break-inside: avoid !important;
             }
 
+            body.is-printing .brochure-sheet:not(:last-child),
             body.imprimiendo-brochure .brochure-sheet:not(:last-child) {
                 break-after: page !important;
                 page-break-after: always !important;
             }
 
+            body.is-printing .brochure-sheet:last-child,
             body.imprimiendo-brochure .brochure-sheet:last-child {
                 break-after: auto !important;
                 page-break-after: auto !important;
             }
 
+            body.is-printing .brochure-evitar-corte,
             body.imprimiendo-brochure .brochure-evitar-corte {
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
                 -webkit-column-break-inside: avoid !important;
             }
 
+            body.is-printing .brochure-sheet *,
             body.imprimiendo-brochure .brochure-sheet * {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
@@ -2321,10 +2384,10 @@
                             <button type="button" onclick="cargarBrochureCorporativo()" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all shadow-sm flex items-center gap-2">
                                 <i class="fas fa-sync-alt text-brand"></i> Actualizar Datos
                             </button>
-                            <button type="button" onclick="imprimirBrochure()" class="bg-gradient-to-r from-[#2c441b] to-[#3b5d47] hover:from-[#233715] hover:to-[#2c441b] text-white px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2 hover:shadow-lg">
+                            <button type="button" onclick="imprimirBrochure()" class="boton-imprimir-brochure bg-gradient-to-r from-[#2c441b] to-[#3b5d47] hover:from-[#233715] hover:to-[#2c441b] text-white px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2 hover:shadow-lg">
                                 <i class="fas fa-print text-amber-300"></i> 🖨️ Imprimir / Descargar PDF
                             </button>
-                            <button type="button" onclick="cerrarModalBrochure()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 w-8 h-8 rounded-xl font-bold transition flex items-center justify-center text-lg shadow-sm" title="Cerrar visor">
+                            <button type="button" onclick="cerrarModalBrochure()" class="boton-cerrar-modal bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 w-8 h-8 rounded-xl font-bold transition flex items-center justify-center text-lg shadow-sm" title="Cerrar visor">
                                 &times;
                             </button>
                         </div>
