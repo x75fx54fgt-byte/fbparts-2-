@@ -41,25 +41,92 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                 let num = parseInt(val, 10);
                 return isNaN(num) || num < 1 ? defaultVal : num;
             },
-            formatImageUrl(val, maxLen = 500) {
+            formatImageUrl(val, maxLen = 1000) {
                 if (!val) return '';
                 let cleanUrl = String(val).trim();
-                // Detectar cualquier link de Google Drive con el ID del archivo
-                // Formatos: /file/d/ID/view  o  /open?id=ID  o  id=ID
-                let driveId = null;
-                const m1 = cleanUrl.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
-                const m2 = cleanUrl.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
-                const m3 = cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-                if (m1) driveId = m1[1];
-                else if (m2) driveId = m2[1];
-                else if (m3) driveId = m3[1];
-                
-                if (driveId) {
-                    // Este formato funciona igual que en la foto de perfil
-                    cleanUrl = `https://lh3.googleusercontent.com/d/${driveId}`;
+                // Detectar cualquier enlace compartido de Google Drive y convertirlo a CDN directo
+                // Formatos: /file/d/ID/view, /open?id=ID, /uc?id=ID, docs.google.com/file/d/ID, etc.
+                const driveMatch = cleanUrl.match(/(?:drive\.google\.com\/file\/d\/|drive\.google\.com\/open\?id=|docs\.google\.com\/file\/d\/|[?&]id=|\/d\/)([a-zA-Z0-9_-]{20,})/);
+                if (driveMatch && driveMatch[1]) {
+                    cleanUrl = `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
+                } else if (cleanUrl.includes('dropbox.com')) {
+                    if (cleanUrl.includes('?dl=0')) cleanUrl = cleanUrl.replace('?dl=0', '?raw=1');
+                    else if (cleanUrl.includes('&dl=0')) cleanUrl = cleanUrl.replace('&dl=0', '&raw=1');
+                    else if (!cleanUrl.includes('raw=1')) cleanUrl += (cleanUrl.includes('?') ? '&raw=1' : '?raw=1');
                 }
                 return this.cleanText(cleanUrl, maxLen);
             }
+        };
+
+        // ==========================================
+        // 🖼️ UTILIDADES GLOBALES DE IMÁGENES (DRIVE, DROPBOX, HTTPS)
+        // ==========================================
+        window.normalizarUrlImagen = function(val) {
+            if (!val || typeof val !== 'string') return '';
+            return SecuritySanitizer.formatImageUrl(val, 1000);
+        };
+
+        window.obtenerGoogleDriveId = function(val) {
+            if (!val || typeof val !== 'string') return null;
+            const cleanUrl = String(val).trim();
+            const m = cleanUrl.match(/(?:drive\.google\.com\/file\/d\/|drive\.google\.com\/open\?id=|docs\.google\.com\/file\/d\/|[?&]id=|\/d\/)([a-zA-Z0-9_-]{20,})/);
+            return m ? m[1] : null;
+        };
+
+        window.verificarCargaImagen = function(url, statusElementId, callback) {
+            const el = document.getElementById(statusElementId);
+            if (!url || !url.trim()) {
+                if (el) el.innerHTML = '';
+                if (callback) callback(false);
+                return;
+            }
+            const clean = url.trim();
+            const normalizada = window.normalizarUrlImagen(clean);
+            const driveId = window.obtenerGoogleDriveId(clean);
+            const esDrive = Boolean(driveId || clean.includes('drive.google.com') || clean.includes('docs.google.com'));
+
+            if (el) {
+                el.innerHTML = `<span style="color: #64748b; font-size: 11.5px; display: inline-flex; align-items: center; gap: 5px;"><i class="fas fa-spinner fa-spin text-emerald-600"></i> Verificando conexión de imagen...</span>`;
+            }
+
+            const testImg = new Image();
+            let finalizado = false;
+
+            testImg.onload = function() {
+                if (finalizado) return;
+                finalizado = true;
+                if (el) {
+                    const tag = esDrive ? ' <span style="background: #dbeafe; color: #1e40af; padding: 2px 6px; border-radius: 4px; font-size: 10.5px; font-weight: 700;">Google Drive OK</span>' : '';
+                    el.innerHTML = `<span style="color: #166534; font-size: 11.5px; display: inline-flex; align-items: center; gap: 5px;"><i class="fas fa-check-circle"></i> Imagen lista para mostrar (${testImg.naturalWidth}x${testImg.naturalHeight}px)${tag}</span>`;
+                }
+                if (callback) callback(true, normalizada);
+            };
+
+            testImg.onerror = function() {
+                if (finalizado) return;
+                if (driveId && !testImg.dataset.triedThumbnail) {
+                    testImg.dataset.triedThumbnail = '1';
+                    testImg.src = `https://drive.google.com/thumbnail?id=${driveId}&sz=w1920`;
+                    return;
+                }
+                finalizado = true;
+                if (el) {
+                    if (esDrive) {
+                        el.innerHTML = `
+                            <div style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 6px 10px; border-radius: 6px; margin-top: 4px; font-size: 11.5px; line-height: 1.35;">
+                                <div><i class="fas fa-exclamation-triangle"></i> <strong>Aviso de Google Drive:</strong> No se pudo cargar la foto.</div>
+                                <div style="margin-top: 3px; color: #7f1d1d; font-size: 11px;">
+                                    Asegúrate de que en Google Drive el archivo tenga <strong>Acceso General: "Cualquier persona con el enlace"</strong> (Modo Lector).
+                                </div>
+                            </div>`;
+                    } else {
+                        el.innerHTML = `<span style="color: #ef4444; font-size: 11.5px;"><i class="fas fa-exclamation-circle"></i> No se pudo cargar la imagen desde este enlace. Revisa que sea una URL pública y directa.</span>`;
+                    }
+                }
+                if (callback) callback(false, normalizada);
+            };
+
+            testImg.src = normalizada;
         };
 
         // ==========================================
@@ -9278,13 +9345,19 @@ DATOS DEL REPUESTO:
             if (!contenedor) return;
 
             const nombre = (document.getElementById('web-dest-nombre')?.value || '').trim() || 'Nombre del Repuesto';
-            const imagen = (document.getElementById('web-dest-imagen')?.value || '').trim() || 'img/logo-fb-parts.png';
+            const rawImg = (document.getElementById('web-dest-imagen')?.value || '').trim() || 'img/logo-fb-parts.png';
+            const driveId = window.obtenerGoogleDriveId ? window.obtenerGoogleDriveId(rawImg) : null;
+            const imagen = window.normalizarUrlImagen ? window.normalizarUrlImagen(rawImg) : rawImg;
             const reg = parseFloat(document.getElementById('web-dest-precio-regular')?.value || 0);
             const ofVal = (document.getElementById('web-dest-precio-oferta')?.value || '').trim();
             const of = ofVal !== '' ? parseFloat(ofVal) : null;
 
             const tieneOferta = of !== null && of > 0 && of < reg;
             const pct = tieneOferta ? Math.round((1 - (of / reg)) * 100) : 0;
+
+            const fallbackAttr = driveId
+                ? `onerror="if(!this.dataset.fb){this.dataset.fb=1;this.src='https://drive.google.com/thumbnail?id=${driveId}&sz=w1920';}else{this.onerror=null;this.src='img/logo-fb-parts.png';}"`
+                : `onerror="this.onerror=null; this.src='img/logo-fb-parts.png';"`;
 
             const badgeHtml = tieneOferta ? `
                 <div style="position: absolute; top: 10px; left: 10px; z-index: 2; display: flex; flex-direction: column; gap: 4px; pointer-events: none;">
@@ -9314,7 +9387,7 @@ DATOS DEL REPUESTO:
                     <div style="width: 100%; height: 165px; background: #ffffff; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 10px; box-sizing: border-box; border-bottom: 1px solid #f1f5f9;">
                         <img src="${SecuritySanitizer.escapeHtml(imagen)}" alt="${SecuritySanitizer.escapeHtml(nombre)}" 
                             style="width: 100%; height: 100%; object-fit: contain;"
-                            onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
+                            ${fallbackAttr}>
                     </div>
                     <div style="padding: 12px 14px; display: flex; flex-direction: column;">
                         <h4 style="font-size: 13px; color: #1e293b; margin: 0 0 8px 0; font-weight: 700; line-height: 1.35; min-height: 35px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="${SecuritySanitizer.escapeHtml(nombre)}">
@@ -9409,18 +9482,33 @@ DATOS DEL REPUESTO:
                 img.src = '';
                 img.style.display = 'none';
                 placeholder.style.display = 'block';
+                if (window.verificarCargaImagen) window.verificarCargaImagen('', 'web-dest-imagen-status');
                 return;
             }
+
+            const cleanUrl = url.trim();
+            const normUrl = window.normalizarUrlImagen ? window.normalizarUrlImagen(cleanUrl) : cleanUrl;
+            const driveId = window.obtenerGoogleDriveId ? window.obtenerGoogleDriveId(cleanUrl) : null;
 
             img.onload = () => {
                 img.style.display = 'block';
                 placeholder.style.display = 'none';
             };
             img.onerror = () => {
+                if (driveId && !img.dataset.triedThumbnail) {
+                    img.dataset.triedThumbnail = '1';
+                    img.src = `https://drive.google.com/thumbnail?id=${driveId}&sz=w1920`;
+                    return;
+                }
                 img.style.display = 'none';
                 placeholder.style.display = 'block';
             };
-            img.src = url.trim();
+            img.dataset.triedThumbnail = '';
+            img.src = normUrl;
+
+            if (window.verificarCargaImagen) {
+                window.verificarCargaImagen(cleanUrl, 'web-dest-imagen-status');
+            }
         };
 
         window.generarSlugWeb = function(nombre) {
@@ -9492,13 +9580,20 @@ DATOS DEL REPUESTO:
                     const pctAhorro = tieneOferta ? Math.round((ahorro / reg) * 100) : 0;
                     const isVisible = Boolean(item.mostrar_en_destacados);
 
+                    const rawImg = item.imagen || 'img/logo-fb-parts.png';
+                    const driveId = window.obtenerGoogleDriveId ? window.obtenerGoogleDriveId(rawImg) : null;
+                    const imagen = SecuritySanitizer.escapeHtml(window.normalizarUrlImagen ? window.normalizarUrlImagen(rawImg) : rawImg);
+                    const fallbackImg = driveId
+                        ? `onerror="if(!this.dataset.fb){this.dataset.fb=1;this.src='https://drive.google.com/thumbnail?id=${driveId}&sz=w1920';}else{this.onerror=null;this.src='img/logo-fb-parts.png';}"`
+                        : `onerror="this.onerror=null; this.src='img/logo-fb-parts.png';"`;
+
                     html += `
                         <tr style="border-bottom: 1px solid #f3f4f6; transition: background 0.15s;">
                             <td style="padding: 10px 14px; text-align: center;">
                                 <div style="width: 52px; height: 52px; border: 1px solid #e5e7eb; border-radius: 8px; background: white; display: flex; align-items: center; justify-content: center; overflow: hidden; margin: 0 auto; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                                    <img src="${SecuritySanitizer.escapeHtml(item.imagen)}" alt="${SecuritySanitizer.escapeHtml(item.nombre)}" 
+                                    <img src="${imagen}" alt="${SecuritySanitizer.escapeHtml(item.nombre)}" 
                                         style="width: 100%; height: 100%; object-fit: contain; padding: 2px;"
-                                        onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
+                                        ${fallbackImg}>
                                 </div>
                             </td>
                             <td style="padding: 10px 14px;">
@@ -9574,7 +9669,8 @@ DATOS DEL REPUESTO:
             const id = idInput ? idInput.value.trim() : '';
 
             const nombre = (document.getElementById('web-dest-nombre')?.value || '').trim();
-            const imagen = (document.getElementById('web-dest-imagen')?.value || '').trim();
+            const rawImagen = (document.getElementById('web-dest-imagen')?.value || '').trim();
+            const imagen = window.normalizarUrlImagen ? window.normalizarUrlImagen(rawImagen) : rawImagen;
             const precioRegVal = parseFloat(document.getElementById('web-dest-precio-regular')?.value || 0);
             const precioOfVal = document.getElementById('web-dest-precio-oferta')?.value.trim();
             const mostrar = document.getElementById('web-dest-mostrar')?.checked ?? true;
@@ -9897,13 +9993,25 @@ DATOS DEL REPUESTO:
             const titulo = (document.getElementById('web-banner-titulo')?.value || '').trim() || 'TÍTULO DEL BANNER';
             const subtitulo = (document.getElementById('web-banner-subtitulo')?.value || '').trim() || 'Subtítulo o descripción del repuesto';
             const btnTexto = (document.getElementById('web-banner-boton-texto')?.value || '').trim() || 'VER PRODUCTOS';
-            const imagen = (document.getElementById('web-banner-imagen')?.value || '').trim() || 'img/fotoportada.webp';
+            const rawImagen = (document.getElementById('web-banner-imagen')?.value || '').trim() || 'img/fotoportada.webp';
+            const driveId = window.obtenerGoogleDriveId ? window.obtenerGoogleDriveId(rawImagen) : null;
+            const imagen = window.normalizarUrlImagen ? window.normalizarUrlImagen(rawImagen) : rawImagen;
 
             if (elTitulo) elTitulo.textContent = titulo;
             if (elSub) elSub.textContent = subtitulo;
             if (elBtn) elBtn.textContent = btnTexto;
             if (box) {
-                box.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url('${imagen}')`;
+                if (driveId) {
+                    box.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url('https://lh3.googleusercontent.com/d/${driveId}'), url('https://drive.google.com/thumbnail?id=${driveId}&sz=w1920'), url('img/fotoportada.webp')`;
+                } else if (imagen) {
+                    box.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url('${imagen}'), url('img/fotoportada.webp')`;
+                } else {
+                    box.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url('img/fotoportada.webp')`;
+                }
+            }
+
+            if (window.verificarCargaImagen) {
+                window.verificarCargaImagen(rawImagen, 'web-banner-imagen-status');
             }
         };
 
@@ -9959,7 +10067,12 @@ DATOS DEL REPUESTO:
 
                 let html = '';
                 items.forEach(item => {
-                    const imagen = SecuritySanitizer.escapeHtml(item.imagen || 'img/fotoportada.webp');
+                    const rawImg = item.imagen || 'img/fotoportada.webp';
+                    const driveId = window.obtenerGoogleDriveId ? window.obtenerGoogleDriveId(rawImg) : null;
+                    const imagen = SecuritySanitizer.escapeHtml(window.normalizarUrlImagen ? window.normalizarUrlImagen(rawImg) : rawImg);
+                    const fallbackImg = driveId
+                        ? `onerror="if(!this.dataset.fb){this.dataset.fb=1;this.src='https://drive.google.com/thumbnail?id=${driveId}&sz=w1920';}else{this.onerror=null;this.src='img/fotoportada.webp';}"`
+                        : `onerror="this.onerror=null; this.src='img/fotoportada.webp';"`;
                     const titulo = SecuritySanitizer.escapeHtml(item.titulo || '');
                     const subtitulo = SecuritySanitizer.escapeHtml(item.subtitulo || '');
                     const botonTexto = SecuritySanitizer.escapeHtml(item.botonTexto || 'VER PRODUCTOS');
@@ -9978,7 +10091,7 @@ DATOS DEL REPUESTO:
                             </td>
                             <td style="padding: 12px 10px;">
                                 <div style="width: 75px; height: 45px; border-radius: 4px; overflow: hidden; background: #334155; border: 1px solid #cbd5e1;">
-                                    <img src="${imagen}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='img/fotoportada.webp';">
+                                    <img src="${imagen}" style="width: 100%; height: 100%; object-fit: cover;" ${fallbackImg}>
                                 </div>
                             </td>
                             <td style="padding: 12px 10px;">
@@ -10042,7 +10155,8 @@ DATOS DEL REPUESTO:
             const subtitulo = (document.getElementById('web-banner-subtitulo')?.value || '').trim();
             const botonTexto = (document.getElementById('web-banner-boton-texto')?.value || '').trim() || 'VER PRODUCTOS';
             const botonLink = (document.getElementById('web-banner-boton-link')?.value || '').trim() || '#';
-            const imagen = (document.getElementById('web-banner-imagen')?.value || '').trim() || 'img/fotoportada.webp';
+            const rawImagen = (document.getElementById('web-banner-imagen')?.value || '').trim() || 'img/fotoportada.webp';
+            const imagen = window.normalizarUrlImagen ? window.normalizarUrlImagen(rawImagen) : rawImagen;
             const orden = parseInt(document.getElementById('web-banner-orden')?.value || '1', 10);
             const activo = document.getElementById('web-banner-activo')?.checked ?? true;
 

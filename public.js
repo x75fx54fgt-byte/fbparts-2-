@@ -69,6 +69,30 @@ function iniciarAnimacionHero(heroCarousel) {
 }
 
 /**
+ * Normaliza enlaces de imágenes compartidos (Google Drive, Dropbox, HTTPS)
+ */
+function normalizarUrlImagen(url) {
+    if (!url || typeof url !== 'string') return '';
+    let cleanUrl = url.trim();
+    const driveMatch = cleanUrl.match(/(?:drive\.google\.com\/file\/d\/|drive\.google\.com\/open\?id=|docs\.google\.com\/file\/d\/|[?&]id=|\/d\/)([a-zA-Z0-9_-]{20,})/);
+    if (driveMatch && driveMatch[1]) {
+        return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
+    }
+    if (cleanUrl.includes('dropbox.com')) {
+        if (cleanUrl.includes('?dl=0')) return cleanUrl.replace('?dl=0', '?raw=1');
+        if (cleanUrl.includes('&dl=0')) return cleanUrl.replace('&dl=0', '&raw=1');
+        if (!cleanUrl.includes('raw=1')) return cleanUrl + (cleanUrl.includes('?') ? '&raw=1' : '?raw=1');
+    }
+    return cleanUrl;
+}
+
+function obtenerGoogleDriveId(url) {
+    if (!url || typeof url !== 'string') return null;
+    const match = url.match(/(?:drive\.google\.com\/file\/d\/|drive\.google\.com\/open\?id=|docs\.google\.com\/file\/d\/|[?&]id=|\/d\/)([a-zA-Z0-9_-]{20,})/);
+    return match ? match[1] : null;
+}
+
+/**
  * Carga y renderiza los banners activos del carrusel principal desde Firestore (web_banners)
  */
 export async function cargarBannersHeroPublico() {
@@ -116,10 +140,19 @@ export async function cargarBannersHeroPublico() {
             const subtitulo = sanitizarTexto(b.subtitulo || '');
             const btnTexto = sanitizarTexto(b.botonTexto || 'VER PRODUCTOS');
             const btnLink = sanitizarTexto(b.botonLink || 'tienda.html');
-            const imagen = sanitizarTexto(b.imagen || 'img/fotoportada.webp');
+            const rawImg = b.imagen || 'img/fotoportada.webp';
+            const driveId = obtenerGoogleDriveId(rawImg);
+            const imagen = sanitizarTexto(normalizarUrlImagen(rawImg));
+
+            let bgStyle = '';
+            if (driveId) {
+                bgStyle = `background-image: linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.35)), url('https://lh3.googleusercontent.com/d/${driveId}'), url('https://drive.google.com/thumbnail?id=${driveId}&sz=w1920'), url('img/fotoportada.webp');`;
+            } else {
+                bgStyle = `background-image: linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.35)), url('${imagen}'), url('img/fotoportada.webp');`;
+            }
 
             slidesHtml += `
-                <div class="hero-slide${activoClass}" style="background-image: linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.35)), url('${imagen}');" role="img" aria-label="${titulo}">
+                <div class="hero-slide${activoClass}" style="${bgStyle}" role="img" aria-label="${titulo}">
                     <div class="hero-overlay">
                         <h2 style="margin: 0 0 10px 0; color: var(--title, #2c441b); font-size: 24px; font-weight: 700; letter-spacing: .08em; line-height: 1.1; font-family: 'Oswald', sans-serif;">
                             ${titulo}
@@ -224,11 +257,17 @@ export async function cargarDestacadosPublico() {
 
         items.forEach(item => {
             const nombre = sanitizarTexto(item.nombre || 'Repuesto Automotriz');
-            const imagen = sanitizarTexto(item.imagen || 'img/logo-fb-parts.png');
+            const rawImg = item.imagen || 'img/logo-fb-parts.png';
+            const driveId = obtenerGoogleDriveId(rawImg);
+            const imagen = sanitizarTexto(normalizarUrlImagen(rawImg));
             const precioRegular = Number(item.precioRegular) || 0;
             const precioOferta = (item.precioOferta !== null && item.precioOferta !== undefined && item.precioOferta !== '') 
                 ? Number(item.precioOferta) 
                 : null;
+
+            const fallbackAttr = driveId
+                ? `onerror="if(!this.dataset.fb){this.dataset.fb=1;this.src='https://drive.google.com/thumbnail?id=${driveId}&sz=w1920';}else{this.onerror=null;this.src='img/logo-fb-parts.png';}"`
+                : `onerror="this.onerror=null; this.src='img/logo-fb-parts.png';"`;
 
             // Generar slug para enlazar al producto
             const slug = sanitizarTexto(item.slug || nombre
@@ -279,7 +318,7 @@ export async function cargarDestacadosPublico() {
                     <div style="width: 100%; height: 190px; background: #ffffff; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 12px; box-sizing: border-box; border-bottom: 1px solid #f3f4f6;">
                         <img src="${imagen}" alt="Repuesto ${nombre} en Caracas" loading="lazy" decoding="async" 
                             style="width: 100%; height: 100%; object-fit: contain; transition: transform 0.3s ease;"
-                            onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
+                            ${fallbackAttr}>
                     </div>
                 </a>
                 <div style="padding: 14px 16px; display: flex; flex-direction: column; flex: 1;">
