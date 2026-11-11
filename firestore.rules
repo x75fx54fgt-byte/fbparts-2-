@@ -18,22 +18,26 @@ service cloud.firestore {
     // 3. web_destacados (Mini-CMS & Ofertas Black Friday):
     //    - nombre: string, precioRegular: number, precioOferta, mostrar_en_destacados: bool
     //
-    // 4. facturas:
+    // 4. web_banners (Mini-CMS Banners Promocionales y Carrusel Superior):
+    //    - titulo: string, subtitulo: string, urlImagen: string, urlBoton: string,
+    //      textoBoton: string, orden: number, activo: bool, fechaActualizacion: string, timestamp: number
+    //
+    // 5. facturas:
     //    - nro: string (required), total: number or string (required)
     //
-    // 5. pedidos / envios:
+    // 6. pedidos / envios:
     //    - Pedidos de compra web y logística de despacho
     //
-    // 6. rutas_puntos / choferes_gps:
+    // 7. rutas_puntos / choferes_gps:
     //    - Puntos de entrega y coordenadas GPS en tiempo real
     //
-    // 7. reventas_gastos / reventas:
+    // 8. reventas_gastos / reventas:
     //    - Control de reventas, intermediarios, comisiones y cierre mensual
     //
-    // 8. auditoria_logs:
+    // 9. auditoria_logs:
     //    - Bitácora de trazabilidad de acciones operativas y administrativas
     //
-    // 9. Gestión administrativa y financiera:
+    // 10. Gestión administrativa y financiera:
     //    - cotizaciones, cuentas_pagar, cxc_personal, importaciones, clientes,
     //      retenciones, administradores, usuarios, ai_copilot_sessions
     //
@@ -73,6 +77,13 @@ service cloud.firestore {
     // Mini-CMS: Repuestos Destacados y Ofertas Black Friday (Web pública)
     // Lectura pública para index.html / public.js; creación y edición restringidas a administradores
     match /web_destacados/{destacadoId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // Mini-CMS: Banners Promocionales y Carrusel Superior (Web pública)
+    // Lectura pública para la portada web; creación y edición restringidas a administradores
+    match /web_banners/{bannerId} {
       allow read: if true;
       allow write: if isAuthenticated();
     }

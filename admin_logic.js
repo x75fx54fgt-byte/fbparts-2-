@@ -295,7 +295,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
             if(id === 'reventas') { window.cargarHistorialReventas(); if(window.actualizarEstadoModoBsReventas) window.actualizarEstadoModoBsReventas(); }
             if(id === 'rutas') { setTimeout(() => { window.iniciarMapaAdmin(); window.cargarPuntosRuta(); window.cargarSelectorPedidosRuta(); }, 200); }
             if(id === 'brochure') { window.abrirModalBrochure(); }
-            if(id === 'web-destacados') { window.cargarWebDestacados(); }
+            if(id === 'web-destacados') { window.cargarWebBanners(); window.cargarWebDestacados(); }
         };
 
         // ==========================================
@@ -6596,7 +6596,10 @@ DATOS DEL REPUESTO:
             alert("✅ Cotización enviada a Pedidos con éxito.\nRevisa los datos, selecciona el Motorizado/Encomienda y haz clic en 'Registrar Pedido'.");
             
             // Hacer scroll hacia arriba para que el usuario vea el formulario
-            document.querySelector('.admin-container').scrollIntoView({ behavior: 'smooth' });
+            const elScroll = document.getElementById('tab-pedidos') || document.querySelector('main');
+            if (elScroll && typeof elScroll.scrollIntoView === 'function') {
+                elScroll.scrollIntoView({ behavior: 'smooth' });
+            }
         };
 
         // ==========================================
@@ -9818,6 +9821,408 @@ DATOS DEL REPUESTO:
                 alert("Error al eliminar: " + (err.message || err));
             }
         };
+
+
+        // =========================================================================
+        // 🖼️ MINI-CMS: GESTOR DE BANNERS DE PORTADA (CARRUSEL SUPERIOR EN INDEX.HTML)
+        // =========================================================================
+
+        window._webBannersCache = [];
+
+        const BANNERS_PREDETERMINADOS = [
+            {
+                titulo: "REPUESTOS Y AUTOPARTES ORIGINALES EN CARACAS",
+                subtitulo: "Especialistas en Toyota, Ford, Dongfeng, Mazda y Honda. Envíos Nacionales.",
+                botonTexto: "VER CATÁLOGO COMPLETO",
+                botonLink: "tienda.html",
+                imagen: "img/fotoportada.webp",
+                orden: 1,
+                activo: true
+            },
+            {
+                titulo: "ENVÍO RÁPIDO Y SEGURO",
+                subtitulo: "ATENCIÓN Y DESPACHO EFICIENTE A TODA VENEZUELA",
+                botonTexto: "CONTÁCTANOS",
+                botonLink: "#contacto",
+                imagen: "img/fotoportada2.webp",
+                orden: 2,
+                activo: true
+            },
+            {
+                titulo: "VARIEDAD DE REPUESTOS",
+                subtitulo: "MOTOR, FRENOS, CARROCERÍA Y MÁS",
+                botonTexto: "VER PRODUCTOS",
+                botonLink: "#mercadolibre",
+                imagen: "img/fotoportada3.webp",
+                orden: 3,
+                activo: true
+            }
+        ];
+
+        window.cambiarSubtabWeb = function(subtab) {
+            const btnBanners = document.getElementById('subtab-btn-banners');
+            const btnDestacados = document.getElementById('subtab-btn-destacados');
+            const contBanners = document.getElementById('subtab-content-banners');
+            const contDestacados = document.getElementById('subtab-content-destacados');
+
+            if (subtab === 'banners') {
+                if (btnBanners) { btnBanners.style.background = '#385723'; btnBanners.style.color = 'white'; }
+                if (btnDestacados) { btnDestacados.style.background = '#f3f4f6'; btnDestacados.style.color = '#4b5563'; }
+                if (contBanners) contBanners.style.display = 'block';
+                if (contDestacados) contDestacados.style.display = 'none';
+                window.cargarWebBanners();
+            } else {
+                if (btnBanners) { btnBanners.style.background = '#f3f4f6'; btnBanners.style.color = '#4b5563'; }
+                if (btnDestacados) { btnDestacados.style.background = '#385723'; btnDestacados.style.color = 'white'; }
+                if (contBanners) contBanners.style.display = 'none';
+                if (contDestacados) contDestacados.style.display = 'block';
+                window.cargarWebDestacados();
+            }
+        };
+
+        window.seleccionarPresetImagenBanner = function(url) {
+            const inp = document.getElementById('web-banner-imagen');
+            if (inp) {
+                inp.value = url;
+                window.actualizarVistaPreviaBannerLive();
+            }
+        };
+
+        window.actualizarVistaPreviaBannerLive = function() {
+            const box = document.getElementById('live-banner-preview-box');
+            const elTitulo = document.getElementById('prev-banner-titulo');
+            const elSub = document.getElementById('prev-banner-subtitulo');
+            const elBtn = document.getElementById('prev-banner-boton');
+
+            const titulo = (document.getElementById('web-banner-titulo')?.value || '').trim() || 'TÍTULO DEL BANNER';
+            const subtitulo = (document.getElementById('web-banner-subtitulo')?.value || '').trim() || 'Subtítulo o descripción del repuesto';
+            const btnTexto = (document.getElementById('web-banner-boton-texto')?.value || '').trim() || 'VER PRODUCTOS';
+            const imagen = (document.getElementById('web-banner-imagen')?.value || '').trim() || 'img/fotoportada.webp';
+
+            if (elTitulo) elTitulo.textContent = titulo;
+            if (elSub) elSub.textContent = subtitulo;
+            if (elBtn) elBtn.textContent = btnTexto;
+            if (box) {
+                box.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url('${imagen}')`;
+            }
+        };
+
+        window.cargarWebBanners = async function() {
+            const tbody = document.getElementById('tabla-web-banners-body');
+            const badgeConteo = document.getElementById('conteo-web-banners');
+            if (!tbody) return;
+
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 25px; color: #6b7280;">
+                        <i class="fas fa-spinner fa-spin text-lg" style="color: #385723;"></i>
+                        <div style="margin-top: 6px; font-weight: 500;">Cargando banners desde Firestore...</div>
+                    </td>
+                </tr>`;
+
+            try {
+                let snap = await getDocs(collection(db, "web_banners"));
+
+                // Si la colección está vacía en Firestore, auto-sembrar los 3 banners originales predeterminados
+                if (snap.empty) {
+                    console.log("Inicializando banners originales en Firestore...");
+                    for (const b of BANNERS_PREDETERMINADOS) {
+                        await addDoc(collection(db, "web_banners"), {
+                            ...b,
+                            timestamp: Date.now(),
+                            fechaActualizacion: new Date().toLocaleDateString('es-VE')
+                        });
+                    }
+                    snap = await getDocs(collection(db, "web_banners"));
+                }
+
+                const items = [];
+                snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+                items.sort((a, b) => (Number(a.orden) || 0) - (Number(b.orden) || 0));
+
+                window._webBannersCache = items;
+
+                const activos = items.filter(x => x.activo).length;
+                if (badgeConteo) {
+                    badgeConteo.textContent = `${items.length} total | ${activos} en carrusel`;
+                }
+
+                if (items.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 30px; color: #6b7280;">
+                                No hay banners registrados. Usa el formulario superior para añadir uno.
+                            </td>
+                        </tr>`;
+                    return;
+                }
+
+                let html = '';
+                items.forEach(item => {
+                    const imagen = SecuritySanitizer.escapeHtml(item.imagen || 'img/fotoportada.webp');
+                    const titulo = SecuritySanitizer.escapeHtml(item.titulo || '');
+                    const subtitulo = SecuritySanitizer.escapeHtml(item.subtitulo || '');
+                    const botonTexto = SecuritySanitizer.escapeHtml(item.botonTexto || 'VER PRODUCTOS');
+                    const botonLink = SecuritySanitizer.escapeHtml(item.botonLink || '#');
+                    const orden = Number(item.orden) || 1;
+                    const esActivo = Boolean(item.activo);
+
+                    const statusBadge = esActivo
+                        ? '<span style="background: #dcfce7; color: #166534; font-weight: 800; font-size: 11px; padding: 3px 8px; border-radius: 9999px; border: 1px solid #86efac; display: inline-flex; align-items: center; gap: 4px;"><i class="fas fa-check-circle"></i> Activo</span>'
+                        : '<span style="background: #f1f5f9; color: #64748b; font-weight: 700; font-size: 11px; padding: 3px 8px; border-radius: 9999px; border: 1px solid #cbd5e1; display: inline-flex; align-items: center; gap: 4px;"><i class="fas fa-eye-slash"></i> Oculto</span>';
+
+                    html += `
+                        <tr style="border-bottom: 1px solid #f3f4f6; transition: background 0.15s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">
+                            <td style="padding: 12px 10px; font-weight: 800; font-size: 14px; text-align: center; color: #1e293b;">
+                                ${orden}
+                            </td>
+                            <td style="padding: 12px 10px;">
+                                <div style="width: 75px; height: 45px; border-radius: 4px; overflow: hidden; background: #334155; border: 1px solid #cbd5e1;">
+                                    <img src="${imagen}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='img/fotoportada.webp';">
+                                </div>
+                            </td>
+                            <td style="padding: 12px 10px;">
+                                <div style="font-weight: 700; font-size: 13.5px; color: #1e293b; line-height: 1.25;">
+                                    ${titulo}
+                                </div>
+                                <div style="font-size: 11.5px; color: #64748b; margin-top: 3px; line-height: 1.25;">
+                                    ${subtitulo}
+                                </div>
+                            </td>
+                            <td style="padding: 12px 10px;">
+                                <span style="background: #f1f5f9; color: #334155; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; display: inline-block;">
+                                    ${botonTexto}
+                                </span>
+                                <div style="font-size: 10.5px; color: #94a3b8; font-family: monospace; margin-top: 2px;">
+                                    ${botonLink}
+                                </div>
+                            </td>
+                            <td style="padding: 12px 10px; text-align: center;">
+                                ${statusBadge}
+                            </td>
+                            <td style="padding: 12px 10px; text-align: center;">
+                                <div style="display: inline-flex; gap: 6px; align-items: center;">
+                                    <button type="button" onclick="toggleActivoWebBanner('${item.id}', ${!esActivo})" 
+                                        style="background: ${esActivo ? '#fef3c7' : '#dcfce7'}; color: ${esActivo ? '#92400e' : '#166534'}; border: 1px solid ${esActivo ? '#fcd34d' : '#86efac'}; padding: 6px 9px; border-radius: 5px; cursor: pointer; font-size: 12px;" 
+                                        title="${esActivo ? 'Ocultar del carrusel' : 'Mostrar en carrusel'}">
+                                        <i class="fas ${esActivo ? 'fa-eye-slash' : 'fa-eye'}"></i>
+                                    </button>
+                                    <button type="button" onclick="editarWebBanner('${item.id}')" 
+                                        style="background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; padding: 6px 9px; border-radius: 5px; cursor: pointer; font-size: 12px;" 
+                                        title="Editar contenido del banner">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" onclick="eliminarWebBanner('${item.id}')" 
+                                        style="background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; padding: 6px 9px; border-radius: 5px; cursor: pointer; font-size: 12px;" 
+                                        title="Eliminar banner">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>`;
+                });
+
+                tbody.innerHTML = html;
+
+            } catch (err) {
+                console.error("Error al cargar banners de Firestore:", err);
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 25px; color: #ef4444;">
+                            <i class="fas fa-exclamation-triangle"></i> Error al conectar con Firestore: ${SecuritySanitizer.escapeHtml(err.message || err)}
+                        </td>
+                    </tr>`;
+            }
+        };
+
+        window.guardarWebBanner = async function(e) {
+            e.preventDefault();
+            const id = (document.getElementById('web-banner-id')?.value || '').trim();
+            const titulo = (document.getElementById('web-banner-titulo')?.value || '').trim();
+            const subtitulo = (document.getElementById('web-banner-subtitulo')?.value || '').trim();
+            const botonTexto = (document.getElementById('web-banner-boton-texto')?.value || '').trim() || 'VER PRODUCTOS';
+            const botonLink = (document.getElementById('web-banner-boton-link')?.value || '').trim() || '#';
+            const imagen = (document.getElementById('web-banner-imagen')?.value || '').trim() || 'img/fotoportada.webp';
+            const orden = parseInt(document.getElementById('web-banner-orden')?.value || '1', 10);
+            const activo = document.getElementById('web-banner-activo')?.checked ?? true;
+
+            const btnSubmit = document.getElementById('btn-guardar-web-banner');
+            const btnTextoOriginal = document.getElementById('btn-guardar-web-banner-texto')?.innerText || 'Guardar Banner';
+
+            if (btnSubmit) {
+                btnSubmit.disabled = true;
+                btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+            }
+
+            const dataToSave = {
+                titulo,
+                subtitulo,
+                botonTexto,
+                botonLink,
+                imagen,
+                orden,
+                activo,
+                fechaActualizacion: new Date().toLocaleDateString('es-VE'),
+                timestamp: Date.now()
+            };
+
+            try {
+                if (id) {
+                    await updateDoc(doc(db, "web_banners", id), dataToSave);
+                } else {
+                    await addDoc(collection(db, "web_banners"), dataToSave);
+                }
+
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: id ? '¡Banner Actualizado!' : '¡Banner Publicado!',
+                        text: 'Los cambios se reflejarán de inmediato en el carrusel de la página de inicio.',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                } else {
+                    alert(id ? '¡Banner actualizado con éxito!' : '¡Banner guardado con éxito!');
+                }
+
+                window.cancelarEdicionWebBanner();
+                await window.cargarWebBanners();
+
+            } catch (err) {
+                console.error("Error al guardar banner en web_banners:", err);
+                alert("Error al guardar banner en Firestore: " + (err.message || err));
+            } finally {
+                if (btnSubmit) {
+                    btnSubmit.disabled = false;
+                    btnSubmit.innerHTML = `<i class="fas fa-save"></i> <span id="btn-guardar-web-banner-texto">${btnTextoOriginal}</span>`;
+                }
+            }
+        };
+
+        window.editarWebBanner = function(id) {
+            const item = (window._webBannersCache || []).find(x => x.id === id);
+            if (!item) return;
+
+            document.getElementById('web-banner-id').value = item.id;
+            document.getElementById('web-banner-titulo').value = item.titulo || '';
+            document.getElementById('web-banner-subtitulo').value = item.subtitulo || '';
+            document.getElementById('web-banner-boton-texto').value = item.botonTexto || '';
+            document.getElementById('web-banner-boton-link').value = item.botonLink || '';
+            document.getElementById('web-banner-imagen').value = item.imagen || '';
+            document.getElementById('web-banner-orden').value = item.orden || 1;
+            document.getElementById('web-banner-activo').checked = Boolean(item.activo);
+
+            const tituloEl = document.getElementById('titulo-form-web-banner');
+            if (tituloEl) tituloEl.innerHTML = `<i class="fas fa-edit" style="color: #d97706;"></i> Editando: ${SecuritySanitizer.escapeHtml(item.titulo || '')}`;
+
+            const badgeEdicion = document.getElementById('badge-modo-edicion-banner');
+            if (badgeEdicion) badgeEdicion.style.display = 'inline-block';
+
+            const btnCancelar = document.getElementById('btn-cancelar-web-banner');
+            if (btnCancelar) btnCancelar.style.display = 'inline-flex';
+
+            const btnTexto = document.getElementById('btn-guardar-web-banner-texto');
+            if (btnTexto) btnTexto.innerText = 'Actualizar Banner';
+
+            window.actualizarVistaPreviaBannerLive();
+            document.getElementById('tab-web-destacados')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        };
+
+        window.cancelarEdicionWebBanner = function() {
+            const idInput = document.getElementById('web-banner-id');
+            if (idInput) idInput.value = '';
+            document.getElementById('form-web-banners')?.reset();
+            
+            document.getElementById('web-banner-imagen').value = 'img/fotoportada.webp';
+            document.getElementById('web-banner-titulo').value = 'REPUESTOS Y AUTOPARTES ORIGINALES EN CARACAS';
+            document.getElementById('web-banner-subtitulo').value = 'Especialistas en Toyota, Ford, Dongfeng, Mazda y Honda. Envíos Nacionales.';
+            document.getElementById('web-banner-boton-texto').value = 'VER CATÁLOGO COMPLETO';
+            document.getElementById('web-banner-boton-link').value = 'tienda.html';
+            document.getElementById('web-banner-orden').value = '1';
+            document.getElementById('web-banner-activo').checked = true;
+
+            const tituloEl = document.getElementById('titulo-form-web-banner');
+            if (tituloEl) tituloEl.innerHTML = '<i class="fas fa-plus-circle"></i> Publicar / Editar Banner de Portada';
+
+            const badgeEdicion = document.getElementById('badge-modo-edicion-banner');
+            if (badgeEdicion) badgeEdicion.style.display = 'none';
+
+            const btnCancelar = document.getElementById('btn-cancelar-web-banner');
+            if (btnCancelar) btnCancelar.style.display = 'none';
+
+            const btnTexto = document.getElementById('btn-guardar-web-banner-texto');
+            if (btnTexto) btnTexto.innerText = 'Guardar Banner';
+
+            window.actualizarVistaPreviaBannerLive();
+        };
+
+        window.toggleActivoWebBanner = async function(id, nuevoEstado) {
+            try {
+                await updateDoc(doc(db, "web_banners", id), {
+                    activo: Boolean(nuevoEstado),
+                    timestamp: Date.now()
+                });
+
+                if (typeof Swal !== 'undefined') {
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
+                    Toast.fire({
+                        icon: nuevoEstado ? 'success' : 'info',
+                        title: nuevoEstado ? 'Banner visible en el carrusel' : 'Banner ocultado del carrusel'
+                    });
+                }
+                await window.cargarWebBanners();
+            } catch (err) {
+                console.error("Error al actualizar estatus de banner:", err);
+                alert("Error al actualizar: " + (err.message || err));
+            }
+        };
+
+        window.eliminarWebBanner = async function(id) {
+            let confirmar = false;
+            if (typeof Swal !== 'undefined') {
+                const res = await Swal.fire({
+                    title: '¿Eliminar este banner?',
+                    text: 'Esta acción borrará el banner del carrusel de inicio.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Sí, eliminar',
+                    cancelButtonText: 'Cancelar'
+                });
+                confirmar = res.isConfirmed;
+            } else {
+                confirmar = confirm('¿Estás seguro de que deseas eliminar este banner del carrusel?');
+            }
+
+            if (!confirmar) return;
+
+            try {
+                await deleteDoc(doc(db, "web_banners", id));
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Eliminado',
+                        text: 'El banner ha sido eliminado del carrusel.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                }
+                if (document.getElementById('web-banner-id')?.value === id) {
+                    window.cancelarEdicionWebBanner();
+                }
+                await window.cargarWebBanners();
+            } catch (err) {
+                console.error("Error al eliminar de web_banners:", err);
+                alert("Error al eliminar: " + (err.message || err));
+            }
+        };
+
 
 window.moduleLoaded = true;
 console.log('Modulo admin_logic cargado exitosamente.');

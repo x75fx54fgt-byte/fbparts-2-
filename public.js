@@ -1,3 +1,151 @@
+
+/**
+ * Inicia o reinicia el carrusel animado de la portada pública
+ */
+let heroTimer = null;
+function iniciarAnimacionHero(heroCarousel) {
+    if (!heroCarousel) return;
+    const heroSlides = heroCarousel.querySelectorAll('.hero-slide');
+    const heroDots = heroCarousel.querySelectorAll('.hero-dots span');
+    const heroPrev = heroCarousel.querySelector('.arrow.left');
+    const heroNext = heroCarousel.querySelector('.arrow.right');
+
+    if (heroSlides.length === 0) return;
+
+    let heroIndex = 0;
+
+    function updateHero() {
+        heroSlides.forEach((slide, i) => slide.classList.toggle('active', i === heroIndex));
+        heroDots.forEach((dot, i) => dot.classList.toggle('active', i === heroIndex));
+    }
+
+    function heroNextSlide() {
+        heroIndex = (heroIndex + 1) % heroSlides.length;
+        updateHero();
+    }
+
+    function heroPrevSlide() {
+        heroIndex = (heroIndex - 1 + heroSlides.length) % heroSlides.length;
+        updateHero();
+    }
+
+    function startHeroAutoplay() {
+        if (heroTimer) clearInterval(heroTimer);
+        heroTimer = setInterval(heroNextSlide, 4500);
+    }
+
+    // Reemplazar listeners viejos clonando los botones de flechas
+    if (heroNext) {
+        const newNext = heroNext.cloneNode(true);
+        heroNext.parentNode.replaceChild(newNext, heroNext);
+        newNext.addEventListener('click', (e) => {
+            e.preventDefault();
+            heroNextSlide();
+            startHeroAutoplay();
+        });
+    }
+
+    if (heroPrev) {
+        const newPrev = heroPrev.cloneNode(true);
+        heroPrev.parentNode.replaceChild(newPrev, heroPrev);
+        newPrev.addEventListener('click', (e) => {
+            e.preventDefault();
+            heroPrevSlide();
+            startHeroAutoplay();
+        });
+    }
+
+    heroDots.forEach((dot, idx) => {
+        dot.style.cursor = 'pointer';
+        dot.onclick = () => {
+            heroIndex = idx;
+            updateHero();
+            startHeroAutoplay();
+        };
+    });
+
+    updateHero();
+    startHeroAutoplay();
+}
+
+/**
+ * Carga y renderiza los banners activos del carrusel principal desde Firestore (web_banners)
+ */
+export async function cargarBannersHeroPublico() {
+    const heroCarousel = document.getElementById('heroCarousel');
+    if (!heroCarousel) return;
+
+    const track = heroCarousel.querySelector('.hero-track');
+    const dotsContainer = heroCarousel.querySelector('.hero-dots');
+    if (!track) return;
+
+    try {
+        let snap;
+        try {
+            const q = query(
+                collection(db, "web_banners"),
+                where("activo", "==", true),
+                orderBy("orden", "asc")
+            );
+            snap = await getDocs(q);
+        } catch (e) {
+            const qSimple = query(
+                collection(db, "web_banners"),
+                where("activo", "==", true)
+            );
+            snap = await getDocs(qSimple);
+        }
+
+        if (!snap || snap.empty) {
+            // Mantiene los banners estáticos originales si Firestore aún no tiene ninguno
+            return;
+        }
+
+        const banners = [];
+        snap.forEach(d => banners.push({ id: d.id, ...d.data() }));
+        banners.sort((a, b) => (Number(a.orden) || 0) - (Number(b.orden) || 0));
+
+        if (banners.length === 0) return;
+
+        let slidesHtml = '';
+        let dotsHtml = '';
+
+        banners.forEach((b, idx) => {
+            const activoClass = idx === 0 ? ' active' : '';
+            const titulo = sanitizarTexto(b.titulo || 'F&B PARTS');
+            const subtitulo = sanitizarTexto(b.subtitulo || '');
+            const btnTexto = sanitizarTexto(b.botonTexto || 'VER PRODUCTOS');
+            const btnLink = sanitizarTexto(b.botonLink || 'tienda.html');
+            const imagen = sanitizarTexto(b.imagen || 'img/fotoportada.webp');
+
+            slidesHtml += `
+                <div class="hero-slide${activoClass}" style="background-image: linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.35)), url('${imagen}');" role="img" aria-label="${titulo}">
+                    <div class="hero-overlay">
+                        <h2 style="margin: 0 0 10px 0; color: var(--title, #2c441b); font-size: 24px; font-weight: 700; letter-spacing: .08em; line-height: 1.1; font-family: 'Oswald', sans-serif;">
+                            ${titulo}
+                        </h2>
+                        <div class="sub" style="margin: 8px 0 24px; color: var(--title, #333); font-family: 'Oswald', sans-serif; font-size: 18px; font-weight: 400; letter-spacing: .04em; line-height: 1.2;">
+                            ${subtitulo}
+                        </div>
+                        <a class="cta" href="${btnLink}">${btnTexto}</a>
+                    </div>
+                </div>
+            `;
+
+            dotsHtml += `<span class="${idx === 0 ? 'active' : ''}"></span>`;
+        });
+
+        track.innerHTML = slidesHtml;
+        if (dotsContainer) dotsContainer.innerHTML = dotsHtml;
+
+        iniciarAnimacionHero(heroCarousel);
+
+    } catch (err) {
+        console.warn("No se pudieron cargar banners dinámicos, conservando los originales:", err);
+    }
+}
+
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, getDocs, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -167,7 +315,11 @@ export async function cargarDestacadosPublico() {
 
 // Ejecución automática al cargar el documento
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', cargarDestacadosPublico);
+    document.addEventListener('DOMContentLoaded', () => {
+        cargarDestacadosPublico();
+        cargarBannersHeroPublico();
+    });
 } else {
     cargarDestacadosPublico();
+    cargarBannersHeroPublico();
 }
