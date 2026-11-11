@@ -13209,6 +13209,29 @@ window.cargarHistorialFacturas = async function() {
                     }
                 }
 
+                // Sincronizar en segundo plano con la colección 'productos' de Firestore
+                try {
+                    const qProd = query(collection(db, "productos"), where("nombre", "==", nombre));
+                    const snapProd = await getDocs(qProd);
+                    if (!snapProd.empty) {
+                        const syncUpdates = [];
+                        snapProd.forEach(pDoc => {
+                            syncUpdates.push(updateDoc(doc(db, "productos", pDoc.id), {
+                                precioOferta: precioOferta,
+                                precioRegular: precioRegular,
+                                fechaOfertaActualizada: fechaStr
+                            }));
+                            if (window.productosDBLocal && window.productosDBLocal[pDoc.id]) {
+                                window.productosDBLocal[pDoc.id].precioOferta = precioOferta;
+                                window.productosDBLocal[pDoc.id].precioRegular = precioRegular;
+                            }
+                        });
+                        await Promise.all(syncUpdates);
+                    }
+                } catch (syncErr) {
+                    console.warn("Aviso: Sincronización secundaria con colección productos:", syncErr);
+                }
+
                 window.cancelarEdicionWebDestacado();
                 await window.cargarWebDestacados();
 

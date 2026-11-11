@@ -562,6 +562,51 @@
                 if(document.getElementById('og-image')) document.getElementById('og-image').setAttribute("content", prod.imagen);
                 if(document.getElementById('og-url')) document.getElementById('og-url').setAttribute("content", window.location.href);
 
+                // 🏷️ CÁLCULO DE DESCUENTO / OFERTA BLACK FRIDAY
+                const precioRegularProd = Number(prod.precioRegular || prod.precio || 0);
+                let precioOfertaProd = (prod.precioOferta !== null && prod.precioOferta !== undefined && prod.precioOferta !== '')
+                    ? Number(prod.precioOferta)
+                    : null;
+
+                // Si no viene en el doc de producto, buscar en caché local de ofertas de web_destacados
+                if (precioOfertaProd === null) {
+                    try {
+                        const cacheRaw = localStorage.getItem('ofertasCatalogo');
+                        if (cacheRaw) {
+                            const parsed = JSON.parse(cacheRaw);
+                            const mapa = parsed.mapa || parsed;
+                            const normKey = (prod.nombre || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "").trim();
+                            if (mapa && mapa[normKey] && mapa[normKey].precioOferta) {
+                                precioOfertaProd = Number(mapa[normKey].precioOferta);
+                            }
+                        }
+                    } catch(e) {}
+                }
+
+                const tieneOferta = precioOfertaProd !== null && precioOfertaProd > 0 && precioOfertaProd < precioRegularProd;
+                const precioFinal = tieneOferta ? precioOfertaProd : precioRegularProd;
+                const pctAhorro = tieneOferta ? Math.round((1 - (precioFinal / precioRegularProd)) * 100) : 0;
+
+                const badgeOfertaProdHTML = tieneOferta ? `
+                    <div style="display: inline-flex; align-items: center; gap: 6px; margin: 8px 0 14px 0;">
+                        <span style="background: linear-gradient(135deg, #e63946 0%, #b7094c 100%); color: white; font-size: 11.5px; font-weight: 800; padding: 4px 10px; border-radius: 4px; box-shadow: 0 3px 8px rgba(230,57,70,0.45); text-transform: uppercase; font-family: 'Oswald', sans-serif; letter-spacing: 0.6px; display: inline-flex; align-items: center; gap: 5px;">
+                            <i class="fas fa-fire"></i> BLACK FRIDAY
+                        </span>
+                        <span style="background: #1f2937; color: #fde047; font-size: 11.5px; font-weight: 800; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px;">
+                            -${pctAhorro}% OFF
+                        </span>
+                    </div>
+                ` : '';
+
+                const precioProdHTML = tieneOferta ? `
+                    <div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
+                        <span style="text-decoration: line-through; color: #ef4444; font-size: 18px; font-weight: 600;">$${precioRegularProd.toFixed(2)}</span>
+                        <span style="font-size: 32px; color: #2c441b; font-weight: 800; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px;">$${precioFinal.toFixed(2)}</span>
+                    </div>
+                ` : `
+                    <div class="product-price">$${precioRegularProd.toFixed(2)}</div>
+                `;
+
                 const productSchema = {
                     "@context": "https://schema.org/",
                     "@type": "Product",
@@ -575,7 +620,7 @@
                         "@type": "Offer",
                         "url": window.location.href,
                         "priceCurrency": "USD",
-                        "price": Number(prod.precio).toFixed(2),
+                        "price": Number(precioFinal).toFixed(2),
                         "availability": (prod.stock > 0) ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
                         "seller": { "@type": "Organization", "name": "Inversiones FB Parts, C.A." }
                     }
@@ -701,9 +746,10 @@
                     <div class="product-details">
                         <span style="font-size: 12px; color: #888; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">${catSubtitle}</span>
                         <h1>${prod.nombre}</h1>
+                        ${badgeOfertaProdHTML}
                         ${badgesHTML}
                         ${selectorPosicion}
-                        <div class="product-price">$${Number(prod.precio).toFixed(2)}</div>
+                        ${precioProdHTML}
                         
                         <div class="product-meta">
                             <p style="margin: 5px 0;"><strong>Disponibilidad de stock:</strong> ${stockTxt}</p>
@@ -713,7 +759,7 @@
                         </div>
 
                         <div>
-                            <button type="button" class="btn-add-cart-large" onclick="agregarAlCarrito('${activeId}', '${safeName}', ${prod.precio})">
+                            <button type="button" class="btn-add-cart-large" onclick="agregarAlCarrito('${activeId}', '${safeName}', ${precioFinal})">
                                 <i class="fas fa-cart-plus"></i> Añadir al Pedido
                             </button>
                             ${botonML}

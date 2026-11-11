@@ -9521,6 +9521,38 @@ DATOS DEL REPUESTO:
                 .replace(/^-+|-+$/g, '');
         };
 
+        /**
+         * Sincroniza ofertas de web_destacados hacia la colección de productos en Firestore
+         */
+        window.sincronizarOfertasConProductos = async function(items) {
+            if (!items || !Array.isArray(items) || items.length === 0) return;
+            try {
+                const prods = window.productosDBLocal || {};
+                const prodsArray = Object.values(prods);
+                if (prodsArray.length === 0) return;
+
+                const norm = (str) => (str || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "").trim();
+
+                for (const item of items) {
+                    if (!item.nombre || !item.precioOferta) continue;
+                    const keyItem = norm(item.nombre);
+                    const coincidente = prodsArray.find(p => norm(p.nombre) === keyItem);
+
+                    if (coincidente && (!coincidente.precioOferta || Number(coincidente.precioOferta) !== Number(item.precioOferta))) {
+                        await updateDoc(doc(db, "productos", coincidente.id), {
+                            precioOferta: item.precioOferta,
+                            precioRegular: item.precioRegular || coincidente.precio || 0,
+                            fechaOfertaActualizada: new Date().toLocaleDateString('es-VE')
+                        }).catch(e => console.warn("Aviso en sync producto:", e));
+                        coincidente.precioOferta = item.precioOferta;
+                        coincidente.precioRegular = item.precioRegular || coincidente.precio;
+                    }
+                }
+            } catch (e) {
+                console.warn("Aviso en sincronizarOfertasConProductos:", e);
+            }
+        };
+
         window.cargarWebDestacados = async function() {
             const tbody = document.getElementById('tabla-web-destacados-body');
             const badgeConteo = document.getElementById('conteo-web-destacados');
@@ -9556,6 +9588,9 @@ DATOS DEL REPUESTO:
 
                 // Renderizar cuadrícula de portada en el panel admin
                 window.renderizarCuadriculaPreviewAdmin(items);
+
+                // Sincronizar automáticamente ofertas existentes con la colección de productos
+                window.sincronizarOfertasConProductos(items);
 
                 if (items.length === 0) {
                     tbody.innerHTML = `
@@ -9767,6 +9802,29 @@ DATOS DEL REPUESTO:
                     }
                 }
 
+                // Sincronizar en segundo plano con la colección 'productos' de Firestore
+                try {
+                    const qProd = query(collection(db, "productos"), where("nombre", "==", nombre));
+                    const snapProd = await getDocs(qProd);
+                    if (!snapProd.empty) {
+                        const syncUpdates = [];
+                        snapProd.forEach(pDoc => {
+                            syncUpdates.push(updateDoc(doc(db, "productos", pDoc.id), {
+                                precioOferta: precioOferta,
+                                precioRegular: precioRegular,
+                                fechaOfertaActualizada: fechaStr
+                            }));
+                            if (window.productosDBLocal && window.productosDBLocal[pDoc.id]) {
+                                window.productosDBLocal[pDoc.id].precioOferta = precioOferta;
+                                window.productosDBLocal[pDoc.id].precioRegular = precioRegular;
+                            }
+                        });
+                        await Promise.all(syncUpdates);
+                    }
+                } catch (syncErr) {
+                    console.warn("Aviso: Sincronización secundaria con colección productos:", syncErr);
+                }
+
                 window.cancelarEdicionWebDestacado();
                 await window.cargarWebDestacados();
 
@@ -9898,7 +9956,22 @@ DATOS DEL REPUESTO:
             if (!confirmar) return;
 
             try {
+                const itemABorrar = window._webDestacadosCache ? window._webDestacadosCache.find(x => x.id === id) : null;
                 await deleteDoc(doc(db, "web_destacados", id));
+
+                // Limpiar precioOferta en colección productos si aplica
+                if (itemABorrar && itemABorrar.nombre) {
+                    try {
+                        const qProd = query(collection(db, "productos"), where("nombre", "==", itemABorrar.nombre));
+                        const snapProd = await getDocs(qProd);
+                        snapProd.forEach(pDoc => {
+                            updateDoc(doc(db, "productos", pDoc.id), {
+                                precioOferta: null
+                            }).catch(() => {});
+                        });
+                    } catch (e) {}
+                }
+
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({
                         icon: 'success',
