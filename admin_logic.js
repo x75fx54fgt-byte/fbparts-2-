@@ -295,6 +295,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
             if(id === 'reventas') { window.cargarHistorialReventas(); if(window.actualizarEstadoModoBsReventas) window.actualizarEstadoModoBsReventas(); }
             if(id === 'rutas') { setTimeout(() => { window.iniciarMapaAdmin(); window.cargarPuntosRuta(); window.cargarSelectorPedidosRuta(); }, 200); }
             if(id === 'brochure') { window.abrirModalBrochure(); }
+            if(id === 'web-destacados') { window.cargarWebDestacados(); }
         };
 
         // ==========================================
@@ -1027,6 +1028,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 
                     let badgeClass = 'badge-status-activo';
                     if(ped.estado === 'Pendiente' || ped.estado === 'Procesando') badgeClass = 'badge-status-inactivo';
+                    if(ped.estado === 'Procesado en Reventa') badgeClass = 'badge-status-reventa';
 
                     let productosStr = '';
                     if(ped.productos && Array.isArray(ped.productos)) {
@@ -1068,6 +1070,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                                 <button type="button" onclick="enviarPedidoAFacturacion('${docId}')" style="background:#28a745; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="Facturar / Nota de Entrega"><i class="fas fa-file-invoice"></i></button>
                                 <button type="button" onclick="imprimirEtiquetaEnvio('${docId}')" style="background:#333; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="Imprimir Etiqueta (58mm)"><i class="fas fa-print"></i></button>
                                 <button type="button" onclick="abrirModalCambioDev('${docId}')" style="background:#e67e22; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="Generar Cambio / Devolución"><i class="fas fa-exchange-alt"></i></button>
+                                <button type="button" onclick="abrirModalMigrarReventa('${docId}')" style="background:#2c441b; color:#ffd700; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="💰 Migrar a Reventa / Desglose de Ganancias"><i class="fas fa-coins"></i></button>
                             </td>
                         </tr>
                     `;
@@ -8472,6 +8475,429 @@ DATOS DEL REPUESTO:
             }
         };
 
+        // =========================================================================
+        // 💰 PUENTE DE DATOS: MIGRACIÓN DE PEDIDOS A CONTROL DE REVENTAS
+        // =========================================================================
+
+        window.abrirModalMigrarReventa = async function(docId) {
+            let ped = (window.pedidosDBLocal && window.pedidosDBLocal[docId]) || 
+                      (window._pedidosTodosCache && window._pedidosTodosCache.find(p => p.id === docId));
+            
+            if (!ped) {
+                try {
+                    const snap = await getDoc(doc(db, "pedidos", docId));
+                    if (snap.exists()) {
+                        ped = { id: snap.id, ...snap.data() };
+                        if (!window.pedidosDBLocal) window.pedidosDBLocal = {};
+                        window.pedidosDBLocal[docId] = ped;
+                    }
+                } catch(e) {
+                    console.error("Error al buscar pedido para migración:", e);
+                }
+            }
+
+            if (!ped) {
+                alert("⚠️ No se encontró la información del pedido seleccionado.");
+                return;
+            }
+
+            // Determinar correlativo / número de orden
+            let numOrden = '';
+            if (window._pedidosTodosCache && Array.isArray(window._pedidosTodosCache)) {
+                const idx = window._pedidosTodosCache.findIndex(p => p.id === docId);
+                if (idx !== -1) numOrden = (idx + 1).toString();
+            }
+            if (!numOrden) numOrden = docId.substring(0, 6).toUpperCase();
+
+            // Configurar cabecera
+            const elId = document.getElementById('migrar-pedido-id');
+            const elNum = document.getElementById('migrar-num-orden');
+            const elTxtNum = document.getElementById('migrar-pedido-numero');
+            const elTxtCli = document.getElementById('migrar-pedido-cliente');
+            const elTxtFec = document.getElementById('migrar-pedido-fecha');
+            const elTxtTot = document.getElementById('migrar-pedido-total');
+
+            if (elId) elId.value = docId;
+            if (elNum) elNum.value = numOrden;
+            if (elTxtNum) elTxtNum.textContent = '#' + numOrden;
+            if (elTxtCli) elTxtCli.textContent = ped.cliente || 'Cliente General';
+            if (elTxtFec) elTxtFec.textContent = ped.fecha || new Date().toLocaleDateString('es-VE');
+            if (elTxtTot) elTxtTot.textContent = '$' + Number(ped.total || 0).toFixed(2);
+
+            // Resetear inputs globales de intermediario
+            const elGlobalInterm = document.getElementById('migrar-global-intermediario');
+            const elGlobalPct = document.getElementById('migrar-global-porcentaje');
+            if (elGlobalInterm) elGlobalInterm.value = '';
+            if (elGlobalPct) elGlobalPct.value = '';
+
+            // Extraer lista de productos
+            let productos = [];
+            if (ped.productos && Array.isArray(ped.productos) && ped.productos.length > 0) {
+                productos = ped.productos;
+            } else if (ped.producto) {
+                productos = [{
+                    nombre: ped.producto,
+                    cantidad: ped.cantidad || 1,
+                    precio: ped.total || 0
+                }];
+            }
+
+            const tbody = document.getElementById('migrar-items-tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            if (productos.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #dc2626; padding: 20px;">Este pedido no tiene repuestos asociados para migrar.</td></tr>';
+                const modal = document.getElementById('modal-migrar-reventas');
+                if (modal) modal.style.display = 'flex';
+                return;
+            }
+
+            const totalGeneral = parseFloat(ped.total) || 0;
+            const tienePrecios = productos.some(p => parseFloat(p.precio) > 0);
+
+            productos.forEach((p, index) => {
+                const cant = parseInt(p.cantidad) || 1;
+                const nombreLimpio = (p.nombre || p.descripcion || p.producto || `Repuesto #${index + 1}`).trim();
+                const descTexto = `${cant}x ${nombreLimpio}`;
+
+                let ventaLinea = 0;
+                if (parseFloat(p.precio) > 0) {
+                    ventaLinea = Math.round((parseFloat(p.precio) * cant) * 100) / 100;
+                } else if (!tienePrecios && totalGeneral > 0) {
+                    ventaLinea = Math.round((totalGeneral / productos.length) * 100) / 100;
+                }
+
+                const tr = document.createElement('tr');
+                tr.className = 'migrar-reventa-row';
+                tr.style.borderBottom = '1px solid #e2e8f0';
+                tr.innerHTML = `
+                    <td style="padding: 10px 12px; vertical-align: middle;">
+                        <input type="text" class="migrar-item-desc" value="${descTexto}" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12.5px; font-weight: 600; color: #1e293b; background: #fff; box-sizing: border-box;">
+                        <input type="hidden" class="migrar-item-nombre-interm" value="">
+                        <div style="font-size: 11px; color: #64748b; margin-top: 3px; display: flex; align-items: center; justify-content: space-between;">
+                            <span>Cant: <strong>${cant}</strong> | Original: ${p.nombre || ''}</span>
+                            <button type="button" onclick="window.eliminarFilaMigrarReventa(this)" style="background: none; border: none; color: #ef4444; font-size: 11px; cursor: pointer; padding: 0; text-decoration: underline;" title="Quitar este repuesto de la migración">Excluir</button>
+                        </div>
+                    </td>
+                    <td style="padding: 10px 8px; vertical-align: middle;">
+                        <input type="number" step="0.01" min="0" class="migrar-item-venta" value="${ventaLinea.toFixed(2)}" oninput="window.calcularFilaMigrarReventa(this)" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; font-weight: bold; text-align: right; color: #047857; background: #f0fdf4; box-sizing: border-box;">
+                    </td>
+                    <td style="padding: 10px 8px; vertical-align: middle;">
+                        <input type="number" step="0.01" min="0" class="migrar-item-costo" value="0.00" placeholder="0.00" oninput="window.calcularFilaMigrarReventa(this)" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; text-align: right; color: #1e293b; background: #fff; box-sizing: border-box;">
+                    </td>
+                    <td style="padding: 10px 8px; vertical-align: middle;">
+                        <input type="number" step="0.01" min="0" class="migrar-item-gastos" value="0.00" placeholder="0.00" oninput="window.calcularFilaMigrarReventa(this)" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; text-align: right; color: #1e293b; background: #fff; box-sizing: border-box;">
+                    </td>
+                    <td style="padding: 10px 8px; vertical-align: middle;">
+                        <input type="number" step="0.1" min="0" max="100" class="migrar-item-porcentaje" value="0" placeholder="0" oninput="window.calcularFilaMigrarReventa(this)" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; text-align: right; color: #1e293b; background: #fff; box-sizing: border-box;">
+                    </td>
+                    <td style="padding: 10px 12px; vertical-align: middle; text-align: right;">
+                        <div class="migrar-item-neta" style="line-height: 1.2;">
+                            <span class="neta-usd" style="font-size: 14px; font-weight: bold; color: #385723;">$0.00</span>
+                            <br><span class="neta-ves" style="font-size: 10px; color: #64748b;">Bs. 0.00</span>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+
+                const dummyInput = tr.querySelector('.migrar-item-venta');
+                window.calcularFilaMigrarReventa(dummyInput);
+            });
+
+            window.calcularTotalesModalMigrar();
+            const modal = document.getElementById('modal-migrar-reventas');
+            if (modal) modal.style.display = 'flex';
+        };
+
+        window.cerrarModalMigrarReventa = function() {
+            const modal = document.getElementById('modal-migrar-reventas');
+            if (modal) modal.style.display = 'none';
+        };
+
+        window.eliminarFilaMigrarReventa = function(btn) {
+            const row = btn.closest('.migrar-reventa-row');
+            if (!row) return;
+            const tbody = row.parentElement;
+            row.remove();
+            if (tbody.querySelectorAll('.migrar-reventa-row').length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #64748b; padding: 20px;">Todos los ítems fueron excluidos de la migración.</td></tr>';
+            }
+            window.calcularTotalesModalMigrar();
+        };
+
+        window.aplicarIntermediarioGlobal = function() {
+            const globalInterm = (document.getElementById('migrar-global-intermediario')?.value || '').trim();
+            const globalPctRaw = parseFloat(document.getElementById('migrar-global-porcentaje')?.value);
+            const globalPct = isNaN(globalPctRaw) ? 0 : Math.max(0, Math.min(100, Math.round(globalPctRaw * 10) / 10));
+
+            const rows = document.querySelectorAll('#migrar-items-tbody tr.migrar-reventa-row');
+            rows.forEach(row => {
+                const inputPct = row.querySelector('.migrar-item-porcentaje');
+                const hiddenInterm = row.querySelector('.migrar-item-nombre-interm');
+                if (inputPct) inputPct.value = globalPct;
+                if (hiddenInterm) hiddenInterm.value = globalInterm;
+                window.calcularFilaMigrarReventa(inputPct);
+            });
+        };
+
+        window.calcularFilaMigrarReventa = function(inputEl) {
+            if (!inputEl) return;
+            const row = inputEl.closest('.migrar-reventa-row');
+            if (!row) return;
+
+            const ventaRaw = parseFloat(row.querySelector('.migrar-item-venta')?.value) || 0;
+            const costoRaw = parseFloat(row.querySelector('.migrar-item-costo')?.value) || 0;
+            const gastosRaw = parseFloat(row.querySelector('.migrar-item-gastos')?.value) || 0;
+            const pctRaw = parseFloat(row.querySelector('.migrar-item-porcentaje')?.value) || 0;
+
+            const venta = Math.round(Math.max(0, ventaRaw) * 100) / 100;
+            const costo = Math.round(Math.max(0, costoRaw) * 100) / 100;
+            const gastos = Math.round(Math.max(0, gastosRaw) * 100) / 100;
+            const pct = Math.round(Math.max(0, Math.min(100, pctRaw)) * 100) / 100;
+
+            // Ganancia Bruta = Precio Venta - Costo - Gastos
+            const gananciaBruta = Math.round((venta - costo - gastos) * 100) / 100;
+            // Comisión Intermediario = (Ganancia Bruta > 0) ? Ganancia Bruta * % Intermediario : 0
+            const comisionTercero = (gananciaBruta > 0 && pct > 0) ? Math.round((gananciaBruta * (pct / 100)) * 100) / 100 : 0;
+            // Ganancia Neta Empresa = (Precio Venta - Costo - Gastos) - Comisión Intermediario
+            const gananciaNeta = Math.round((gananciaBruta - comisionTercero) * 100) / 100;
+
+            const tasaBCV = (window.obtenerTasaBCVActual && window.obtenerTasaBCVActual()) || window.tasaReventaBCV || 42.00;
+            const netaVES = Math.round((gananciaNeta * tasaBCV) * 100) / 100;
+
+            const elNeta = row.querySelector('.migrar-item-neta');
+            if (elNeta) {
+                const color = gananciaNeta >= 0 ? '#385723' : '#dc2626';
+                elNeta.innerHTML = `
+                    <span class="neta-usd" style="font-size: 14px; font-weight: bold; color: ${color};">$${gananciaNeta.toFixed(2)}</span>
+                    <br><span class="neta-ves" style="font-size: 10px; color: #64748b;">Bs. ${netaVES.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                    ${comisionTercero > 0 ? `<br><span style="font-size: 9.5px; color: #d9534f; font-weight: 600;">Comis: $${comisionTercero.toFixed(2)}</span>` : ''}
+                `;
+            }
+
+            window.calcularTotalesModalMigrar();
+        };
+
+        window.calcularTotalesModalMigrar = function() {
+            const rows = document.querySelectorAll('#migrar-items-tbody tr.migrar-reventa-row');
+            let totVenta = 0, totCosto = 0, totGastos = 0, totComision = 0, totNeta = 0;
+
+            rows.forEach(row => {
+                const ventaRaw = parseFloat(row.querySelector('.migrar-item-venta')?.value) || 0;
+                const costoRaw = parseFloat(row.querySelector('.migrar-item-costo')?.value) || 0;
+                const gastosRaw = parseFloat(row.querySelector('.migrar-item-gastos')?.value) || 0;
+                const pctRaw = parseFloat(row.querySelector('.migrar-item-porcentaje')?.value) || 0;
+
+                const venta = Math.round(Math.max(0, ventaRaw) * 100) / 100;
+                const costo = Math.round(Math.max(0, costoRaw) * 100) / 100;
+                const gastos = Math.round(Math.max(0, gastosRaw) * 100) / 100;
+                const pct = Math.round(Math.max(0, Math.min(100, pctRaw)) * 100) / 100;
+
+                const bruta = Math.round((venta - costo - gastos) * 100) / 100;
+                const comision = (bruta > 0 && pct > 0) ? Math.round((bruta * (pct / 100)) * 100) / 100 : 0;
+                const neta = Math.round((bruta - comision) * 100) / 100;
+
+                totVenta += venta;
+                totCosto += costo;
+                totGastos += gastos;
+                totComision += comision;
+                totNeta += neta;
+            });
+
+            totVenta = Math.round(totVenta * 100) / 100;
+            totCosto = Math.round(totCosto * 100) / 100;
+            totGastos = Math.round(totGastos * 100) / 100;
+            totComision = Math.round(totComision * 100) / 100;
+            totNeta = Math.round(totNeta * 100) / 100;
+
+            const tasaBCV = (window.obtenerTasaBCVActual && window.obtenerTasaBCVActual()) || window.tasaReventaBCV || 42.00;
+            const netaGlobalVES = Math.round((totNeta * tasaBCV) * 100) / 100;
+
+            const elVentas = document.getElementById('migrar-res-ventas');
+            const elCostos = document.getElementById('migrar-res-costos');
+            const elGastos = document.getElementById('migrar-res-gastos');
+            const elComis = document.getElementById('migrar-res-comision');
+            const elNeta = document.getElementById('migrar-res-neta');
+            const elNetaVES = document.getElementById('migrar-res-neta-ves');
+
+            if (elVentas) elVentas.textContent = '$' + totVenta.toFixed(2);
+            if (elCostos) elCostos.textContent = '$' + totCosto.toFixed(2);
+            if (elGastos) elGastos.textContent = '$' + totGastos.toFixed(2);
+            if (elComis) elComis.textContent = '$' + totComision.toFixed(2);
+            if (elNeta) {
+                elNeta.textContent = '$' + totNeta.toFixed(2);
+                elNeta.style.color = totNeta >= 0 ? '#385723' : '#dc2626';
+            }
+            if (elNetaVES) {
+                elNetaVES.textContent = 'Bs. ' + netaGlobalVES.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            }
+        };
+
+        window.guardarYRegistrarReventas = async function() {
+            const docId = document.getElementById('migrar-pedido-id')?.value;
+            const numOrden = document.getElementById('migrar-num-orden')?.value || '';
+            const ped = (window.pedidosDBLocal && window.pedidosDBLocal[docId]) || {};
+            const clienteFinal = ped.cliente || document.getElementById('migrar-pedido-cliente')?.textContent || 'Cliente';
+
+            const rows = document.querySelectorAll('#migrar-items-tbody tr.migrar-reventa-row');
+            if (rows.length === 0) {
+                alert("⚠️ No hay repuestos disponibles en la lista para migrar.");
+                return;
+            }
+
+            // Advertencia si ya fue procesado
+            if (ped.estado === 'Procesado en Reventa') {
+                const conf = confirm(`⚠️ Este pedido (#${numOrden}) ya tiene el estado 'Procesado en Reventa'.\n¿Deseas registrar nuevamente estas operaciones en el historial de reventas?`);
+                if (!conf) return;
+            }
+
+            const btn = document.getElementById('btn-guardar-migrar-reventas');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registrando Reventas...';
+            }
+
+            try {
+                const hoyStr = new Date().toLocaleDateString("es-VE");
+                const timestamp = Date.now();
+                const tasaVES = (window.obtenerTasaBCVActual && window.obtenerTasaBCVActual()) || window.tasaReventaBCV || 42.00;
+                const tasaEUR = window.tasaReventaEUR || 1.08;
+
+                const globalInterm = (document.getElementById('migrar-global-intermediario')?.value || '').trim();
+
+                let totalNetaAcumulada = 0;
+                let countRegistros = 0;
+
+                for (const row of rows) {
+                    const descInput = row.querySelector('.migrar-item-desc');
+                    const desc = SecuritySanitizer.cleanText(descInput ? descInput.value : '', 150) || 'Repuesto Reventa';
+                    
+                    const venta = Math.round(SecuritySanitizer.sanitizeAmount(row.querySelector('.migrar-item-venta')?.value) * 100) / 100;
+                    const costo = Math.round(SecuritySanitizer.sanitizeAmount(row.querySelector('.migrar-item-costo')?.value) * 100) / 100;
+                    const gastos = Math.round(SecuritySanitizer.sanitizeAmount(row.querySelector('.migrar-item-gastos')?.value) * 100) / 100;
+                    const pct = Math.round(SecuritySanitizer.sanitizeAmount(row.querySelector('.migrar-item-porcentaje')?.value) * 100) / 100;
+                    const intermFila = (row.querySelector('.migrar-item-nombre-interm')?.value || '').trim();
+                    const intermediario = intermFila || globalInterm || 'N/A';
+
+                    const gananciaBruta = Math.round((venta - costo - gastos) * 100) / 100;
+                    const comisionTercero = (gananciaBruta > 0 && pct > 0) ? Math.round((gananciaBruta * (pct / 100)) * 100) / 100 : 0;
+                    const gananciaNeta = Math.round((gananciaBruta - comisionTercero) * 100) / 100;
+
+                    totalNetaAcumulada += gananciaNeta;
+                    countRegistros++;
+
+                    const dataToSave = {
+                        fecha: hoyStr,
+                        timestamp: timestamp,
+                        cliente: clienteFinal,
+                        clienteFinal: clienteFinal,
+                        descripcion: desc,
+                        ventaUSD: venta,
+                        precioVenta: venta,
+                        costoUSD: costo,
+                        costo: costo,
+                        gastosUSD: gastos,
+                        gastosOperativos: gastos,
+                        intermediario: intermediario,
+                        porcentajeComision: pct,
+                        comisionTerceroUSD: comisionTercero,
+                        comisionIntermediario: comisionTercero,
+                        gananciaBrutaUSD: gananciaBruta,
+                        gananciaNetaUSD: gananciaNeta,
+                        netaEmpresa: gananciaNeta,
+                        tasaCambioVES: tasaVES,
+                        tasaCambioEUR: tasaEUR,
+                        pedidoId: docId,
+                        pedidoNumero: numOrden,
+                        origen: `Migrado de Pedido #${numOrden}`
+                    };
+
+                    // Guardado en Firestore: reventas_gastos (utilizada por el panel de reventas) y reventas (respaldo)
+                    await addDoc(collection(db, "reventas_gastos"), dataToSave);
+                    try {
+                        await addDoc(collection(db, "reventas"), dataToSave);
+                    } catch (backupErr) {
+                        console.warn("Respaldo secundario en colección reventas omitido:", backupErr);
+                    }
+                }
+
+                // Cambiar el estado del pedido original a 'Procesado en Reventa'
+                await updateDoc(doc(db, "pedidos", docId), {
+                    estado: "Procesado en Reventa",
+                    reventaProcesada: true,
+                    reventaProcesadaFecha: hoyStr,
+                    reventaProcesadaTimestamp: timestamp,
+                    reventaTotalNeta: Math.round(totalNetaAcumulada * 100) / 100
+                });
+
+                // Registrar en Auditoría
+                if (window.registrarAuditoria) {
+                    window.registrarAuditoria("MIGRAR REVENTA", `Pedido #${numOrden} (${clienteFinal}) migrado a reventas: ${countRegistros} ítems registrados.`);
+                }
+
+                // Actualizar estado en memoria local
+                if (window.pedidosDBLocal && window.pedidosDBLocal[docId]) {
+                    window.pedidosDBLocal[docId].estado = "Procesado en Reventa";
+                }
+                if (window._pedidosTodosCache) {
+                    const p = window._pedidosTodosCache.find(x => x.id === docId);
+                    if (p) p.estado = "Procesado en Reventa";
+                }
+
+                // Cerrar modal
+                window.cerrarModalMigrarReventa();
+
+                // Recargar pedidos y reventas
+                window.cargarPedidos();
+                if (window.cargarHistorialReventas) window.cargarHistorialReventas();
+                if (window.calcularGananciaNetaDashboard) {
+                    await window.calcularGananciaNetaDashboard(window.tasaVivaBCV || 42.00, window.tasaVivaEUR || 1.08);
+                }
+
+                // Notificación visual de éxito con SweetAlert2 o alert nativo
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Reventas Registradas con Éxito!',
+                        html: `
+                            <p style="font-size: 14px; color: #475569; margin-bottom: 12px;">
+                                Se generaron <b>${countRegistros} documento(s)</b> en el módulo de Reventas para <b>${clienteFinal}</b>.
+                            </p>
+                            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+                                <span style="font-size: 11px; color: #166534; text-transform: uppercase; font-weight: bold; display: block;">Ganancia Neta Total Obtenida</span>
+                                <strong style="font-size: 22px; color: #15803d;">$${totalNetaAcumulada.toFixed(2)}</strong>
+                            </div>
+                            <p style="font-size: 12px; color: #64748b;">
+                                El pedido <b>#${numOrden}</b> fue actualizado a: <span class="badge-status-reventa" style="display: inline-block; vertical-align: middle;">Procesado en Reventa</span>
+                            </p>
+                        `,
+                        showCancelButton: true,
+                        confirmButtonColor: '#385723',
+                        cancelButtonColor: '#64748b',
+                        confirmButtonText: '<i class="fas fa-calculator"></i> Ver en Reventas',
+                        cancelButtonText: 'Continuar en Pedidos'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            const btnRev = document.querySelector('button[onclick*="mostrarPestana(\'reventas\'"]');
+                            if (btnRev) window.mostrarPestana('reventas', btnRev);
+                        }
+                    });
+                } else {
+                    alert(`✅ ¡Reventas Registradas con Éxito!\n\nSe crearon ${countRegistros} registros de reventa para "${clienteFinal}".\nGanancia Neta Total: $${totalNetaAcumulada.toFixed(2)}\n\nEl pedido #${numOrden} ahora tiene estatus "Procesado en Reventa".`);
+                }
+
+            } catch (error) {
+                console.error("Error al registrar reventas desde pedido:", error);
+                alert("❌ Error al registrar las reventas: " + error.message);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-save text-amber-300"></i> Guardar y Registrar Reventas';
+                }
+            }
+        };
+
     
 
 
@@ -8702,6 +9128,696 @@ DATOS DEL REPUESTO:
         };
 
         window.iniciarTickerTasas();
+
+        // ==========================================
+        // 🌐 MÓDULO MINI-CMS: WEB PÚBLICA & OFERTAS (FIRESTORE: web_destacados)
+        // ==========================================
+
+        window._webDestacadosCache = [];
+
+        // Carga y cachea el catálogo general desde Firestore productos si aún no está en memoria
+        window.asegurarCatalogoCargado = async function() {
+            if (window.productosDBLocal && Object.keys(window.productosDBLocal).length > 0) {
+                return window.productosDBLocal;
+            }
+            try {
+                const snap = await getDocs(collection(db, "productos"));
+                window.productosDBLocal = {};
+                snap.forEach(d => {
+                    window.productosDBLocal[d.id] = { id: d.id, ...d.data() };
+                });
+                return window.productosDBLocal;
+            } catch (e) {
+                console.warn("⚠️ No se pudo cargar catálogo para autocompletado:", e);
+                return {};
+            }
+        };
+
+        // Búsqueda inteligente en el catálogo con menú desplegable
+        window.buscarEnCatalogoWeb = async function(termino) {
+            const contenedorSugerencias = document.getElementById('web-dest-sugerencias');
+            if (!contenedorSugerencias) return;
+
+            await window.asegurarCatalogoCargado();
+            const productos = Object.values(window.productosDBLocal || {});
+
+            if (productos.length === 0) {
+                contenedorSugerencias.innerHTML = `
+                    <div style="padding: 12px; text-align: center; color: #6b7280; font-size: 12px;">
+                        Cargando inventario del catálogo...
+                    </div>`;
+                contenedorSugerencias.style.display = 'block';
+                return;
+            }
+
+            let lista = [];
+            if (!termino || termino.trim().length === 0) {
+                lista = productos.slice(0, 8);
+            } else {
+                const t = termino.toLowerCase().trim();
+                lista = productos.filter(p => {
+                    const nom = (p.nombre || '').toLowerCase();
+                    const mar = (p.marca || '').toLowerCase();
+                    const cat = (p.categoria || '').toLowerCase();
+                    return nom.includes(t) || mar.includes(t) || cat.includes(t);
+                }).slice(0, 10);
+            }
+
+            if (lista.length === 0) {
+                contenedorSugerencias.innerHTML = `
+                    <div style="padding: 12px; text-align: center; color: #6b7280; font-size: 12px;">
+                        No se encontraron repuestos con "${SecuritySanitizer.escapeHtml(termino)}". Puedes escribir los datos manualmente abajo.
+                    </div>`;
+                contenedorSugerencias.style.display = 'block';
+                return;
+            }
+
+            let html = '';
+            lista.forEach(prod => {
+                const precio = Number(prod.precio) || 0;
+                const img = prod.imagen || 'img/logo-fb-parts.png';
+                const prodDataStr = encodeURIComponent(JSON.stringify({
+                    nombre: prod.nombre,
+                    imagen: prod.imagen,
+                    precio: precio
+                }));
+
+                html += `
+                    <div onclick="seleccionarProductoDeCatalogo('${prodDataStr}')" 
+                        style="padding: 9px 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: background 0.15s;"
+                        onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='white'">
+                        <div style="width: 42px; height: 42px; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: white;">
+                            <img src="${SecuritySanitizer.escapeHtml(img)}" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
+                        </div>
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-weight: 700; font-size: 13px; color: #1f2937; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                ${SecuritySanitizer.escapeHtml(prod.nombre)}
+                            </div>
+                            <div style="font-size: 11.5px; color: #6b7280; display: flex; gap: 6px; align-items: center;">
+                                ${prod.marca ? `<span style="background: #f1f5f9; padding: 1px 5px; border-radius: 3px; font-weight: 600; color: #475569;">${SecuritySanitizer.escapeHtml(prod.marca)}</span>` : ''}
+                                <strong style="color: #15803d; font-family: 'Oswald', sans-serif; font-size: 13px;">$${precio.toFixed(2)}</strong>
+                            </div>
+                        </div>
+                        <button type="button" style="padding: 5px 10px; background: #dcfce7; color: #166534; border: 1px solid #86efac; border-radius: 5px; font-size: 11px; font-weight: 800; cursor: pointer;">
+                            <i class="fas fa-check"></i> Elegir
+                        </button>
+                    </div>`;
+            });
+
+            contenedorSugerencias.innerHTML = html;
+            contenedorSugerencias.style.display = 'block';
+        };
+
+        // Al seleccionar un producto del catálogo: auto-rellena y enfoca el precio oferta
+        window.seleccionarProductoDeCatalogo = function(encodedData) {
+            try {
+                const prod = JSON.parse(decodeURIComponent(encodedData));
+                if (!prod) return;
+
+                document.getElementById('web-dest-nombre').value = prod.nombre || '';
+                document.getElementById('web-dest-imagen').value = prod.imagen || '';
+                document.getElementById('web-dest-precio-regular').value = prod.precio ? Number(prod.precio).toFixed(2) : '';
+
+                // Ocultar buscador de catálogo y sugerencias
+                const sugerencias = document.getElementById('web-dest-sugerencias');
+                if (sugerencias) sugerencias.style.display = 'none';
+
+                const buscador = document.getElementById('web-dest-buscar-catalogo');
+                if (buscador) buscador.value = `✓ Seleccionado: ${prod.nombre}`;
+
+                // Actualizar thumbnail e imagen en vivo
+                window.previsualizarImagenWeb(prod.imagen || '');
+                window.actualizarVistaPreviaTarjetaLive();
+
+                // Enfocar automáticamente el precio de oferta
+                const inputOferta = document.getElementById('web-dest-precio-oferta');
+                if (inputOferta) {
+                    inputOferta.focus();
+                    inputOferta.select();
+                }
+            } catch (e) {
+                console.error("Error al seleccionar producto del catálogo:", e);
+            }
+        };
+
+        // Cerrar menú de sugerencias si hace clic fuera
+        document.addEventListener('click', (e) => {
+            const sug = document.getElementById('web-dest-sugerencias');
+            const bus = document.getElementById('web-dest-buscar-catalogo');
+            if (sug && bus && !bus.contains(e.target) && !sug.contains(e.target)) {
+                sug.style.display = 'none';
+            }
+        });
+
+        // Actualiza la tarjeta en vivo situada a la derecha del formulario
+        window.actualizarVistaPreviaTarjetaLive = function() {
+            const contenedor = document.getElementById('live-card-preview-container');
+            if (!contenedor) return;
+
+            const nombre = (document.getElementById('web-dest-nombre')?.value || '').trim() || 'Nombre del Repuesto';
+            const imagen = (document.getElementById('web-dest-imagen')?.value || '').trim() || 'img/logo-fb-parts.png';
+            const reg = parseFloat(document.getElementById('web-dest-precio-regular')?.value || 0);
+            const ofVal = (document.getElementById('web-dest-precio-oferta')?.value || '').trim();
+            const of = ofVal !== '' ? parseFloat(ofVal) : null;
+
+            const tieneOferta = of !== null && of > 0 && of < reg;
+            const pct = tieneOferta ? Math.round((1 - (of / reg)) * 100) : 0;
+
+            const badgeHtml = tieneOferta ? `
+                <div style="position: absolute; top: 10px; left: 10px; z-index: 2; display: flex; flex-direction: column; gap: 4px; pointer-events: none;">
+                    <span style="background: linear-gradient(135deg, #e63946 0%, #b7094c 100%); color: white; font-size: 10.5px; font-weight: 800; padding: 3px 8px; border-radius: 4px; box-shadow: 0 3px 6px rgba(230,57,70,0.4); text-transform: uppercase; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 4px;">
+                        <i class="fas fa-fire"></i> BLACK FRIDAY
+                    </span>
+                    <span style="background: #1f2937; color: #fde047; font-size: 9.5px; font-weight: 800; padding: 2px 6px; border-radius: 3px; align-self: flex-start; text-transform: uppercase; font-family: 'Oswald', sans-serif;">
+                        -${pct}% OFF
+                    </span>
+                </div>
+            ` : '';
+
+            const precioHtml = tieneOferta ? `
+                <div style="margin-bottom: 10px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+                    <span style="text-decoration: line-through; color: #ef4444; font-size: 13.5px; font-weight: 600;">$${reg.toFixed(2)}</span>
+                    <span style="color: #2c441b; font-size: 21px; font-weight: 800; font-family: 'Oswald', sans-serif;">$${of.toFixed(2)}</span>
+                </div>
+            ` : `
+                <div style="margin-bottom: 10px;">
+                    <span style="color: #5e8877; font-size: 20px; font-weight: 800; font-family: 'Oswald', sans-serif;">$${reg > 0 ? reg.toFixed(2) : '0.00'}</span>
+                </div>
+            `;
+
+            contenedor.innerHTML = `
+                <div style="background: white; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.07); display: flex; flex-direction: column; position: relative;">
+                    ${badgeHtml}
+                    <div style="width: 100%; height: 165px; background: #ffffff; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 10px; box-sizing: border-box; border-bottom: 1px solid #f1f5f9;">
+                        <img src="${SecuritySanitizer.escapeHtml(imagen)}" alt="${SecuritySanitizer.escapeHtml(nombre)}" 
+                            style="width: 100%; height: 100%; object-fit: contain;"
+                            onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
+                    </div>
+                    <div style="padding: 12px 14px; display: flex; flex-direction: column;">
+                        <h4 style="font-size: 13px; color: #1e293b; margin: 0 0 8px 0; font-weight: 700; line-height: 1.35; min-height: 35px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="${SecuritySanitizer.escapeHtml(nombre)}">
+                            ${SecuritySanitizer.escapeHtml(nombre)}
+                        </h4>
+                        ${precioHtml}
+                        <button type="button" style="background: #5e8877; color: white; border: none; padding: 8px 10px; border-radius: 5px; font-weight: 700; width: 100%; font-size: 12px; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; gap: 5px; cursor: default;">
+                            <i class="fas fa-eye"></i> VER DETALLES
+                        </button>
+                    </div>
+                </div>
+            `;
+        };
+
+        // Renderiza la cuadrícula de vista previa completa (reflejo de index.html)
+        window.renderizarCuadriculaPreviewAdmin = function(items) {
+            const grid = document.getElementById('grid-destacados-admin-preview');
+            if (!grid) return;
+
+            const activos = (items || []).filter(x => x.mostrar_en_destacados);
+
+            if (activos.length === 0) {
+                grid.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 35px 20px; background: white; border-radius: 8px; border: 1px dashed #cbd5e1; color: #64748b;">
+                        <i class="fas fa-tags text-2xl text-slate-300 mb-2"></i>
+                        <p style="margin: 0; font-size: 14px; font-weight: 600;">No hay repuestos activos en la portada en este momento.</p>
+                        <span style="font-size: 12px; color: #94a3b8;">Usa el formulario superior para añadir repuestos o activa alguno en la tabla.</span>
+                    </div>`;
+                return;
+            }
+
+            let html = '';
+            activos.forEach(item => {
+                const reg = Number(item.precioRegular) || 0;
+                const of = (item.precioOferta !== null && item.precioOferta !== undefined && item.precioOferta !== '') 
+                    ? Number(item.precioOferta) 
+                    : null;
+                const tieneOferta = of !== null && of > 0 && of < reg;
+                const pct = tieneOferta ? Math.round((1 - (of / reg)) * 100) : 0;
+
+                const badgeHtml = tieneOferta ? `
+                    <div style="position: absolute; top: 10px; left: 10px; z-index: 2; display: flex; flex-direction: column; gap: 4px; pointer-events: none;">
+                        <span style="background: linear-gradient(135deg, #e63946 0%, #b7094c 100%); color: white; font-size: 10px; font-weight: 800; padding: 3px 7px; border-radius: 4px; box-shadow: 0 2px 6px rgba(230,57,70,0.4); text-transform: uppercase; font-family: 'Oswald', sans-serif;">
+                            <i class="fas fa-fire"></i> BLACK FRIDAY
+                        </span>
+                        <span style="background: #1f2937; color: #fde047; font-size: 9px; font-weight: 800; padding: 2px 5px; border-radius: 3px; align-self: flex-start;">
+                            -${pct}% OFF
+                        </span>
+                    </div>
+                ` : '';
+
+                const precioHtml = tieneOferta ? `
+                    <div style="margin-bottom: 10px; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;">
+                        <span style="text-decoration: line-through; color: #ef4444; font-size: 13px; font-weight: 600;">$${reg.toFixed(2)}</span>
+                        <span style="color: #2c441b; font-size: 19px; font-weight: 800; font-family: 'Oswald', sans-serif;">$${of.toFixed(2)}</span>
+                    </div>
+                ` : `
+                    <div style="margin-bottom: 10px;">
+                        <span style="color: #5e8877; font-size: 18px; font-weight: 800; font-family: 'Oswald', sans-serif;">$${reg.toFixed(2)}</span>
+                    </div>
+                `;
+
+                html += `
+                    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; flex-direction: column; position: relative;">
+                        ${badgeHtml}
+                        <div style="width: 100%; height: 160px; background: white; display: flex; align-items: center; justify-content: center; padding: 10px; box-sizing: border-box; border-bottom: 1px solid #f1f5f9;">
+                            <img src="${SecuritySanitizer.escapeHtml(item.imagen)}" alt="${SecuritySanitizer.escapeHtml(item.nombre)}" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
+                        </div>
+                        <div style="padding: 12px; display: flex; flex-direction: column; flex: 1;">
+                            <h4 style="font-size: 12.5px; color: #1e293b; margin: 0 0 8px 0; font-weight: 700; line-height: 1.3; min-height: 32px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="${SecuritySanitizer.escapeHtml(item.nombre)}">
+                                ${SecuritySanitizer.escapeHtml(item.nombre)}
+                            </h4>
+                            ${precioHtml}
+                            <div style="margin-top: auto;">
+                                <a href="index.html#destacados" target="_blank" style="background: #5e8877; color: white; border: none; padding: 7px; border-radius: 4px; font-weight: bold; width: 100%; font-size: 12px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 4px; box-sizing: border-box;">
+                                    <i class="fas fa-eye"></i> Ver en Web
+                                </a>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+
+            grid.innerHTML = html;
+        };
+
+        window.previsualizarImagenWeb = function(url) {
+            const img = document.getElementById('preview-img');
+            const placeholder = document.getElementById('preview-placeholder');
+            if (!img || !placeholder) return;
+
+            if (!url || !url.trim()) {
+                img.src = '';
+                img.style.display = 'none';
+                placeholder.style.display = 'block';
+                return;
+            }
+
+            img.onload = () => {
+                img.style.display = 'block';
+                placeholder.style.display = 'none';
+            };
+            img.onerror = () => {
+                img.style.display = 'none';
+                placeholder.style.display = 'block';
+            };
+            img.src = url.trim();
+        };
+
+        window.generarSlugWeb = function(nombre) {
+            if (!nombre) return 'repuesto';
+            return nombre
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+        };
+
+        window.cargarWebDestacados = async function() {
+            const tbody = document.getElementById('tabla-web-destacados-body');
+            const badgeConteo = document.getElementById('conteo-web-destacados');
+            if (!tbody) return;
+
+            // Iniciar precarga de catálogo en segundo plano
+            window.asegurarCatalogoCargado();
+            window.actualizarVistaPreviaTarjetaLive();
+
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 25px; color: #6b7280;">
+                        <i class="fas fa-spinner fa-spin text-lg" style="color: #385723;"></i>
+                        <div style="margin-top: 6px; font-weight: 500;">Cargando repuestos web desde Firestore...</div>
+                    </td>
+                </tr>`;
+
+            try {
+                const snap = await getDocs(collection(db, "web_destacados"));
+                const items = [];
+                snap.forEach(d => {
+                    items.push({ id: d.id, ...d.data() });
+                });
+
+                // Ordenar por timestamp descendente
+                items.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+                window._webDestacadosCache = items;
+
+                if (badgeConteo) {
+                    const activosCount = items.filter(x => x.mostrar_en_destacados).length;
+                    badgeConteo.innerHTML = `<strong>${items.length}</strong> total | <span style="color: #047857;"><strong>${activosCount}</strong> en portada</span>`;
+                }
+
+                // Renderizar cuadrícula de portada en el panel admin
+                window.renderizarCuadriculaPreviewAdmin(items);
+
+                if (items.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 35px 20px; color: #9ca3af;">
+                                <i class="fas fa-tags" style="font-size: 28px; color: #d1d5db; margin-bottom: 8px; display: block;"></i>
+                                <div style="font-size: 14px; font-weight: 600; color: #4b5563;">Aún no hay repuestos registrados para la web.</div>
+                                <div style="font-size: 12px; color: #9ca3af; margin-top: 4px;">Usa el buscador de catálogo superior para añadir el primer repuesto con o sin oferta.</div>
+                            </td>
+                        </tr>`;
+                    return;
+                }
+
+                let html = '';
+                items.forEach(item => {
+                    const reg = Number(item.precioRegular) || 0;
+                    const of = (item.precioOferta !== null && item.precioOferta !== undefined && item.precioOferta !== '') 
+                        ? Number(item.precioOferta) 
+                        : null;
+                    const tieneOferta = of !== null && of > 0 && of < reg;
+                    const ahorro = tieneOferta ? (reg - of) : 0;
+                    const pctAhorro = tieneOferta ? Math.round((ahorro / reg) * 100) : 0;
+                    const isVisible = Boolean(item.mostrar_en_destacados);
+
+                    html += `
+                        <tr style="border-bottom: 1px solid #f3f4f6; transition: background 0.15s;">
+                            <td style="padding: 10px 14px; text-align: center;">
+                                <div style="width: 52px; height: 52px; border: 1px solid #e5e7eb; border-radius: 8px; background: white; display: flex; align-items: center; justify-content: center; overflow: hidden; margin: 0 auto; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                                    <img src="${SecuritySanitizer.escapeHtml(item.imagen)}" alt="${SecuritySanitizer.escapeHtml(item.nombre)}" 
+                                        style="width: 100%; height: 100%; object-fit: contain; padding: 2px;"
+                                        onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
+                                </div>
+                            </td>
+                            <td style="padding: 10px 14px;">
+                                <div style="font-weight: 700; color: #1f2937; font-size: 13.5px;">${SecuritySanitizer.escapeHtml(item.nombre)}</div>
+                                <div style="font-size: 11px; color: #6b7280; display: flex; gap: 8px; align-items: center; margin-top: 2px;">
+                                    <span><i class="fas fa-link" style="font-size: 10px;"></i> /${SecuritySanitizer.escapeHtml(item.slug || 'repuesto')}.html</span>
+                                    ${item.fechaActualizacion ? `<span>• Act: ${SecuritySanitizer.escapeHtml(item.fechaActualizacion)}</span>` : ''}
+                                </div>
+                            </td>
+                            <td style="padding: 10px 14px; text-align: right; font-weight: 700; font-family: 'Oswald', sans-serif; font-size: 15px; color: #374151;">
+                                $${reg.toFixed(2)}
+                            </td>
+                            <td style="padding: 10px 14px; text-align: right;">
+                                ${tieneOferta ? `
+                                    <div style="font-weight: 800; font-family: 'Oswald', sans-serif; font-size: 16px; color: #385723;">
+                                        $${of.toFixed(2)}
+                                    </div>
+                                    <span style="display: inline-block; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; margin-top: 2px;">
+                                        🔥 -${pctAhorro}% ($${ahorro.toFixed(2)})
+                                    </span>
+                                ` : `
+                                    <span style="font-size: 12px; color: #9ca3af; font-style: italic;">Sin Oferta</span>
+                                `}
+                            </td>
+                            <td style="padding: 10px 14px; text-align: center;">
+                                ${isVisible ? `
+                                    <span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 9999px; font-size: 11.5px; font-weight: 700; background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0;">
+                                        <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981;"></span> Visible en Home
+                                    </span>
+                                ` : `
+                                    <span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 9999px; font-size: 11.5px; font-weight: 700; background: #f3f4f6; color: #4b5563; border: 1px solid #d1d5db;">
+                                        <span style="width: 7px; height: 7px; border-radius: 50%; background: #9ca3af;"></span> Oculto
+                                    </span>
+                                `}
+                            </td>
+                            <td style="padding: 10px 14px; text-align: center;">
+                                <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+                                    <button type="button" onclick="editarWebDestacado('${item.id}')" title="Editar Repuesto"
+                                        style="padding: 6px 9px; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; border-radius: 6px; cursor: pointer; transition: background 0.15s;">
+                                        <i class="fas fa-edit" style="font-size: 12px;"></i>
+                                    </button>
+                                    <button type="button" onclick="toggleDestacadoWeb('${item.id}', ${!isVisible})" 
+                                        title="${isVisible ? 'Quitar de Portada (Ocultar)' : 'Mostrar en Portada'}"
+                                        style="padding: 6px 9px; background: ${isVisible ? '#fffbeb' : '#f0fdf4'}; color: ${isVisible ? '#b45309' : '#15803d'}; border: 1px solid ${isVisible ? '#fde68a' : '#bbf7d0'}; border-radius: 6px; cursor: pointer; transition: background 0.15s;">
+                                        <i class="fas ${isVisible ? 'fa-eye-slash' : 'fa-eye'}" style="font-size: 12px;"></i>
+                                    </button>
+                                    <button type="button" onclick="eliminarWebDestacado('${item.id}')" title="Eliminar Repuesto"
+                                        style="padding: 6px 9px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 6px; cursor: pointer; transition: background 0.15s;">
+                                        <i class="fas fa-trash-alt" style="font-size: 12px;"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>`;
+                });
+
+                tbody.innerHTML = html;
+
+            } catch (err) {
+                console.error("Error al cargar web_destacados:", err);
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 25px; color: #dc2626;">
+                            <i class="fas fa-exclamation-triangle"></i> Error al conectar con Firestore: ${SecuritySanitizer.escapeHtml(err.message || err)}
+                        </td>
+                    </tr>`;
+            }
+        };
+
+        window.guardarWebDestacado = async function(e) {
+            if (e && e.preventDefault) e.preventDefault();
+
+            const idInput = document.getElementById('web-dest-id');
+            const id = idInput ? idInput.value.trim() : '';
+
+            const nombre = (document.getElementById('web-dest-nombre')?.value || '').trim();
+            const imagen = (document.getElementById('web-dest-imagen')?.value || '').trim();
+            const precioRegVal = parseFloat(document.getElementById('web-dest-precio-regular')?.value || 0);
+            const precioOfVal = document.getElementById('web-dest-precio-oferta')?.value.trim();
+            const mostrar = document.getElementById('web-dest-mostrar')?.checked ?? true;
+
+            if (!nombre) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({ icon: 'warning', title: 'Campo Requerido', text: 'Por favor ingresa o selecciona el nombre del repuesto.' });
+                } else {
+                    alert('Por favor ingresa o selecciona el nombre del repuesto.');
+                }
+                return;
+            }
+
+            if (!imagen) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({ icon: 'warning', title: 'Campo Requerido', text: 'Por favor ingresa la URL de la imagen del repuesto.' });
+                } else {
+                    alert('Por favor ingresa la URL de la imagen del repuesto.');
+                }
+                return;
+            }
+
+            if (isNaN(precioRegVal) || precioRegVal <= 0) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({ icon: 'warning', title: 'Precio Inválido', text: 'El precio regular debe ser un número mayor a 0.' });
+                } else {
+                    alert('El precio regular debe ser un número mayor a 0.');
+                }
+                return;
+            }
+
+            let precioOferta = null;
+            if (precioOfVal !== '') {
+                const parsedOf = parseFloat(precioOfVal);
+                if (!isNaN(parsedOf) && parsedOf > 0) {
+                    precioOferta = Math.round(parsedOf * 100) / 100;
+                }
+            }
+
+            const precioRegular = Math.round(precioRegVal * 100) / 100;
+            const slug = window.generarSlugWeb(nombre);
+
+            const ahora = new Date();
+            const dia = String(ahora.getDate()).padStart(2, '0');
+            const mes = String(ahora.getMonth() + 1).padStart(2, '0');
+            const anio = ahora.getFullYear();
+            const fechaStr = `${dia}/${mes}/${anio}`;
+
+            const dataDoc = {
+                nombre: nombre,
+                imagen: imagen,
+                precioRegular: precioRegular,
+                precioOferta: precioOferta,
+                mostrar_en_destacados: Boolean(mostrar),
+                slug: slug,
+                fechaActualizacion: fechaStr,
+                timestamp: Date.now()
+            };
+
+            const btnSubmit = document.getElementById('btn-guardar-web-dest');
+            const btnTextoSpan = document.getElementById('btn-guardar-web-dest-texto');
+            const btnTextoOriginal = btnTextoSpan ? btnTextoSpan.innerText : 'Guardar';
+            if (btnSubmit) {
+                btnSubmit.disabled = true;
+                btnSubmit.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Guardando...`;
+            }
+
+            try {
+                if (id) {
+                    await updateDoc(doc(db, "web_destacados", id), dataDoc);
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Actualizado con Éxito!',
+                            text: `El repuesto "${nombre}" fue actualizado correctamente.`,
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    } else {
+                        alert(`¡Repuesto "${nombre}" actualizado con éxito!`);
+                    }
+                } else {
+                    await addDoc(collection(db, "web_destacados"), dataDoc);
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Publicado con Éxito!',
+                            text: `El repuesto "${nombre}" ha sido agregado al gestor web.`,
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    } else {
+                        alert(`¡Repuesto "${nombre}" publicado con éxito!`);
+                    }
+                }
+
+                window.cancelarEdicionWebDestacado();
+                await window.cargarWebDestacados();
+
+            } catch (err) {
+                console.error("Error al guardar en web_destacados:", err);
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de Conexión',
+                        text: 'No se pudo guardar el repuesto en Firestore: ' + (err.message || err)
+                    });
+                } else {
+                    alert('Error al guardar en Firestore: ' + (err.message || err));
+                }
+            } finally {
+                if (btnSubmit) {
+                    btnSubmit.disabled = false;
+                    btnSubmit.innerHTML = `<i class="fas fa-save"></i> <span id="btn-guardar-web-dest-texto">${btnTextoOriginal}</span>`;
+                }
+            }
+        };
+
+        window.editarWebDestacado = function(id) {
+            if (!window._webDestacadosCache) return;
+            const item = window._webDestacadosCache.find(x => x.id === id);
+            if (!item) return;
+
+            document.getElementById('web-dest-id').value = item.id;
+            document.getElementById('web-dest-nombre').value = item.nombre || '';
+            document.getElementById('web-dest-imagen').value = item.imagen || '';
+            document.getElementById('web-dest-precio-regular').value = item.precioRegular ?? '';
+            document.getElementById('web-dest-precio-oferta').value = (item.precioOferta !== null && item.precioOferta !== undefined) ? item.precioOferta : '';
+            document.getElementById('web-dest-mostrar').checked = Boolean(item.mostrar_en_destacados);
+
+            const buscador = document.getElementById('web-dest-buscar-catalogo');
+            if (buscador) buscador.value = `Editando: ${item.nombre}`;
+
+            window.previsualizarImagenWeb(item.imagen || '');
+            window.actualizarVistaPreviaTarjetaLive();
+
+            const titulo = document.getElementById('titulo-form-web-destacado');
+            if (titulo) titulo.innerHTML = `<i class="fas fa-edit" style="color: #d97706;"></i> Editando: ${SecuritySanitizer.escapeHtml(item.nombre)}`;
+
+            const badgeEdicion = document.getElementById('badge-modo-edicion');
+            if (badgeEdicion) badgeEdicion.style.display = 'inline-block';
+
+            const btnCancelar = document.getElementById('btn-cancelar-web-dest');
+            if (btnCancelar) btnCancelar.style.display = 'inline-flex';
+
+            const btnTexto = document.getElementById('btn-guardar-web-dest-texto');
+            if (btnTexto) btnTexto.innerText = 'Actualizar Repuesto';
+
+            document.getElementById('tab-web-destacados')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        };
+
+        window.cancelarEdicionWebDestacado = function() {
+            const idInput = document.getElementById('web-dest-id');
+            if (idInput) idInput.value = '';
+            document.getElementById('form-web-destacados')?.reset();
+            const chk = document.getElementById('web-dest-mostrar');
+            if (chk) chk.checked = true;
+
+            const buscador = document.getElementById('web-dest-buscar-catalogo');
+            if (buscador) buscador.value = '';
+
+            const sugerencias = document.getElementById('web-dest-sugerencias');
+            if (sugerencias) sugerencias.style.display = 'none';
+
+            window.previsualizarImagenWeb('');
+            window.actualizarVistaPreviaTarjetaLive();
+
+            const titulo = document.getElementById('titulo-form-web-destacado');
+            if (titulo) titulo.innerHTML = `<i class="fas fa-plus-circle"></i> Publicar / Editar Repuesto Destacado`;
+
+            const badgeEdicion = document.getElementById('badge-modo-edicion');
+            if (badgeEdicion) badgeEdicion.style.display = 'none';
+
+            const btnCancelar = document.getElementById('btn-cancelar-web-dest');
+            if (btnCancelar) btnCancelar.style.display = 'none';
+
+            const btnTexto = document.getElementById('btn-guardar-web-dest-texto');
+            if (btnTexto) btnTexto.innerText = 'Guardar en Web Destacados';
+        };
+
+        window.toggleDestacadoWeb = async function(id, nuevoEstado) {
+            try {
+                await updateDoc(doc(db, "web_destacados", id), {
+                    mostrar_en_destacados: Boolean(nuevoEstado),
+                    timestamp: Date.now()
+                });
+
+                if (typeof Swal !== 'undefined') {
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
+                    Toast.fire({
+                        icon: nuevoEstado ? 'success' : 'info',
+                        title: nuevoEstado ? 'Repuesto visible en Portada' : 'Repuesto ocultado de Portada'
+                    });
+                }
+                await window.cargarWebDestacados();
+            } catch (err) {
+                console.error("Error al actualizar estatus de destacado:", err);
+                alert("Error al actualizar: " + (err.message || err));
+            }
+        };
+
+        window.eliminarWebDestacado = async function(id) {
+            let confirmar = false;
+            if (typeof Swal !== 'undefined') {
+                const res = await Swal.fire({
+                    title: '¿Eliminar este repuesto?',
+                    text: 'Esta acción borrará el repuesto del listado web y de la portada.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Sí, eliminar',
+                    cancelButtonText: 'Cancelar'
+                });
+                confirmar = res.isConfirmed;
+            } else {
+                confirmar = confirm('¿Estás seguro de que deseas eliminar este repuesto de la web?');
+            }
+
+            if (!confirmar) return;
+
+            try {
+                await deleteDoc(doc(db, "web_destacados", id));
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Eliminado',
+                        text: 'El repuesto ha sido eliminado.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                }
+                if (document.getElementById('web-dest-id')?.value === id) {
+                    window.cancelarEdicionWebDestacado();
+                }
+                await window.cargarWebDestacados();
+            } catch (err) {
+                console.error("Error al eliminar de web_destacados:", err);
+                alert("Error al eliminar: " + (err.message || err));
+            }
+        };
 
 window.moduleLoaded = true;
 console.log('Modulo admin_logic cargado exitosamente.');

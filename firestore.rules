@@ -3,6 +3,42 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ===============================================================
+    // Assumed Data Models & Schema Overview
+    // ===============================================================
+    //
+    // 1. productos:
+    //    - nombre: string (required)
+    //    - precio: number (required)
+    //    - categoria, imagen, stock, etc.
+    //
+    // 2. categorias / configuracion:
+    //    - Categorías de catálogo y configuración de tasas (BCV/EUR)
+    //
+    // 3. web_destacados (Mini-CMS & Ofertas Black Friday):
+    //    - nombre: string, precioRegular: number, precioOferta, mostrar_en_destacados: bool
+    //
+    // 4. facturas:
+    //    - nro: string (required), total: number or string (required)
+    //
+    // 5. pedidos / envios:
+    //    - Pedidos de compra web y logística de despacho
+    //
+    // 6. rutas_puntos / choferes_gps:
+    //    - Puntos de entrega y coordenadas GPS en tiempo real
+    //
+    // 7. reventas_gastos / reventas:
+    //    - Control de reventas, intermediarios, comisiones y cierre mensual
+    //
+    // 8. auditoria_logs:
+    //    - Bitácora de trazabilidad de acciones operativas y administrativas
+    //
+    // 9. Gestión administrativa y financiera:
+    //    - cotizaciones, cuentas_pagar, cxc_personal, importaciones, clientes,
+    //      retenciones, administradores, usuarios, ai_copilot_sessions
+    //
+    // ===============================================================
+
     // ==========================================
     // FUNCIONES AUXILIARES DE SEGURIDAD
     // ==========================================
@@ -11,7 +47,7 @@ service cloud.firestore {
     }
 
     // ==========================================
-    // 1. CATÁLOGO PÚBLICO DE LA TIENDA
+    // 1. CATÁLOGO PÚBLICO Y MINI-CMS WEB
     // ==========================================
     // Los productos y categorías son visibles para cualquier visitante (SEO y navegación),
     // pero su creación, actualización y eliminación requiere autenticación administrativa.
@@ -30,6 +66,13 @@ service cloud.firestore {
 
     // Configuración general de la tienda (tasas oficiales BCV / EUR para conversión de precios)
     match /configuracion/{docId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // Mini-CMS: Repuestos Destacados y Ofertas Black Friday (Web pública)
+    // Lectura pública para index.html / public.js; creación y edición restringidas a administradores
+    match /web_destacados/{destacadoId} {
       allow read: if true;
       allow write: if isAuthenticated();
     }
@@ -71,7 +114,28 @@ service cloud.firestore {
     }
 
     // ==========================================
-    // 4. GESTIÓN FINANCIERA Y ADMINISTRATIVA
+    // 4. MÓDULO DE REVENTAS Y CIERRE MENSUAL
+    // ==========================================
+    // Control de reventas, intermediarios, comisiones y gastos operativos
+    match /reventas_gastos/{reventaId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Registros secundarios de reventa migrados desde pedidos
+    match /reventas/{reventaId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // ==========================================
+    // 5. AUDITORÍA Y TRAZABILIDAD INTERNA
+    // ==========================================
+    // Bitácora de operaciones (Login, Logout, Creación, Modificación, Migración y Eliminación)
+    match /auditoria_logs/{logId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // ==========================================
+    // 6. GESTIÓN FINANCIERA Y ADMINISTRATIVA
     // ==========================================
     match /cotizaciones/{cotizacionId} {
       allow read, write: if isAuthenticated();
@@ -110,7 +174,7 @@ service cloud.firestore {
     }
 
     // ==========================================
-    // 5. BLOQUEO POR DEFECTO (REGLA RESIDUAL)
+    // 7. BLOQUEO POR DEFECTO (REGLA RESIDUAL)
     // ==========================================
     match /{document=**} {
       allow read, write: if false;
