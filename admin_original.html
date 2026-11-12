@@ -5884,8 +5884,17 @@
             const btn = e.target.querySelector('button[type="submit"]');
             btn.innerHTML = "Guardando..."; btn.disabled = true;
 
+            const nombreProd = SecuritySanitizer.cleanText(document.getElementById('prod-nombre').value, 150);
+            const slugProd = nombreProd
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+
             const nuevoProducto = {
-                nombre: SecuritySanitizer.cleanText(document.getElementById('prod-nombre').value, 150),
+                nombre: nombreProd,
+                slug: slugProd,
                 precio: SecuritySanitizer.sanitizeAmount(document.getElementById('prod-precio').value),
                 stock: SecuritySanitizer.sanitizeInt(document.getElementById('prod-stock').value, 0),
                 categoria: SecuritySanitizer.cleanText(document.getElementById('prod-categoria').value, 50),

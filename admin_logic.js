@@ -1385,8 +1385,17 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                 modalidadVal = SecuritySanitizer.cleanText(document.getElementById('prod-modalidad-custom').value, 100) || 'Importación Personalizada';
             }
 
+            const nombreProd = SecuritySanitizer.cleanText(document.getElementById('prod-nombre').value, 150);
+            const slugProd = nombreProd
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+
             const nuevoProducto = {
-                nombre: SecuritySanitizer.cleanText(document.getElementById('prod-nombre').value, 150),
+                nombre: nombreProd,
+                slug: slugProd,
                 precio: SecuritySanitizer.sanitizeAmount(document.getElementById('prod-precio').value),
                 stock: SecuritySanitizer.sanitizeInt(document.getElementById('prod-stock').value, 0),
                 categoria: catId,
@@ -1830,8 +1839,17 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                 modalidadVal = SecuritySanitizer.cleanText(document.getElementById('edit-modalidad-custom').value, 100) || 'Entrega Inmediata';
             }
 
+            const nombreActualizado = SecuritySanitizer.cleanText(document.getElementById('edit-nombre').value, 150);
+            const slugActualizado = nombreActualizado
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+
             const datosActualizados = {
-                nombre: SecuritySanitizer.cleanText(document.getElementById('edit-nombre').value, 150),
+                nombre: nombreActualizado,
+                slug: slugActualizado,
                 precio: SecuritySanitizer.sanitizeAmount(document.getElementById('edit-precio').value),
                 stock: SecuritySanitizer.sanitizeInt(document.getElementById('edit-stock').value, 0),
                 categoria: catId,
@@ -10030,14 +10048,30 @@ DATOS DEL REPUESTO:
                             syncUpdates.push(updateDoc(doc(db, "productos", pDoc.id), {
                                 precioOferta: precioOferta,
                                 precioRegular: precioRegular,
+                                slug: slug,
                                 fechaOfertaActualizada: fechaStr
                             }));
                             if (window.productosDBLocal && window.productosDBLocal[pDoc.id]) {
                                 window.productosDBLocal[pDoc.id].precioOferta = precioOferta;
                                 window.productosDBLocal[pDoc.id].precioRegular = precioRegular;
+                                window.productosDBLocal[pDoc.id].slug = slug;
                             }
                         });
                         await Promise.all(syncUpdates);
+                    } else {
+                        // Si el repuesto se publica en Web pero aún no existe en el catálogo general, crearlo automáticamente
+                        await addDoc(collection(db, "productos"), {
+                            nombre: nombre,
+                            slug: slug,
+                            precio: precioRegular,
+                            precioRegular: precioRegular,
+                            precioOferta: precioOferta,
+                            imagen: imagen,
+                            stock: 1,
+                            categoria: "repuestos",
+                            estado: "activo",
+                            fechaOfertaActualizada: fechaStr
+                        });
                     }
                 } catch (syncErr) {
                     console.warn("Aviso: Sincronización secundaria con colección productos:", syncErr);

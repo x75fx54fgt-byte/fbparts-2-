@@ -1,0 +1,17 @@
+{
+  "cleanUrls": false,
+  "rewrites": [
+    {
+      "source": "/:slug((?!admin|admin-login|tienda|index|quienes-somos|register|politicas-devoluciones|producto)[^/]+)\\.html",
+      "destination": "/producto.html"
+    },
+    {
+      "source": "/producto/:slug*",
+      "destination": "/producto.html"
+    },
+    {
+      "source": "/repuesto/:slug*",
+      "destination": "/producto.html"
+    }
+  ]
+}

@@ -600,7 +600,9 @@
             if (productoCargado) return;
 
             const params = new URLSearchParams(window.location.search);
-            const pathId = window.location.pathname.split('/').pop().replace(/\.html$/i, '');
+            const rawPath = window.location.pathname.split('/').pop().replace(/\.html$/i, '');
+            let pathId = '';
+            try { pathId = decodeURIComponent(rawPath); } catch(e) { pathId = rawPath; }
             const productId = window.FIREBASE_PRODUCT_ID || params.get('id') || (pathId && pathId !== 'producto' ? pathId : null);
             const container = document.getElementById('product-details-container');
 
@@ -612,7 +614,7 @@
                 prod = window.PRODUCTO_PRECARGADO;
                 activeId = prod.id || productId || window.FIREBASE_PRODUCT_ID;
             } else {
-                // 2. Fallback dinámico si no hay datos precargados (visita directa a producto.html?id=...)
+                // 2. Fallback dinámico si no hay datos precargados (visita directa a producto.html?id=... o URL amigable /slug.html)
                 if (!productId) {
                     if (container) {
                         container.innerHTML = '<div style="text-align:center; grid-column: 1/-1; padding: 40px;">Repuesto no especificado. <a href="tienda.html" style="color:#5e8877; font-weight:bold;">Volver a la tienda</a></div>';
@@ -621,18 +623,90 @@
                 }
 
                 try {
-                    const docRef = doc(db, "productos", productId);
-                    const docSnap = await getDoc(docRef);
+                    // Intento 1: Buscar por ID directo de documento en colección 'productos'
+                    try {
+                        const docRef = doc(db, "productos", productId);
+                        const docSnap = await getDoc(docRef);
+                        if (docSnap.exists()) {
+                            prod = docSnap.data();
+                            activeId = productId;
+                        }
+                    } catch (eId) {}
 
-                    if (!docSnap.exists()) {
+                    // Intento 2: Buscar en colección 'productos' donde slug == productId
+                    if (!prod) {
+                        try {
+                            const qSlug = query(collection(db, "productos"), where("slug", "==", productId), limit(1));
+                            const snapSlug = await getDocs(qSlug);
+                            if (!snapSlug.empty) {
+                                const d = snapSlug.docs[0];
+                                prod = d.data();
+                                activeId = d.id;
+                            }
+                        } catch (eSlug) {}
+                    }
+
+                    // Función normalizadora de slugs
+                    const normalizarSlugLocal = (texto) => (texto || '')
+                        .toLowerCase()
+                        .normalize("NFD")
+                        .replace(/[\u0300-\u036f]/g, "")
+                        .replace(/[^a-z0-9]+/g, '-')
+                        .replace(/^-+|-+$/g, '');
+
+                    // Intento 3: Búsqueda exhaustiva en colección 'productos' comparando slugs generados
+                    if (!prod) {
+                        try {
+                            const targetSlug = normalizarSlugLocal(productId);
+                            const snapAll = await getDocs(collection(db, "productos"));
+                            for (const docItem of snapAll.docs) {
+                                const d = docItem.data();
+                                const s = d.slug || normalizarSlugLocal(d.nombre);
+                                if (s === targetSlug || normalizarSlugLocal(d.nombre) === targetSlug) {
+                                    prod = d;
+                                    activeId = docItem.id;
+                                    break;
+                                }
+                            }
+                        } catch (eAll) {}
+                    }
+
+                    // Intento 4: Búsqueda en 'web_destacados' (por si fue publicado en el CMS Web de portada)
+                    if (!prod) {
+                        try {
+                            const targetSlug = normalizarSlugLocal(productId);
+                            const snapDest = await getDocs(collection(db, "web_destacados"));
+                            for (const docItem of snapDest.docs) {
+                                const d = docItem.data();
+                                const s = d.slug || normalizarSlugLocal(d.nombre);
+                                if (s === targetSlug || normalizarSlugLocal(d.nombre) === targetSlug || docItem.id === productId) {
+                                    prod = {
+                                        id: docItem.id,
+                                        nombre: d.nombre,
+                                        precio: d.precioRegular || d.precio || 0,
+                                        precioRegular: d.precioRegular || d.precio || 0,
+                                        precioOferta: d.precioOferta || null,
+                                        imagen: d.imagen,
+                                        stock: 1,
+                                        categoria: d.categoria || 'Repuestos',
+                                        marca: d.marca || '',
+                                        modelo: d.modelo || '',
+                                        numero_parte: d.numero_parte || '',
+                                        descripcion: d.descripcion || `Repuesto original ${d.nombre}. Consulta disponibilidad inmediata y entrega en Caracas.`
+                                    };
+                                    activeId = docItem.id;
+                                    break;
+                                }
+                            }
+                        } catch (eDest) {}
+                    }
+
+                    if (!prod) {
                         if (container) {
                             container.innerHTML = '<div style="text-align:center; grid-column: 1/-1; padding: 40px;">El repuesto solicitado no existe o fue retirado. <a href="tienda.html" style="color:#5e8877; font-weight:bold;">Ir a la tienda</a></div>';
                         }
                         return;
                     }
-
-                    prod = docSnap.data();
-                    activeId = productId;
                 } catch (error) {
                     console.error("Error al cargar producto desde Firestore:", error);
                     if (container) {
