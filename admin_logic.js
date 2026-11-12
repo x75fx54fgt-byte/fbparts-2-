@@ -1878,6 +1878,27 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 
             try {
                 await updateDoc(doc(db, "productos", docId), datosActualizados);
+
+                // Sincronizar en segundo plano con web_destacados si el repuesto está publicado allí
+                try {
+                    const snapDest = await getDocs(collection(db, "web_destacados"));
+                    snapDest.forEach(async dSnap => {
+                        const d = dSnap.data();
+                        if (d.productoId === docId || d.slug === datosActualizados.slug || d.nombre === datosActualizados.nombre) {
+                            await updateDoc(doc(db, "web_destacados", dSnap.id), {
+                                nombre: datosActualizados.nombre,
+                                slug: datosActualizados.slug,
+                                precioRegular: datosActualizados.precio,
+                                categoria: datosActualizados.categoria,
+                                marca: datosActualizados.marca,
+                                modelo: datosActualizados.modelo,
+                                subcategoria: datosActualizados.subcategoria,
+                                imagen: datosActualizados.imagen
+                            });
+                        }
+                    });
+                } catch(eDest) { console.warn("Aviso al sincronizar con web_destacados:", eDest); }
+
                 if(window.registrarAuditoria) window.registrarAuditoria("EDITAR PRODUCTO", "Se modificó el producto: " + datosActualizados.nombre);
                 window.cerrarModalEdicion(); 
                 window.cargarCatalogoAdmin();

@@ -832,7 +832,14 @@
             }
 
             if (busqueda) {
-                filtrados = filtrados.filter(p => (p.nombre || '').toLowerCase().includes(busqueda));
+                filtrados = filtrados.filter(p => {
+                    const n = (p.nombre || '').toLowerCase();
+                    const m = (p.marca || '').toLowerCase();
+                    const mod = (p.modelo || '').toLowerCase();
+                    const sub = (p.subcategoria || '').toLowerCase();
+                    const np = (p.numero_parte || '').toLowerCase();
+                    return n.includes(busqueda) || m.includes(busqueda) || mod.includes(busqueda) || sub.includes(busqueda) || np.includes(busqueda);
+                });
             }
 
             renderizarProductos(filtrados);
@@ -1046,6 +1053,17 @@
                     <div class="prod-price">$${precioNum.toFixed(2)}</div>
                 `;
 
+                // 🏷️ BADGES TÉCNICOS: MARCA, MODELO, SUBCATEGORÍA
+                const tagMarca = (prod.marca && prod.marca !== '' && prod.marca !== 'Universal/Multi-marca')
+                    ? `<span style="background:#e8f4f8; color:#1d6fa5; border:1px solid #bee3f8; padding:2px 7px; border-radius:12px; font-size:10.5px; font-weight:700; display:inline-flex; align-items:center; gap:4px;"><i class="fas fa-car-side"></i> ${prod.marca}</span>` : '';
+                const tagModelo = (prod.modelo && prod.modelo !== '')
+                    ? `<span style="background:#f0f4ff; color:#3c4fa8; border:1px solid #c3cff8; padding:2px 7px; border-radius:12px; font-size:10.5px; font-weight:700; display:inline-flex; align-items:center; gap:4px;"><i class="fas fa-cogs"></i> ${prod.modelo}</span>` : '';
+                const tagSubcat = (prod.subcategoria && prod.subcategoria !== '')
+                    ? `<span style="background:#f5f0ff; color:#6b46c1; border:1px solid #d6bcfa; padding:2px 7px; border-radius:12px; font-size:10.5px; font-weight:700;"><i class="fas fa-tag"></i> ${prod.subcategoria}</span>` : '';
+
+                const tagsCardHTML = (tagMarca || tagModelo || tagSubcat)
+                    ? `<div style="display:flex; flex-wrap:wrap; gap:5px; margin: 6px 0 8px 0;">${tagMarca}${tagModelo}${tagSubcat}</div>` : '';
+
                 cardsHTML += `
                     <div class="prod-card">
                         ${badgeOfertaHTML}
@@ -1056,6 +1074,7 @@
                             <div class="prod-info">
                                 <div class="prod-cat">${nombreCat}</div>
                                 <h4 class="prod-title">${nombreProd}</h4>
+                                ${tagsCardHTML}
                         </a>
                                 ${precioHTML}
                                 <div style="margin-top: auto;">

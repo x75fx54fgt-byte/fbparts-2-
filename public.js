@@ -345,6 +345,16 @@ export async function cargarDestacadosPublico() {
                 `;
             }
 
+            // Badges técnicos: Marca, Modelo, Subcategoría
+            const tagMarca = (item.marca && item.marca !== '' && item.marca !== 'Universal/Multi-marca')
+                ? `<span style="background:#e8f4f8; color:#1d6fa5; border:1px solid #bee3f8; padding:2px 7px; border-radius:12px; font-size:10.5px; font-weight:700; display:inline-flex; align-items:center; gap:4px;"><i class="fas fa-car-side"></i> ${sanitizarTexto(item.marca)}</span>` : '';
+            const tagModelo = (item.modelo && item.modelo !== '')
+                ? `<span style="background:#f0f4ff; color:#3c4fa8; border:1px solid #c3cff8; padding:2px 7px; border-radius:12px; font-size:10.5px; font-weight:700; display:inline-flex; align-items:center; gap:4px;"><i class="fas fa-cogs"></i> ${sanitizarTexto(item.modelo)}</span>` : '';
+            const tagSubcat = (item.subcategoria && item.subcategoria !== '')
+                ? `<span style="background:#f5f0ff; color:#6b46c1; border:1px solid #d6bcfa; padding:2px 7px; border-radius:12px; font-size:10.5px; font-weight:700;">${sanitizarTexto(item.subcategoria)}</span>` : '';
+            const tagsCardHtml = (tagMarca || tagModelo || tagSubcat)
+                ? `<div style="display:flex; flex-wrap:wrap; gap:5px; margin: 4px 0 8px 0;">${tagMarca}${tagModelo}${tagSubcat}</div>` : '';
+
             html += `
             <div class="card-repuesto-destacado" style="background: white; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.06); display: flex; flex-direction: column; position: relative; transition: transform 0.25s ease, box-shadow 0.25s ease;">
                 ${badgeOfertaHtml}
@@ -357,9 +367,10 @@ export async function cargarDestacadosPublico() {
                 </a>
                 <div style="padding: 14px 16px; display: flex; flex-direction: column; flex: 1;">
                     <a href="${productUrl}" style="text-decoration: none; color: inherit; display: block; flex: 1;">
-                        <h4 style="font-size: 13.5px; color: #1f2937; margin: 0 0 10px 0; font-weight: 700; line-height: 1.35; min-height: 36px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="${nombre}">
+                        <h4 style="font-size: 13.5px; color: #1f2937; margin: 0 0 6px 0; font-weight: 700; line-height: 1.35; min-height: 36px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="${nombre}">
                             ${nombre}
                         </h4>
+                        ${tagsCardHtml}
                     </a>
                     
                     ${precioHtml}

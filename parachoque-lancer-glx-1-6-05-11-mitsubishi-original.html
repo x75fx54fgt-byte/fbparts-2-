@@ -451,7 +451,7 @@
     </script>
     <!-- ========================================== -->
 
-    <script type="module">
+        <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, doc, getDoc, collection, getDocs, query, where, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -471,16 +471,18 @@
 
         onAuthStateChanged(auth, (user) => {
             const navBtn = document.getElementById('nav-cuenta-btn');
-            if (user) {
-                navBtn.href = "mi-cuenta.html";
-                navBtn.innerHTML = `<i class="fas fa-user-check"></i> Mi Cuenta`;
-            } else {
-                navBtn.href = "login.html";
-                navBtn.innerHTML = `<i class="fas fa-user"></i> Iniciar Sesión`;
+            if (navBtn) {
+                if (user) {
+                    navBtn.href = "mi-cuenta.html";
+                    navBtn.innerHTML = `<i class="fas fa-user-check"></i> Mi Cuenta`;
+                } else {
+                    navBtn.href = "login.html";
+                    navBtn.innerHTML = `<i class="fas fa-user"></i> Iniciar Sesión`;
+                }
             }
         });
 
-        let productoCargado = false;
+        let currentProdData = null;
 
         // Configuración de Campaña Promocional (Black Friday, Navidad, etc.)
         let campanaConfigProducto = { activa: true, nombre: 'BLACK FRIDAY', icono: 'fas fa-fire' };
@@ -502,6 +504,18 @@
                 .replace(/[\u0300-\u036f]/g, "")
                 .replace(/[^a-z0-9]/g, "")
                 .trim();
+        }
+
+        /**
+         * Normaliza slugs para URLs amigables
+         */
+        function normalizarSlug(texto) {
+            return (texto || '')
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
         }
 
         /**
@@ -596,141 +610,29 @@
             return null;
         }
 
-        async function cargarDetalleProducto() {
-            if (productoCargado) return;
-
-            const params = new URLSearchParams(window.location.search);
-            const rawPath = window.location.pathname.split('/').pop().replace(/\.html$/i, '');
-            let pathId = '';
-            try { pathId = decodeURIComponent(rawPath); } catch(e) { pathId = rawPath; }
-            const productId = window.FIREBASE_PRODUCT_ID || params.get('id') || (pathId && pathId !== 'producto' ? pathId : null);
+        /**
+         * Renderiza la ficha completa del producto en el contenedor
+         */
+        function renderizarFichaProducto(prod, activeId, pathId) {
             const container = document.getElementById('product-details-container');
-
-            let prod = null;
-            let activeId = productId;
-
-            // 1. ⚡ OPTIMIZACIÓN INSTANTÁNEA (Zero-Delay): Usar datos precargados en páginas estáticas
-            if (window.PRODUCTO_PRECARGADO && typeof window.PRODUCTO_PRECARGADO === 'object') {
-                prod = window.PRODUCTO_PRECARGADO;
-                activeId = prod.id || productId || window.FIREBASE_PRODUCT_ID;
-            } else {
-                // 2. Fallback dinámico si no hay datos precargados (visita directa a producto.html?id=... o URL amigable /slug.html)
-                if (!productId) {
-                    if (container) {
-                        container.innerHTML = '<div style="text-align:center; grid-column: 1/-1; padding: 40px;">Repuesto no especificado. <a href="tienda.html" style="color:#5e8877; font-weight:bold;">Volver a la tienda</a></div>';
-                    }
-                    return;
-                }
-
-                try {
-                    // Intento 1: Buscar por ID directo de documento en colección 'productos'
-                    try {
-                        const docRef = doc(db, "productos", productId);
-                        const docSnap = await getDoc(docRef);
-                        if (docSnap.exists()) {
-                            prod = docSnap.data();
-                            activeId = productId;
-                        }
-                    } catch (eId) {}
-
-                    // Intento 2: Buscar en colección 'productos' donde slug == productId
-                    if (!prod) {
-                        try {
-                            const qSlug = query(collection(db, "productos"), where("slug", "==", productId), limit(1));
-                            const snapSlug = await getDocs(qSlug);
-                            if (!snapSlug.empty) {
-                                const d = snapSlug.docs[0];
-                                prod = d.data();
-                                activeId = d.id;
-                            }
-                        } catch (eSlug) {}
-                    }
-
-                    // Función normalizadora de slugs
-                    const normalizarSlugLocal = (texto) => (texto || '')
-                        .toLowerCase()
-                        .normalize("NFD")
-                        .replace(/[\u0300-\u036f]/g, "")
-                        .replace(/[^a-z0-9]+/g, '-')
-                        .replace(/^-+|-+$/g, '');
-
-                    // Intento 3: Búsqueda exhaustiva en colección 'productos' comparando slugs generados
-                    if (!prod) {
-                        try {
-                            const targetSlug = normalizarSlugLocal(productId);
-                            const snapAll = await getDocs(collection(db, "productos"));
-                            for (const docItem of snapAll.docs) {
-                                const d = docItem.data();
-                                const s = d.slug || normalizarSlugLocal(d.nombre);
-                                if (s === targetSlug || normalizarSlugLocal(d.nombre) === targetSlug) {
-                                    prod = d;
-                                    activeId = docItem.id;
-                                    break;
-                                }
-                            }
-                        } catch (eAll) {}
-                    }
-
-                    // Intento 4: Búsqueda en 'web_destacados' (por si fue publicado en el CMS Web de portada)
-                    if (!prod) {
-                        try {
-                            const targetSlug = normalizarSlugLocal(productId);
-                            const snapDest = await getDocs(collection(db, "web_destacados"));
-                            for (const docItem of snapDest.docs) {
-                                const d = docItem.data();
-                                const s = d.slug || normalizarSlugLocal(d.nombre);
-                                if (s === targetSlug || normalizarSlugLocal(d.nombre) === targetSlug || docItem.id === productId) {
-                                    prod = {
-                                        id: docItem.id,
-                                        nombre: d.nombre,
-                                        precio: d.precioRegular || d.precio || 0,
-                                        precioRegular: d.precioRegular || d.precio || 0,
-                                        precioOferta: d.precioOferta || null,
-                                        imagen: d.imagen,
-                                        stock: 1,
-                                        categoria: d.categoria || 'Repuestos',
-                                        marca: d.marca || '',
-                                        modelo: d.modelo || '',
-                                        numero_parte: d.numero_parte || '',
-                                        descripcion: d.descripcion || `Repuesto original ${d.nombre}. Consulta disponibilidad inmediata y entrega en Caracas.`
-                                    };
-                                    activeId = docItem.id;
-                                    break;
-                                }
-                            }
-                        } catch (eDest) {}
-                    }
-
-                    if (!prod) {
-                        if (container) {
-                            container.innerHTML = '<div style="text-align:center; grid-column: 1/-1; padding: 40px;">El repuesto solicitado no existe o fue retirado. <a href="tienda.html" style="color:#5e8877; font-weight:bold;">Ir a la tienda</a></div>';
-                        }
-                        return;
-                    }
-                } catch (error) {
-                    console.error("Error al cargar producto desde Firestore:", error);
-                    if (container) {
-                        container.innerHTML = '<div style="text-align:center; grid-column: 1/-1; color: red; padding: 40px;">Error al cargar los datos del repuesto.</div>';
-                    }
-                    return;
-                }
-            }
-
             if (!prod || !container) return;
-            productoCargado = true;
 
             try {
                 if (prod.categoria) {
                     const catLink = document.getElementById('breadcrumb-category');
-                    catLink.textContent = prod.categoria;
-                    catLink.href = `tienda.html?cat=${encodeURIComponent(prod.categoria)}`;
-                    catLink.style.display = 'inline';
-                    document.getElementById('breadcrumb-category-separator').style.display = 'inline';
+                    if (catLink) {
+                        catLink.textContent = prod.categoria;
+                        catLink.href = `tienda.html?cat=${encodeURIComponent(prod.categoria)}`;
+                        catLink.style.display = 'inline';
+                    }
+                    const catSep = document.getElementById('breadcrumb-category-separator');
+                    if (catSep) catSep.style.display = 'inline';
                 }
                 
-                document.getElementById('breadcrumb-current').textContent = prod.nombre;
+                const breadcrumbCurrent = document.getElementById('breadcrumb-current');
+                if (breadcrumbCurrent) breadcrumbCurrent.textContent = prod.nombre;
 
-                // 🚀 INYECCIÓN DINÁMICA DE SEO PARA GOOGLE Y REDES SOCIALES
+                // 🚀 SEO DINÁMICO
                 document.title = `${prod.nombre} - F&B Parts`;
 
                 let metaDescription = document.querySelector('meta[name="description"]');
@@ -744,7 +646,7 @@
 
                 if(document.getElementById('og-title')) document.getElementById('og-title').setAttribute("content", document.title);
                 if(document.getElementById('og-desc')) document.getElementById('og-desc').setAttribute("content", metaDescription.content);
-                if(document.getElementById('og-image')) document.getElementById('og-image').setAttribute("content", prod.imagen);
+                if(document.getElementById('og-image')) document.getElementById('og-image').setAttribute("content", prod.imagen || '');
                 if(document.getElementById('og-url')) document.getElementById('og-url').setAttribute("content", window.location.href);
 
                 // 🏷️ CÁLCULO DE DESCUENTO / OFERTA DINÁMICA DE CAMPAÑA
@@ -795,6 +697,14 @@
                     <div id="precio-producto-contenedor" class="product-price">$${precioRegularProd.toFixed(2)}</div>
                 `;
 
+                // Schema JSON-LD
+                let scriptProduct = document.getElementById('schema-product-jsonld');
+                if (!scriptProduct) {
+                    scriptProduct = document.createElement('script');
+                    scriptProduct.id = 'schema-product-jsonld';
+                    scriptProduct.type = "application/ld+json";
+                    document.head.appendChild(scriptProduct);
+                }
                 const productSchema = {
                     "@context": "https://schema.org/",
                     "@type": "Product",
@@ -803,7 +713,7 @@
                     "description": prod.descripcion || `Repuesto automotriz ${prod.nombre} disponible en F&B Parts Caracas.`,
                     "sku": prod.numero_parte || activeId,
                     "mpn": prod.numero_parte || "",
-                    "brand": { "@type": "Brand", "name": "F&B Parts" },
+                    "brand": { "@type": "Brand", "name": prod.marca || "F&B Parts" },
                     "offers": {
                         "@type": "Offer",
                         "url": window.location.href,
@@ -813,47 +723,7 @@
                         "seller": { "@type": "Organization", "name": "Inversiones FB Parts, C.A." }
                     }
                 };
-
-                const scriptProduct = document.createElement('script');
-                scriptProduct.type = "application/ld+json";
                 scriptProduct.text = JSON.stringify(productSchema);
-                document.head.appendChild(scriptProduct);
-
-                const breadcrumbSchema = {
-                    "@context": "https://schema.org",
-                    "@type": "BreadcrumbList",
-                    "itemListElement": [
-                        { "@type": "ListItem", "position": 1, "name": "Inicio", "item": "https://www.fybparts.com/index.html" },
-                        { "@type": "ListItem", "position": 2, "name": "Tienda", "item": "https://www.fybparts.com/tienda.html" }
-                    ]
-                };
-                
-                if (prod.categoria) {
-                    breadcrumbSchema.itemListElement.push({
-                        "@type": "ListItem",
-                        "position": 3,
-                        "name": prod.categoria,
-                        "item": `https://www.fybparts.com/tienda.html?cat=${encodeURIComponent(prod.categoria)}`
-                    });
-                    breadcrumbSchema.itemListElement.push({
-                        "@type": "ListItem",
-                        "position": 4,
-                        "name": prod.nombre,
-                        "item": window.location.href
-                    });
-                } else {
-                    breadcrumbSchema.itemListElement.push({
-                        "@type": "ListItem",
-                        "position": 3,
-                        "name": prod.nombre,
-                        "item": window.location.href
-                    });
-                }
-
-                const scriptBreadcrumb = document.createElement('script');
-                scriptBreadcrumb.type = "application/ld+json";
-                scriptBreadcrumb.text = JSON.stringify(breadcrumbSchema);
-                document.head.appendChild(scriptBreadcrumb);
 
                 let botonML = "";
                 if(prod.ml_id && prod.ml_id.trim() !== "") {
@@ -862,7 +732,7 @@
                     botonML = `<a href="https://articulo.mercadolibre.com.ve/${idML}" target="_blank" class="btn-ml-large"><i class="fas fa-handshake"></i> Ver esta pieza en Mercado Libre</a>`;
                 }
 
-                const safeName = prod.nombre.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                const safeName = (prod.nombre || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
                 const stockTxt = prod.stock > 0 ? `<span style="color: #27ae60; font-weight: bold;">En Stock (${prod.stock} disponibles)</span>` : `<span style="color: #c0392b; font-weight: bold;">Agotado</span>`;
                 const numParteTxt = prod.numero_parte ? `<p style="margin: 5px 0;"><strong>Número de Parte / OEM:</strong> ${prod.numero_parte}</p>` : '';
                 const descTxt = prod.descripcion ? `<div style="margin: 15px 0; color: #444; font-size: 14px; line-height: 1.6; white-space: pre-wrap; font-family: inherit;">${prod.descripcion}</div>` : '<p style="margin: 10px 0; color: #888; font-size: 13px;">Sin descripción detallada para este repuesto. Contáctanos para mayor información de compatibilidad.</p>';
@@ -885,10 +755,10 @@
                         ${imagenes.map((url, i) => `<img src="${url}" data-idx="${i}" onclick="cambiarFotoPrincipal(this)" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:2px solid ${i===0?'#5B8266':'#ddd'}; cursor:pointer; transition:border 0.2s;" onerror="this.style.display='none'">`).join('')}
                     </div>` : '';
 
-                // Badges de info técnica
-                const badgeMarca = prod.marca && prod.marca !== '' && prod.marca !== 'Universal/Multi-marca'
+                // Badges de info técnica: MARCA, MODELO, SUBCATEGORÍA, POSICIÓN
+                const badgeMarca = (prod.marca && prod.marca !== '' && prod.marca !== 'Universal/Multi-marca')
                     ? `<span style="background:#e8f4f8; color:#1d6fa5; border:1px solid #bee3f8; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:bold; display:inline-flex; align-items:center; gap:5px;"><i class="fas fa-car-side"></i> ${prod.marca}</span>` : '';
-                const badgeModelo = prod.modelo
+                const badgeModelo = (prod.modelo && prod.modelo !== '')
                     ? `<span style="background:#f0f4ff; color:#3c4fa8; border:1px solid #c3cff8; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:bold; display:inline-flex; align-items:center; gap:5px;"><i class="fas fa-cogs"></i> ${prod.modelo}</span>` : '';
                 
                 const posiciones = Array.isArray(prod.posiciones) && prod.posiciones.length > 0
@@ -904,8 +774,8 @@
                             <div style="display:flex; gap:10px; flex-wrap:wrap;">
                                 ${posiciones.map(p => `
                                     <button type="button" onclick="seleccionarPosicion(this, '${p}')"
-                                        class="btn-pos-var"
-                                        style="padding:8px 18px; border:2px solid #ddd; border-radius:8px; background:#fff; font-size:13px; font-weight:bold; cursor:pointer; transition:all 0.2s;">
+                                        class="btn-pos-var ${window._posicionSeleccionada === p ? 'active-pos' : ''}"
+                                        style="padding:8px 18px; border:2px solid ${window._posicionSeleccionada === p ? '#5B8266' : '#ddd'}; border-radius:8px; background:${window._posicionSeleccionada === p ? '#5B8266' : '#fff'}; color:${window._posicionSeleccionada === p ? '#fff' : '#333'}; font-size:13px; font-weight:bold; cursor:pointer; transition:all 0.2s;">
                                         ${p === 'RH' ? '→ RH (Derecho)' : p === 'LH' ? '← LH (Izquierdo)' : p}
                                     </button>`).join('')}
                             </div>
@@ -914,8 +784,8 @@
                     badgePosicion = `<span style="background:#fff7e6; color:#c07800; border:1px solid #ffe0a0; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:bold;">${posiciones[0]}</span>`;
                 }
 
-                const badgeSubcat = prod.subcategoria
-                    ? `<span style="background:#f5f0ff; color:#6b46c1; border:1px solid #d6bcfa; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:bold;">${prod.subcategoria}</span>` : '';
+                const badgeSubcat = (prod.subcategoria && prod.subcategoria !== '')
+                    ? `<span style="background:#f5f0ff; color:#6b46c1; border:1px solid #d6bcfa; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:bold;"><i class="fas fa-tag"></i> ${prod.subcategoria}</span>` : '';
 
                 const badgesHTML = (badgeMarca || badgeModelo || badgePosicion || badgeSubcat)
                     ? `<div style="display:flex; flex-wrap:wrap; gap:8px; margin: 10px 0;">${badgeMarca}${badgeModelo}${badgePosicion}${badgeSubcat}</div>` : '';
@@ -968,7 +838,7 @@
                     </div>
                 `;
 
-                // Verificación en Firestore en segundo plano (para actualizar ofertas y estado de campaña)
+                // Verificación remota adicional de ofertas
                 buscarOfertaRemota(prod.nombre, activeId, prod.slug || pathId).then(ofRemota => {
                     const cActiva = campanaConfigProducto.activa !== false;
                     const cNombre = campanaConfigProducto.nombre || 'BLACK FRIDAY';
@@ -1008,7 +878,6 @@
                             btnEl.setAttribute('onclick', `agregarAlCarrito('${activeId}', '${safeName}', ${ofPrice})`);
                         }
                     } else if (!cActiva || !ofRemota) {
-                        // Si la campaña está desactivada, restaurar al precio normal
                         if (bEl) bEl.style.display = 'none';
                         if (pEl) {
                             pEl.className = 'product-price';
@@ -1021,12 +890,130 @@
                     }
                 });
 
-                await cargarProductosRelacionadosPorOEMyNombre(activeId, prod.categoria, prod.nombre, prod.numero_parte || "");
-
             } catch (error) {
-                console.error("Error al cargar producto:", error);
-                container.innerHTML = '<div style="text-align:center; grid-column: 1/-1; color: red; padding: 40px;">Error al cargar los datos del repuesto.</div>';
+                console.error("Error al renderizar ficha:", error);
+                if (container) {
+                    container.innerHTML = '<div style="text-align:center; grid-column: 1/-1; color: red; padding: 40px;">Error al mostrar los datos del repuesto.</div>';
+                }
             }
+        }
+
+        async function sincronizarConFirestore(targetId, pathId) {
+            const container = document.getElementById('product-details-container');
+            let liveProd = null;
+            let finalId = targetId;
+
+            try {
+                // Intento 1: Por ID directo
+                if (targetId) {
+                    try {
+                        const docRef = doc(db, "productos", targetId);
+                        const docSnap = await getDoc(docRef);
+                        if (docSnap.exists()) {
+                            liveProd = { id: docSnap.id, ...docSnap.data() };
+                            finalId = docSnap.id;
+                        }
+                    } catch(e) {}
+                }
+
+                // Intento 2: Por slug en colección productos
+                if (!liveProd && (pathId || targetId)) {
+                    const querySlug = pathId || targetId;
+                    try {
+                        const qSlug = query(collection(db, "productos"), where("slug", "==", querySlug), limit(1));
+                        const snapSlug = await getDocs(qSlug);
+                        if (!snapSlug.empty) {
+                            const d = snapSlug.docs[0];
+                            liveProd = { id: d.id, ...d.data() };
+                            finalId = d.id;
+                        }
+                    } catch(e) {}
+                }
+
+                // Intento 3: Búsqueda exhaustiva por normalización de slug o nombre
+                if (!liveProd && (pathId || targetId)) {
+                    const targetSlug = normalizarSlug(pathId || targetId);
+                    try {
+                        const snapAll = await getDocs(collection(db, "productos"));
+                        for (const docItem of snapAll.docs) {
+                            const d = docItem.data();
+                            const s = d.slug || normalizarSlug(d.nombre);
+                            if (s === targetSlug || normalizarSlug(d.nombre) === targetSlug || docItem.id === targetId) {
+                                liveProd = { id: docItem.id, ...d };
+                                finalId = docItem.id;
+                                break;
+                            }
+                        }
+                    } catch(e) {}
+                }
+
+                // Intento 4: Búsqueda en web_destacados si no se encontró en productos
+                if (!liveProd && (pathId || targetId)) {
+                    const targetSlug = normalizarSlug(pathId || targetId);
+                    try {
+                        const snapDest = await getDocs(collection(db, "web_destacados"));
+                        for (const docItem of snapDest.docs) {
+                            const d = docItem.data();
+                            const s = d.slug || normalizarSlug(d.nombre);
+                            if (s === targetSlug || normalizarSlug(d.nombre) === targetSlug || docItem.id === targetId) {
+                                liveProd = {
+                                    id: docItem.id,
+                                    nombre: d.nombre,
+                                    precio: d.precioRegular || d.precio || 0,
+                                    precioRegular: d.precioRegular || d.precio || 0,
+                                    precioOferta: d.precioOferta || null,
+                                    imagen: d.imagen,
+                                    stock: 1,
+                                    categoria: d.categoria || 'Repuestos',
+                                    marca: d.marca || '',
+                                    modelo: d.modelo || '',
+                                    subcategoria: d.subcategoria || '',
+                                    numero_parte: d.numero_parte || '',
+                                    descripcion: d.descripcion || `Repuesto original ${d.nombre}. Consulta disponibilidad inmediata y entrega en Caracas.`
+                                };
+                                finalId = docItem.id;
+                                break;
+                            }
+                        }
+                    } catch(e) {}
+                }
+
+                if (liveProd) {
+                    // Mezclar datos: datos en vivo de Firestore actualizan los campos estáticos
+                    const merged = Object.assign({}, currentProdData || {}, liveProd);
+                    currentProdData = merged;
+                    renderizarFichaProducto(merged, finalId, pathId);
+                    cargarProductosRelacionadosPorOEMyNombre(finalId, merged.categoria, merged.nombre, merged.numero_parte || "");
+                } else if (!currentProdData) {
+                    if (container) {
+                        container.innerHTML = '<div style="text-align:center; grid-column: 1/-1; padding: 40px;">El repuesto solicitado no existe o fue retirado. <a href="tienda.html" style="color:#5e8877; font-weight:bold;">Ir a la tienda</a></div>';
+                    }
+                }
+            } catch(err) {
+                console.warn("Aviso: Error en sincronización con Firestore:", err);
+            }
+        }
+
+        async function cargarDetalleProducto() {
+            const params = new URLSearchParams(window.location.search);
+            const rawPath = window.location.pathname.split('/').pop().replace(/\.html$/i, '');
+            let pathId = '';
+            try { pathId = decodeURIComponent(rawPath); } catch(e) { pathId = rawPath; }
+            const productId = window.FIREBASE_PRODUCT_ID || params.get('id') || (pathId && pathId !== 'producto' ? pathId : null);
+
+            let activeId = productId;
+
+            // FASE 1: RENDERIZADO INMEDIATO (0 ms) si hay datos precargados
+            if (window.PRODUCTO_PRECARGADO && typeof window.PRODUCTO_PRECARGADO === 'object') {
+                currentProdData = Object.assign({}, window.PRODUCTO_PRECARGADO);
+                activeId = currentProdData.id || productId || window.FIREBASE_PRODUCT_ID;
+                renderizarFichaProducto(currentProdData, activeId, pathId);
+                cargarProductosRelacionadosPorOEMyNombre(activeId, currentProdData.categoria, currentProdData.nombre, currentProdData.numero_parte || "");
+            }
+
+            // FASE 2: SINCRONIZACIÓN EN VIVO CON FIRESTORE (Stale-While-Revalidate)
+            // Siempre consulta Firestore para actualizar etiquetas, marcas, modelos, precios, ofertas y stock
+            sincronizarConFirestore(activeId, pathId);
         }
 
         async function cargarProductosRelacionadosPorOEMyNombre(currentId, categoriaActual, nombreActual, numeroParteActual) {
@@ -1045,12 +1032,12 @@
                 });
 
                 const palabrasIgnoradas = ["de", "para", "el", "la", "los", "las", "y", "con", "en", "un", "una", "del", "al"];
-                const palabrasNombre = nombreActual.toLowerCase().replace(/[^a-záéíóúñ0-9]/g, " ").split(/\s+/).filter(w => w.length > 2 && !palabrasIgnoradas.includes(w));
+                const palabrasNombre = (nombreActual || '').toLowerCase().replace(/[^a-záéíóúñ0-9]/g, " ").split(/\s+/).filter(w => w.length > 2 && !palabrasIgnoradas.includes(w));
                 const tokensOEM = numeroParteActual ? numeroParteActual.toLowerCase().replace(/[^a-záéíóúñ0-9]/g, " ").split(/\s+/).filter(w => w.length > 1 && !palabrasIgnoradas.includes(w)) : [];
 
                 let puntuados = poolProductos.map(prod => {
                     let score = 0;
-                    const nombreProd = prod.nombre.toLowerCase();
+                    const nombreProd = (prod.nombre || '').toLowerCase();
                     const oemProd = prod.numero_parte ? prod.numero_parte.toLowerCase() : "";
 
                     if (prod.categoria === categoriaActual) score += 5;
@@ -1081,12 +1068,7 @@
 
                 relatedGrid.innerHTML = '';
                 seleccionados.forEach(prod => {
-                    const slug = (prod.nombre || 'repuesto')
-                        .toLowerCase()
-                        .normalize("NFD")
-                        .replace(/[\u0300-\u036f]/g, "")
-                        .replace(/[^a-z0-9]+/g, '-')
-                        .replace(/^-+|-+$/g, '');
+                    const slug = normalizarSlug(prod.nombre || 'repuesto');
                     const productUrl = `${slug}.html`;
                     
                     const precioBaseRel = Number(prod.precio || 0);
@@ -1145,14 +1127,16 @@
         // ==========================================
         window.toggleCartPanel = function() {
             const panel = document.getElementById('cart-panel-overlay');
-            panel.classList.toggle('active');
-            if (panel.classList.contains('active')) {
-                actualizarUICarritoProducto();
+            if (panel) {
+                panel.classList.toggle('active');
+                if (panel.classList.contains('active')) {
+                    actualizarUICarritoProducto();
+                }
             }
         };
 
         window.cerrarPanelCarrito = function(e) {
-            if (e.target.id === 'cart-panel-overlay') {
+            if (e.target && e.target.id === 'cart-panel-overlay') {
                 toggleCartPanel();
             }
         };
@@ -1211,7 +1195,7 @@
                 item.cantidad += delta;
                 if(item.cantidad <= 0) carrito = carrito.filter(i => i.id !== id);
                 localStorage.setItem('carritoFB', JSON.stringify(carrito));
-                actualizarUICarritoProducto(); // Actualiza el panel lateral
+                actualizarUICarritoProducto();
             }
         };
 
@@ -1223,27 +1207,24 @@
         };
 
         window.agregarAlCarrito = function(id, nombre, precio) {
-            // Guardamos en memoria
             let carrito = JSON.parse(localStorage.getItem('carritoFB')) || [];
             const item = carrito.find(i => i.id === id);
             if(item) item.cantidad++;
             else carrito.push({ id, nombre, precio, cantidad: 1 });
             localStorage.setItem('carritoFB', JSON.stringify(carrito));
             
-            // Actualizamos la UI
             window.actualizarBadgeCarrito();
             window.actualizarUICarritoProducto();
 
-            // Transformamos el botón para guiar al cliente
             const btn = document.querySelector('.btn-add-cart-large');
             if(btn) {
                 btn.innerHTML = '<i class="fas fa-check-circle"></i> ¡Añadido! Ver mi Pedido';
                 btn.style.background = '#25D366';
-                btn.onclick = () => window.toggleCartPanel(); // Ahora abre el panel
+                btn.onclick = () => window.toggleCartPanel();
             }
             
-            // Abrimos el panel lateral automáticamente
-            document.getElementById('cart-panel-overlay').classList.add('active');
+            const overlay = document.getElementById('cart-panel-overlay');
+            if (overlay) overlay.classList.add('active');
         };
 
         // ⚡ INICIALIZACIÓN INMEDIATA (Zero-Delay): Renderizar ya mismo si el contenedor existe en el DOM
