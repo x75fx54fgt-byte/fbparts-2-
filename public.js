@@ -180,7 +180,7 @@ export async function cargarBannersHeroPublico() {
 
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, getDocs, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, getDocs, query, where, orderBy, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // Configuración oficial de Firebase FB Parts
 const firebaseConfig = {
@@ -195,6 +195,34 @@ const firebaseConfig = {
 // Inicializar Firebase Firestore
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+
+let _campanaPublicConfig = null;
+async function obtenerConfigCampanaPublic() {
+    if (_campanaPublicConfig) return _campanaPublicConfig;
+    try {
+        const cached = localStorage.getItem('campanaOfertasConfig');
+        if (cached) {
+            _campanaPublicConfig = JSON.parse(cached);
+        }
+    } catch(e) {}
+    if (!_campanaPublicConfig) {
+        _campanaPublicConfig = { activa: true, nombre: 'BLACK FRIDAY', icono: 'fas fa-fire' };
+    }
+    // Background check contra Firestore
+    try {
+        const snap = await getDoc(doc(db, "configuracion", "campana_ofertas"));
+        if (snap.exists()) {
+            const d = snap.data();
+            _campanaPublicConfig = {
+                activa: d.activa !== false,
+                nombre: d.nombre || 'BLACK FRIDAY',
+                icono: d.icono || 'fas fa-fire'
+            };
+            try { localStorage.setItem('campanaOfertasConfig', JSON.stringify(_campanaPublicConfig)); } catch(e) {}
+        }
+    } catch(e) {}
+    return _campanaPublicConfig;
+}
 
 /**
  * Sanitiza texto para evitar inyecciones HTML en el frontend público
@@ -253,6 +281,12 @@ export async function cargarDestacadosPublico() {
         });
         items.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
+        // Obtener configuración de campaña (activada/desactivada, nombre e icono)
+        const campanaConfig = await obtenerConfigCampanaPublic();
+        const campanaActiva = campanaConfig && campanaConfig.activa !== false;
+        const nombreCampana = (campanaConfig && campanaConfig.nombre) ? campanaConfig.nombre : 'BLACK FRIDAY';
+        const iconoCampana = (campanaConfig && campanaConfig.icono) ? campanaConfig.icono : 'fas fa-fire';
+
         let html = '';
 
         items.forEach(item => {
@@ -278,15 +312,15 @@ export async function cargarDestacadosPublico() {
                 .replace(/^-+|-+$/g, ''));
             const productUrl = `${slug}.html`;
 
-            // Lógica de Descuentos (Black Friday / Oferta)
-            const tieneOferta = precioOferta !== null && precioOferta > 0 && precioOferta < precioRegular;
+            // Lógica de Descuentos (depende de que la campaña esté activa)
+            const tieneOferta = campanaActiva && precioOferta !== null && precioOferta > 0 && precioOferta < precioRegular;
             const pctAhorro = tieneOferta ? Math.round((1 - (precioOferta / precioRegular)) * 100) : 0;
 
-            // Badge de Oferta / Black Friday en la esquina superior izquierda
+            // Badge de Oferta dinámico en la esquina superior izquierda
             const badgeOfertaHtml = tieneOferta ? `
                 <div style="position: absolute; top: 12px; left: 12px; z-index: 2; display: flex; flex-direction: column; gap: 4px; pointer-events: none;">
                     <span style="background: linear-gradient(135deg, #e63946 0%, #b7094c 100%); color: white; font-size: 11px; font-weight: 800; padding: 4px 9px; border-radius: 4px; box-shadow: 0 3px 8px rgba(230,57,70,0.45); text-transform: uppercase; font-family: 'Oswald', sans-serif; letter-spacing: 0.6px; display: inline-flex; align-items: center; gap: 5px;">
-                        <i class="fas fa-fire"></i> BLACK FRIDAY
+                        <i class="${iconoCampana}"></i> ${sanitizarTexto(nombreCampana)}
                     </span>
                     <span style="background: #1f2937; color: #fde047; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 3px; align-self: flex-start; text-transform: uppercase; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px;">
                         -${pctAhorro}% OFF

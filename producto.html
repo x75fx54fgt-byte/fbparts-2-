@@ -482,6 +482,15 @@
 
         let productoCargado = false;
 
+        // Configuración de Campaña Promocional (Black Friday, Navidad, etc.)
+        let campanaConfigProducto = { activa: true, nombre: 'BLACK FRIDAY', icono: 'fas fa-fire' };
+        try {
+            const cachedCamp = localStorage.getItem('campanaOfertasConfig');
+            if (cachedCamp) {
+                campanaConfigProducto = JSON.parse(cachedCamp);
+            }
+        } catch(e) {}
+
         /**
          * Normaliza cadenas para comparaciones flexibles (sin acentos ni símbolos)
          */
@@ -496,9 +505,10 @@
         }
 
         /**
-         * Busca ofertas activas en la caché local (0 ms)
+         * Busca ofertas activas en la caché local (0 ms) si la campaña está encendida
          */
         function buscarOfertaEnMemoria(nombre, id, slug) {
+            if (campanaConfigProducto.activa === false) return null;
             try {
                 const cacheRaw = localStorage.getItem('ofertasCatalogo');
                 if (cacheRaw) {
@@ -517,10 +527,28 @@
         }
 
         /**
-         * Consulta Firestore (web_destacados) en segundo plano si la caché estaba vacía
+         * Consulta Firestore (web_destacados y campana_ofertas) en segundo plano
          */
         async function buscarOfertaRemota(nombre, id, slug) {
             try {
+                // Sincronizar estado global de campaña
+                try {
+                    const snapCampana = await getDoc(doc(db, "configuracion", "campana_ofertas"));
+                    if (snapCampana.exists()) {
+                        const cd = snapCampana.data();
+                        campanaConfigProducto = {
+                            activa: cd.activa !== false,
+                            nombre: cd.nombre || 'BLACK FRIDAY',
+                            icono: cd.icono || 'fas fa-fire'
+                        };
+                        try { localStorage.setItem('campanaOfertasConfig', JSON.stringify(campanaConfigProducto)); } catch(e) {}
+                    }
+                } catch(e) {}
+
+                if (campanaConfigProducto.activa === false) {
+                    return null;
+                }
+
                 const snap = await getDocs(collection(db, "web_destacados"));
                 const nuevoMapa = {};
                 const nuevoById = {};
@@ -645,24 +673,30 @@
                 if(document.getElementById('og-image')) document.getElementById('og-image').setAttribute("content", prod.imagen);
                 if(document.getElementById('og-url')) document.getElementById('og-url').setAttribute("content", window.location.href);
 
-                // 🏷️ CÁLCULO DE DESCUENTO / OFERTA BLACK FRIDAY
+                // 🏷️ CÁLCULO DE DESCUENTO / OFERTA DINÁMICA DE CAMPAÑA
                 const precioRegularProd = Number(prod.precioRegular || prod.precio || 0);
+                const campanaActiva = campanaConfigProducto.activa !== false;
+                const nombreCampana = campanaConfigProducto.nombre || 'BLACK FRIDAY';
+                const iconoCampana = campanaConfigProducto.icono || 'fas fa-fire';
+
                 let ofertaInfo = null;
 
-                const ofDoc = (prod.precioOferta !== null && prod.precioOferta !== undefined && prod.precioOferta !== '')
-                    ? Number(prod.precioOferta)
-                    : null;
-                if (ofDoc !== null && ofDoc > 0 && ofDoc < precioRegularProd) {
-                    ofertaInfo = {
-                        precioRegular: precioRegularProd,
-                        precioOferta: ofDoc,
-                        porcentaje: Math.round((1 - (ofDoc / precioRegularProd)) * 100)
-                    };
-                } else {
-                    ofertaInfo = buscarOfertaEnMemoria(prod.nombre, activeId, prod.slug || pathId);
+                if (campanaActiva) {
+                    const ofDoc = (prod.precioOferta !== null && prod.precioOferta !== undefined && prod.precioOferta !== '')
+                        ? Number(prod.precioOferta)
+                        : null;
+                    if (ofDoc !== null && ofDoc > 0 && ofDoc < precioRegularProd) {
+                        ofertaInfo = {
+                            precioRegular: precioRegularProd,
+                            precioOferta: ofDoc,
+                            porcentaje: Math.round((1 - (ofDoc / precioRegularProd)) * 100)
+                        };
+                    } else {
+                        ofertaInfo = buscarOfertaEnMemoria(prod.nombre, activeId, prod.slug || pathId);
+                    }
                 }
 
-                const tieneOferta = Boolean(ofertaInfo && ofertaInfo.precioOferta > 0 && ofertaInfo.precioOferta < (ofertaInfo.precioRegular || precioRegularProd));
+                const tieneOferta = campanaActiva && Boolean(ofertaInfo && ofertaInfo.precioOferta > 0 && ofertaInfo.precioOferta < (ofertaInfo.precioRegular || precioRegularProd));
                 const precioRegularFinal = tieneOferta ? Number(ofertaInfo.precioRegular || precioRegularProd) : precioRegularProd;
                 const precioFinal = tieneOferta ? Number(ofertaInfo.precioOferta) : precioRegularProd;
                 const pctAhorro = tieneOferta ? (ofertaInfo.porcentaje || Math.round((1 - (precioFinal / precioRegularFinal)) * 100)) : 0;
@@ -670,7 +704,7 @@
                 const badgeOfertaProdHTML = `
                     <div id="badge-oferta-contenedor" style="${tieneOferta ? 'display: inline-flex;' : 'display: none;'} align-items: center; gap: 6px; margin: 8px 0 14px 0;">
                         <span style="background: linear-gradient(135deg, #e63946 0%, #b7094c 100%); color: white; font-size: 11.5px; font-weight: 800; padding: 4px 10px; border-radius: 4px; box-shadow: 0 3px 8px rgba(230,57,70,0.45); text-transform: uppercase; font-family: 'Oswald', sans-serif; letter-spacing: 0.6px; display: inline-flex; align-items: center; gap: 5px;">
-                            <i class="fas fa-fire"></i> BLACK FRIDAY
+                            <i id="badge-icono-oferta" class="${iconoCampana}"></i> <span id="badge-texto-campana">${nombreCampana}</span>
                         </span>
                         <span id="badge-pct-oferta" style="background: #1f2937; color: #fde047; font-size: 11.5px; font-weight: 800; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px;">
                             -${pctAhorro}% OFF
@@ -860,42 +894,58 @@
                     </div>
                 `;
 
-                // Si no se detectó oferta inicialmente, verificar en Firestore en segundo plano
-                if (!tieneOferta) {
-                    buscarOfertaRemota(prod.nombre, activeId, prod.slug || pathId).then(ofRemota => {
-                        if (ofRemota && ofRemota.precioOferta > 0 && ofRemota.precioOferta < (ofRemota.precioRegular || precioRegularProd)) {
-                            const ofPrice = Number(ofRemota.precioOferta);
-                            const regPrice = Number(ofRemota.precioRegular || precioRegularProd);
-                            const pct = ofRemota.porcentaje || Math.round((1 - (ofPrice / regPrice)) * 100);
+                // Verificación en Firestore en segundo plano (para actualizar ofertas y estado de campaña)
+                buscarOfertaRemota(prod.nombre, activeId, prod.slug || pathId).then(ofRemota => {
+                    const cActiva = campanaConfigProducto.activa !== false;
+                    const cNombre = campanaConfigProducto.nombre || 'BLACK FRIDAY';
+                    const cIcono = campanaConfigProducto.icono || 'fas fa-fire';
 
-                            const bEl = document.getElementById('badge-oferta-contenedor');
-                            const pctEl = document.getElementById('badge-pct-oferta');
-                            if (bEl && pctEl) {
-                                pctEl.innerText = `-${pct}% OFF`;
-                                bEl.style.display = 'inline-flex';
-                            }
+                    const bEl = document.getElementById('badge-oferta-contenedor');
+                    const pctEl = document.getElementById('badge-pct-oferta');
+                    const txtEl = document.getElementById('badge-texto-campana');
+                    const icoEl = document.getElementById('badge-icono-oferta');
+                    const pEl = document.getElementById('precio-producto-contenedor');
+                    const btnEl = document.getElementById('btn-add-cart-main');
 
-                            const pEl = document.getElementById('precio-producto-contenedor');
-                            if (pEl) {
-                                pEl.className = '';
-                                pEl.style.display = 'flex';
-                                pEl.style.alignItems = 'baseline';
-                                pEl.style.gap = '12px';
-                                pEl.style.marginBottom = '20px';
-                                pEl.style.flexWrap = 'wrap';
-                                pEl.innerHTML = `
-                                    <span style="text-decoration: line-through; color: #ef4444; font-size: 20px; font-weight: 600;">$${regPrice.toFixed(2)}</span>
-                                    <span style="font-size: 32px; color: #2c441b; font-weight: 800; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px;">$${ofPrice.toFixed(2)}</span>
-                                `;
-                            }
+                    if (cActiva && ofRemota && ofRemota.precioOferta > 0 && ofRemota.precioOferta < (ofRemota.precioRegular || precioRegularProd)) {
+                        const ofPrice = Number(ofRemota.precioOferta);
+                        const regPrice = Number(ofRemota.precioRegular || precioRegularProd);
+                        const pct = ofRemota.porcentaje || Math.round((1 - (ofPrice / regPrice)) * 100);
 
-                            const btnEl = document.getElementById('btn-add-cart-main');
-                            if (btnEl) {
-                                btnEl.setAttribute('onclick', `agregarAlCarrito('${activeId}', '${safeName}', ${ofPrice})`);
-                            }
+                        if (txtEl) txtEl.innerText = cNombre;
+                        if (icoEl) icoEl.className = cIcono;
+                        if (pctEl) pctEl.innerText = `-${pct}% OFF`;
+                        if (bEl) bEl.style.display = 'inline-flex';
+
+                        if (pEl) {
+                            pEl.className = '';
+                            pEl.style.display = 'flex';
+                            pEl.style.alignItems = 'baseline';
+                            pEl.style.gap = '12px';
+                            pEl.style.marginBottom = '20px';
+                            pEl.style.flexWrap = 'wrap';
+                            pEl.innerHTML = `
+                                <span style="text-decoration: line-through; color: #ef4444; font-size: 20px; font-weight: 600;">$${regPrice.toFixed(2)}</span>
+                                <span style="font-size: 32px; color: #2c441b; font-weight: 800; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px;">$${ofPrice.toFixed(2)}</span>
+                            `;
                         }
-                    });
-                }
+
+                        if (btnEl) {
+                            btnEl.setAttribute('onclick', `agregarAlCarrito('${activeId}', '${safeName}', ${ofPrice})`);
+                        }
+                    } else if (!cActiva || !ofRemota) {
+                        // Si la campaña está desactivada, restaurar al precio normal
+                        if (bEl) bEl.style.display = 'none';
+                        if (pEl) {
+                            pEl.className = 'product-price';
+                            pEl.style.display = '';
+                            pEl.innerHTML = `$${precioRegularProd.toFixed(2)}`;
+                        }
+                        if (btnEl) {
+                            btnEl.setAttribute('onclick', `agregarAlCarrito('${activeId}', '${safeName}', ${precioRegularProd})`);
+                        }
+                    }
+                });
 
                 await cargarProductosRelacionadosPorOEMyNombre(activeId, prod.categoria, prod.nombre, prod.numero_parte || "");
 
@@ -951,6 +1001,10 @@
                     return;
                 }
                 
+                const campanaActiva = campanaConfigProducto.activa !== false;
+                const nombreCampana = campanaConfigProducto.nombre || 'BLACK FRIDAY';
+                const iconoCampana = campanaConfigProducto.icono || 'fas fa-fire';
+
                 relatedGrid.innerHTML = '';
                 seleccionados.forEach(prod => {
                     const slug = (prod.nombre || 'repuesto')
@@ -962,16 +1016,16 @@
                     const productUrl = `${slug}.html`;
                     
                     const precioBaseRel = Number(prod.precio || 0);
-                    const ofRel = buscarOfertaEnMemoria(prod.nombre, prod.id, slug);
-                    const tieneOfRel = Boolean(ofRel && ofRel.precioOferta > 0 && ofRel.precioOferta < (ofRel.precioRegular || precioBaseRel));
+                    const ofRel = campanaActiva ? buscarOfertaEnMemoria(prod.nombre, prod.id, slug) : null;
+                    const tieneOfRel = campanaActiva && Boolean(ofRel && ofRel.precioOferta > 0 && ofRel.precioOferta < (ofRel.precioRegular || precioBaseRel));
                     const precioFinalRel = tieneOfRel ? Number(ofRel.precioOferta) : precioBaseRel;
                     const precioRegRel = tieneOfRel ? Number(ofRel.precioRegular || precioBaseRel) : precioBaseRel;
                     const pctRel = tieneOfRel ? (ofRel.porcentaje || Math.round((1 - (precioFinalRel / precioRegRel)) * 100)) : 0;
 
                     const badgeRelHTML = tieneOfRel ? `
                         <div style="position: absolute; top: 8px; left: 8px; z-index: 2; display: flex; flex-direction: column; gap: 2px;">
-                            <span style="background: linear-gradient(135deg, #e63946 0%, #b7094c 100%); color: white; font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 3px; font-family: 'Oswald', sans-serif;">
-                                🔥 BLACK FRIDAY
+                            <span style="background: linear-gradient(135deg, #e63946 0%, #b7094c 100%); color: white; font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 3px; font-family: 'Oswald', sans-serif; display: inline-flex; align-items: center; gap: 4px;">
+                                <i class="${iconoCampana}"></i> ${nombreCampana}
                             </span>
                             <span style="background: #1f2937; color: #fde047; font-size: 8.5px; font-weight: 800; padding: 1px 5px; border-radius: 2px; align-self: flex-start;">
                                 -${pctRel}% OFF

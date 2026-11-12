@@ -628,7 +628,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, getDocs, query, where, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, query, where, addDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         import { SecuritySanitizer } from "./security-utils.js";
 
         const firebaseConfig = {
@@ -690,11 +690,19 @@
             return match ? match[1] : null;
         }
 
+        let campanaConfigTienda = { activa: true, nombre: 'BLACK FRIDAY', icono: 'fas fa-fire' };
+        try {
+            const cachedCamp = localStorage.getItem('campanaOfertasConfig');
+            if (cachedCamp) {
+                campanaConfigTienda = JSON.parse(cachedCamp);
+            }
+        } catch(e) {}
+
         /**
          * Busca de forma multi-criterio si un producto tiene un descuento activo
          */
         function buscarOfertaParaProducto(prod) {
-            if (!prod) return null;
+            if (!prod || campanaConfigTienda.activa === false) return null;
 
             // 1. Verificación directa si el documento de producto ya tiene precioOferta
             const precioRegDoc = Number(prod.precioRegular || prod.precio || 0);
@@ -874,14 +882,25 @@
             try {
                 const qProd = query(collection(db, "productos"), where("estado", "==", "activo"));
 
-                // Consultar inventario y ofertas en paralelo
-                const [snapProd, snapOfertas] = await Promise.all([
+                // Consultar inventario, ofertas y campaña en paralelo
+                const [snapProd, snapOfertas, snapCampana] = await Promise.all([
                     getDocs(qProd),
                     getDocs(collection(db, "web_destacados")).catch(e => {
                         console.warn("Aviso al consultar web_destacados en catálogo:", e);
                         return { forEach: () => {} };
-                    })
+                    }),
+                    getDoc(doc(db, "configuracion", "campana_ofertas")).catch(e => null)
                 ]);
+
+                if (snapCampana && snapCampana.exists && snapCampana.exists()) {
+                    const cd = snapCampana.data();
+                    campanaConfigTienda = {
+                        activa: cd.activa !== false,
+                        nombre: cd.nombre || 'BLACK FRIDAY',
+                        icono: cd.icono || 'fas fa-fire'
+                    };
+                    try { localStorage.setItem('campanaOfertasConfig', JSON.stringify(campanaConfigTienda)); } catch(e) {}
+                }
 
                 // Procesar mapa de ofertas
                 const nuevoMapa = {};
@@ -1000,16 +1019,20 @@
 
                 const precioNum = Number(prod.precio || 0);
 
-                // 🏷️ COMPROBACIÓN DE OFERTA / DESCUENTO BLACK FRIDAY
+                // 🏷️ COMPROBACIÓN DE OFERTA / DESCUENTO DE CAMPAÑA
                 const oferta = buscarOfertaParaProducto(prod);
-                const tieneOferta = Boolean(oferta && oferta.precioOferta > 0 && oferta.precioOferta < (oferta.precioRegular || precioNum));
+                const campanaActiva = campanaConfigTienda.activa !== false;
+                const nombreCampana = campanaConfigTienda.nombre || 'BLACK FRIDAY';
+                const iconoCampana = campanaConfigTienda.icono || 'fas fa-fire';
+
+                const tieneOferta = campanaActiva && Boolean(oferta && oferta.precioOferta > 0 && oferta.precioOferta < (oferta.precioRegular || precioNum));
                 const precioRegularFinal = tieneOferta ? Number(oferta.precioRegular || precioNum) : precioNum;
                 const precioFinal = tieneOferta ? Number(oferta.precioOferta) : precioNum;
                 const pctAhorro = tieneOferta ? (oferta.porcentaje || Math.round((1 - (precioFinal / precioRegularFinal)) * 100)) : 0;
 
                 const badgeOfertaHTML = tieneOferta ? `
                     <div class="badge-black-friday-catalogo">
-                        <span class="tag-bf"><i class="fas fa-fire"></i> BLACK FRIDAY</span>
+                        <span class="tag-bf"><i class="${iconoCampana}"></i> ${nombreCampana}</span>
                         <span class="tag-pct">-${pctAhorro}% OFF</span>
                     </div>
                 ` : '';
