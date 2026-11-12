@@ -2615,6 +2615,125 @@
                 <!-- ============================================== -->
                 <div id="subtab-content-destacados" style="display: none;">
 
+                <!-- ============================================== -->
+                <!-- 🎯 CONTROL GENERAL DE CAMPAÑA PROMOCIONAL      -->
+                <!-- ============================================== -->
+                <div class="card-form" style="background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%); border: 1.5px solid #86efac; border-radius: 12px; padding: 20px 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 24px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #bbf7d0; padding-bottom: 12px; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <h3 style="color: #166534; font-family: 'Oswald', sans-serif; font-size: 19px; margin: 0; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-bullhorn" style="color: #15803d;"></i> Control General de Campaña Promocional (Festividades & Ofertas)
+                            </h3>
+                            <p style="margin: 2px 0 0 0; font-size: 12.5px; color: #4b5563;">
+                                Activa o desactiva las ofertas globalmente en la web y personaliza qué evento se está celebrando (Black Friday, Navidad, Año Nuevo, etc.).
+                            </p>
+                        </div>
+                        <div id="badge-estado-campana-global" style="display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 9999px; font-weight: 800; font-size: 12.5px; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px; background: #dcfce7; color: #15803d; border: 1.5px solid #86efac;">
+                            <i class="fas fa-check-circle" id="icono-estado-campana-global"></i> <span id="texto-estado-campana-global">OFERTAS ACTIVAS</span>
+                        </div>
+                    </div>
+
+                    <!-- Controles de la Campaña en Grid -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; align-items: stretch;">
+                        
+                        <!-- 1. Switch de Activación -->
+                        <div style="background: white; border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+                                <div>
+                                    <span style="font-weight: 800; font-size: 13.5px; color: #1e293b; display: block;">
+                                        Activar Ofertas en la Web
+                                    </span>
+                                    <span style="font-size: 11.5px; color: #64748b; display: block; margin-top: 2px;">
+                                        Si está apagado, toda la tienda muestra solo precios regulares normales sin borrar tu lista de descuentos.
+                                    </span>
+                                </div>
+                                <div style="flex-shrink: 0;">
+                                    <input type="checkbox" id="switch-campana-activa" checked onchange="actualizarEstadoCampanaLive()" style="display: none;">
+                                    <div id="toggle-campana-visual" onclick="toggleSwitchCampana()" 
+                                        style="width: 52px; height: 28px; background: #15803d; border-radius: 9999px; position: relative; cursor: pointer; transition: background 0.3s;">
+                                        <div id="toggle-campana-knob" 
+                                            style="width: 22px; height: 22px; background: white; border-radius: 50%; position: absolute; top: 3px; left: 27px; transition: left 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.25);"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="desc-estado-campana" style="font-size: 11.5px; font-weight: 600; color: #166534; background: #f0fdf4; padding: 6px 10px; border-radius: 6px; border: 1px solid #bbf7d0;">
+                                ✓ Las promociones y badges se están mostrando en la web.
+                            </div>
+                        </div>
+
+                        <!-- 2. Nombre del Evento y Selector de Icono -->
+                        <div style="background: white; border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                            <div>
+                                <label style="display: block; font-weight: 800; margin-bottom: 6px; font-size: 12px; text-transform: uppercase; color: #1e293b; letter-spacing: 0.5px;">
+                                    Nombre del Evento / Celebración <span style="color: #ef4444;">*</span>
+                                </label>
+                                <div style="display: flex; gap: 8px;">
+                                    <input type="text" id="campana-nombre-input" value="BLACK FRIDAY" placeholder="Ej: NAVIDAD, BLACK FRIDAY..." 
+                                        oninput="actualizarEstadoCampanaLive()"
+                                        style="flex: 1; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 13.5px; font-weight: bold; color: #0f172a;">
+                                    <select id="campana-icono-select" onchange="actualizarEstadoCampanaLive()"
+                                        style="padding: 8px 10px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 13.5px; font-weight: bold; background: white; cursor: pointer;">
+                                        <option value="fas fa-fire">🔥 Fuego</option>
+                                        <option value="fas fa-tree">🎄 Árbol (Navidad)</option>
+                                        <option value="fas fa-gift">🎁 Regalo</option>
+                                        <option value="fas fa-star">⭐ Estrella</option>
+                                        <option value="fas fa-bolt">⚡ Rayo (Cyber)</option>
+                                        <option value="fas fa-tag">🏷️ Etiqueta</option>
+                                        <option value="fas fa-sparkles">✨ Chispas</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Presets Rápidos -->
+                            <div>
+                                <span style="font-size: 10.5px; color: #64748b; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 4px;">Selección rápida:</span>
+                                <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                                    <button type="button" onclick="seleccionarPresetCampana('BLACK FRIDAY', 'fas fa-fire')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                        🔥 Black Friday
+                                    </button>
+                                    <button type="button" onclick="seleccionarPresetCampana('NAVIDAD', 'fas fa-tree')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                        🎄 Navidad
+                                    </button>
+                                    <button type="button" onclick="seleccionarPresetCampana('AÑO NUEVO', 'fas fa-star')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                        ✨ Año Nuevo
+                                    </button>
+                                    <button type="button" onclick="seleccionarPresetCampana('CYBER WEEK', 'fas fa-bolt')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                        ⚡ Cyber Week
+                                    </button>
+                                    <button type="button" onclick="seleccionarPresetCampana('REYES MAGOS', 'fas fa-gift')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                        🎁 Reyes
+                                    </button>
+                                    <button type="button" onclick="seleccionarPresetCampana('OFERTA ESPECIAL', 'fas fa-tag')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                        ⭐ Especial
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Vista Previa del Badge y Guardar -->
+                        <div style="background: white; border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                            <div>
+                                <label style="display: block; font-weight: 800; margin-bottom: 6px; font-size: 12px; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px;">
+                                    Vista Previa del Badge en la Web:
+                                </label>
+                                <div id="campana-badge-live-preview" style="display: inline-flex; align-items: center; gap: 5px; min-height: 32px;">
+                                    <span id="campana-badge-tag-live" style="background: linear-gradient(135deg, #e63946 0%, #b7094c 100%); color: white; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 4px; font-family: 'Oswald', sans-serif; letter-spacing: 0.6px; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 6px rgba(230,57,70,0.35);">
+                                        <i id="campana-badge-icon-live" class="fas fa-fire"></i> <span id="campana-badge-name-live">BLACK FRIDAY</span>
+                                    </span>
+                                    <span id="campana-badge-pct-live" style="background: #1f2937; color: #fde047; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 4px; font-family: 'Oswald', sans-serif;">
+                                        -16% OFF
+                                    </span>
+                                </div>
+                            </div>
+                            <button type="button" id="btn-guardar-campana" onclick="guardarConfiguracionCampana()"
+                                style="background: #15803d; color: white; border: none; padding: 10px 18px; border-radius: 6px; font-weight: 800; font-size: 13.5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <i class="fas fa-save"></i> <span id="btn-guardar-campana-texto">Guardar Configuración de Campaña</span>
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+
 
                 <!-- Formulario de Repuestos Destacados con Vista Previa en Vivo -->
                 <div class="card-form" style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 22px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); margin-bottom: 24px;">

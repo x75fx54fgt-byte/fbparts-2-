@@ -9339,6 +9339,214 @@ DATOS DEL REPUESTO:
             }
         });
 
+        // ==========================================
+        // 🎯 GESTIÓN GLOBAL DE CAMPAÑA PROMOCIONAL
+        // ==========================================
+        window._campanaConfig = { activa: true, nombre: 'BLACK FRIDAY', icono: 'fas fa-fire' };
+
+        window.toggleSwitchCampana = function() {
+            const chk = document.getElementById('switch-campana-activa');
+            if (!chk) return;
+            chk.checked = !chk.checked;
+            window.actualizarEstadoCampanaLive();
+        };
+
+        window.seleccionarPresetCampana = function(nombre, icono) {
+            const inpNombre = document.getElementById('campana-nombre-input');
+            const selIcono = document.getElementById('campana-icono-select');
+            if (inpNombre) inpNombre.value = nombre;
+            if (selIcono) selIcono.value = icono;
+            window.actualizarEstadoCampanaLive();
+        };
+
+        window.actualizarEstadoCampanaLive = function() {
+            const chk = document.getElementById('switch-campana-activa');
+            const inpNombre = document.getElementById('campana-nombre-input');
+            const selIcono = document.getElementById('campana-icono-select');
+
+            const activa = chk ? chk.checked : true;
+            const nombre = (inpNombre?.value || 'BLACK FRIDAY').trim() || 'OFERTA';
+            const icono = selIcono?.value || 'fas fa-fire';
+
+            window._campanaConfig = { activa, nombre, icono };
+
+            // Actualizar toggle visual
+            const toggleVisual = document.getElementById('toggle-campana-visual');
+            const toggleKnob = document.getElementById('toggle-campana-knob');
+            const badgeEstado = document.getElementById('badge-estado-campana-global');
+            const textoEstado = document.getElementById('texto-estado-campana-global');
+            const iconoEstado = document.getElementById('icono-estado-campana-global');
+            const descEstado = document.getElementById('desc-estado-campana');
+
+            if (toggleVisual && toggleKnob) {
+                if (activa) {
+                    toggleVisual.style.background = '#15803d';
+                    toggleKnob.style.left = '27px';
+                } else {
+                    toggleVisual.style.background = '#94a3b8';
+                    toggleKnob.style.left = '3px';
+                }
+            }
+
+            if (badgeEstado && textoEstado && iconoEstado) {
+                if (activa) {
+                    badgeEstado.style.background = '#dcfce7';
+                    badgeEstado.style.color = '#15803d';
+                    badgeEstado.style.borderColor = '#86efac';
+                    textoEstado.innerText = 'OFERTAS ACTIVAS';
+                    iconoEstado.className = 'fas fa-check-circle';
+                } else {
+                    badgeEstado.style.background = '#f1f5f9';
+                    badgeEstado.style.color = '#64748b';
+                    badgeEstado.style.borderColor = '#cbd5e1';
+                    textoEstado.innerText = 'OFERTAS DESACTIVADAS (PAUSA)';
+                    iconoEstado.className = 'fas fa-pause-circle';
+                }
+            }
+
+            if (descEstado) {
+                if (activa) {
+                    descEstado.style.background = '#f0fdf4';
+                    descEstado.style.color = '#166534';
+                    descEstado.style.borderColor = '#bbf7d0';
+                    descEstado.innerText = `✓ Las promociones se están mostrando como "${nombre}".`;
+                } else {
+                    descEstado.style.background = '#fef2f2';
+                    descEstado.style.color = '#991b1b';
+                    descEstado.style.borderColor = '#fecaca';
+                    descEstado.innerText = `⚠️ Las ofertas están pausadas. Toda la web muestra precios regulares normales.`;
+                }
+            }
+
+            // Actualizar badge live preview
+            const tagLive = document.getElementById('campana-badge-tag-live');
+            const nameLive = document.getElementById('campana-badge-name-live');
+            const iconLive = document.getElementById('campana-badge-icon-live');
+            const pctLive = document.getElementById('campana-badge-pct-live');
+
+            if (tagLive && nameLive && iconLive && pctLive) {
+                if (activa) {
+                    tagLive.style.background = 'linear-gradient(135deg, #e63946 0%, #b7094c 100%)';
+                    tagLive.style.opacity = '1';
+                    pctLive.style.display = 'inline-block';
+                    nameLive.innerText = nombre;
+                    iconLive.className = icono;
+                } else {
+                    tagLive.style.background = '#64748b';
+                    tagLive.style.opacity = '0.75';
+                    pctLive.style.display = 'none';
+                    nameLive.innerText = 'PAUSADO (PRECIO NORMAL)';
+                    iconLive.className = 'fas fa-ban';
+                }
+            }
+
+            // Actualizar tarjeta live
+            if (typeof window.actualizarVistaPreviaTarjetaLive === 'function') {
+                window.actualizarVistaPreviaTarjetaLive();
+            }
+        };
+
+        window.cargarConfiguracionCampana = async function() {
+            try {
+                let data = null;
+                const snap = await getDoc(doc(db, "configuracion", "campana_ofertas"));
+                if (snap.exists()) {
+                    data = snap.data();
+                } else {
+                    data = { activa: true, nombre: 'BLACK FRIDAY', icono: 'fas fa-fire' };
+                }
+
+                const activa = data.activa !== false;
+                const nombre = data.nombre || 'BLACK FRIDAY';
+                const icono = data.icono || 'fas fa-fire';
+
+                window._campanaConfig = { activa, nombre, icono };
+
+                const chk = document.getElementById('switch-campana-activa');
+                const inpNombre = document.getElementById('campana-nombre-input');
+                const selIcono = document.getElementById('campana-icono-select');
+
+                if (chk) chk.checked = activa;
+                if (inpNombre) inpNombre.value = nombre;
+                if (selIcono) selIcono.value = icono;
+
+                try {
+                    localStorage.setItem('campanaOfertasConfig', JSON.stringify(window._campanaConfig));
+                } catch(e) {}
+
+                window.actualizarEstadoCampanaLive();
+
+            } catch (err) {
+                console.warn("Aviso: No se pudo cargar configuracion/campana_ofertas:", err);
+            }
+        };
+
+        window.guardarConfiguracionCampana = async function() {
+            const btn = document.getElementById('btn-guardar-campana');
+            const btnTexto = document.getElementById('btn-guardar-campana-texto');
+            const chk = document.getElementById('switch-campana-activa');
+            const inpNombre = document.getElementById('campana-nombre-input');
+            const selIcono = document.getElementById('campana-icono-select');
+
+            const activa = chk ? chk.checked : true;
+            const nombre = (inpNombre?.value || 'BLACK FRIDAY').trim() || 'OFERTA';
+            const icono = selIcono?.value || 'fas fa-fire';
+
+            const configDoc = {
+                activa: Boolean(activa),
+                nombre: String(nombre),
+                icono: String(icono),
+                fechaActualizacion: new Date().toLocaleDateString('es-VE') + ' ' + new Date().toLocaleTimeString('es-VE'),
+                timestamp: Date.now()
+            };
+
+            if (btn) btn.disabled = true;
+            if (btnTexto) btnTexto.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Guardando...`;
+
+            try {
+                await setDoc(doc(db, "configuracion", "campana_ofertas"), configDoc, { merge: true });
+                window._campanaConfig = { activa, nombre, icono };
+
+                try {
+                    localStorage.setItem('campanaOfertasConfig', JSON.stringify(window._campanaConfig));
+                } catch(e) {}
+
+                window.actualizarEstadoCampanaLive();
+                if (typeof window.cargarWebDestacados === 'function') {
+                    await window.cargarWebDestacados();
+                }
+
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: activa ? '¡Campaña Activada con Éxito!' : '¡Ofertas Pausadas!',
+                        text: activa 
+                            ? `La campaña "${nombre}" está activa ahora en la web pública.`
+                            : 'Las ofertas han sido desactivadas. Toda la web mostrará únicamente precios regulares.',
+                        timer: 2500,
+                        showConfirmButton: false
+                    });
+                } else {
+                    alert(activa ? `¡Campaña "${nombre}" activada!` : '¡Ofertas pausadas!');
+                }
+
+            } catch (err) {
+                console.error("Error al guardar campana_ofertas:", err);
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error al Guardar',
+                        text: 'No se pudo guardar la configuración: ' + (err.message || err)
+                    });
+                } else {
+                    alert('Error al guardar: ' + (err.message || err));
+                }
+            } finally {
+                if (btn) btn.disabled = false;
+                if (btnTexto) btnTexto.innerHTML = `Guardar Configuración de Campaña`;
+            }
+        };
+
         // Actualiza la tarjeta en vivo situada a la derecha del formulario
         window.actualizarVistaPreviaTarjetaLive = function() {
             const contenedor = document.getElementById('live-card-preview-container');
@@ -9352,7 +9560,8 @@ DATOS DEL REPUESTO:
             const ofVal = (document.getElementById('web-dest-precio-oferta')?.value || '').trim();
             const of = ofVal !== '' ? parseFloat(ofVal) : null;
 
-            const tieneOferta = of !== null && of > 0 && of < reg;
+            const campanaConfig = window._campanaConfig || { activa: true, nombre: 'BLACK FRIDAY', icono: 'fas fa-fire' };
+            const tieneOferta = campanaConfig.activa && of !== null && of > 0 && of < reg;
             const pct = tieneOferta ? Math.round((1 - (of / reg)) * 100) : 0;
 
             const fallbackAttr = driveId
@@ -9362,7 +9571,7 @@ DATOS DEL REPUESTO:
             const badgeHtml = tieneOferta ? `
                 <div style="position: absolute; top: 10px; left: 10px; z-index: 2; display: flex; flex-direction: column; gap: 4px; pointer-events: none;">
                     <span style="background: linear-gradient(135deg, #e63946 0%, #b7094c 100%); color: white; font-size: 10.5px; font-weight: 800; padding: 3px 8px; border-radius: 4px; box-shadow: 0 3px 6px rgba(230,57,70,0.4); text-transform: uppercase; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 4px;">
-                        <i class="fas fa-fire"></i> BLACK FRIDAY
+                        <i class="${campanaConfig.icono || 'fas fa-fire'}"></i> ${SecuritySanitizer.escapeHtml(campanaConfig.nombre || 'BLACK FRIDAY')}
                     </span>
                     <span style="background: #1f2937; color: #fde047; font-size: 9.5px; font-weight: 800; padding: 2px 6px; border-radius: 3px; align-self: flex-start; text-transform: uppercase; font-family: 'Oswald', sans-serif;">
                         -${pct}% OFF
@@ -9419,19 +9628,22 @@ DATOS DEL REPUESTO:
                 return;
             }
 
+            const campanaConfig = window._campanaConfig || { activa: true, nombre: 'BLACK FRIDAY', icono: 'fas fa-fire' };
+            const campanaActiva = campanaConfig.activa !== false;
+
             let html = '';
             activos.forEach(item => {
                 const reg = Number(item.precioRegular) || 0;
                 const of = (item.precioOferta !== null && item.precioOferta !== undefined && item.precioOferta !== '') 
                     ? Number(item.precioOferta) 
                     : null;
-                const tieneOferta = of !== null && of > 0 && of < reg;
+                const tieneOferta = campanaActiva && of !== null && of > 0 && of < reg;
                 const pct = tieneOferta ? Math.round((1 - (of / reg)) * 100) : 0;
 
                 const badgeHtml = tieneOferta ? `
                     <div style="position: absolute; top: 10px; left: 10px; z-index: 2; display: flex; flex-direction: column; gap: 4px; pointer-events: none;">
-                        <span style="background: linear-gradient(135deg, #e63946 0%, #b7094c 100%); color: white; font-size: 10px; font-weight: 800; padding: 3px 7px; border-radius: 4px; box-shadow: 0 2px 6px rgba(230,57,70,0.4); text-transform: uppercase; font-family: 'Oswald', sans-serif;">
-                            <i class="fas fa-fire"></i> BLACK FRIDAY
+                        <span style="background: linear-gradient(135deg, #e63946 0%, #b7094c 100%); color: white; font-size: 10px; font-weight: 800; padding: 3px 7px; border-radius: 4px; box-shadow: 0 2px 6px rgba(230,57,70,0.4); text-transform: uppercase; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="${campanaConfig.icono || 'fas fa-fire'}"></i> ${SecuritySanitizer.escapeHtml(campanaConfig.nombre || 'BLACK FRIDAY')}
                         </span>
                         <span style="background: #1f2937; color: #fde047; font-size: 9px; font-weight: 800; padding: 2px 5px; border-radius: 3px; align-self: flex-start;">
                             -${pct}% OFF
@@ -9558,8 +9770,11 @@ DATOS DEL REPUESTO:
             const badgeConteo = document.getElementById('conteo-web-destacados');
             if (!tbody) return;
 
-            // Iniciar precarga de catálogo en segundo plano
+            // Iniciar precarga de catálogo y configuración de campaña en segundo plano
             window.asegurarCatalogoCargado();
+            if (typeof window.cargarConfiguracionCampana === 'function') {
+                try { await window.cargarConfiguracionCampana(); } catch(e) {}
+            }
             window.actualizarVistaPreviaTarjetaLive();
 
             tbody.innerHTML = `
@@ -9604,6 +9819,9 @@ DATOS DEL REPUESTO:
                     return;
                 }
 
+                const campanaConfig = window._campanaConfig || { activa: true, nombre: 'BLACK FRIDAY', icono: 'fas fa-fire' };
+                const campanaActiva = campanaConfig.activa !== false;
+
                 let html = '';
                 items.forEach(item => {
                     const reg = Number(item.precioRegular) || 0;
@@ -9643,11 +9861,11 @@ DATOS DEL REPUESTO:
                             </td>
                             <td style="padding: 10px 14px; text-align: right;">
                                 ${tieneOferta ? `
-                                    <div style="font-weight: 800; font-family: 'Oswald', sans-serif; font-size: 16px; color: #385723;">
+                                    <div style="font-weight: 800; font-family: 'Oswald', sans-serif; font-size: 16px; color: ${campanaActiva ? '#385723' : '#64748b'};">
                                         $${of.toFixed(2)}
                                     </div>
-                                    <span style="display: inline-block; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; margin-top: 2px;">
-                                        🔥 -${pctAhorro}% ($${ahorro.toFixed(2)})
+                                    <span style="display: inline-block; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; background: ${campanaActiva ? '#fee2e2' : '#f1f5f9'}; color: ${campanaActiva ? '#b91c1c' : '#64748b'}; border: 1px solid ${campanaActiva ? '#fecaca' : '#cbd5e1'}; margin-top: 2px;">
+                                        <i class="${campanaConfig.icono || 'fas fa-fire'}"></i> -${pctAhorro}% ($${ahorro.toFixed(2)}) ${!campanaActiva ? '• En Pausa' : ''}
                                     </span>
                                 ` : `
                                     <span style="font-size: 12px; color: #9ca3af; font-style: italic;">Sin Oferta</span>
