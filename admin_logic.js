@@ -359,8 +359,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
             if(id === 'pedidos') { window._pedidosTodosCache = null; if(document.getElementById('pedidos-mes-filtro')) document.getElementById('pedidos-mes-filtro').innerHTML = ''; window.cargarPedidos(); }
             if(id === 'catalogo') { window.cargarCatalogoAdmin(); }
             if(id === 'clientes') { 
-                window.cargarBaseClientes(); 
-                if (window.inicializarModulosCRM) window.inicializarModulosCRM();
+                if (window.recomputarCRMTransaccional) window.recomputarCRMTransaccional();
             }
             if(id === 'cotizaciones') { window.cargarBaseClientes(); window.actualizarPreview(); }
             if(id === 'historial-cotizaciones') { window.cargarHistorialCotizaciones(); }
@@ -368,7 +367,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
             if(id === 'historial-facturas') { window.cargarHistorialFacturas(); }
             if(id === 'importacion') { 
                 window.cargarHistorialImportaciones(); 
-                if (window.calcularLandedCostEnvios) window.calcularLandedCostEnvios();
+                if (window.renderizarTablaTarifasBase) window.renderizarTablaTarifasBase();
+                if (window.ejecutarCalculoLandedCost) window.ejecutarCalculoLandedCost();
             }
             if(id === 'reventas') { window.cargarHistorialReventas(); if(window.actualizarEstadoModoBsReventas) window.actualizarEstadoModoBsReventas(); }
             if(id === 'rutas') { setTimeout(() => { window.iniciarMapaAdmin(); window.cargarPuntosRuta(); window.cargarSelectorPedidosRuta(); }, 200); }
@@ -10785,157 +10785,231 @@ DATOS DEL REPUESTO:
 
 
         // =========================================================================
-        // 🚘 MÓDULO MINI-CRM (BASE DE CLIENTES FRECUENTES) & LANDED COST ENVÍOS
+        // 🚘 VISTA 1: CRM AUTOMATIZADO TRANSACCIONAL (BASE DE CLIENTES DERIVADA)
         // =========================================================================
-        window.clientesMockData = [
-            {
-                id: "cli-001",
-                nombre: "Taller Mecánico Hermanos Mendoza, C.A.",
-                rif: "J-31458920-4",
-                tipo: "Taller Mecánico Autorizado",
-                telefono: "+58 414-2394811",
-                contacto: "Ing. Carlos Mendoza",
-                ciudad: "Caracas (Boleíta Sur)",
-                totalCompradoYTD: 14850.00,
-                marcasPreferidas: ["Toyota", "Mitsubishi", "Dongfeng"],
-                deudaPendiente: 0.00,
-                pedidos: [
-                    { fecha: "10/11/2026", desc: "Parrilla Frontal Mercedes Benz C180 (OEM A2048800683)", monto: 320.50, estado: "Entregado" },
-                    { fecha: "28/10/2026", desc: "Parachoques Delantero Lancer GLX 1.6 + Neblineros", monto: 410.00, estado: "Entregado" },
-                    { fecha: "15/10/2026", desc: "Kit Conchas de Bancada y Biela Blazer 4.3 (020)", monto: 85.00, estado: "Entregado" },
-                    { fecha: "02/10/2026", desc: "Bomba Gasolina Pila Denso Toyota Yaris", monto: 45.00, estado: "Entregado" }
-                ]
-            },
-            {
-                id: "cli-002",
-                nombre: "Inversiones & Repuestos El Ávila 2021, C.A.",
-                rif: "J-40981245-1",
-                tipo: "Distribuidor / Aseguradora",
-                telefono: "+58 412-0192843",
-                contacto: "Lcda. Mariángel Durán",
-                ciudad: "Guatire / Caracas",
-                totalCompradoYTD: 8940.50,
-                marcasPreferidas: ["Ford", "Chevrolet", "Chery"],
-                deudaPendiente: 420.00,
-                pedidos: [
-                    { fecha: "12/11/2026", desc: "Parachoques Trasero Dongfeng Rich P11 (Zna)", monto: 84.99, estado: "En Tránsito" },
-                    { fecha: "05/11/2026", desc: "Bobinas Encendido Ford Super Duty 6.2 (Par Der/Izq)", monto: 180.00, estado: "Pendiente Pago" },
-                    { fecha: "20/10/2026", desc: "Empacadura Cárter Motor Cummins 6BT", monto: 42.00, estado: "Entregado" }
-                ]
-            }
+        window.transaccionesSimuladas = [
+            { id: "FAC-1045", cliente: "Taller Mecánico Hermanos Mendoza, C.A.", rif: "J-31458920-4", telefono: "+58 414-2394811", fecha: "2026-11-10", monto: 320.50, estado: "Pagada", items: ["Parrilla Frontal Mercedes Benz C180 C200 2007-2011", "Emblema Mercedes Benz"] },
+            { id: "FAC-1038", cliente: "Taller Mecánico Hermanos Mendoza, C.A.", rif: "J-31458920-4", telefono: "+58 414-2394811", fecha: "2026-10-28", monto: 410.00, estado: "Pagada", items: ["Parachoques Delantero Lancer GLX 1.6 Mitsubishi", "Faros Neblineros Mitsubishi Lancer"] },
+            { id: "FAC-1025", cliente: "Taller Mecánico Hermanos Mendoza, C.A.", rif: "J-31458920-4", telefono: "+58 414-2394811", fecha: "2026-10-14", monto: 185.00, estado: "Pagada", items: ["Kit Conchas Bancada y Biela Chevrolet Blazer 4.3 Vortec", "Empacadura Cárter Chevrolet"] },
+            { id: "FAC-1011", cliente: "Taller Mecánico Hermanos Mendoza, C.A.", rif: "J-31458920-4", telefono: "+58 414-2394811", fecha: "2026-09-30", monto: 540.00, estado: "Pagada", items: ["Meseta Superior Izquierda Toyota Hilux Kavak Fortuner", "Amortiguadores Delanteros Toyota Hilux"] },
+
+            { id: "FAC-1049", cliente: "Inversiones & Repuestos El Ávila 2021, C.A.", rif: "J-40981245-1", telefono: "+58 412-0192843", fecha: "2026-11-12", monto: 84.99, estado: "En Tránsito", items: ["Parachoques Trasero Dongfeng Rich P11 Zna 2024"] },
+            { id: "FAC-1041", cliente: "Inversiones & Repuestos El Ávila 2021, C.A.", rif: "J-40981245-1", telefono: "+58 412-0192843", fecha: "2026-11-04", monto: 195.00, estado: "Pendiente Pago", items: ["Bobinas de Encendido Ford Super Duty 6.2 8Cil Derecha e Izquierda"] },
+            { id: "FAC-1030", cliente: "Inversiones & Repuestos El Ávila 2021, C.A.", rif: "J-40981245-1", telefono: "+58 412-0192843", fecha: "2026-10-19", monto: 42.00, estado: "Pagada", items: ["Empacadura Cárter Motor Cummins 6BT"] },
+            { id: "FAC-1018", cliente: "Inversiones & Repuestos El Ávila 2021, C.A.", rif: "J-40981245-1", telefono: "+58 412-0192843", fecha: "2026-09-22", monto: 380.00, estado: "Pagada", items: ["Radiador Aeolus Dongfeng AX7 Pro 2021-2025", "Retrovisor Dongfeng Rich 7"] },
+
+            { id: "FAC-1047", cliente: "Multiservicios Automotrices Los Andes, C.A.", rif: "J-29837102-3", telefono: "+58 424-7128394", fecha: "2026-11-11", monto: 260.00, estado: "Pagada", items: ["Bomba Gasolina Pila Denso Toyota Yaris Original 2007-2017", "Pastillas de Freno Delanteras Toyota Yaris"] },
+            { id: "FAC-1033", cliente: "Multiservicios Automotrices Los Andes, C.A.", rif: "J-29837102-3", telefono: "+58 424-7128394", fecha: "2026-10-22", monto: 145.00, estado: "Pagada", items: ["Bujes Ejes Balanceadores Mazda BT50 2.6 B2600", "Anillos STD Honda Civic 1.6"] },
+            { id: "FAC-1020", cliente: "Multiservicios Automotrices Los Andes, C.A.", rif: "J-29837102-3", telefono: "+58 424-7128394", fecha: "2026-10-02", monto: 310.00, estado: "Pagada", items: ["Parrilla Inferior Toyota Levin GT 2020-2025", "Filtros de Aceite Toyota"] }
         ];
 
-        window.renderizarPerfilClienteCRM = function(cliente) {
-            const container = document.getElementById('crm-perfil-container');
-            const notFound = document.getElementById('crm-not-found');
+        window.clientesAgrupadosCache = [];
+        window.clienteSeleccionadoCRM = null;
+
+        /**
+         * Core Científico de Datos: Agrupa y procesa transacciones usando reduce & map.
+         * Extrae: Total Comprado, Frecuencia de Marcas y Fecha de Último Pedido.
+         */
+        window.procesarClientesDesdeTransacciones = function(transacciones) {
+            const MARCAS_DETECTABLES = [
+                'Toyota', 'Mercedes Benz', 'Mitsubishi', 'Chevrolet', 'Ford', 
+                'Dongfeng', 'Cummins', 'Honda', 'Mazda', 'Nissan', 'Chery', 'Hyundai'
+            ];
+
+            // 1. Agrupación matemática mediante Array.prototype.reduce
+            const agrupadoPorCliente = transacciones.reduce((acc, trans) => {
+                const nombreKey = (trans.cliente || 'Consumidor Final').trim();
+                
+                if (!acc[nombreKey]) {
+                    acc[nombreKey] = {
+                        cliente: nombreKey,
+                        rif: trans.rif || 'N/A',
+                        telefono: trans.telefono || 'N/A',
+                        facturas: [],
+                        totalComprado: 0,
+                        deudaPendiente: 0,
+                        frecuenciaMarcas: {},
+                        fechas: []
+                    };
+                }
+
+                // Acumulador financiero
+                const montoNum = parseFloat(trans.monto) || 0;
+                acc[nombreKey].facturas.push(trans);
+                acc[nombreKey].totalComprado += montoNum;
+                if (trans.estado === 'Pendiente Pago') {
+                    acc[nombreKey].deudaPendiente += montoNum;
+                }
+
+                // Registro cronológico
+                if (trans.fecha) {
+                    acc[nombreKey].fechas.push(new Date(trans.fecha));
+                }
+
+                // Extracción analítica de marcas por Procesamiento de Texto (NLP ligero)
+                const corpusTexto = (trans.items || []).join(' ') + ' ' + (trans.desc || '');
+                MARCAS_DETECTABLES.forEach(marca => {
+                    const regex = new RegExp('\\b' + marca.replace(' ', '\\s+') + '\\b', 'gi');
+                    const coincidencias = corpusTexto.match(regex);
+                    if (coincidencias) {
+                        acc[nombreKey].frecuenciaMarcas[marca] = (acc[nombreKey].frecuenciaMarcas[marca] || 0) + coincidencias.length;
+                    }
+                });
+
+                return acc;
+            }, {});
+
+            // 2. Mapeo a Array final con cálculo de derivadas
+            return Object.values(agrupadoPorCliente).map(cuenta => {
+                // Ordenar marcas de mayor a menor frecuencia
+                const marcasOrdenadas = Object.entries(cuenta.frecuenciaMarcas)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(entry => entry[0]);
+
+                // Determinar fecha más reciente
+                let fechaUltimo = 'Sin fecha';
+                if (cuenta.fechas.length > 0) {
+                    const fechaTimestamp = Math.max(...cuenta.fechas);
+                    const d = new Date(fechaTimestamp);
+                    fechaUltimo = d.toISOString().split('T')[0];
+                }
+
+                return {
+                    cliente: cuenta.cliente,
+                    rif: cuenta.rif,
+                    telefono: cuenta.telefono,
+                    totalComprado: Math.round(cuenta.totalComprado * 100) / 100,
+                    deudaPendiente: Math.round(cuenta.deudaPendiente * 100) / 100,
+                    marcasPreferidas: marcasOrdenadas.length > 0 ? marcasOrdenadas.slice(0, 3) : ['Multimarca / Universal'],
+                    ultimoPedido: fechaUltimo,
+                    totalFacturas: cuenta.facturas.length,
+                    facturas: cuenta.facturas.sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+                };
+            }).sort((a, b) => b.totalComprado - a.totalComprado);
+        };
+
+        window.renderizarPerfilClienteTransaccional = function(cliente) {
+            const container = document.getElementById('crm-perfil-card-container');
+            const notFound = document.getElementById('crm-transaccional-not-found');
             if (!container) return;
 
             if (!cliente) {
                 container.innerHTML = '';
                 if (notFound) notFound.style.display = 'flex';
-                window.renderizarTablaPedidosCRM([]);
+                window.renderizarTablaFacturasCliente([]);
                 return;
             }
 
             if (notFound) notFound.style.display = 'none';
+            window.clienteSeleccionadoCRM = cliente;
 
-            const saldoColor = cliente.deudaPendiente > 0 
-                ? 'background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;' 
-                : 'background: #eef3f0; color: #385723; border: 1px solid #c3e6cb;';
-            
-            const saldoTexto = cliente.deudaPendiente > 0 
-                ? `$${cliente.deudaPendiente.toFixed(2)} Pendiente` 
-                : 'Solvente ($0.00)';
+            const estadoSolvencia = cliente.deudaPendiente > 0
+                ? `<span style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 6px;">Deuda Activa: $${cliente.deudaPendiente.toFixed(2)}</span>`
+                : `<span style="background: #eef3f0; color: #385723; border: 1px solid #c3e6cb; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 6px;">100% Solvente ($0.00)</span>`;
 
             container.innerHTML = `
-                <div style="background: linear-gradient(135deg, #fbfdfb 0%, #f4f7f5 100%); border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin-bottom: 16px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 12px;">
+                <div style="background: linear-gradient(135deg, #fbfdfb 0%, #f4f7f5 100%); border: 1.5px solid #c3e6cb; border-radius: 14px; padding: 22px; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+                    <!-- Cabecera de la Cuenta -->
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 14px;">
                         <div>
-                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                                <h3 style="margin: 0; color: #1e293b; font-size: 17px; font-weight: bold;">${SecuritySanitizer.escapeHtml(cliente.nombre)}</h3>
-                                <span style="background: #eef3f0; color: #385723; border: 1px solid #c3e6cb; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 12px;">
-                                    ${SecuritySanitizer.escapeHtml(cliente.tipo)}
+                            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                <h3 style="margin: 0; color: #1e293b; font-size: 18px; font-weight: 800; font-family: 'Oswald', sans-serif; letter-spacing: 0.3px;">
+                                    ${SecuritySanitizer.escapeHtml(cliente.cliente)}
+                                </h3>
+                                <span style="background: #eef3f0; color: #385723; border: 1px solid #c3e6cb; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 12px;">
+                                    CUENTA AUDITADA
                                 </span>
                             </div>
-                            <p style="margin: 4px 0 0 0; font-size: 12px; color: #64748b;">
+                            <p style="margin: 5px 0 0 0; font-size: 12.5px; color: #64748b;">
                                 <strong>RIF:</strong> ${SecuritySanitizer.escapeHtml(cliente.rif)} &bull; 
-                                <strong>Ubicación:</strong> ${SecuritySanitizer.escapeHtml(cliente.ciudad)} &bull; 
-                                <strong>Contacto:</strong> ${SecuritySanitizer.escapeHtml(cliente.contacto)}
+                                <strong>Contacto Telefónico:</strong> ${SecuritySanitizer.escapeHtml(cliente.telefono)}
                             </p>
                         </div>
-                        <div>
-                            <a href="https://wa.me/${cliente.telefono.replace(/[^0-9]/g, '')}" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; background: #25D366; color: white; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: bold; text-decoration: none; box-shadow: 0 2px 4px rgba(37,211,102,0.25);">
-                                <i class="fab fa-whatsapp"></i> ${SecuritySanitizer.escapeHtml(cliente.telefono)}
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            ${estadoSolvencia}
+                            <a href="https://wa.me/${cliente.telefono.replace(/[^0-9]/g, '')}" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; background: #25D366; color: white; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: bold; text-decoration: none;">
+                                <i class="fab fa-whatsapp"></i> Contactar
                             </a>
                         </div>
                     </div>
 
-                    <!-- 3 Métricas Destacadas (KPIs) -->
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 14px;">
-                        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
-                            <span style="display: block; font-size: 10px; font-weight: bold; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Total Comprado YTD</span>
-                            <div style="font-size: 20px; font-weight: 900; color: #2c441b; font-family: 'Oswald', sans-serif; margin-top: 4px;">
-                                $${cliente.totalCompradoYTD.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    <!-- 3 Métricas Extraídas Matemáticamente -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 16px;">
+                        <!-- Métrica 1: Total Comprado (Suma de Facturas) -->
+                        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px;">
+                            <span style="display: block; font-size: 10.5px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">
+                                Total Comprado Acumulado
+                            </span>
+                            <div style="font-size: 24px; font-weight: 900; color: #2c441b; font-family: 'Oswald', sans-serif; margin-top: 4px;">
+                                $${cliente.totalComprado.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                             </div>
-                            <span style="font-size: 10.5px; color: #64748b;">Acumulado del año</span>
+                            <span style="font-size: 11px; color: #64748b;">En base a ${cliente.totalFacturas} transacciones</span>
                         </div>
 
-                        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
-                            <span style="display: block; font-size: 10px; font-weight: bold; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Marcas Preferidas</span>
-                            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px;">
-                                ${cliente.marcasPreferidas.map(m => `
-                                    <span style="background: #eef3f0; color: #385723; border: 1px solid #c3e6cb; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 4px;">
-                                        <i class="fas fa-car" style="font-size: 9px; margin-right: 3px;"></i>${SecuritySanitizer.escapeHtml(m)}
+                        <!-- Métrica 2: Marcas Preferidas (Conteo de Frecuencias) -->
+                        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px;">
+                            <span style="display: block; font-size: 10.5px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">
+                                Marcas de Mayor Relevancia
+                            </span>
+                            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;">
+                                ${cliente.marcasPreferidas.map((m, idx) => `
+                                    <span style="background: ${idx === 0 ? '#eef3f0' : '#f8fafc'}; color: ${idx === 0 ? '#385723' : '#475569'}; border: 1px solid ${idx === 0 ? '#c3e6cb' : '#cbd5e1'}; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                                        <i class="fas fa-car" style="font-size: 9px;"></i> ${SecuritySanitizer.escapeHtml(m)}
                                     </span>
                                 `).join('')}
                             </div>
                         </div>
 
-                        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
-                            <span style="display: block; font-size: 10px; font-weight: bold; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Estado de Cuenta / Deuda</span>
-                            <div style="margin-top: 6px;">
-                                <span style="display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 800; font-family: 'Oswald', sans-serif; ${saldoColor}">
-                                    ${saldoTexto}
-                                </span>
+                        <!-- Métrica 3: Último Pedido -->
+                        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px;">
+                            <span style="display: block; font-size: 10.5px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">
+                                Fecha de Última Compra
+                            </span>
+                            <div style="font-size: 18px; font-weight: 800; color: #334155; font-family: 'Oswald', sans-serif; margin-top: 6px;">
+                                <i class="far fa-calendar-check" style="color: #5e8877; margin-right: 4px;"></i> ${cliente.ultimoPedido}
                             </div>
+                            <span style="font-size: 11px; color: #64748b;">Actividad comercial reciente</span>
                         </div>
                     </div>
                 </div>
             `;
 
-            window.renderizarTablaPedidosCRM(cliente.pedidos || []);
+            window.renderizarTablaFacturasCliente(cliente.facturas || []);
         };
 
-        window.renderizarTablaPedidosCRM = function(pedidos) {
-            const tbody = document.getElementById('crm-pedidos-tbody');
-            const badge = document.getElementById('crm-total-pedidos-badge');
+        window.renderizarTablaFacturasCliente = function(facturas) {
+            const tbody = document.getElementById('crm-facturas-tbody');
+            const badge = document.getElementById('crm-facturas-count-badge');
             if (!tbody) return;
 
-            if (badge) badge.innerText = `${pedidos.length} Órdenes Registradas`;
+            if (badge) badge.innerText = `${facturas.length} Facturas Registradas`;
 
-            if (pedidos.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" style="padding: 20px; text-align: center; color: #94a3b8;">Sin historial de pedidos disponible.</td></tr>`;
+            if (facturas.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="padding: 24px; text-align: center; color: #94a3b8;">No hay transacciones registradas para este cliente.</td></tr>`;
                 return;
             }
 
-            tbody.innerHTML = pedidos.map(p => {
+            tbody.innerHTML = facturas.map(f => {
                 let badgeStyle = 'background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;';
-                if (p.estado === 'Entregado') {
+                if (f.estado === 'Pagada') {
                     badgeStyle = 'background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;';
-                } else if (p.estado === 'En Tránsito') {
+                } else if (f.estado === 'En Tránsito') {
                     badgeStyle = 'background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe;';
-                } else if (p.estado === 'Pendiente Pago') {
+                } else if (f.estado === 'Pendiente Pago') {
                     badgeStyle = 'background: #fffbeb; color: #b45309; border: 1px solid #fde68a;';
                 }
 
+                const itemsStr = Array.isArray(f.items) ? f.items.join(' • ') : (f.desc || 'Repuestos automotrices');
+
                 return `
                     <tr style="border-bottom: 1px solid #f1f5f9;">
-                        <td style="padding: 10px 14px; font-weight: 500;">${SecuritySanitizer.escapeHtml(p.fecha)}</td>
-                        <td style="padding: 10px 14px; font-weight: 600; color: #1e293b;">${SecuritySanitizer.escapeHtml(p.desc)}</td>
-                        <td style="padding: 10px 14px; text-align: right; font-weight: 800; font-family: 'Oswald', sans-serif; color: #0f172a;">$${p.monto.toFixed(2)}</td>
+                        <td style="padding: 10px 14px; font-weight: bold; font-family: monospace; color: #0f172a;">${SecuritySanitizer.escapeHtml(f.id)}</td>
+                        <td style="padding: 10px 14px; color: #64748b; font-size: 12px;">${SecuritySanitizer.escapeHtml(f.fecha)}</td>
+                        <td style="padding: 10px 14px; font-weight: 600; color: #334155; max-width: 420px;">${SecuritySanitizer.escapeHtml(itemsStr)}</td>
+                        <td style="padding: 10px 14px; text-align: right; font-weight: 900; font-family: 'Oswald', sans-serif; color: #1e293b; font-size: 14px;">$${Number(f.monto).toFixed(2)}</td>
                         <td style="padding: 10px 14px; text-align: center;">
-                            <span style="display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 10.5px; font-weight: 700; ${badgeStyle}">
-                                ${SecuritySanitizer.escapeHtml(p.estado)}
+                            <span style="display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; ${badgeStyle}">
+                                ${SecuritySanitizer.escapeHtml(f.estado)}
                             </span>
                         </td>
                     </tr>
@@ -10943,104 +11017,191 @@ DATOS DEL REPUESTO:
             }).join('');
         };
 
-        window.buscarClienteCRM = function() {
-            const query = (document.getElementById('crm-search-input')?.value || '').trim().toLowerCase();
+        window.filtrarClientesTransaccionales = function() {
+            const query = (document.getElementById('crm-search-transaccional')?.value || '').trim().toLowerCase();
             if (!query) {
-                window.renderizarPerfilClienteCRM(window.clientesMockData[0]);
+                window.renderizarPerfilClienteTransaccional(window.clientesAgrupadosCache[0] || null);
                 return;
             }
 
-            const coincidente = window.clientesMockData.find(c => 
-                c.nombre.toLowerCase().includes(query) || 
+            const coincidente = window.clientesAgrupadosCache.find(c => 
+                c.cliente.toLowerCase().includes(query) ||
                 c.rif.toLowerCase().includes(query) ||
-                (c.contacto && c.contacto.toLowerCase().includes(query))
+                c.marcasPreferidas.some(m => m.toLowerCase().includes(query))
             );
 
-            window.renderizarPerfilClienteCRM(coincidente || null);
+            window.renderizarPerfilClienteTransaccional(coincidente || null);
         };
 
-        window.restablecerClientesCRM = function() {
-            const input = document.getElementById('crm-search-input');
+        window.limpiarFiltroCRM = function() {
+            const input = document.getElementById('crm-search-transaccional');
             if (input) input.value = '';
-            window.renderizarPerfilClienteCRM(window.clientesMockData[0]);
+            window.renderizarPerfilClienteTransaccional(window.clientesAgrupadosCache[0] || null);
         };
 
-        window.inicializarModulosCRM = function() {
-            if (document.getElementById('crm-perfil-container')) {
-                window.renderizarPerfilClienteCRM(window.clientesMockData[0]);
+        window.recomputarCRMTransaccional = function() {
+            window.clientesAgrupadosCache = window.procesarClientesDesdeTransacciones(window.transaccionesSimuladas);
+            const badgeCuentas = document.getElementById('crm-total-cuentas-badge');
+            if (badgeCuentas) {
+                badgeCuentas.innerHTML = `<i class="fas fa-users-cog"></i> ${window.clientesAgrupadosCache.length} Cuentas Procesadas`;
+            }
+            window.renderizarPerfilClienteTransaccional(window.clientesAgrupadosCache[0] || null);
+        };
+
+
+        // =========================================================================
+        // 📦 VISTA 2: GESTOR DE TARIFAS BASE & CALCULADORA LANDED COST (TIEMPO REAL)
+        // =========================================================================
+        window.tarifasBaseDefault = {
+            tealca:      { nombre: "Tealca", base: 5.00, porKg: 2.00, recargoInterior: 3.00, zona: "Nacional (Agencias y Domicilio)" },
+            mrw:         { nombre: "MRW", base: 4.50, porKg: 2.20, recargoInterior: 3.50, zona: "Nacional (Oficinas Receptoras)" },
+            zoom:        { nombre: "Grupo Zoom", base: 6.00, porKg: 2.50, recargoInterior: 4.00, zona: "Nacional (Aéreo / Terrestre)" },
+            delivery_fb: { nombre: "Delivery Propio F&B", base: 0.00, porKg: 0.00, recargoInterior: 0.00, zona: "Caracas Metropolitana" }
+        };
+
+        // Estado activo en memoria
+        window.tarifasBaseActivas = JSON.parse(JSON.stringify(window.tarifasBaseDefault));
+
+        window.renderizarTablaTarifasBase = function() {
+            const tbody = document.getElementById('tabla-tarifas-base-tbody');
+            if (!tbody) return;
+
+            tbody.innerHTML = Object.entries(window.tarifasBaseActivas).map(([key, op]) => {
+                const esDeliveryPropio = (key === 'delivery_fb');
+                return `
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 14px; font-weight: bold; color: #1e293b;">
+                            <i class="fas ${esDeliveryPropio ? 'fa-motorcycle text-[#5e8877]' : 'fa-truck text-gray-400'}"></i> ${op.nombre}
+                        </td>
+                        <td style="padding: 10px 14px; text-align: center;">
+                            <input 
+                                type="number" 
+                                step="0.5" 
+                                min="0" 
+                                value="${op.base.toFixed(2)}" 
+                                ${esDeliveryPropio ? 'disabled style="background:#f1f5f9; color:#94a3b8;"' : ''}
+                                oninput="window.actualizarTarifaBaseInput('${key}', 'base', this.value)"
+                                style="width: 80px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 6px; text-align: center; font-weight: bold;"
+                            />
+                        </td>
+                        <td style="padding: 10px 14px; text-align: center;">
+                            <input 
+                                type="number" 
+                                step="0.1" 
+                                min="0" 
+                                value="${op.porKg.toFixed(2)}" 
+                                ${esDeliveryPropio ? 'disabled style="background:#f1f5f9; color:#94a3b8;"' : ''}
+                                oninput="window.actualizarTarifaBaseInput('${key}', 'porKg', this.value)"
+                                style="width: 80px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 6px; text-align: center; font-weight: bold;"
+                            />
+                        </td>
+                        <td style="padding: 10px 14px; text-align: center;">
+                            <input 
+                                type="number" 
+                                step="0.5" 
+                                min="0" 
+                                value="${op.recargoInterior.toFixed(2)}" 
+                                ${esDeliveryPropio ? 'disabled style="background:#f1f5f9; color:#94a3b8;"' : ''}
+                                oninput="window.actualizarTarifaBaseInput('${key}', 'recargoInterior', this.value)"
+                                style="width: 80px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 6px; text-align: center; font-weight: bold;"
+                            />
+                        </td>
+                        <td style="padding: 10px 14px; color: #64748b; font-size: 11.5px;">${op.zona}</td>
+                    </tr>
+                `;
+            }).join('');
+        };
+
+        window.actualizarTarifaBaseInput = function(operadorKey, campo, nuevoValor) {
+            const valNum = Math.max(0, parseFloat(nuevoValor) || 0);
+            if (window.tarifasBaseActivas[operadorKey]) {
+                window.tarifasBaseActivas[operadorKey][campo] = valNum;
+                window.ejecutarCalculoLandedCost();
             }
         };
 
-        // =========================================================================
-        // 📦 MÓDULO LANDED COST (ENVÍOS & DELIVERY CARACAS)
-        // =========================================================================
-        const TABULADOR_ENVIOS = {
-            tealca:      { nombre: "Tealca", base: 5.00, porKg: 2.00, recargoInterior: 3.00 },
-            mrw:         { nombre: "MRW", base: 4.50, porKg: 2.20, recargoInterior: 3.50 },
-            zoom:        { nombre: "Grupo Zoom", base: 6.00, porKg: 2.50, recargoInterior: 4.00 },
-            delivery_fb: { nombre: "Delivery F&B Parts", base: 0.00, porKg: 0.00, recargoInterior: 0.00 }
+        window.restablecerTarifasBaseDefault = function() {
+            window.tarifasBaseActivas = JSON.parse(JSON.stringify(window.tarifasBaseDefault));
+            window.renderizarTablaTarifasBase();
+            window.ejecutarCalculoLandedCost();
         };
 
-        window.calcularLandedCostEnvios = function() {
-            const agenciaKey = document.getElementById('lc-agencia')?.value || 'tealca';
-            const peso = Math.max(0.1, parseFloat(document.getElementById('lc-peso')?.value || '1'));
-            const zona = document.getElementById('lc-zona')?.value || 'interior';
+        window.ejecutarCalculoLandedCost = function() {
+            const agenciaKey = document.getElementById('calc-agencia-select')?.value || 'tealca';
+            const peso = Math.max(0.1, parseFloat(document.getElementById('calc-peso-input')?.value || '1'));
+            const destino = document.getElementById('calc-destino-select')?.value || 'interior';
 
-            const config = TABULADOR_ENVIOS[agenciaKey] || TABULADOR_ENVIOS.tealca;
+            const config = window.tarifasBaseActivas[agenciaKey] || window.tarifasBaseActivas.tealca;
+            
             let base = 0;
             let costoPeso = 0;
-            let cargoZona = 0;
+            let recargoZona = 0;
             let total = 0;
+            let ecuacion = "";
             let nota = "";
 
             if (agenciaKey === 'delivery_fb') {
-                if (zona === 'caracas_centro') {
+                if (destino === 'caracas_centro') {
                     base = 0.00;
-                    cargoZona = 0.00;
+                    costoPeso = 0.00;
+                    recargoZona = 0.00;
                     total = 0.00;
-                    nota = "✅ Delivery Gratuito en Caracas Centro / Municipio Libertador por compras en tienda.";
-                } else if (zona === 'caracas_este') {
+                    ecuacion = "Tarifa Plana ($0.00)";
+                    nota = "✅ Delivery Gratuito en Caracas Centro / Municipio Libertador.";
+                } else if (destino === 'caracas_este') {
                     base = 5.00;
-                    cargoZona = 0.00;
+                    costoPeso = 0.00;
+                    recargoZona = 0.00;
                     total = 5.00;
-                    nota = "🛵 Tarifa plana de delivery motorizado para Chacao, Baruta, Sucre y El Hatillo ($5.00).";
+                    ecuacion = "Tarifa Plana Este ($5.00)";
+                    nota = "🛵 Tarifa plana fija para Chacao, Baruta, Sucre y El Hatillo ($5.00).";
                 } else {
                     base = 0.00;
-                    cargoZona = 0.00;
+                    costoPeso = 0.00;
+                    recargoZona = 0.00;
                     total = 0.00;
-                    nota = "⚠️ El Delivery Propio solo aplica dentro de Caracas. Para envíos al interior selecciona Tealca, MRW o Zoom.";
+                    ecuacion = "No Disponible";
+                    nota = "⚠️ El Delivery Propio no cubre el interior. Selecciona Tealca, MRW o Zoom.";
                 }
             } else {
                 base = config.base;
-                costoPeso = peso * config.porKg;
-                cargoZona = (zona === 'interior') ? config.recargoInterior : 1.50;
-                total = base + costoPeso + cargoZona;
-                nota = `📦 Flete nacional estimado vía ${config.nombre}. Incluye empaque protector y tracking de guía.`;
+                costoPeso = Math.round(peso * config.porKg * 100) / 100;
+                recargoZona = (destino === 'interior') ? config.recargoInterior : 1.50;
+                total = Math.round((base + costoPeso + recargoZona) * 100) / 100;
+                ecuacion = `$${base.toFixed(2)} + (${peso}kg × $${config.porKg.toFixed(2)}) + $${recargoZona.toFixed(2)}`;
+                nota = `📦 Estimado vía ${config.nombre}. Multiplica peso por la tarifa activa del panel base.`;
             }
 
-            const elTotal = document.getElementById('lc-total-display');
-            const elBase = document.getElementById('lc-desglose-base');
-            const elPeso = document.getElementById('lc-desglose-peso');
-            const elZona = document.getElementById('lc-desglose-zona');
-            const elNota = document.getElementById('lc-mensaje-nota');
+            // Actualizar DOM
+            const elTotal = document.getElementById('calc-costo-total');
+            const elBase = document.getElementById('calc-base-display');
+            const elPeso = document.getElementById('calc-peso-display');
+            const elRecargo = document.getElementById('calc-recargo-display');
+            const elKgLabel = document.getElementById('calc-kg-label');
+            const elEcuacion = document.getElementById('calc-ecuacion-display');
+            const elBadge = document.getElementById('calc-operador-badge');
+            const elNota = document.getElementById('calc-mensaje-nota');
 
             if (elTotal) elTotal.innerText = total.toFixed(2);
             if (elBase) elBase.innerText = `$${base.toFixed(2)}`;
             if (elPeso) elPeso.innerText = `$${costoPeso.toFixed(2)}`;
-            if (elZona) elZona.innerText = `$${cargoZona.toFixed(2)}`;
+            if (elRecargo) elRecargo.innerText = `$${recargoZona.toFixed(2)}`;
+            if (elKgLabel) elKgLabel.innerText = peso.toFixed(1);
+            if (elEcuacion) elEcuacion.innerText = ecuacion;
+            if (elBadge) elBadge.innerText = config.nombre;
             if (elNota) elNota.innerText = nota;
         };
 
-        window.copiarCalculoLandedCost = function() {
-            const total = document.getElementById('lc-total-display')?.innerText || '0.00';
-            const agencia = document.getElementById('lc-agencia')?.selectedOptions[0]?.text || '';
-            const peso = document.getElementById('lc-peso')?.value || '1';
-            const zona = document.getElementById('lc-zona')?.selectedOptions[0]?.text || '';
+        window.copiarCotizacionEnvio = function() {
+            const total = document.getElementById('calc-costo-total')?.innerText || '0.00';
+            const agencia = document.getElementById('calc-agencia-select')?.selectedOptions[0]?.text || '';
+            const peso = document.getElementById('calc-peso-input')?.value || '1';
+            const destino = document.getElementById('calc-destino-select')?.selectedOptions[0]?.text || '';
 
-            const texto = `Estimado de Flete / Delivery F&B Parts:\n- Modalidad: ${agencia}\n- Destino: ${zona}\n- Peso: ${peso} Kg\n- Costo Estimado: $${total} USD`;
+            const texto = `Cotización Logística F&B Parts:\n- Operador: ${agencia}\n- Destino: ${destino}\n- Peso Carga: ${peso} Kg\n- Costo Estimado: $${total} USD`;
 
             navigator.clipboard.writeText(texto).then(() => {
-                const btnSpan = document.getElementById('lc-btn-copy-text');
+                const btnSpan = document.getElementById('btn-copiar-calc-text');
                 if (btnSpan) {
                     const orig = btnSpan.innerText;
                     btnSpan.innerText = "¡Copiado al Portapapeles!";
@@ -11049,10 +11210,11 @@ DATOS DEL REPUESTO:
             }).catch(() => alert("No se pudo copiar el texto."));
         };
 
-        // Inicialización en carga inicial
+        // Inicialización reactiva
         setTimeout(() => {
-            if (window.inicializarModulosCRM) window.inicializarModulosCRM();
-            if (window.calcularLandedCostEnvios) window.calcularLandedCostEnvios();
+            if (window.recomputarCRMTransaccional) window.recomputarCRMTransaccional();
+            if (window.renderizarTablaTarifasBase) window.renderizarTablaTarifasBase();
+            if (window.ejecutarCalculoLandedCost) window.ejecutarCalculoLandedCost();
         }, 300);
 
 
