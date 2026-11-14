@@ -358,12 +358,18 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
             if(id === 'finanzas') { window.cargarFinanzas(); }
             if(id === 'pedidos') { window._pedidosTodosCache = null; if(document.getElementById('pedidos-mes-filtro')) document.getElementById('pedidos-mes-filtro').innerHTML = ''; window.cargarPedidos(); }
             if(id === 'catalogo') { window.cargarCatalogoAdmin(); }
-            if(id === 'clientes') { window.cargarBaseClientes(); }
+            if(id === 'clientes') { 
+                window.cargarBaseClientes(); 
+                if (window.inicializarModulosCRM) window.inicializarModulosCRM();
+            }
             if(id === 'cotizaciones') { window.cargarBaseClientes(); window.actualizarPreview(); }
             if(id === 'historial-cotizaciones') { window.cargarHistorialCotizaciones(); }
             if(id === 'facturacion') { window.cargarBaseClientes(); window.actualizarPreviewFactura(); }
             if(id === 'historial-facturas') { window.cargarHistorialFacturas(); }
-            if(id === 'importacion') { window.cargarHistorialImportaciones(); }
+            if(id === 'importacion') { 
+                window.cargarHistorialImportaciones(); 
+                if (window.calcularLandedCostEnvios) window.calcularLandedCostEnvios();
+            }
             if(id === 'reventas') { window.cargarHistorialReventas(); if(window.actualizarEstadoModoBsReventas) window.actualizarEstadoModoBsReventas(); }
             if(id === 'rutas') { setTimeout(() => { window.iniciarMapaAdmin(); window.cargarPuntosRuta(); window.cargarSelectorPedidosRuta(); }, 200); }
             if(id === 'brochure') { window.abrirModalBrochure(); }
@@ -10776,6 +10782,278 @@ DATOS DEL REPUESTO:
                 alert("Error al eliminar: " + (err.message || err));
             }
         };
+
+
+        // =========================================================================
+        // 🚘 MÓDULO MINI-CRM (BASE DE CLIENTES FRECUENTES) & LANDED COST ENVÍOS
+        // =========================================================================
+        window.clientesMockData = [
+            {
+                id: "cli-001",
+                nombre: "Taller Mecánico Hermanos Mendoza, C.A.",
+                rif: "J-31458920-4",
+                tipo: "Taller Mecánico Autorizado",
+                telefono: "+58 414-2394811",
+                contacto: "Ing. Carlos Mendoza",
+                ciudad: "Caracas (Boleíta Sur)",
+                totalCompradoYTD: 14850.00,
+                marcasPreferidas: ["Toyota", "Mitsubishi", "Dongfeng"],
+                deudaPendiente: 0.00,
+                pedidos: [
+                    { fecha: "10/11/2026", desc: "Parrilla Frontal Mercedes Benz C180 (OEM A2048800683)", monto: 320.50, estado: "Entregado" },
+                    { fecha: "28/10/2026", desc: "Parachoques Delantero Lancer GLX 1.6 + Neblineros", monto: 410.00, estado: "Entregado" },
+                    { fecha: "15/10/2026", desc: "Kit Conchas de Bancada y Biela Blazer 4.3 (020)", monto: 85.00, estado: "Entregado" },
+                    { fecha: "02/10/2026", desc: "Bomba Gasolina Pila Denso Toyota Yaris", monto: 45.00, estado: "Entregado" }
+                ]
+            },
+            {
+                id: "cli-002",
+                nombre: "Inversiones & Repuestos El Ávila 2021, C.A.",
+                rif: "J-40981245-1",
+                tipo: "Distribuidor / Aseguradora",
+                telefono: "+58 412-0192843",
+                contacto: "Lcda. Mariángel Durán",
+                ciudad: "Guatire / Caracas",
+                totalCompradoYTD: 8940.50,
+                marcasPreferidas: ["Ford", "Chevrolet", "Chery"],
+                deudaPendiente: 420.00,
+                pedidos: [
+                    { fecha: "12/11/2026", desc: "Parachoques Trasero Dongfeng Rich P11 (Zna)", monto: 84.99, estado: "En Tránsito" },
+                    { fecha: "05/11/2026", desc: "Bobinas Encendido Ford Super Duty 6.2 (Par Der/Izq)", monto: 180.00, estado: "Pendiente Pago" },
+                    { fecha: "20/10/2026", desc: "Empacadura Cárter Motor Cummins 6BT", monto: 42.00, estado: "Entregado" }
+                ]
+            }
+        ];
+
+        window.renderizarPerfilClienteCRM = function(cliente) {
+            const container = document.getElementById('crm-perfil-container');
+            const notFound = document.getElementById('crm-not-found');
+            if (!container) return;
+
+            if (!cliente) {
+                container.innerHTML = '';
+                if (notFound) notFound.style.display = 'flex';
+                window.renderizarTablaPedidosCRM([]);
+                return;
+            }
+
+            if (notFound) notFound.style.display = 'none';
+
+            const saldoColor = cliente.deudaPendiente > 0 
+                ? 'background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;' 
+                : 'background: #eef3f0; color: #385723; border: 1px solid #c3e6cb;';
+            
+            const saldoTexto = cliente.deudaPendiente > 0 
+                ? `$${cliente.deudaPendiente.toFixed(2)} Pendiente` 
+                : 'Solvente ($0.00)';
+
+            container.innerHTML = `
+                <div style="background: linear-gradient(135deg, #fbfdfb 0%, #f4f7f5 100%); border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 12px;">
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                <h3 style="margin: 0; color: #1e293b; font-size: 17px; font-weight: bold;">${SecuritySanitizer.escapeHtml(cliente.nombre)}</h3>
+                                <span style="background: #eef3f0; color: #385723; border: 1px solid #c3e6cb; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 12px;">
+                                    ${SecuritySanitizer.escapeHtml(cliente.tipo)}
+                                </span>
+                            </div>
+                            <p style="margin: 4px 0 0 0; font-size: 12px; color: #64748b;">
+                                <strong>RIF:</strong> ${SecuritySanitizer.escapeHtml(cliente.rif)} &bull; 
+                                <strong>Ubicación:</strong> ${SecuritySanitizer.escapeHtml(cliente.ciudad)} &bull; 
+                                <strong>Contacto:</strong> ${SecuritySanitizer.escapeHtml(cliente.contacto)}
+                            </p>
+                        </div>
+                        <div>
+                            <a href="https://wa.me/${cliente.telefono.replace(/[^0-9]/g, '')}" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; background: #25D366; color: white; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: bold; text-decoration: none; box-shadow: 0 2px 4px rgba(37,211,102,0.25);">
+                                <i class="fab fa-whatsapp"></i> ${SecuritySanitizer.escapeHtml(cliente.telefono)}
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- 3 Métricas Destacadas (KPIs) -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 14px;">
+                        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
+                            <span style="display: block; font-size: 10px; font-weight: bold; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Total Comprado YTD</span>
+                            <div style="font-size: 20px; font-weight: 900; color: #2c441b; font-family: 'Oswald', sans-serif; margin-top: 4px;">
+                                $${cliente.totalCompradoYTD.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </div>
+                            <span style="font-size: 10.5px; color: #64748b;">Acumulado del año</span>
+                        </div>
+
+                        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
+                            <span style="display: block; font-size: 10px; font-weight: bold; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Marcas Preferidas</span>
+                            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px;">
+                                ${cliente.marcasPreferidas.map(m => `
+                                    <span style="background: #eef3f0; color: #385723; border: 1px solid #c3e6cb; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 4px;">
+                                        <i class="fas fa-car" style="font-size: 9px; margin-right: 3px;"></i>${SecuritySanitizer.escapeHtml(m)}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
+                            <span style="display: block; font-size: 10px; font-weight: bold; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Estado de Cuenta / Deuda</span>
+                            <div style="margin-top: 6px;">
+                                <span style="display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 800; font-family: 'Oswald', sans-serif; ${saldoColor}">
+                                    ${saldoTexto}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            window.renderizarTablaPedidosCRM(cliente.pedidos || []);
+        };
+
+        window.renderizarTablaPedidosCRM = function(pedidos) {
+            const tbody = document.getElementById('crm-pedidos-tbody');
+            const badge = document.getElementById('crm-total-pedidos-badge');
+            if (!tbody) return;
+
+            if (badge) badge.innerText = `${pedidos.length} Órdenes Registradas`;
+
+            if (pedidos.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="padding: 20px; text-align: center; color: #94a3b8;">Sin historial de pedidos disponible.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = pedidos.map(p => {
+                let badgeStyle = 'background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;';
+                if (p.estado === 'Entregado') {
+                    badgeStyle = 'background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;';
+                } else if (p.estado === 'En Tránsito') {
+                    badgeStyle = 'background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe;';
+                } else if (p.estado === 'Pendiente Pago') {
+                    badgeStyle = 'background: #fffbeb; color: #b45309; border: 1px solid #fde68a;';
+                }
+
+                return `
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 14px; font-weight: 500;">${SecuritySanitizer.escapeHtml(p.fecha)}</td>
+                        <td style="padding: 10px 14px; font-weight: 600; color: #1e293b;">${SecuritySanitizer.escapeHtml(p.desc)}</td>
+                        <td style="padding: 10px 14px; text-align: right; font-weight: 800; font-family: 'Oswald', sans-serif; color: #0f172a;">$${p.monto.toFixed(2)}</td>
+                        <td style="padding: 10px 14px; text-align: center;">
+                            <span style="display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 10.5px; font-weight: 700; ${badgeStyle}">
+                                ${SecuritySanitizer.escapeHtml(p.estado)}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        };
+
+        window.buscarClienteCRM = function() {
+            const query = (document.getElementById('crm-search-input')?.value || '').trim().toLowerCase();
+            if (!query) {
+                window.renderizarPerfilClienteCRM(window.clientesMockData[0]);
+                return;
+            }
+
+            const coincidente = window.clientesMockData.find(c => 
+                c.nombre.toLowerCase().includes(query) || 
+                c.rif.toLowerCase().includes(query) ||
+                (c.contacto && c.contacto.toLowerCase().includes(query))
+            );
+
+            window.renderizarPerfilClienteCRM(coincidente || null);
+        };
+
+        window.restablecerClientesCRM = function() {
+            const input = document.getElementById('crm-search-input');
+            if (input) input.value = '';
+            window.renderizarPerfilClienteCRM(window.clientesMockData[0]);
+        };
+
+        window.inicializarModulosCRM = function() {
+            if (document.getElementById('crm-perfil-container')) {
+                window.renderizarPerfilClienteCRM(window.clientesMockData[0]);
+            }
+        };
+
+        // =========================================================================
+        // 📦 MÓDULO LANDED COST (ENVÍOS & DELIVERY CARACAS)
+        // =========================================================================
+        const TABULADOR_ENVIOS = {
+            tealca:      { nombre: "Tealca", base: 5.00, porKg: 2.00, recargoInterior: 3.00 },
+            mrw:         { nombre: "MRW", base: 4.50, porKg: 2.20, recargoInterior: 3.50 },
+            zoom:        { nombre: "Grupo Zoom", base: 6.00, porKg: 2.50, recargoInterior: 4.00 },
+            delivery_fb: { nombre: "Delivery F&B Parts", base: 0.00, porKg: 0.00, recargoInterior: 0.00 }
+        };
+
+        window.calcularLandedCostEnvios = function() {
+            const agenciaKey = document.getElementById('lc-agencia')?.value || 'tealca';
+            const peso = Math.max(0.1, parseFloat(document.getElementById('lc-peso')?.value || '1'));
+            const zona = document.getElementById('lc-zona')?.value || 'interior';
+
+            const config = TABULADOR_ENVIOS[agenciaKey] || TABULADOR_ENVIOS.tealca;
+            let base = 0;
+            let costoPeso = 0;
+            let cargoZona = 0;
+            let total = 0;
+            let nota = "";
+
+            if (agenciaKey === 'delivery_fb') {
+                if (zona === 'caracas_centro') {
+                    base = 0.00;
+                    cargoZona = 0.00;
+                    total = 0.00;
+                    nota = "✅ Delivery Gratuito en Caracas Centro / Municipio Libertador por compras en tienda.";
+                } else if (zona === 'caracas_este') {
+                    base = 5.00;
+                    cargoZona = 0.00;
+                    total = 5.00;
+                    nota = "🛵 Tarifa plana de delivery motorizado para Chacao, Baruta, Sucre y El Hatillo ($5.00).";
+                } else {
+                    base = 0.00;
+                    cargoZona = 0.00;
+                    total = 0.00;
+                    nota = "⚠️ El Delivery Propio solo aplica dentro de Caracas. Para envíos al interior selecciona Tealca, MRW o Zoom.";
+                }
+            } else {
+                base = config.base;
+                costoPeso = peso * config.porKg;
+                cargoZona = (zona === 'interior') ? config.recargoInterior : 1.50;
+                total = base + costoPeso + cargoZona;
+                nota = `📦 Flete nacional estimado vía ${config.nombre}. Incluye empaque protector y tracking de guía.`;
+            }
+
+            const elTotal = document.getElementById('lc-total-display');
+            const elBase = document.getElementById('lc-desglose-base');
+            const elPeso = document.getElementById('lc-desglose-peso');
+            const elZona = document.getElementById('lc-desglose-zona');
+            const elNota = document.getElementById('lc-mensaje-nota');
+
+            if (elTotal) elTotal.innerText = total.toFixed(2);
+            if (elBase) elBase.innerText = `$${base.toFixed(2)}`;
+            if (elPeso) elPeso.innerText = `$${costoPeso.toFixed(2)}`;
+            if (elZona) elZona.innerText = `$${cargoZona.toFixed(2)}`;
+            if (elNota) elNota.innerText = nota;
+        };
+
+        window.copiarCalculoLandedCost = function() {
+            const total = document.getElementById('lc-total-display')?.innerText || '0.00';
+            const agencia = document.getElementById('lc-agencia')?.selectedOptions[0]?.text || '';
+            const peso = document.getElementById('lc-peso')?.value || '1';
+            const zona = document.getElementById('lc-zona')?.selectedOptions[0]?.text || '';
+
+            const texto = `Estimado de Flete / Delivery F&B Parts:\n- Modalidad: ${agencia}\n- Destino: ${zona}\n- Peso: ${peso} Kg\n- Costo Estimado: $${total} USD`;
+
+            navigator.clipboard.writeText(texto).then(() => {
+                const btnSpan = document.getElementById('lc-btn-copy-text');
+                if (btnSpan) {
+                    const orig = btnSpan.innerText;
+                    btnSpan.innerText = "¡Copiado al Portapapeles!";
+                    setTimeout(() => { btnSpan.innerText = orig; }, 2000);
+                }
+            }).catch(() => alert("No se pudo copiar el texto."));
+        };
+
+        // Inicialización en carga inicial
+        setTimeout(() => {
+            if (window.inicializarModulosCRM) window.inicializarModulosCRM();
+            if (window.calcularLandedCostEnvios) window.calcularLandedCostEnvios();
+        }, 300);
 
 
 window.moduleLoaded = true;
