@@ -359,6 +359,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
             if(id === 'pedidos') { window._pedidosTodosCache = null; if(document.getElementById('pedidos-mes-filtro')) document.getElementById('pedidos-mes-filtro').innerHTML = ''; window.cargarPedidos(); }
             if(id === 'catalogo') { window.cargarCatalogoAdmin(); }
             if(id === 'clientes') { 
+                window.cargarBaseClientes();
                 if (window.recomputarCRMTransaccional) window.recomputarCRMTransaccional();
             }
             if(id === 'cotizaciones') { window.cargarBaseClientes(); window.actualizarPreview(); }
