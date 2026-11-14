@@ -39,9 +39,8 @@
     <!-- LIBRERÍA PARA GRÁFICAS -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- 📊 MOTOR GRÁFICO 3D INTERACTIVO (THREE.JS + ORBIT CONTROLS) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- 📊 MOTOR GRÁFICO 3D INTERACTIVO (PLOTLY.JS) -->
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 
     <!-- LIBRERÍA DE MAPAS GRATIS (LEAFLET) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -1014,7 +1013,7 @@
                         <div>
                             <h3 style="margin: 0; display: flex; align-items: center; gap: 10px; color: #2c441b; font-size: 18px;">
                                 <i class="fas fa-cubes" style="color: #5e8877;"></i> Matriz 3D de Rentabilidad y Ganancia Neta
-                                <span style="background: #e8f4ec; color: #385723; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; border: 1px solid #c3e6cb; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px;">THREE.JS 3D</span>
+                                <span style="background: #e8f4ec; color: #385723; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; border: 1px solid #c3e6cb; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px;">PLOTLY 3D</span>
                             </h3>
                             <p style="font-size: 12px; color: #666; margin: 4px 0 0 0;">
                                 Inspección dimensional de rendimiento: <strong>Eje X</strong> (Meses) × <strong>Eje Y</strong> (Línea de Repuesto) → <strong>Eje Z</strong> (Ganancia Neta en USD).
@@ -1022,40 +1021,56 @@
                         </div>
                         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                             <span style="font-size: 11px; color: #777; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">
-                                <i class="fas fa-mouse text-[#5e8877]"></i> Clic izq: Orbitar • Rueda: Zoom • Clic der: Mover
+                                <i class="fas fa-mouse text-[#5e8877]"></i> Clic y arrastrar: Rotar 3D • Scroll: Zoom • Doble clic: Reset
                             </span>
-                            <div style="display: inline-flex; border: 1px solid #d1d5db; border-radius: 8px; overflow: hidden; background: #fff;">
-                                <button type="button" id="btn-tipo-3d-bar" onclick="window.cambiarModoVisualizacion3D('bar3D')" style="padding: 5px 10px; font-size: 11px; font-weight: bold; cursor: pointer; border: none; background: #385723; color: #fff; transition: all 0.2s;">
-                                    <i class="fas fa-chart-bar"></i> Barras 3D
-                                </button>
-                                <button type="button" id="btn-tipo-3d-surface" onclick="window.cambiarModoVisualizacion3D('surface')" style="padding: 5px 10px; font-size: 11px; font-weight: bold; cursor: pointer; border: none; background: #fff; color: #385723; transition: all 0.2s;">
-                                    <i class="fas fa-mountain"></i> Superficie 3D
-                                </button>
-                            </div>
-                            <button type="button" id="btn-toggle-auto-rotar-3d" onclick="window.toggleAutoRotacion3D()" class="btn-secundario" style="padding: 6px 12px; font-size: 11.5px; border-radius: 6px; cursor: pointer; background: #fff; border: 1px solid #ccc; color: #385723; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
-                                <i class="fas fa-play" id="icon-auto-rotar-3d"></i> Presentación 360°
-                            </button>
-                            <button type="button" onclick="window.reiniciarCamara3D()" class="btn-secundario" style="padding: 6px 12px; font-size: 11.5px; border-radius: 6px; cursor: pointer; background: #f8faf8; border: 1px solid #ccc; color: #385723; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;" title="Restablecer ángulo inicial de la cámara">
-                                <i class="fas fa-crosshairs"></i> Centrar
-                            </button>
                         </div>
                     </div>
 
-                    <!-- Lienzo WebGL Three.js 3D -->
-                    <div id="contenedor-grafico-3d" style="position: relative; width: 100%; height: 480px; background: radial-gradient(circle at 50% 45%, #ffffff 0%, #f6f8f6 100%); border-radius: 10px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: inset 0 1px 4px rgba(0,0,0,0.04);">
-                        <div id="chart-3d-rentabilidad" style="width: 100%; height: 100%; position: relative;"></div>
-                        <!-- Tooltip Flotante 3D -->
-                        <div id="tooltip-3d-rentabilidad" style="display: none; position: absolute; pointer-events: none; z-index: 100; background: rgba(255, 255, 255, 0.96); border: 1.5px solid #5e8877; border-radius: 8px; padding: 8px 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); transition: opacity 0.15s ease; font-family: 'Helvetica Neue', Arial, sans-serif;"></div>
-                        <!-- Barra de Escala de Colores (Visual Map) -->
-                        <div style="position: absolute; bottom: 15px; right: 15px; z-index: 10; background: rgba(255,255,255,0.92); border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); font-size: 11px; font-family: 'Oswald', sans-serif;">
-                            <span style="font-weight: bold; color: #2c441b; display: block; margin-bottom: 4px; font-size: 11px;">ESCALA DE GANANCIA</span>
-                            <div style="display: flex; align-items: center; gap: 6px;">
-                                <span style="color: #666; font-size: 10px;">$250</span>
-                                <div style="width: 100px; height: 8px; border-radius: 4px; background: linear-gradient(to right, #a8d5ba, #5e8877, #385723, #233a16, #c9b065);"></div>
-                                <span style="color: #c9b065; font-weight: bold; font-size: 10px;">+$2,500</span>
-                            </div>
-                        </div>
-                    </div>
+                    <!-- Contenedor Plotly 3D -->
+                    <div id="grafico-rentabilidad-3d" style="width:100%; height:500px; background: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: inset 0 1px 4px rgba(0,0,0,0.03);"></div>
+
+                    <!-- Script de Inicialización Inmediata Plotly -->
+                    <script>
+                        (function() {
+                            function iniciarPlotlyInmediato() {
+                                if (typeof Plotly === 'undefined') {
+                                    setTimeout(iniciarPlotlyInmediato, 150);
+                                    return;
+                                }
+                                if (typeof window.renderizarGrafico3DPlotly === 'function') {
+                                    window.renderizarGrafico3DPlotly();
+                                } else {
+                                    var meses = ['Jun 2026', 'Jul 2026', 'Ago 2026', 'Sep 2026', 'Oct 2026', 'Nov 2026'];
+                                    var categorias = ['Motor', 'Carrocería', 'Suspensión', 'Eléctrico'];
+                                    var zData = [
+                                        [920, 1180, 1050, 1420, 1850, 2400],
+                                        [480,  620,  890, 1050, 1200, 1550],
+                                        [350,  490,  540,  680,  820,  980],
+                                        [280,  380,  420,  560,  690,  850]
+                                    ];
+                                    var data = [{
+                                        z: zData,
+                                        x: meses,
+                                        y: categorias,
+                                        type: 'surface',
+                                        colorscale: [[0, '#eef3f0'], [0.5, '#5e8877'], [1, '#385723']]
+                                    }];
+                                    var layout = {
+                                        autosize: true,
+                                        margin: { l: 0, r: 0, b: 0, t: 0 },
+                                        paper_bgcolor: 'rgba(0,0,0,0)'
+                                    };
+                                    Plotly.newPlot('grafico-rentabilidad-3d', data, layout, { responsive: true });
+                                }
+                            }
+
+                            if (document.readyState === 'loading') {
+                                document.addEventListener('DOMContentLoaded', iniciarPlotlyInmediato);
+                            } else {
+                                iniciarPlotlyInmediato();
+                            }
+                        })();
+                    </script>
                 </div>
             </div>
 

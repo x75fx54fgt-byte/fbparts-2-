@@ -351,7 +351,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 
             if(id === 'dashboard') { 
                 window.cargarDashboard(); 
-                if (window.resizeGrafico3D) window.resizeGrafico3D();
+                if (window.renderizarGrafico3DPlotly) {
+                    setTimeout(() => window.renderizarGrafico3DPlotly(), 100);
+                }
             }
             if(id === 'finanzas') { window.cargarFinanzas(); }
             if(id === 'pedidos') { window._pedidosTodosCache = null; if(document.getElementById('pedidos-mes-filtro')) document.getElementById('pedidos-mes-filtro').innerHTML = ''; window.cargarPedidos(); }
@@ -600,447 +602,149 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                     await window.calcularGananciaNetaDashboard(tasaVivaBCV, tasaVivaEUR);
                 }
 
-                // 🧊 RENDERIZADO DEL GRÁFICO 3D (ECHARTS GL)
-                if (window.renderizarGrafico3DRentabilidad) {
-                    window.renderizarGrafico3DRentabilidad(ventasPorMes);
+                // 🧊 RENDERIZADO DEL GRÁFICO 3D (PLOTLY 3D SURFACE)
+                if (window.renderizarGrafico3DPlotly) {
+                    window.renderizarGrafico3DPlotly(ventasPorMes);
                 }
 
             } catch (error) { console.error("Error cargando Dashboard:", error); }
         };
 
         // =========================================================================
-        // 🧊 MÓDULO VISUALIZACIÓN DE DATOS 3D INTERACTIVA (THREE.JS + ORBIT CONTROLS)
+        // 🧊 MÓDULO VISUALIZACIÓN DE DATOS 3D INTERACTIVA (PLOTLY.JS - 3D SURFACE)
         // =========================================================================
-        window._three3D = {
-            scene: null,
-            camera: null,
-            renderer: null,
-            controls: null,
-            barsGroup: null,
-            surfaceMesh: null,
-            labelsGroup: null,
-            raycaster: null,
-            mouse: null,
-            interactiveMeshes: [],
-            hoveredMesh: null,
-            animating: false,
-            animationProgress: 0,
-            autoRotate: false,
-            tipoActual: 'bar3D',
-            animFrameId: null
-        };
-
-        function comprobarSoporteWebGL() {
-            try {
-                const testCanvas = document.createElement('canvas');
-                return !!(window.WebGLRenderingContext && (testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl') || testCanvas.getContext('webgl2')));
-            } catch (e) {
-                return false;
-            }
-        }
-
-        function interpolarColorVerde3D(t) {
-            const c0 = new THREE.Color(0xa8d5ba); // base
-            const c1 = new THREE.Color(0x5e8877); // corporativo F&B
-            const c2 = new THREE.Color(0x385723); // brandDark
-            const c3 = new THREE.Color(0x233a16); // bosque profundo
-            const c4 = new THREE.Color(0xc9b065); // oro picos
-
-            if (t < 0.25) return c0.clone().lerp(c1, t / 0.25);
-            if (t < 0.55) return c1.clone().lerp(c2, (t - 0.25) / 0.30);
-            if (t < 0.85) return c2.clone().lerp(c3, (t - 0.55) / 0.30);
-            return c3.clone().lerp(c4, (t - 0.85) / 0.15);
-        }
-
-        function crearSpriteTexto3D(texto, colorHex = '#2c441b', fontSize = 28) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 256;
-            canvas.height = 64;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = colorHex;
-            ctx.font = 'bold ' + fontSize + 'px Oswald, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(texto, 128, 32);
-            const texture = new THREE.CanvasTexture(canvas);
-            const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
-            const sprite = new THREE.Sprite(material);
-            sprite.scale.set(12, 3, 1);
-            return sprite;
-        }
-
-        window.renderizarGrafico3DRentabilidad = function(ventasMesesObj) {
-            const container = document.getElementById('chart-3d-rentabilidad');
+        window.renderizarGrafico3DPlotly = function(ventasMesesObj) {
+            const container = document.getElementById('grafico-rentabilidad-3d');
             if (!container) return;
 
-            // Verificación segura de WebGL y Three.js
-            if (!comprobarSoporteWebGL() || typeof THREE === 'undefined') {
-                container.innerHTML = `
-                    <div style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #555; text-align: center; padding: 20px;">
-                        <i class="fas fa-cubes" style="font-size: 38px; color: #5e8877; margin-bottom: 10px;"></i>
-                        <h4 style="font-family: 'Oswald', sans-serif; color: #2c441b; margin: 0 0 5px 0; font-size: 16px;">VISTA PREVIA 3D DISPONIBLE</h4>
-                        <p style="font-size: 13px; color: #777; max-width: 420px; margin: 0;">Activa la aceleración gráfica por hardware en la configuración de tu navegador para renderizar la matriz dimensional.</p>
-                    </div>`;
+            if (typeof Plotly === 'undefined') {
+                console.warn('Plotly.js aún no está disponible. Reintentando...');
+                setTimeout(() => window.renderizarGrafico3DPlotly(ventasMesesObj), 200);
                 return;
             }
 
-            // Datos temporales y de categorías
+            // Eje X: Meses (Dinámicos basados en histórico o últimos 6 meses)
             let meses = [];
             if (ventasMesesObj && Object.keys(ventasMesesObj).length > 0) {
                 meses = Object.keys(ventasMesesObj);
             } else {
-                const mesesNombresCortos = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-                const now = new Date();
+                const mesesNombresCortos = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                const hoy = new Date();
                 for (let i = 5; i >= 0; i--) {
-                    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-                    meses.push(`${mesesNombresCortos[d.getMonth()]} ${d.getFullYear()}`);
+                    const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+                    meses.push();
                 }
             }
+
+            // Eje Y: Categorías de repuestos clave
             const categorias = ['Motor', 'Carrocería', 'Suspensión', 'Eléctrico'];
 
-            // Matriz de Ganancia Neta
-            const dataPuntos = [
-                [0, 0, 920],  [0, 1, 480],  [0, 2, 350],  [0, 3, 280],
-                [1, 0, 1180], [1, 1, 620],  [1, 2, 490],  [1, 3, 380],
-                [2, 0, 1050], [2, 1, 890],  [2, 2, 540],  [2, 3, 420],
-                [3, 0, 1420], [3, 1, 1050], [3, 2, 680],  [3, 3, 560],
-                [4, 0, 1750], [4, 1, 1290], [4, 2, 890],  [4, 3, 710],
-                [5, 0, 2280], [5, 1, 1540], [5, 2, 1120], [5, 3, 940]
+            // Eje Z: Matriz 2D de Ganancia Neta [categorías x meses]
+            let zData = [
+                [920, 1180, 1050, 1420, 1850, 2400], // Motor
+                [480,  620,  890, 1050, 1200, 1550], // Carrocería
+                [350,  490,  540,  680,  820,  980], // Suspensión
+                [280,  380,  420,  560,  690,  850]  // Eléctrico
             ];
 
+            // Si hay ventas reales de los últimos 6 meses en Firebase, calibrar la superficie Z
             if (ventasMesesObj && Object.keys(ventasMesesObj).length === 6) {
                 const valoresVentas = Object.values(ventasMesesObj);
-                dataPuntos.forEach(p => {
-                    const mesIdx = p[0];
-                    const catIdx = p[1];
-                    const ventaTotalMes = valoresVentas[mesIdx] || 0;
-                    if (ventaTotalMes > 100) {
-                        const ratios = [0.45, 0.25, 0.18, 0.12];
-                        const margenPromedio = 0.28;
-                        const gananciaEstimada = Math.round(ventaTotalMes * margenPromedio * ratios[catIdx] * 3.5);
-                        p[2] = Math.max(gananciaEstimada, 250);
-                    }
-                });
-            }
+                const ratios = [0.45, 0.25, 0.18, 0.12];
+                const margenPromedio = 0.28;
 
-            const state = window._three3D;
-            const width = container.clientWidth || 800;
-            const height = container.clientHeight || 480;
-
-            if (!state.renderer) {
-                container.innerHTML = '';
-                state.scene = new THREE.Scene();
-
-                state.camera = new THREE.PerspectiveCamera(38, width / height, 1, 1000);
-                state.camera.position.set(45, 50, 70);
-
-                state.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-                state.renderer.setSize(width, height);
-                state.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-                state.renderer.shadowMap.enabled = true;
-                state.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-                container.appendChild(state.renderer.domElement);
-
-                if (typeof THREE.OrbitControls !== 'undefined') {
-                    state.controls = new THREE.OrbitControls(state.camera, state.renderer.domElement);
-                    state.controls.enableDamping = true;
-                    state.controls.dampingFactor = 0.05;
-                    state.controls.maxPolarAngle = Math.PI / 2 - 0.04;
-                    state.controls.minDistance = 25;
-                    state.controls.maxDistance = 220;
-                    state.controls.target.set(0, 8, 0);
-                }
-
-                // Iluminación realista
-                const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
-                state.scene.add(ambientLight);
-
-                const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
-                dirLight.position.set(50, 90, 50);
-                dirLight.castShadow = true;
-                dirLight.shadow.mapSize.width = 1024;
-                dirLight.shadow.mapSize.height = 1024;
-                state.scene.add(dirLight);
-
-                const fillLight = new THREE.DirectionalLight(0xdff0e4, 0.4);
-                fillLight.position.set(-50, 40, -50);
-                state.scene.add(fillLight);
-
-                // Plataforma base y Rejilla
-                const groundGeo = new THREE.PlaneGeometry(75, 55);
-                const groundMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, metalness: 0.05 });
-                const ground = new THREE.Mesh(groundGeo, groundMat);
-                ground.rotation.x = -Math.PI / 2;
-                ground.position.y = -0.05;
-                ground.receiveShadow = true;
-                state.scene.add(ground);
-
-                const grid = new THREE.GridHelper(70, 14, 0x5e8877, 0xe2e8f0);
-                grid.position.y = 0.01;
-                state.scene.add(grid);
-
-                state.raycaster = new THREE.Raycaster();
-                state.mouse = new THREE.Vector2();
-
-                // Interacción Mouse -> Tooltip
-                const tooltipEl = document.getElementById('tooltip-3d-rentabilidad');
-                container.addEventListener('mousemove', (e) => {
-                    const rect = state.renderer.domElement.getBoundingClientRect();
-                    state.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-                    state.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-
-                    if (state.raycaster && state.interactiveMeshes.length > 0) {
-                        state.raycaster.setFromCamera(state.mouse, state.camera);
-                        const intersects = state.raycaster.intersectObjects(state.interactiveMeshes);
-
-                        if (intersects.length > 0) {
-                            const hit = intersects[0].object;
-                            if (state.hoveredMesh !== hit) {
-                                if (state.hoveredMesh) {
-                                    state.hoveredMesh.material.emissive.setHex(0x000000);
-                                }
-                                state.hoveredMesh = hit;
-                                hit.material.emissive.setHex(0x385723);
-                            }
-
-                            if (tooltipEl && hit.userData) {
-                                const d = hit.userData;
-                                tooltipEl.innerHTML = `
-                                    <div style="font-family:'Oswald',sans-serif; min-width:140px;">
-                                        <div style="color:#2c441b; font-size:14px; font-weight:700; border-bottom:1px solid #e2e8f0; padding-bottom:3px; margin-bottom:5px; display:flex; align-items:center; gap:6px;">
-                                            <i class="fas fa-cube" style="color:#5e8877;"></i> ${d.cat} • ${d.mes}
-                                        </div>
-                                        <div style="font-family:sans-serif; font-size:12px; color:#555; display:flex; justify-content:space-between; align-items:baseline;">
-                                            <span>Ganancia Neta:</span>
-                                            <strong style="color:#2c441b; font-size:15px; font-family:'Oswald',sans-serif;">$${d.ganancia.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
-                                        </div>
-                                    </div>`;
-                                const posX = e.clientX - rect.left + 15;
-                                const posY = e.clientY - rect.top - 15;
-                                tooltipEl.style.left = posX + 'px';
-                                tooltipEl.style.top = posY + 'px';
-                                tooltipEl.style.display = 'block';
-                            }
-                        } else {
-                            if (state.hoveredMesh) {
-                                state.hoveredMesh.material.emissive.setHex(0x000000);
-                                state.hoveredMesh = null;
-                            }
-                            if (tooltipEl) tooltipEl.style.display = 'none';
+                zData = categorias.map((cat, catIdx) => {
+                    return valoresVentas.map((ventaTotalMes, mesIdx) => {
+                        if (ventaTotalMes > 100) {
+                            return Math.round(ventaTotalMes * margenPromedio * ratios[catIdx] * 3.5);
                         }
-                    }
+                        return zData[catIdx][mesIdx] || 300;
+                    });
                 });
-
-                container.addEventListener('mouseleave', () => {
-                    if (state.hoveredMesh) {
-                        state.hoveredMesh.material.emissive.setHex(0x000000);
-                        state.hoveredMesh = null;
-                    }
-                    if (tooltipEl) tooltipEl.style.display = 'none';
-                });
-
-                window.addEventListener('resize', window.resizeGrafico3D);
             }
 
-            if (state.barsGroup) state.scene.remove(state.barsGroup);
-            if (state.surfaceMesh) state.scene.remove(state.surfaceMesh);
-            if (state.labelsGroup) state.scene.remove(state.labelsGroup);
+            const data = [{
+                z: zData,
+                x: meses,
+                y: categorias,
+                type: 'surface',
+                colorscale: [
+                    [0, '#eef3f0'],
+                    [0.5, '#5e8877'],
+                    [1, '#385723']
+                ],
+                colorbar: {
+                    title: {
+                        text: '<b>Ganancia ($)</b>',
+                        side: 'top',
+                        font: { family: 'Oswald, sans-serif', size: 12, color: '#2c441b' }
+                    },
+                    tickprefix: '$',
+                    len: 0.85,
+                    thickness: 16,
+                    tickfont: { family: 'sans-serif', size: 10, color: '#444' }
+                },
+                contours: {
+                    z: {
+                        show: true,
+                        usecolormap: true,
+                        highlightcolor: '#c9b065',
+                        project: { z: false }
+                    }
+                },
+                hovertemplate: '<b>Categoría:</b> %{y}<br><b>Mes:</b> %{x}<br><b>Ganancia Neta:</b> $%{z:,.2f}<extra></extra>'
+            }];
 
-            state.barsGroup = new THREE.Group();
-            state.labelsGroup = new THREE.Group();
-            state.interactiveMeshes = [];
-
-            const xCoords = [-25, -15, -5, 5, 15, 25];
-            const zCoords = [-15, -5, 5, 15];
-            const maxVal = Math.max(...dataPuntos.map(p => p[2]));
-
-            // Generar Columnas 3D con Paleta Verde Corporativa
-            dataPuntos.forEach(p => {
-                const mesIdx = p[0];
-                const catIdx = p[1];
-                const ganancia = p[2];
-
-                const heightBar = Math.max((ganancia / maxVal) * 24, 2);
-                const x = xCoords[mesIdx];
-                const z = zCoords[catIdx];
-
-                const geo = new THREE.BoxGeometry(6.2, heightBar, 6.2);
-                geo.translate(0, heightBar / 2, 0);
-
-                const color = interpolarColorVerde3D(ganancia / maxVal);
-                const mat = new THREE.MeshStandardMaterial({
-                    color: color,
-                    roughness: 0.35,
-                    metalness: 0.12
-                });
-
-                const barMesh = new THREE.Mesh(geo, mat);
-                barMesh.position.set(x, 0, z);
-                barMesh.castShadow = true;
-                barMesh.receiveShadow = true;
-                barMesh.userData = {
-                    mes: meses[mesIdx],
-                    cat: categorias[catIdx],
-                    ganancia: ganancia,
-                    targetHeight: heightBar
-                };
-
-                state.barsGroup.add(barMesh);
-                state.interactiveMeshes.push(barMesh);
-
-                // Remate dorado para máximos de rentabilidad ($1,800+)
-                if (ganancia >= 1800) {
-                    const capGeo = new THREE.BoxGeometry(6.3, 0.4, 6.3);
-                    const capMat = new THREE.MeshStandardMaterial({ color: 0xc9b065, roughness: 0.2, metalness: 0.5 });
-                    const capMesh = new THREE.Mesh(capGeo, capMat);
-                    capMesh.position.set(0, heightBar + 0.2, 0);
-                    barMesh.add(capMesh);
+            const layout = {
+                autosize: true,
+                margin: { l: 0, r: 0, b: 0, t: 0 },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                scene: {
+                    xaxis: {
+                        title: { text: '<b>Mes</b>', font: { family: 'Oswald, sans-serif', size: 11, color: '#385723' } },
+                        gridcolor: '#e2e8f0',
+                        zerolinecolor: '#cbd5e1',
+                        showbackground: true,
+                        backgroundcolor: 'rgba(255, 255, 255, 0.9)'
+                    },
+                    yaxis: {
+                        title: { text: '<b>Categoría</b>', font: { family: 'Oswald, sans-serif', size: 11, color: '#385723' } },
+                        gridcolor: '#e2e8f0',
+                        zerolinecolor: '#cbd5e1',
+                        showbackground: true,
+                        backgroundcolor: 'rgba(255, 255, 255, 0.9)'
+                    },
+                    zaxis: {
+                        title: { text: '<b>Ganancia Neta ($)</b>', font: { family: 'Oswald, sans-serif', size: 11, color: '#385723' } },
+                        tickprefix: '$',
+                        gridcolor: '#e2e8f0',
+                        zerolinecolor: '#cbd5e1',
+                        showbackground: true,
+                        backgroundcolor: 'rgba(255, 255, 255, 0.9)'
+                    },
+                    camera: {
+                        eye: { x: 1.6, y: -1.6, z: 1.2 }
+                    }
                 }
-            });
+            };
 
-            // Etiquetas de Meses (Eje X)
-            meses.forEach((m, idx) => {
-                const label = crearSpriteTexto3D(m, '#2c441b', 26);
-                label.position.set(xCoords[idx], 0.6, 23);
-                state.labelsGroup.add(label);
-            });
+            const config = {
+                responsive: true,
+                displayModeBar: true,
+                displaylogo: false,
+                modeBarButtonsToRemove: ['sendDataToCloud', 'hoverClosest3d']
+            };
 
-            // Etiquetas de Categorías (Eje Z)
-            categorias.forEach((c, idx) => {
-                const label = crearSpriteTexto3D(c, '#385723', 28);
-                label.position.set(-33, 0.6, zCoords[idx]);
-                state.labelsGroup.add(label);
-            });
-
-            // Generar Superficie 3D Paramétrica
-            const surfGeo = new THREE.PlaneGeometry(50, 30, 5, 3);
-            surfGeo.rotateX(-Math.PI / 2);
-            const posAttr = surfGeo.attributes.position;
-            for (let i = 0; i < posAttr.count; i++) {
-                const vx = posAttr.getX(i);
-                const vz = posAttr.getZ(i);
-                let closestDist = 999;
-                let h = 5;
-                dataPuntos.forEach(dp => {
-                    const dx = vx - xCoords[dp[0]];
-                    const dz = vz - zCoords[dp[1]];
-                    const dist = Math.sqrt(dx * dx + dz * dz);
-                    if (dist < closestDist) {
-                        closestDist = dist;
-                        h = (dp[2] / maxVal) * 22;
-                    }
-                });
-                posAttr.setY(i, h);
-            }
-            surfGeo.computeVertexNormals();
-
-            const surfMat = new THREE.MeshStandardMaterial({
-                color: 0x5e8877,
-                roughness: 0.3,
-                metalness: 0.2,
-                wireframe: true,
-                side: THREE.DoubleSide
-            });
-            state.surfaceMesh = new THREE.Mesh(surfGeo, surfMat);
-            state.surfaceMesh.position.set(0, 0, 0);
-            state.surfaceMesh.visible = (state.tipoActual === 'surface');
-
-            state.scene.add(state.barsGroup);
-            state.scene.add(state.surfaceMesh);
-            state.scene.add(state.labelsGroup);
-
-            state.animationProgress = 0;
-            state.animating = true;
-
-            if (!state.animFrameId) {
-                const animate = () => {
-                    state.animFrameId = requestAnimationFrame(animate);
-
-                    if (state.controls) {
-                        state.controls.update();
-                    }
-
-                    if (state.animating && state.barsGroup) {
-                        state.animationProgress += 0.04;
-                        const factor = Math.min(1, state.animationProgress);
-                        const scale = 1 - Math.pow(1 - factor, 3);
-                        state.barsGroup.children.forEach(bar => {
-                            bar.scale.y = Math.max(0.01, scale);
-                        });
-                        if (factor >= 1) state.animating = false;
-                    }
-
-                    if (state.renderer && state.scene && state.camera) {
-                        state.renderer.render(state.scene, state.camera);
-                    }
-                };
-                animate();
-            }
+            Plotly.newPlot('grafico-rentabilidad-3d', data, layout, config);
         };
 
-        window.toggleAutoRotacion3D = function() {
-            const state = window._three3D;
-            if (!state.controls) return;
-            state.autoRotate = !state.autoRotate;
-            state.controls.autoRotate = state.autoRotate;
-            state.controls.autoRotateSpeed = 2.0;
-
-            const btn = document.getElementById('btn-toggle-auto-rotar-3d');
-            const icon = document.getElementById('icon-auto-rotar-3d');
-            if (btn && icon) {
-                btn.style.background = state.autoRotate ? '#385723' : '#ffffff';
-                btn.style.color = state.autoRotate ? '#ffffff' : '#385723';
-                icon.className = state.autoRotate ? 'fas fa-pause' : 'fas fa-play';
+        window.addEventListener('resize', () => {
+            const el = document.getElementById('grafico-rentabilidad-3d');
+            if (el && typeof Plotly !== 'undefined') {
+                Plotly.Plots.resize(el);
             }
-        };
-
-        window.reiniciarCamara3D = function() {
-            const state = window._three3D;
-            if (!state.camera || !state.controls) return;
-            state.camera.position.set(45, 50, 70);
-            state.controls.target.set(0, 8, 0);
-            state.controls.update();
-        };
-
-        window.cambiarModoVisualizacion3D = function(modo) {
-            const state = window._three3D;
-            state.tipoActual = modo;
-
-            const btnBar = document.getElementById('btn-tipo-3d-bar');
-            const btnSurf = document.getElementById('btn-tipo-3d-surface');
-            if (btnBar && btnSurf) {
-                if (modo === 'bar3D') {
-                    btnBar.style.background = '#385723';
-                    btnBar.style.color = '#fff';
-                    btnSurf.style.background = '#fff';
-                    btnSurf.style.color = '#385723';
-                } else {
-                    btnSurf.style.background = '#385723';
-                    btnSurf.style.color = '#fff';
-                    btnBar.style.background = '#fff';
-                    btnBar.style.color = '#385723';
-                }
-            }
-
-            if (state.barsGroup && state.surfaceMesh) {
-                state.barsGroup.visible = (modo === 'bar3D');
-                state.surfaceMesh.visible = (modo === 'surface');
-            }
-        };
-
-        window.resizeGrafico3D = function() {
-            const state = window._three3D;
-            const container = document.getElementById('chart-3d-rentabilidad');
-            if (state.renderer && state.camera && container) {
-                const w = container.clientWidth;
-                const h = container.clientHeight;
-                if (w > 0 && h > 0) {
-                    state.camera.aspect = w / h;
-                    state.camera.updateProjectionMatrix();
-                    state.renderer.setSize(w, h);
-                }
-            }
-        };
+        });
 
         // ==========================================
         // 🚀 MÓDULO CXC Y CXP (MULTIMONEDA)
