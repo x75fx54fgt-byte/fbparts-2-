@@ -632,12 +632,14 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                 const hoy = new Date();
                 for (let i = 5; i >= 0; i--) {
                     const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
-                    meses.push();
+                    meses.push(`${mesesNombresCortos[d.getMonth()]} ${d.getFullYear()}`);
                 }
             }
 
-            // Eje Y: Categorías de repuestos clave
+            // Coordenadas numéricas requeridas por WebGL para el eje X y eje Y
+            const xCoords = meses.map((_, i) => i);
             const categorias = ['Motor', 'Carrocería', 'Suspensión', 'Eléctrico'];
+            const yCoords = categorias.map((_, i) => i);
 
             // Eje Z: Matriz 2D de Ganancia Neta [categorías x meses]
             let zData = [
@@ -663,10 +665,16 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                 });
             }
 
+            const hoverTexts = categorias.map((cat, r) => {
+                return meses.map((mes, c) => {
+                    return `<b>${cat}</b><br>Mes: ${mes}<br>Ganancia Neta: $${zData[r][c].toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+                });
+            });
+
             const data = [{
                 z: zData,
-                x: meses,
-                y: categorias,
+                x: xCoords,
+                y: yCoords,
                 type: 'surface',
                 colorscale: [
                     [0, '#eef3f0'],
@@ -689,10 +697,18 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                         show: true,
                         usecolormap: true,
                         highlightcolor: '#c9b065',
-                        project: { z: false }
+                        project: { z: true }
                     }
                 },
-                hovertemplate: '<b>Categoría:</b> %{y}<br><b>Mes:</b> %{x}<br><b>Ganancia Neta:</b> $%{z:,.2f}<extra></extra>'
+                lighting: {
+                    ambient: 0.85,
+                    diffuse: 0.8,
+                    specular: 0.25,
+                    roughness: 0.5,
+                    fresnel: 0.2
+                },
+                text: hoverTexts,
+                hoverinfo: 'text'
             }];
 
             const layout = {
@@ -703,6 +719,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                 scene: {
                     xaxis: {
                         title: { text: '<b>Mes</b>', font: { family: 'Oswald, sans-serif', size: 11, color: '#385723' } },
+                        tickmode: 'array',
+                        tickvals: xCoords,
+                        ticktext: meses,
                         gridcolor: '#e2e8f0',
                         zerolinecolor: '#cbd5e1',
                         showbackground: true,
@@ -710,6 +729,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                     },
                     yaxis: {
                         title: { text: '<b>Categoría</b>', font: { family: 'Oswald, sans-serif', size: 11, color: '#385723' } },
+                        tickmode: 'array',
+                        tickvals: yCoords,
+                        ticktext: categorias,
                         gridcolor: '#e2e8f0',
                         zerolinecolor: '#cbd5e1',
                         showbackground: true,
@@ -724,7 +746,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                         backgroundcolor: 'rgba(255, 255, 255, 0.9)'
                     },
                     camera: {
-                        eye: { x: 1.6, y: -1.6, z: 1.2 }
+                        eye: { x: 1.5, y: -1.7, z: 1.2 }
                     }
                 }
             };

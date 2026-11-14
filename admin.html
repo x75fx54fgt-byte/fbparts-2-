@@ -1042,25 +1042,94 @@
                                 } else {
                                     var meses = ['Jun 2026', 'Jul 2026', 'Ago 2026', 'Sep 2026', 'Oct 2026', 'Nov 2026'];
                                     var categorias = ['Motor', 'Carrocería', 'Suspensión', 'Eléctrico'];
+                                    var xCoords = [0, 1, 2, 3, 4, 5];
+                                    var yCoords = [0, 1, 2, 3];
                                     var zData = [
                                         [920, 1180, 1050, 1420, 1850, 2400],
                                         [480,  620,  890, 1050, 1200, 1550],
                                         [350,  490,  540,  680,  820,  980],
                                         [280,  380,  420,  560,  690,  850]
                                     ];
+
+                                    var hoverTexts = categorias.map(function(cat, r) {
+                                        return meses.map(function(mes, c) {
+                                            return '<b>' + cat + '</b><br>Mes: ' + mes + '<br>Ganancia Neta: $' + zData[r][c].toLocaleString('en-US', { minimumFractionDigits: 2 });
+                                        });
+                                    });
+
                                     var data = [{
                                         z: zData,
-                                        x: meses,
-                                        y: categorias,
+                                        x: xCoords,
+                                        y: yCoords,
                                         type: 'surface',
-                                        colorscale: [[0, '#eef3f0'], [0.5, '#5e8877'], [1, '#385723']]
+                                        colorscale: [
+                                            [0, '#eef3f0'],
+                                            [0.5, '#5e8877'],
+                                            [1, '#385723']
+                                        ],
+                                        colorbar: {
+                                            title: { text: '<b>Ganancia ($)</b>', side: 'top', font: { family: 'Oswald, sans-serif', size: 12, color: '#2c441b' } },
+                                            tickprefix: '$',
+                                            len: 0.85,
+                                            thickness: 16
+                                        },
+                                        contours: {
+                                            z: {
+                                                show: true,
+                                                usecolormap: true,
+                                                highlightcolor: '#c9b065',
+                                                project: { z: true }
+                                            }
+                                        },
+                                        lighting: {
+                                            ambient: 0.85,
+                                            diffuse: 0.8,
+                                            specular: 0.25,
+                                            roughness: 0.5,
+                                            fresnel: 0.2
+                                        },
+                                        text: hoverTexts,
+                                        hoverinfo: 'text'
                                     }];
+
                                     var layout = {
                                         autosize: true,
                                         margin: { l: 0, r: 0, b: 0, t: 0 },
-                                        paper_bgcolor: 'rgba(0,0,0,0)'
+                                        paper_bgcolor: 'rgba(0,0,0,0)',
+                                        plot_bgcolor: 'rgba(0,0,0,0)',
+                                        scene: {
+                                            xaxis: {
+                                                title: { text: '<b>Mes</b>', font: { family: 'Oswald, sans-serif', size: 11, color: '#385723' } },
+                                                tickmode: 'array',
+                                                tickvals: xCoords,
+                                                ticktext: meses,
+                                                gridcolor: '#e2e8f0',
+                                                showbackground: true,
+                                                backgroundcolor: 'rgba(255, 255, 255, 0.9)'
+                                            },
+                                            yaxis: {
+                                                title: { text: '<b>Línea de Repuesto</b>', font: { family: 'Oswald, sans-serif', size: 11, color: '#385723' } },
+                                                tickmode: 'array',
+                                                tickvals: yCoords,
+                                                ticktext: categorias,
+                                                gridcolor: '#e2e8f0',
+                                                showbackground: true,
+                                                backgroundcolor: 'rgba(255, 255, 255, 0.9)'
+                                            },
+                                            zaxis: {
+                                                title: { text: '<b>Ganancia Neta ($)</b>', font: { family: 'Oswald, sans-serif', size: 11, color: '#385723' } },
+                                                tickprefix: '$',
+                                                gridcolor: '#e2e8f0',
+                                                showbackground: true,
+                                                backgroundcolor: 'rgba(255, 255, 255, 0.9)'
+                                            },
+                                            camera: {
+                                                eye: { x: 1.5, y: -1.7, z: 1.2 }
+                                            }
+                                        }
                                     };
-                                    Plotly.newPlot('grafico-rentabilidad-3d', data, layout, { responsive: true });
+
+                                    Plotly.newPlot('grafico-rentabilidad-3d', data, layout, { responsive: true, displayModeBar: true, displaylogo: false });
                                 }
                             }
 
