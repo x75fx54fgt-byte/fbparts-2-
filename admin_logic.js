@@ -610,56 +610,85 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
         };
 
         // =========================================================================
-        // 🧊 MÓDULO VISUALIZACIÓN DE DATOS 3D INTERACTIVA (PLOTLY.JS - 3D SURFACE)
+        // 📊 MÓDULO VISUALIZACIÓN DE DATOS 2D (PLOTLY.JS - HEATMAP 100% SVG)
         // =========================================================================
-        window.renderizarGrafico3DPlotly = function() {
-            const container = document.getElementById('grafico-rentabilidad-3d');
+        window.renderizarGraficoHeatmapPlotly = function() {
+            const container = document.getElementById('grafico-heatmap-rentabilidad') || document.getElementById('grafico-rentabilidad-3d');
             if (!container) return;
 
             if (typeof Plotly === 'undefined') {
                 console.warn('Plotly.js aún no está disponible. Reintentando...');
-                setTimeout(window.renderizarGrafico3DPlotly, 200);
+                setTimeout(window.renderizarGraficoHeatmapPlotly, 200);
                 return;
             }
 
-            // Datos simulados reales: Array de Arrays (Eje Z)
+            // Datos estructurados: Matriz 2D 5x5 perfecta (Eje Z)
             var z_data = [
-              [250, 400, 800, 1200, 900], // Fila 1: Motor
-              [300, 500, 750, 1400, 1100], // Fila 2: Suspensión
-              [600, 900, 1500, 2100, 1800], // Fila 3: Frenos
-              [800, 1200, 2200, 3000, 2500], // Fila 4: Carrocería
-              [500, 700, 1100, 1600, 1300]  // Fila 5: Eléctrico
+              [250, 400, 800, 1200, 900],   // Fila 0: Motor
+              [300, 500, 750, 1400, 1100],  // Fila 1: Suspensión
+              [600, 900, 1500, 2100, 1800], // Fila 2: Frenos
+              [800, 1200, 2200, 3000, 2500],// Fila 3: Carrocería
+              [500, 700, 1100, 1600, 1300]  // Fila 4: Eléctrico
             ];
 
-            var x_data = ['Jun', 'Jul', 'Ago', 'Sep', 'Oct'];
+            var x_data = ['Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre'];
             var y_data = ['Motor', 'Suspensión', 'Frenos', 'Carrocería', 'Eléctrico'];
 
             var data = [{
               z: z_data,
               x: x_data,
               y: y_data,
-              type: 'surface',
-              colorscale: [[0, '#eef3f0'], [0.5, '#5e8877'], [1, '#385723']]
+              type: 'heatmap',
+              hoverongaps: false,
+              colorscale: [
+                [0.0, '#ffffff'],
+                [0.2, '#eef3f0'],
+                [0.5, '#5e8877'],
+                [1.0, '#385723']
+              ],
+              showscale: true,
+              colorbar: {
+                title: {
+                  text: 'Ganancia ($)',
+                  font: { family: 'Arial, sans-serif', size: 12, color: '#333333' }
+                },
+                tickfont: { family: 'Arial, sans-serif', size: 11, color: '#333333' },
+                len: 0.9,
+                thickness: 16
+              }
             }];
 
             var layout = {
               title: false,
               autosize: true,
-              margin: { l: 0, r: 0, b: 0, t: 0 },
+              margin: { t: 30, r: 30, b: 60, l: 80 },
               paper_bgcolor: 'rgba(0,0,0,0)',
-              scene: {
-                xaxis: { title: 'Meses' },
-                yaxis: { title: 'Categoría' },
-                zaxis: { title: 'Ganancia ($)' },
-                camera: { eye: {x: 1.5, y: 1.5, z: 1.2} }
+              plot_bgcolor: 'rgba(0,0,0,0)',
+              font: { family: 'Arial, sans-serif', color: '#333333' },
+              xaxis: {
+                title: { text: 'Meses', font: { family: 'Arial, sans-serif', size: 13, color: '#333333' } },
+                tickfont: { family: 'Arial, sans-serif', size: 11, color: '#333333' }
+              },
+              yaxis: {
+                title: { text: 'Categoría', font: { family: 'Arial, sans-serif', size: 13, color: '#333333' } },
+                tickfont: { family: 'Arial, sans-serif', size: 11, color: '#333333' }
               }
             };
 
-            Plotly.newPlot('grafico-rentabilidad-3d', data, layout);
+            var config = {
+              responsive: true,
+              displayModeBar: true,
+              displaylogo: false
+            };
+
+            Plotly.newPlot(container, data, layout, config);
         };
 
+        // Alias retrocompatible
+        window.renderizarGrafico3DPlotly = window.renderizarGraficoHeatmapPlotly;
+
         window.addEventListener('resize', () => {
-            const el = document.getElementById('grafico-rentabilidad-3d');
+            const el = document.getElementById('grafico-heatmap-rentabilidad') || document.getElementById('grafico-rentabilidad-3d');
             if (el && typeof Plotly !== 'undefined') {
                 Plotly.Plots.resize(el);
             }

@@ -1007,77 +1007,106 @@
                     </div>
                 </div>
 
-                <!-- 🧊 TARJETA DE VISUALIZACIÓN 3D INTERACTIVA: MATRIZ DE RENTABILIDAD POR LÍNEA -->
+                <!-- 📊 TARJETA DE VISUALIZACIÓN: MAPA DE CALOR DE RENTABILIDAD POR LÍNEA -->
                 <div class="card-form" style="margin-top: 25px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 15px;">
                         <div>
                             <h3 style="margin: 0; display: flex; align-items: center; gap: 10px; color: #2c441b; font-size: 18px;">
-                                <i class="fas fa-cubes" style="color: #5e8877;"></i> Matriz 3D de Rentabilidad y Ganancia Neta
-                                <span style="background: #e8f4ec; color: #385723; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; border: 1px solid #c3e6cb; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px;">PLOTLY 3D</span>
+                                <i class="fas fa-th" style="color: #5e8877;"></i> Mapa de Calor de Rentabilidad y Ganancia Neta
+                                <span style="background: #e8f4ec; color: #385723; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; border: 1px solid #c3e6cb; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px;">PLOTLY HEATMAP</span>
                             </h3>
                             <p style="font-size: 12px; color: #666; margin: 4px 0 0 0;">
-                                Inspección dimensional de rendimiento: <strong>Eje X</strong> (Meses) × <strong>Eje Y</strong> (Línea de Repuesto) → <strong>Eje Z</strong> (Ganancia Neta en USD).
+                                Matriz 2D de rendimiento por categoría y período: <strong>Eje X</strong> (Meses) × <strong>Eje Y</strong> (Categorías) → <strong>Intensidad</strong> (Ganancia Neta en USD).
                             </p>
                         </div>
                         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                             <span style="font-size: 11px; color: #777; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">
-                                <i class="fas fa-mouse text-[#5e8877]"></i> Clic y arrastrar: Rotar 3D • Scroll: Zoom • Doble clic: Reset
+                                <i class="fas fa-info-circle text-[#5e8877]"></i> Renderizado 2D directo (100% compatible sin WebGL)
                             </span>
                         </div>
                     </div>
 
-                    <!-- Contenedor Plotly 3D -->
-                    <div id="grafico-rentabilidad-3d" style="width:100%; height:500px; background: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: inset 0 1px 4px rgba(0,0,0,0.03);"></div>
+                    <!-- Contenedor Plotly Heatmap -->
+                    <div id="grafico-heatmap-rentabilidad" style="width: 100%; height: 500px; max-width: 900px; margin: 0 auto; background: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: inset 0 1px 4px rgba(0,0,0,0.03);"></div>
 
-                    <!-- Script de Inicialización Inmediata Plotly -->
+                    <!-- Script de Inicialización Inmediata Plotly Heatmap -->
                     <script>
                         (function() {
-                            function iniciarPlotlyInmediato() {
+                            function iniciarPlotlyHeatmap() {
                                 if (typeof Plotly === 'undefined') {
-                                    setTimeout(iniciarPlotlyInmediato, 150);
+                                    setTimeout(iniciarPlotlyHeatmap, 150);
                                     return;
                                 }
 
-                                // Datos simulados reales: Array de Arrays (Eje Z)
+                                var targetEl = document.getElementById('grafico-heatmap-rentabilidad') || document.getElementById('grafico-rentabilidad-3d');
+                                if (!targetEl) return;
+
+                                // Datos estructurados: Matriz 2D 5x5 perfecta (Eje Z)
                                 var z_data = [
-                                  [250, 400, 800, 1200, 900], // Fila 1: Motor
-                                  [300, 500, 750, 1400, 1100], // Fila 2: Suspensión
-                                  [600, 900, 1500, 2100, 1800], // Fila 3: Frenos
-                                  [800, 1200, 2200, 3000, 2500], // Fila 4: Carrocería
-                                  [500, 700, 1100, 1600, 1300]  // Fila 5: Eléctrico
+                                  [250, 400, 800, 1200, 900],   // Fila 0: Motor
+                                  [300, 500, 750, 1400, 1100],  // Fila 1: Suspensión
+                                  [600, 900, 1500, 2100, 1800], // Fila 2: Frenos
+                                  [800, 1200, 2200, 3000, 2500],// Fila 3: Carrocería
+                                  [500, 700, 1100, 1600, 1300]  // Fila 4: Eléctrico
                                 ];
 
-                                var x_data = ['Jun', 'Jul', 'Ago', 'Sep', 'Oct'];
+                                var x_data = ['Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre'];
                                 var y_data = ['Motor', 'Suspensión', 'Frenos', 'Carrocería', 'Eléctrico'];
 
                                 var data = [{
                                   z: z_data,
                                   x: x_data,
                                   y: y_data,
-                                  type: 'surface',
-                                  colorscale: [[0, '#eef3f0'], [0.5, '#5e8877'], [1, '#385723']]
+                                  type: 'heatmap',
+                                  hoverongaps: false,
+                                  colorscale: [
+                                    [0.0, '#ffffff'],
+                                    [0.2, '#eef3f0'],
+                                    [0.5, '#5e8877'],
+                                    [1.0, '#385723']
+                                  ],
+                                  showscale: true,
+                                  colorbar: {
+                                    title: {
+                                      text: 'Ganancia ($)',
+                                      font: { family: 'Arial, sans-serif', size: 12, color: '#333333' }
+                                    },
+                                    tickfont: { family: 'Arial, sans-serif', size: 11, color: '#333333' },
+                                    len: 0.9,
+                                    thickness: 16
+                                  }
                                 }];
 
                                 var layout = {
                                   title: false,
                                   autosize: true,
-                                  margin: { l: 0, r: 0, b: 0, t: 0 },
+                                  margin: { t: 30, r: 30, b: 60, l: 80 },
                                   paper_bgcolor: 'rgba(0,0,0,0)',
-                                  scene: {
-                                    xaxis: { title: 'Meses' },
-                                    yaxis: { title: 'Categoría' },
-                                    zaxis: { title: 'Ganancia ($)' },
-                                    camera: { eye: {x: 1.5, y: 1.5, z: 1.2} }
+                                  plot_bgcolor: 'rgba(0,0,0,0)',
+                                  font: { family: 'Arial, sans-serif', color: '#333333' },
+                                  xaxis: {
+                                    title: { text: 'Meses', font: { family: 'Arial, sans-serif', size: 13, color: '#333333' } },
+                                    tickfont: { family: 'Arial, sans-serif', size: 11, color: '#333333' }
+                                  },
+                                  yaxis: {
+                                    title: { text: 'Categoría', font: { family: 'Arial, sans-serif', size: 13, color: '#333333' } },
+                                    tickfont: { family: 'Arial, sans-serif', size: 11, color: '#333333' }
                                   }
                                 };
 
-                                Plotly.newPlot('grafico-rentabilidad-3d', data, layout);
+                                var config = {
+                                  responsive: true,
+                                  displayModeBar: true,
+                                  displaylogo: false
+                                };
+
+                                Plotly.newPlot(targetEl, data, layout, config);
                             }
 
                             if (document.readyState === 'loading') {
-                                document.addEventListener('DOMContentLoaded', iniciarPlotlyInmediato);
+                                document.addEventListener('DOMContentLoaded', iniciarPlotlyHeatmap);
                             } else {
-                                iniciarPlotlyInmediato();
+                                iniciarPlotlyHeatmap();
                             }
                         })();
                     </script>
@@ -3748,7 +3777,7 @@
             }
         }, 8000);
     </script>
-    <script type="module" src="admin_logic.js?v=20261114_plotly_3d"></script>
+    <script type="module" src="admin_logic.js?v=20261114_heatmap"></script>
 
 
     <!-- MODAL AUDITORIA INTERNA -->
