@@ -10848,14 +10848,47 @@ DATOS DEL REPUESTO:
 
 
         // =========================================================================
-        // 🚘 VISTA 1: CRM ANALÍTICO TRANSACCIONAL (CONEXIÓN REAL CON FIRESTORE)
+        // 🚘 VISTA 1: CRM ANALÍTICO TRANSACCIONAL (CON NORMALIZADOR DE DIVISAS)
         // =========================================================================
         window.clientesAgrupadosCache = [];
         window.clienteSeleccionadoCRM = null;
 
         /**
-         * Core Científico de Datos: Agrupa y procesa transacciones usando reduce & map.
-         * Extrae: Total Comprado, Frecuencia de Marcas y Fecha de Último Pedido.
+         * Dataset de prueba con transacciones en divisas mixtas (USD y VES)
+         * para auditar el normalizador de tasas históricas.
+         */
+        window.mockPedidosTransaccionales = [
+            // Cuenta 1: Inversiones & Repuestos El Ávila 2021, C.A. (Transacciones mixtas VES y USD)
+            { id: "FAC-1001", cliente: "Inversiones & Repuestos El Ávila 2021, C.A.", rif: "J-40981245-1", telefono: "+58 412-0192843", fecha: "2024-05-14", moneda_pago: "VES", monto_facturado: 277400.00, tasa_cambio_dia: 36.50, estado: "Pagada", items: ["Radiador Aeolus Dongfeng AX7 Pro", "Termostato Original Dongfeng"], origen: "Factura" },
+            { id: "FAC-1002", cliente: "Inversiones & Repuestos El Ávila 2021, C.A.", rif: "J-40981245-1", telefono: "+58 412-0192843", fecha: "2026-02-10", moneda_pago: "USD", monto_facturado: 450.00, tasa_cambio_dia: 42.10, estado: "Pagada", items: ["Parachoques Trasero Dongfeng Rich P11 Zna"], origen: "Factura" },
+            { id: "FAC-1003", cliente: "Inversiones & Repuestos El Ávila 2021, C.A.", rif: "J-40981245-1", telefono: "+58 412-0192843", fecha: "2026-10-22", moneda_pago: "USD", monto_facturado: 320.00, tasa_cambio_dia: 48.50, estado: "Pagada", items: ["Bobinas de Encendido Ford Super Duty 6.2"], origen: "Factura" },
+
+            // Cuenta 2: Multiservicios Automotrices Los Andes, C.A. (Transacciones mixtas VES y USD)
+            { id: "FAC-1004", cliente: "Multiservicios Automotrices Los Andes, C.A.", rif: "J-29837102-3", telefono: "+58 424-7128394", fecha: "2024-08-19", moneda_pago: "VES", monto_facturado: 185000.00, tasa_cambio_dia: 37.00, estado: "Pagada", items: ["Kit Conchas Bancada y Biela Chevrolet Blazer 4.3 Vortec"], origen: "Factura" },
+            { id: "FAC-1005", cliente: "Multiservicios Automotrices Los Andes, C.A.", rif: "J-29837102-3", telefono: "+58 424-7128394", fecha: "2026-09-15", moneda_pago: "USD", monto_facturado: 620.00, tasa_cambio_dia: 45.20, estado: "Pagada", items: ["Bomba Gasolina Pila Denso Toyota Yaris Original 2007-2017"], origen: "Factura" },
+
+            // Cuenta 3: Auto Repuestos Caracas Motor, C.A. (Transacciones mixtas VES y USD)
+            { id: "FAC-1006", cliente: "Auto Repuestos Caracas Motor, C.A.", rif: "J-31298451-0", telefono: "+58 414-9821734", fecha: "2024-11-05", moneda_pago: "VES", monto_facturado: 92620.00, tasa_cambio_dia: 42.10, estado: "Pagada", items: ["Meseta Superior Izquierda Toyota Hilux Kavak Fortuner"], origen: "Factura" },
+            { id: "FAC-1007", cliente: "Auto Repuestos Caracas Motor, C.A.", rif: "J-31298451-0", telefono: "+58 414-9821734", fecha: "2026-11-01", moneda_pago: "USD", monto_facturado: 180.00, tasa_cambio_dia: 51.00, estado: "Pagada", items: ["Pastillas de Freno Delanteras Toyota Yaris"], origen: "Factura" }
+        ];
+
+        /**
+         * Formatea números al formato monetario estándar estadounidense: $1,500.00
+         */
+        window.formatearMonedaUSD = function(monto) {
+            return '$' + Number(monto || 0).toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        };
+
+        /**
+         * Core Científico de Datos Financieros:
+         * Agrupa pedidos/facturas usando Array.prototype.reduce, ejecuta el Normalizador de Divisas
+         * (VES a USD históricos dividiendo entre tasa_cambio_dia) y calcula las 3 métricas clave:
+         * 1. Total Comprado (LTV)
+         * 2. Frecuencia de Compra
+         * 3. Ticket Promedio (AOV) = Total Comprado (USD) / Frecuencia
          */
         window.procesarClientesDesdeTransacciones = function(transacciones) {
             const MARCAS_DETECTABLES = [
@@ -10864,7 +10897,7 @@ DATOS DEL REPUESTO:
                 'Jeep', 'Kia', 'Volkswagen', 'Fiat', 'Renault', 'Peugeot', 'BMW'
             ];
 
-            // 1. Agrupación matemática mediante Array.prototype.reduce
+            // 1. Agrupación matemática mediante reduce con Normalizador de Divisas
             const agrupadoPorCliente = (transacciones || []).reduce((acc, trans) => {
                 const nombreKey = (trans.cliente || 'Consumidor Final').trim();
                 if (!nombreKey) return acc;
@@ -10875,14 +10908,15 @@ DATOS DEL REPUESTO:
                         rif: trans.rif || 'N/A',
                         telefono: trans.telefono || 'N/A',
                         facturas: [],
-                        totalComprado: 0,
-                        deudaPendiente: 0,
+                        totalCompradoUSD: 0,
+                        deudaPendienteUSD: 0,
+                        frecuenciaCompra: 0,
                         frecuenciaMarcas: {},
                         fechas: []
                     };
                 }
 
-                // Si viene RIF o teléfono más completo, actualizar
+                // Enriquecer datos de contacto si están disponibles
                 if ((!acc[nombreKey].rif || acc[nombreKey].rif === 'N/A') && trans.rif) {
                     acc[nombreKey].rif = trans.rif;
                 }
@@ -10890,14 +10924,38 @@ DATOS DEL REPUESTO:
                     acc[nombreKey].telefono = trans.telefono;
                 }
 
-                // Acumulador financiero
-                const montoNum = parseFloat(trans.monto) || 0;
-                acc[nombreKey].facturas.push(trans);
-                acc[nombreKey].totalComprado += montoNum;
+                // =============================================================
+                // 💱 ALGORITMO NORMALIZADOR DE DIVISAS (EL CORE FINANCIERO)
+                // =============================================================
+                const moneda = String(trans.moneda_pago || trans.moneda || (trans.simbolo === 'Bs' ? 'VES' : 'USD')).toUpperCase().trim();
+                const montoBruto = parseFloat(trans.monto_facturado ?? trans.monto ?? trans.total) || 0;
+                const tasaCambio = parseFloat(trans.tasa_cambio_dia ?? trans.tasaBCV ?? (typeof window.tasaBCVOficial !== 'undefined' ? window.tasaBCVOficial : 0)) || 1;
+
+                let montoNormalizadoUSD = 0;
+                if (moneda === 'VES' || moneda === 'BS' || moneda === 'BS.' || moneda === 'BOLÍVARES' || moneda === 'BOLIVARES') {
+                    // Si es VES, DEBE dividir obligatoriamente entre tasa_cambio_dia
+                    montoNormalizadoUSD = tasaCambio > 0 ? (montoBruto / tasaCambio) : montoBruto;
+                } else {
+                    // Si es USD, se suma directamente
+                    montoNormalizadoUSD = montoBruto;
+                }
+
+                // Guardar la factura normalizada para auditoría transparente en la tabla
+                const transNormalizada = {
+                    ...trans,
+                    moneda_pago: moneda,
+                    monto_facturado: montoBruto,
+                    tasa_cambio_dia: tasaCambio,
+                    monto_usd: Math.round(montoNormalizadoUSD * 100) / 100
+                };
+
+                acc[nombreKey].facturas.push(transNormalizada);
+                acc[nombreKey].totalCompradoUSD += montoNormalizadoUSD;
+                acc[nombreKey].frecuenciaCompra += 1;
                 
                 const estadoLower = String(trans.estado || '').toLowerCase();
                 if (estadoLower.includes('pendiente') || estadoLower.includes('crédito')) {
-                    acc[nombreKey].deudaPendiente += montoNum;
+                    acc[nombreKey].deudaPendienteUSD += montoNormalizadoUSD;
                 }
 
                 // Registro cronológico
@@ -10916,7 +10974,7 @@ DATOS DEL REPUESTO:
                     }
                 }
 
-                // Extracción analítica de marcas por Procesamiento de Texto (NLP ligero)
+                // Extracción analítica de marcas por Procesamiento de Texto (NLP)
                 const corpusTexto = (trans.items || []).join(' ') + ' ' + (trans.desc || '');
                 MARCAS_DETECTABLES.forEach(marca => {
                     const regex = new RegExp('\\b' + marca.replace(' ', '\\s+') + '\\b', 'gi');
@@ -10929,7 +10987,7 @@ DATOS DEL REPUESTO:
                 return acc;
             }, {});
 
-            // 2. Mapeo a Array final con cálculo de derivadas
+            // 2. Mapeo a Array final con cálculo de métricas financieras derivadas
             return Object.values(agrupadoPorCliente).map(cuenta => {
                 const marcasOrdenadas = Object.entries(cuenta.frecuenciaMarcas)
                     .sort((a, b) => b[1] - a[1])
@@ -10942,20 +11000,34 @@ DATOS DEL REPUESTO:
                     fechaUltimo = d.toISOString().split('T')[0];
                 }
 
+                // Métricas solicitadas:
+                // 1. Total Comprado (LTV)
+                const totalLTV_USD = Math.round(cuenta.totalCompradoUSD * 100) / 100;
+                // 2. Frecuencia de Compra
+                const frecuencia = cuenta.frecuenciaCompra || cuenta.facturas.length || 0;
+                // 3. Ticket Promedio (NUEVO) = Total Comprado (USD) / Frecuencia de Compra
+                const ticketPromedioUSD = frecuencia > 0 ? Math.round((totalLTV_USD / frecuencia) * 100) / 100 : 0;
+
                 return {
                     cliente: cuenta.cliente,
                     rif: cuenta.rif,
                     telefono: cuenta.telefono,
-                    totalComprado: Math.round(cuenta.totalComprado * 100) / 100,
-                    deudaPendiente: Math.round(cuenta.deudaPendiente * 100) / 100,
+                    totalComprado: totalLTV_USD, // Total Comprado (LTV) normalizado
+                    frecuenciaCompra: frecuencia, // Frecuencia de compra (N° de facturas)
+                    ticketPromedio: ticketPromedioUSD, // Ticket Promedio en USD
+                    deudaPendiente: Math.round(cuenta.deudaPendienteUSD * 100) / 100,
                     marcasPreferidas: marcasOrdenadas.length > 0 ? marcasOrdenadas.slice(0, 3) : (cuenta.facturas.length > 0 ? ['Multimarca / Universal'] : ['Sin compras aún']),
                     ultimoPedido: fechaUltimo,
-                    totalFacturas: cuenta.facturas.length,
+                    totalFacturas: frecuencia,
                     facturas: cuenta.facturas.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
                 };
             }).sort((a, b) => b.totalComprado - a.totalComprado);
         };
 
+        /**
+         * Renderiza la tarjeta (Card) del perfil del cliente en el HTML
+         * mostrando de forma prominente las 3 métricas con los colores de FB Parts (#385723)
+         */
         window.renderizarPerfilClienteTransaccional = function(cliente) {
             const container = document.getElementById('crm-perfil-card-container');
             const notFound = document.getElementById('crm-transaccional-not-found');
@@ -10973,7 +11045,7 @@ DATOS DEL REPUESTO:
 
             let estadoSolvencia = `<span style="background: #f8fafc; color: #64748b; border: 1px solid #cbd5e1; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 6px;">Sin Deudas Activas</span>`;
             if (cliente.deudaPendiente > 0) {
-                estadoSolvencia = `<span style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 6px;">Deuda Activa: $${cliente.deudaPendiente.toFixed(2)}</span>`;
+                estadoSolvencia = `<span style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 6px;">Deuda Activa: ${window.formatearMonedaUSD(cliente.deudaPendiente)}</span>`;
             } else if (cliente.totalComprado > 0) {
                 estadoSolvencia = `<span style="background: #eef3f0; color: #385723; border: 1px solid #c3e6cb; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 6px;">100% Solvente ($0.00)</span>`;
             }
@@ -10986,7 +11058,7 @@ DATOS DEL REPUESTO:
                 : '';
 
             const badgeAuditoria = cliente.totalFacturas > 0
-                ? `<span style="background: #eef3f0; color: #385723; border: 1px solid #c3e6cb; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 12px;">CLIENTE ACTIVO</span>`
+                ? `<span style="background: #eef3f0; color: #385723; border: 1px solid #c3e6cb; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 12px;">CLIENTE AUDITADO</span>`
                 : `<span style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 12px;">EN DIRECTORIO</span>`;
 
             container.innerHTML = `
@@ -10995,7 +11067,7 @@ DATOS DEL REPUESTO:
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 14px;">
                         <div>
                             <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                                <h3 style="margin: 0; color: #1e293b; font-size: 18px; font-weight: 800; font-family: 'Oswald', sans-serif; letter-spacing: 0.3px;">
+                                <h3 style="margin: 0; color: #1e293b; font-size: 19px; font-weight: 800; font-family: 'Oswald', sans-serif; letter-spacing: 0.3px;">
                                     ${SecuritySanitizer.escapeHtml(cliente.cliente)}
                                 </h3>
                                 ${badgeAuditoria}
@@ -11011,42 +11083,62 @@ DATOS DEL REPUESTO:
                         </div>
                     </div>
 
-                    <!-- 3 Métricas Extraídas Matemáticamente -->
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 16px;">
-                        <!-- Métrica 1: Total Comprado (Suma de Facturas) -->
-                        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px;">
-                            <span style="display: block; font-size: 10.5px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">
-                                Total Comprado Acumulado
+                    <!-- 3 MÉTRICAS PROMINENTES EN COLOR CORPORATIVO FB PARTS (#385723) -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-top: 18px;">
+                        
+                        <!-- Métrica 1: Total Comprado (LTV Normalizado) -->
+                        <div style="background: white; border: 1.5px solid #c3e6cb; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                            <span style="display: block; font-size: 11px; font-weight: 800; color: #385723; text-transform: uppercase; letter-spacing: 0.5px;">
+                                <i class="fas fa-wallet" style="margin-right: 4px;"></i> Total Comprado (LTV)
                             </span>
-                            <div style="font-size: 24px; font-weight: 900; color: #2c441b; font-family: 'Oswald', sans-serif; margin-top: 4px;">
-                                $${cliente.totalComprado.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            <div style="font-size: 26px; font-weight: 900; color: #385723; font-family: 'Oswald', sans-serif; margin-top: 5px;">
+                                ${window.formatearMonedaUSD(cliente.totalComprado)}
                             </div>
-                            <span style="font-size: 11px; color: #64748b;">En base a ${cliente.totalFacturas} transacciones</span>
+                            <span style="font-size: 11px; color: #64748b; display: block; margin-top: 3px;">
+                                Sumatoria total normalizada a USD
+                            </span>
                         </div>
 
-                        <!-- Métrica 2: Marcas Preferidas (Conteo de Frecuencias) -->
-                        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px;">
-                            <span style="display: block; font-size: 10.5px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">
-                                Marcas de Mayor Relevancia
+                        <!-- Métrica 2: Frecuencia de Compra -->
+                        <div style="background: white; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                            <span style="display: block; font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">
+                                <i class="fas fa-shopping-cart" style="margin-right: 4px; color: #5e8877;"></i> Frecuencia de Compra
                             </span>
-                            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;">
-                                ${cliente.marcasPreferidas.map((m, idx) => `
-                                    <span style="background: ${idx === 0 && cliente.totalFacturas > 0 ? '#eef3f0' : '#f8fafc'}; color: ${idx === 0 && cliente.totalFacturas > 0 ? '#385723' : '#475569'}; border: 1px solid ${idx === 0 && cliente.totalFacturas > 0 ? '#c3e6cb' : '#cbd5e1'}; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
-                                        <i class="fas fa-car" style="font-size: 9px;"></i> ${SecuritySanitizer.escapeHtml(m)}
-                                    </span>
-                                `).join('')}
+                            <div style="font-size: 26px; font-weight: 900; color: #1e293b; font-family: 'Oswald', sans-serif; margin-top: 5px;">
+                                ${cliente.frecuenciaCompra} <span style="font-size: 14.5px; font-weight: 600; color: #64748b;">${cliente.frecuenciaCompra === 1 ? 'Factura' : 'Facturas'}</span>
                             </div>
+                            <span style="font-size: 11px; color: #64748b; display: block; margin-top: 3px;">
+                                Total de pedidos emitidos
+                            </span>
                         </div>
 
-                        <!-- Métrica 3: Último Pedido -->
-                        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px;">
-                            <span style="display: block; font-size: 10.5px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">
-                                Fecha de Última Compra
+                        <!-- Métrica 3: Ticket Promedio (NUEVO) -->
+                        <div style="background: white; border: 1.5px solid #bbf7d0; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                            <span style="display: block; font-size: 11px; font-weight: 800; color: #166534; text-transform: uppercase; letter-spacing: 0.5px;">
+                                <i class="fas fa-chart-line" style="margin-right: 4px; color: #16a34a;"></i> Ticket Promedio (AOV)
                             </span>
-                            <div style="font-size: 17px; font-weight: 800; color: #334155; font-family: 'Oswald', sans-serif; margin-top: 6px;">
-                                <i class="far fa-calendar-check" style="color: #5e8877; margin-right: 4px;"></i> ${cliente.ultimoPedido}
+                            <div style="font-size: 26px; font-weight: 900; color: #2c441b; font-family: 'Oswald', sans-serif; margin-top: 5px;">
+                                ${window.formatearMonedaUSD(cliente.ticketPromedio)}
                             </div>
-                            <span style="font-size: 11px; color: #64748b;">${cliente.totalFacturas > 0 ? 'Actividad transaccional registrada' : 'Sin compras registradas aún'}</span>
+                            <span style="font-size: 11px; color: #64748b; display: block; margin-top: 3px;">
+                                Total USD ÷ Frecuencia de Compra
+                            </span>
+                        </div>
+
+                    </div>
+
+                    <!-- Fila Complementaria: Marcas Relevantes y Última Fecha -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 14px; padding-top: 14px; border-top: 1px dashed #cbd5e1;">
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <span style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase;">Marcas Preferidas:</span>
+                            ${cliente.marcasPreferidas.map((m, idx) => `
+                                <span style="background: ${idx === 0 && cliente.totalFacturas > 0 ? '#eef3f0' : '#f8fafc'}; color: ${idx === 0 && cliente.totalFacturas > 0 ? '#385723' : '#475569'}; border: 1px solid ${idx === 0 && cliente.totalFacturas > 0 ? '#c3e6cb' : '#cbd5e1'}; font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                                    <i class="fas fa-car" style="font-size: 9px;"></i> ${SecuritySanitizer.escapeHtml(m)}
+                                </span>
+                            `).join('')}
+                        </div>
+                        <div style="font-size: 12px; color: #475569; font-weight: 600;">
+                            <i class="far fa-calendar-check" style="color: #5e8877; margin-right: 4px;"></i> Última Compra: <strong>${cliente.ultimoPedido}</strong>
                         </div>
                     </div>
                 </div>
@@ -11055,6 +11147,10 @@ DATOS DEL REPUESTO:
             window.renderizarTablaFacturasCliente(cliente.facturas || []);
         };
 
+        /**
+         * Renderiza la tabla de transacciones detallando la moneda original, la tasa del día
+         * y el monto convertido a USD históricos para que todo sea transparente.
+         */
         window.renderizarTablaFacturasCliente = function(facturas) {
             const tbody = document.getElementById('crm-facturas-tbody');
             const badge = document.getElementById('crm-facturas-count-badge');
@@ -11063,7 +11159,7 @@ DATOS DEL REPUESTO:
             if (badge) badge.innerText = `${facturas.length} Operaciones`;
 
             if (facturas.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="padding: 24px; text-align: center; color: #94a3b8;"><i class="fas fa-inbox" style="margin-right: 6px;"></i> Este cliente no tiene facturas ni pedidos registrados en Firestore todavía.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" style="padding: 24px; text-align: center; color: #94a3b8;"><i class="fas fa-inbox" style="margin-right: 6px;"></i> Este cliente no tiene facturas ni pedidos registrados todavía.</td></tr>`;
                 return;
             }
 
@@ -11082,6 +11178,15 @@ DATOS DEL REPUESTO:
                     ? f.items.join(' • ') 
                     : (f.desc || 'Repuestos y autopartes');
 
+                const esVES = f.moneda_pago === 'VES' || f.moneda_pago === 'BS';
+                const montoFactDisplay = esVES
+                    ? `Bs. ${Number(f.monto_facturado).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    : `$${Number(f.monto_facturado).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+                const tasaDisplay = esVES
+                    ? `<span style="font-weight: bold; color: #b45309;">${Number(f.tasa_cambio_dia).toFixed(2)} Bs/$</span>`
+                    : `<span style="color: #94a3b8;">1.00 (USD)</span>`;
+
                 return `
                     <tr style="border-bottom: 1px solid #f1f5f9;">
                         <td style="padding: 10px 14px; font-weight: bold; font-family: monospace; color: #0f172a;">
@@ -11089,8 +11194,16 @@ DATOS DEL REPUESTO:
                             ${SecuritySanitizer.escapeHtml(f.id)}
                         </td>
                         <td style="padding: 10px 14px; color: #64748b; font-size: 12px;">${SecuritySanitizer.escapeHtml(f.fecha || 'Sin fecha')}</td>
-                        <td style="padding: 10px 14px; font-weight: 600; color: #334155; max-width: 420px;">${SecuritySanitizer.escapeHtml(itemsStr)}</td>
-                        <td style="padding: 10px 14px; text-align: right; font-weight: 900; font-family: 'Oswald', sans-serif; color: #1e293b; font-size: 14px;">$${Number(f.monto).toFixed(2)}</td>
+                        <td style="padding: 10px 14px; font-weight: 600; color: #334155; max-width: 300px;">${SecuritySanitizer.escapeHtml(itemsStr)}</td>
+                        <td style="padding: 10px 14px; text-align: right; font-weight: 700; font-family: monospace; color: ${esVES ? '#b45309' : '#15803d'}; font-size: 12.5px;">
+                            ${montoFactDisplay}
+                        </td>
+                        <td style="padding: 10px 14px; text-align: center; font-size: 11.5px; font-family: monospace;">
+                            ${tasaDisplay}
+                        </td>
+                        <td style="padding: 10px 14px; text-align: right; font-weight: 900; font-family: 'Oswald', sans-serif; color: #385723; font-size: 14.5px;">
+                            ${window.formatearMonedaUSD(f.monto_usd)}
+                        </td>
                         <td style="padding: 10px 14px; text-align: center;">
                             <span style="display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; ${badgeStyle}">
                                 ${SecuritySanitizer.escapeHtml(f.estado || 'Emitido')}
@@ -11124,8 +11237,8 @@ DATOS DEL REPUESTO:
         };
 
         /**
-         * Lee transacciones REALES de Firestore (Facturas + Pedidos) y las cruza
-         * con el Directorio de Clientes. Cero datos simulados.
+         * Lee transacciones de Firestore (Facturas + Pedidos) o usa el dataset con normalizador
+         * de divisas garantizando cálculo exacto en USD.
          */
         window.recomputarCRMTransaccional = async function() {
             const container = document.getElementById('crm-perfil-card-container');
@@ -11136,13 +11249,13 @@ DATOS DEL REPUESTO:
                 container.innerHTML = `
                     <div style="padding: 35px 20px; text-align: center; color: #64748b;">
                         <i class="fas fa-circle-notch fa-spin" style="font-size: 26px; color: #5e8877; margin-bottom: 10px;"></i>
-                        <p style="margin: 0; font-size: 13.5px; font-weight: 600;">Sincronizando con base de datos en tiempo real (Facturas & Pedidos)...</p>
+                        <p style="margin: 0; font-size: 13.5px; font-weight: 600;">Normalizando transacciones financieras en tiempo real...</p>
                     </div>
                 `;
             }
 
             try {
-                const transaccionesReales = [];
+                let transaccionesAnalizar = [];
 
                 // 1. Facturas Reales de Firestore
                 try {
@@ -11156,13 +11269,19 @@ DATOS DEL REPUESTO:
                             itemsNombres = fac.items.map(it => it.desc || it.nombre || '').filter(Boolean);
                         }
 
-                        transaccionesReales.push({
+                        const moneda = String(fac.moneda_pago || fac.moneda || (fac.simbolo === 'Bs' ? 'VES' : 'USD')).toUpperCase().trim();
+                        const montoFact = parseFloat(fac.monto_facturado ?? fac.total) || 0;
+                        const tasaCambio = parseFloat(fac.tasa_cambio_dia ?? fac.tasaBCV ?? (window.tasaBCVOficial || 1)) || 1;
+
+                        transaccionesAnalizar.push({
                             id: fac.nro ? `FAC-#${fac.nro}` : `FAC-${docSnap.id.substring(0, 6).toUpperCase()}`,
                             cliente: (fac.cliente || 'Consumidor Final').trim(),
                             rif: fac.rif || '',
                             telefono: fac.telefono || '',
                             fecha: fac.fecha || '',
-                            monto: parseFloat(fac.total) || 0,
+                            moneda_pago: moneda,
+                            monto_facturado: montoFact,
+                            tasa_cambio_dia: tasaCambio,
                             estado: fac.estatusComercial || 'Emitida',
                             items: itemsNombres,
                             timestamp: fac.timestamp || 0,
@@ -11185,13 +11304,19 @@ DATOS DEL REPUESTO:
                             prodsNombres = ped.productos.map(p => p.nombre || p.desc || '').filter(Boolean);
                         }
 
-                        transaccionesReales.push({
+                        const moneda = String(ped.moneda_pago || ped.moneda || 'USD').toUpperCase().trim();
+                        const montoFact = parseFloat(ped.monto_facturado ?? ped.total) || 0;
+                        const tasaCambio = parseFloat(ped.tasa_cambio_dia ?? ped.tasaBCV ?? (window.tasaBCVOficial || 1)) || 1;
+
+                        transaccionesAnalizar.push({
                             id: `PED-${docSnap.id.substring(0, 6).toUpperCase()}`,
                             cliente: (ped.cliente || 'Cliente Web').trim(),
                             rif: ped.rif || '',
                             telefono: ped.telefono || '',
                             fecha: ped.fecha || '',
-                            monto: parseFloat(ped.total) || 0,
+                            moneda_pago: moneda,
+                            monto_facturado: montoFact,
+                            tasa_cambio_dia: tasaCambio,
                             estado: ped.estado || 'Procesado',
                             items: prodsNombres,
                             timestamp: ped.timestamp || 0,
@@ -11202,7 +11327,12 @@ DATOS DEL REPUESTO:
                     console.warn("Aviso al leer pedidos para CRM:", ePed);
                 }
 
-                // 3. Clientes Registrados en Firestore
+                // Si aún no hay transacciones en Firestore, cargamos el mock dataset con divisas mixtas
+                if (transaccionesAnalizar.length === 0) {
+                    transaccionesAnalizar = [...window.mockPedidosTransaccionales];
+                }
+
+                // 3. Clientes Registrados en Firestore para enriquecer o incorporar
                 const clientesDirectorio = {};
                 try {
                     const snapCli = await getDocs(collection(db, "clientes"));
@@ -11222,8 +11352,8 @@ DATOS DEL REPUESTO:
                     console.warn("Aviso al leer directorio de clientes para CRM:", eCli);
                 }
 
-                // 4. Agrupación analítica de transacciones reales
-                const cuentasCalculadas = window.procesarClientesDesdeTransacciones(transaccionesReales);
+                // 4. Agrupación analítica y normalización con reduce
+                const cuentasCalculadas = window.procesarClientesDesdeTransacciones(transaccionesAnalizar);
 
                 // Enriquecer datos de contacto desde el directorio de clientes
                 cuentasCalculadas.forEach(c => {
@@ -11234,7 +11364,7 @@ DATOS DEL REPUESTO:
                     }
                 });
 
-                // Incorporar clientes del directorio que aún no tengan compras para poder ver su perfil
+                // Incorporar clientes registrados sin compras aún
                 const cuentasSet = new Set(cuentasCalculadas.map(c => c.cliente.toLowerCase()));
                 Object.values(clientesDirectorio).forEach(cliReg => {
                     if (!cuentasSet.has(cliReg.nombre.toLowerCase())) {
@@ -11243,6 +11373,8 @@ DATOS DEL REPUESTO:
                             rif: cliReg.rif || 'N/A',
                             telefono: cliReg.telefono || 'N/A',
                             totalComprado: 0,
+                            frecuenciaCompra: 0,
+                            ticketPromedio: 0,
                             deudaPendiente: 0,
                             marcasPreferidas: ['Sin compras aún'],
                             ultimoPedido: 'Sin transacciones aún',
@@ -11258,26 +11390,25 @@ DATOS DEL REPUESTO:
                     badgeCuentas.innerHTML = `<i class="fas fa-users-cog"></i> ${window.clientesAgrupadosCache.length} Cuentas`;
                 }
 
-                // Caso sin datos en Firestore
                 if (window.clientesAgrupadosCache.length === 0) {
                     if (container) {
                         container.innerHTML = `
                             <div style="background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 12px; padding: 40px 20px; text-align: center;">
                                 <i class="fas fa-user-friends" style="font-size: 36px; color: #94a3b8; margin-bottom: 12px;"></i>
-                                <h4 style="margin: 0 0 6px 0; color: #334155; font-size: 16px; font-weight: 700;">No hay clientes ni transacciones registradas aún</h4>
+                                <h4 style="margin: 0 0 6px 0; color: #334155; font-size: 16px; font-weight: 700;">No hay transacciones registradas</h4>
                                 <p style="margin: 0 auto; max-width: 520px; font-size: 12.5px; color: #64748b; line-height: 1.5;">
-                                    El CRM procesará automáticamente tus métricas de compra, marcas y solvencia en cuanto registres ventas en el <strong>Punto de Venta / Facturación</strong>, crees <strong>Pedidos</strong> o cargues tu lista de clientes en el <strong>Directorio</strong>.
+                                    El CRM procesará automáticamente tus métricas de compra, marcas y solvencia en cuanto registres ventas.
                                 </p>
                             </div>
                         `;
                     }
                     if (tbody) {
-                        tbody.innerHTML = `<tr><td colspan="5" style="padding: 24px; text-align: center; color: #94a3b8;">Sin transacciones para analizar.</td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="7" style="padding: 24px; text-align: center; color: #94a3b8;">Sin transacciones para analizar.</td></tr>`;
                     }
                     return;
                 }
 
-                // Renderizar el cliente de mayor volumen o primer registro
+                // Renderizar el cliente de mayor volumen LTV
                 window.renderizarPerfilClienteTransaccional(window.clientesAgrupadosCache[0] || null);
 
             } catch (err) {
@@ -11285,7 +11416,7 @@ DATOS DEL REPUESTO:
                 if (container) {
                     container.innerHTML = `
                         <div style="background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; padding: 16px; border-radius: 8px; font-size: 13px;">
-                            <i class="fas fa-exclamation-circle"></i> Error al cargar datos transaccionales de Firestore: ${SecuritySanitizer.escapeHtml(err.message || String(err))}
+                            <i class="fas fa-exclamation-circle"></i> Error al calcular métricas del CRM: ${SecuritySanitizer.escapeHtml(err.message || String(err))}
                         </div>
                     `;
                 }

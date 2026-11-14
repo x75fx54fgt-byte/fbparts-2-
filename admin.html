@@ -1665,7 +1665,9 @@
                                             <th style="padding: 8px 12px;">N° Operación / Doc</th>
                                             <th style="padding: 8px 12px;">Fecha</th>
                                             <th style="padding: 8px 12px;">Repuestos / Detalle</th>
-                                            <th style="padding: 8px 12px; text-align: right;">Total ($)</th>
+                                            <th style="padding: 8px 12px; text-align: right;">Monto Facturado</th>
+                                            <th style="padding: 8px 12px; text-align: center;">Tasa BCV</th>
+                                            <th style="padding: 8px 12px; text-align: right;">Total Normalizado ($ USD)</th>
                                             <th style="padding: 8px 12px; text-align: center;">Estatus</th>
                                         </tr>
                                     </thead>
@@ -3033,22 +3035,22 @@
                         </div>
 
                         <!-- 2. Nombre del Evento y Selector de Icono -->
-                        <div style="background: white; border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                        <div style="background: white; border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); box-sizing: border-box; overflow: hidden;">
                             <div>
                                 <label style="display: block; font-weight: 800; margin-bottom: 6px; font-size: 12px; text-transform: uppercase; color: #1e293b; letter-spacing: 0.5px;">
                                     Nombre del Evento / Celebración <span style="color: #ef4444;">*</span>
                                 </label>
-                                <div style="display: flex; gap: 8px;">
+                                <div style="display: flex; gap: 8px; width: 100%; box-sizing: border-box; align-items: center;">
                                     <input type="text" id="campana-nombre-input" value="BLACK FRIDAY" placeholder="Ej: NAVIDAD, BLACK FRIDAY..." 
                                         oninput="actualizarEstadoCampanaLive()"
-                                        style="flex: 1; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 13.5px; font-weight: bold; color: #0f172a;">
+                                        style="flex: 1; min-width: 0; width: 100%; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 13.5px; font-weight: bold; color: #0f172a; box-sizing: border-box; outline: none;">
                                     <select id="campana-icono-select" onchange="actualizarEstadoCampanaLive()"
-                                        style="padding: 8px 10px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 13.5px; font-weight: bold; background: white; cursor: pointer;">
+                                        style="width: 110px; flex-shrink: 0; padding: 8px 8px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 13px; font-weight: bold; background: white; cursor: pointer; box-sizing: border-box; outline: none;">
                                         <option value="fas fa-fire">🔥 Fuego</option>
-                                        <option value="fas fa-tree">🎄 Árbol (Navidad)</option>
+                                        <option value="fas fa-tree">🎄 Árbol</option>
                                         <option value="fas fa-gift">🎁 Regalo</option>
                                         <option value="fas fa-star">⭐ Estrella</option>
-                                        <option value="fas fa-bolt">⚡ Rayo (Cyber)</option>
+                                        <option value="fas fa-bolt">⚡ Rayo</option>
                                         <option value="fas fa-tag">🏷️ Etiqueta</option>
                                         <option value="fas fa-sparkles">✨ Chispas</option>
                                     </select>
@@ -4035,7 +4037,7 @@
             }
         }, 8000);
     </script>
-    <script type="module" src="admin_logic.js?v=20261114_fix_landed_duplicate"></script>
+    <script type="module" src="admin_logic.js?v=20261114_crm_currency_normalizer"></script>
 
 
     <!-- MODAL AUDITORIA INTERNA -->
