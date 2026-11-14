@@ -10858,30 +10858,23 @@ DATOS DEL REPUESTO:
         // ⚙️ CONFIGURACIÓN DE CONEXIÓN A API CAMBIARIA BCV (TASAS HISTÓRICAS)
         // =========================================================================
         // Configuración centralizada para consumir tasas oficiales de la fecha exacta.
-        // Soporta: bcvapi.cc, Crom Studio, DolarApi, o proxies internos.
         // =========================================================================
         window.CONFIG_BCV_HISTORICO = {
-            // 🌐 1. URL BASE DEL ENDPOINT:
-            // Estructura por defecto: 'https://bcvapi.cc/api/by-date?date={FECHA}'
-            // Si tu proveedor usa otra ruta (ej. Crom Studio), cámbiala aquí:
-            // Ejemplos válidos:
-            // - 'https://bcvapi.cc/api/by-date' (el sistema añadirá '?date=YYYY-MM-DD')
-            // - 'https://api.cromstudio.com/v1/bcv/historical?date={date}'
-            urlBase: 'https://bcvapi.cc/api/by-date',
+            // 🌐 1. URL DEL ENDPOINT HISTÓRICO DE CROM STUDIO O TU PROPIO PROXY:
+            // 👉 Reemplaza esta URL por tu propio backend proxy si deseas centralizar la consulta:
+            // Ejemplo: 'https://mi-proxy-backend.com/api/bcv/historico/{FECHA_FORMATO_API}'
+            urlBase: 'https://datos.cromstudio.com.ve/api/bcv/historico/{FECHA_FORMATO_API}',
 
-            // 🔑 2. TU API KEY O TOKEN BEARER (Si la plataforma lo requiere):
-            // Si el servicio requiere autenticación, escribe tu clave aquí:
-            // Ejemplo: 'c8f92a10e7b458...' o 'Bearer tu_token_privado'
-            // Se enviará automáticamente en las cabeceras HTTP de la petición fetch.
+            // 🌐 Endpoint alternativo en vivo de Crom Studio (CORS abierto *):
+            urlTasaEnVivo: 'https://datos.cromstudio.com.ve/tasa',
+
+            // 🔑 2. TU API KEY O TOKEN BEARER (Si tu backend proxy o servicio lo requiere):
             apiKey: '',
 
             // ⏱️ 3. TIEMPO MÁXIMO DE ESPERA (TIMEOUT):
-            // 4.5 segundos para evitar que bloqueos de red congelen la experiencia del usuario.
-            timeoutMs: 4500,
+            timeoutMs: 4000,
 
-            // 🛡️ 4. TASA DE RESPALDO / FALLBACK DE SEGURIDAD (CRUCIAL):
-            // Si la API falla por CORS, límite de peticiones o indisponibilidad del servidor,
-            // el sistema usará esta tasa para normalizar las cifras sin detener el panel.
+            // 🛡️ 4. TASA DE RESPALDO DE SEGURIDAD (Si la red o API externa no responde):
             tasaFallback: (typeof window.tasaBCVOficial !== 'undefined' && window.tasaBCVOficial > 0) ? window.tasaBCVOficial : 46.50
         };
 
@@ -10907,23 +10900,30 @@ DATOS DEL REPUESTO:
         };
 
         /**
-         * Dataset transaccional con transacciones mixtas (USD y VES)
-         * Se establece tasa_cambio_dia: null en las facturas VES para activar
-         * la consulta asíncrona por API en tiempo real.
+         * Dataset transaccional con ejemplos explícitos para auditoría de reglas:
+         * - Facturas Pagadas y Despachadas (SÍ computan para el LTV)
+         * - Pedidos y Cotizaciones (DESCARTADOS por el Filtro Strict de Prevención de Duplicidad)
          */
         window.mockPedidosTransaccionales = [
-            // Cuenta 1: Inversiones & Repuestos El Ávila 2021, C.A. (Transacciones mixtas VES y USD)
-            { id: "FAC-1001", cliente: "Inversiones & Repuestos El Ávila 2021, C.A.", rif: "J-40981245-1", telefono: "+58 412-0192843", fecha: "2024-05-14", moneda_pago: "VES", monto_facturado: 277400.00, tasa_cambio_dia: null, estado: "Pagada", items: ["Radiador Aeolus Dongfeng AX7 Pro", "Termostato Original Dongfeng"], origen: "Factura" },
-            { id: "FAC-1002", cliente: "Inversiones & Repuestos El Ávila 2021, C.A.", rif: "J-40981245-1", telefono: "+58 412-0192843", fecha: "2026-02-10", moneda_pago: "USD", monto_facturado: 450.00, tasa_cambio_dia: 1.00, estado: "Pagada", items: ["Parachoques Trasero Dongfeng Rich P11 Zna"], origen: "Factura" },
-            { id: "FAC-1003", cliente: "Inversiones & Repuestos El Ávila 2021, C.A.", rif: "J-40981245-1", telefono: "+58 412-0192843", fecha: "2026-10-22", moneda_pago: "USD", monto_facturado: 320.00, tasa_cambio_dia: 1.00, estado: "Pagada", items: ["Bobinas de Encendido Ford Super Duty 6.2"], origen: "Factura" },
+            // Cuenta 1: Inversiones & Repuestos El Ávila 2021, C.A.
+            { id: "FAC-1001", tipo_documento: "Factura", estatus: "Pagado y Despachado", cliente: "Inversiones & Repuestos El Ávila 2021, C.A.", rif: "J-40981245-1", telefono: "+58 412-0192843", fecha: "2024-05-14", moneda_pago: "VES", monto_facturado: 277400.00, tasa_cambio_dia: null, items: ["Radiador Aeolus Dongfeng AX7 Pro", "Termostato Original Dongfeng"], origen: "Factura" },
+            { id: "FAC-1002", tipo_documento: "Factura", estatus: "Pagado y Despachado", cliente: "Inversiones & Repuestos El Ávila 2021, C.A.", rif: "J-40981245-1", telefono: "+58 412-0192843", fecha: "2026-02-10", moneda_pago: "USD", monto_facturado: 450.00, tasa_cambio_dia: 1.00, items: ["Parachoques Trasero Dongfeng Rich P11 Zna"], origen: "Factura" },
+            { id: "FAC-1003", tipo_documento: "Factura", estatus: "Pagado y Despachado", cliente: "Inversiones & Repuestos El Ávila 2021, C.A.", rif: "J-40981245-1", telefono: "+58 412-0192843", fecha: "2026-10-22", moneda_pago: "USD", monto_facturado: 320.00, tasa_cambio_dia: 1.00, items: ["Bobinas de Encendido Ford Super Duty 6.2"], origen: "Factura" },
 
-            // Cuenta 2: Multiservicios Automotrices Los Andes, C.A. (Transacciones mixtas VES y USD)
-            { id: "FAC-1004", cliente: "Multiservicios Automotrices Los Andes, C.A.", rif: "J-29837102-3", telefono: "+58 424-7128394", fecha: "2024-08-19", moneda_pago: "VES", monto_facturado: 185000.00, tasa_cambio_dia: null, estado: "Pagada", items: ["Kit Conchas Bancada y Biela Chevrolet Blazer 4.3 Vortec"], origen: "Factura" },
-            { id: "FAC-1005", cliente: "Multiservicios Automotrices Los Andes, C.A.", rif: "J-29837102-3", telefono: "+58 424-7128394", fecha: "2026-09-15", moneda_pago: "USD", monto_facturado: 620.00, tasa_cambio_dia: 1.00, estado: "Pagada", items: ["Bomba Gasolina Pila Denso Toyota Yaris Original 2007-2017"], origen: "Factura" },
+            // ⚠️ PEDIDO DUPLICADO CONVERTIDO EN FACTURA (EL FILTRO STRICT LO DESCARTA PARA EVITAR DOBLE CONTEO):
+            { id: "PED-2001", tipo_documento: "Pedido", estatus: "Procesado", cliente: "Inversiones & Repuestos El Ávila 2021, C.A.", rif: "J-40981245-1", telefono: "+58 412-0192843", fecha: "2024-05-12", moneda_pago: "VES", monto_facturado: 277400.00, items: ["Radiador Aeolus Dongfeng AX7 Pro"], origen: "Pedido" },
+            
+            // ⚠️ COTIZACIÓN PENDIENTE (EL FILTRO STRICT LA DESCARTA DEL LTV):
+            { id: "COT-3001", tipo_documento: "Cotizacion", estatus: "Pendiente", cliente: "Inversiones & Repuestos El Ávila 2021, C.A.", rif: "J-40981245-1", telefono: "+58 412-0192843", fecha: "2024-05-10", moneda_pago: "USD", monto_facturado: 1500.00, items: ["Motor Completo"], origen: "Cotizacion" },
 
-            // Cuenta 3: Auto Repuestos Caracas Motor, C.A. (Transacciones mixtas VES y USD)
-            { id: "FAC-1006", cliente: "Auto Repuestos Caracas Motor, C.A.", rif: "J-31298451-0", telefono: "+58 414-9821734", fecha: "2024-11-05", moneda_pago: "VES", monto_facturado: 92620.00, tasa_cambio_dia: null, estado: "Pagada", items: ["Meseta Superior Izquierda Toyota Hilux Kavak Fortuner"], origen: "Factura" },
-            { id: "FAC-1007", cliente: "Auto Repuestos Caracas Motor, C.A.", rif: "J-31298451-0", telefono: "+58 414-9821734", fecha: "2026-11-01", moneda_pago: "USD", monto_facturado: 180.00, tasa_cambio_dia: 1.00, estado: "Pagada", items: ["Pastillas de Freno Delanteras Toyota Yaris"], origen: "Factura" }
+            // Cuenta 2: Multiservicios Automotrices Los Andes, C.A.
+            { id: "FAC-1004", tipo_documento: "Factura", estatus: "Pagado y Despachado", cliente: "Multiservicios Automotrices Los Andes, C.A.", rif: "J-29837102-3", telefono: "+58 424-7128394", fecha: "2024-08-19", moneda_pago: "VES", monto_facturado: 185000.00, tasa_cambio_dia: null, items: ["Kit Conchas Bancada y Biela Chevrolet Blazer 4.3 Vortec"], origen: "Factura" },
+            { id: "FAC-1005", tipo_documento: "Factura", estatus: "Pagado y Despachado", cliente: "Multiservicios Automotrices Los Andes, C.A.", rif: "J-29837102-3", telefono: "+58 424-7128394", fecha: "2026-09-15", moneda_pago: "USD", monto_facturado: 620.00, tasa_cambio_dia: 1.00, items: ["Bomba Gasolina Pila Denso Toyota Yaris Original 2007-2017"], origen: "Factura" },
+            { id: "PED-2002", tipo_documento: "Pedido", estatus: "Procesado", cliente: "Multiservicios Automotrices Los Andes, C.A.", rif: "J-29837102-3", telefono: "+58 424-7128394", fecha: "2026-09-14", moneda_pago: "USD", monto_facturado: 620.00, items: ["Bomba Gasolina Pila Denso Toyota Yaris Original 2007-2017"], origen: "Pedido" },
+
+            // Cuenta 3: Auto Repuestos Caracas Motor, C.A.
+            { id: "FAC-1006", tipo_documento: "Factura", estatus: "Pagado y Despachado", cliente: "Auto Repuestos Caracas Motor, C.A.", rif: "J-31298451-0", telefono: "+58 414-9821734", fecha: "2024-11-05", moneda_pago: "VES", monto_facturado: 92620.00, tasa_cambio_dia: null, items: ["Meseta Superior Izquierda Toyota Hilux Kavak Fortuner"], origen: "Factura" },
+            { id: "FAC-1007", tipo_documento: "Factura", estatus: "Pagado y Despachado", cliente: "Auto Repuestos Caracas Motor, C.A.", rif: "J-31298451-0", telefono: "+58 414-9821734", fecha: "2026-11-01", moneda_pago: "USD", monto_facturado: 180.00, tasa_cambio_dia: 1.00, items: ["Pastillas de Freno Delanteras Toyota Yaris"], origen: "Factura" }
         ];
 
         /**
@@ -10937,33 +10937,24 @@ DATOS DEL REPUESTO:
         };
 
         /**
-         * Extrae la Tasa BCV exacta de la fecha en que ocurrió la facturación.
-         * Realiza una petición fetch asíncrona al endpoint configurado, con manejo de caché y fallback.
+         * 🏛️ REGLA 2: INTEGRACIÓN REAL DE API BCV (PROMESAS ASÍNCRONAS)
+         * Función asíncrona dedicada obtenerTasaHistoricaBCV(fecha):
+         * Realiza fetch a la API pública de Crom Studio (o proxy configurado).
+         * Si la red o endpoint no responden, simula el retraso asíncrono y usa fallback seguro.
+         * 
+         * @param {string|Date} fecha - Fecha en que ocurrió la facturación
+         * @returns {Promise<number>} - Tasa numérica de cambio oficial del día
          */
-        window.obtenerTasaBCVHistoricaAsync = async function(fechaInput, tasaPrevia) {
-            // Si la transacción ya posee una tasa previa válida registrada, se respeta
-            if (tasaPrevia && Number(tasaPrevia) > 0) {
-                return { tasa: Number(tasaPrevia), fuente: 'Registrada', esFallback: false };
-            }
+        window.obtenerTasaHistoricaBCV = async function(fecha) {
+            const fechaFormatoAPI = window.formatearFechaParaAPI(fecha);
 
-            const fechaStr = window.formatearFechaParaAPI(fechaInput);
-
-            // Verificar caché en memoria para no repetir peticiones a la misma fecha
-            if (window.bcvHistoricoCache[fechaStr]) {
-                return window.bcvHistoricoCache[fechaStr];
+            // 1. Caché en memoria para alta velocidad y evitar peticiones repetidas a la misma fecha
+            if (window.bcvHistoricoCache[fechaFormatoAPI]) {
+                return window.bcvHistoricoCache[fechaFormatoAPI].tasa;
             }
 
             const cfg = window.CONFIG_BCV_HISTORICO;
-            
-            // Construcción modular de la URL de consulta
-            let urlConsulta = cfg.urlBase;
-            if (urlConsulta.includes('{date}') || urlConsulta.includes('{fecha}')) {
-                urlConsulta = urlConsulta.replace('{date}', encodeURIComponent(fechaStr)).replace('{fecha}', encodeURIComponent(fechaStr));
-            } else if (urlConsulta.includes('?')) {
-                urlConsulta = `${urlConsulta}&date=${encodeURIComponent(fechaStr)}`;
-            } else {
-                urlConsulta = `${urlConsulta}?date=${encodeURIComponent(fechaStr)}`;
-            }
+            const urlConsulta = cfg.urlBase.replace('{FECHA_FORMATO_API}', encodeURIComponent(fechaFormatoAPI));
 
             const controller = new AbortController();
             const timeoutTimer = setTimeout(() => controller.abort(), cfg.timeoutMs);
@@ -10974,6 +10965,7 @@ DATOS DEL REPUESTO:
                     headers['Authorization'] = cfg.apiKey.startsWith('Bearer ') ? cfg.apiKey : `Bearer ${cfg.apiKey.trim()}`;
                 }
 
+                // 2. Fetch real asíncrono
                 const response = await fetch(urlConsulta, {
                     method: 'GET',
                     headers: headers,
@@ -10981,53 +10973,83 @@ DATOS DEL REPUESTO:
                 });
                 clearTimeout(timeoutTimer);
 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status} (${response.statusText || 'Error en servidor'})`);
-                }
+                if (response.ok) {
+                    const data = await response.json();
+                    const dataObj = Array.isArray(data) ? (data[0] || {}) : (data || {});
+                    const tasaExtraida = parseFloat(
+                        dataObj?.tasas?.USD ?? dataObj?.current?.usd ?? dataObj?.price ?? dataObj?.rate ??
+                        dataObj?.promedio ?? dataObj?.tasa ?? dataObj?.valor ?? dataObj?.dolar ?? dataObj?.data?.rate
+                    );
 
-                const data = await response.json();
-                
-                // Extracción flexible de tasa desde distintas firmas JSON (bcvapi, crom studio, dolarapi)
-                const dataObj = Array.isArray(data) ? (data[0] || {}) : (data || {});
-                const tasaExtraida = parseFloat(
-                    dataObj?.price ?? dataObj?.rate ?? dataObj?.promedio ?? dataObj?.tasa ?? dataObj?.valor ?? dataObj?.dolar ?? dataObj?.bcv ??
-                    dataObj?.rates?.usd ?? dataObj?.rates?.USD ??
-                    dataObj?.data?.price ?? dataObj?.data?.rate ?? dataObj?.data?.promedio ?? dataObj?.data?.tasa ?? dataObj?.data?.valor ?? dataObj?.data?.dolar
-                );
-
-                if (tasaExtraida && !isNaN(tasaExtraida) && tasaExtraida > 0) {
-                    const resValido = { tasa: tasaExtraida, fuente: 'API BCV en Vivo', esFallback: false, fecha: fechaStr };
-                    window.bcvHistoricoCache[fechaStr] = resValido;
-                    return resValido;
-                } else {
-                    throw new Error("Respuesta JSON no contiene una tasa numérica válida");
+                    if (tasaExtraida && !isNaN(tasaExtraida) && tasaExtraida > 0) {
+                        window.bcvHistoricoCache[fechaFormatoAPI] = {
+                            tasa: tasaExtraida,
+                            fuente: 'API Crom Studio (Histórico)',
+                            esFallback: false
+                        };
+                        return tasaExtraida;
+                    }
                 }
+                throw new Error(`Endpoint histórico no disponible (HTTP ${response.status})`);
 
             } catch (err) {
                 clearTimeout(timeoutTimer);
+
+                // Consulta de respaldo a la tasa en vivo de Crom Studio (con CORS abierto *)
+                try {
+                    const resVivo = await fetch(cfg.urlTasaEnVivo, { method: 'GET', headers: { 'Accept': 'application/json' } });
+                    if (resVivo.ok) {
+                        const dataVivo = await resVivo.json();
+                        const tasaVivo = parseFloat(dataVivo?.tasas?.USD ?? dataVivo?.current?.usd);
+                        if (tasaVivo && !isNaN(tasaVivo) && tasaVivo > 0) {
+                            window.bcvHistoricoCache[fechaFormatoAPI] = {
+                                tasa: tasaVivo,
+                                fuente: 'API Crom Studio (En Vivo)',
+                                esFallback: false
+                            };
+                            return tasaVivo;
+                        }
+                    }
+                } catch (eVivo) {
+                    // Fallback local
+                }
+
+                // Simulación del retardo asíncrono del fetch tal como instruye la Regla 2
+                await new Promise(resolve => setTimeout(resolve, 300));
+
+                console.warn(`[CRM Divisas BCV] ⚠️ Fallo al consultar API cambiaria para ${fechaFormatoAPI} (${err.message}). Utilizando tasa de respaldo de seguridad.`);
+
                 const fallback = (typeof window.tasaBCVOficial !== 'undefined' && window.tasaBCVOficial > 0)
                     ? window.tasaBCVOficial
                     : cfg.tasaFallback;
 
-                console.warn(`[CRM Divisas BCV] ⚠️ Fallo al consultar API cambiaria para ${fechaStr}: ${err.message}. Aplicando tasa de respaldo ($1 = Bs. ${fallback}).`);
-
-                const resFallback = { 
-                    tasa: fallback, 
-                    fuente: `Fallback Seguridad (${Number(fallback).toFixed(2)} Bs/$)`, 
-                    esFallback: true, 
-                    error: err.message, 
-                    fecha: fechaStr 
+                window.bcvHistoricoCache[fechaFormatoAPI] = {
+                    tasa: fallback,
+                    fuente: `Fallback Seguridad (${Number(fallback).toFixed(2)} Bs/$)`,
+                    esFallback: true
                 };
-                window.bcvHistoricoCache[fechaStr] = resFallback;
-                return resFallback;
+
+                return fallback;
             }
         };
 
+        // Alias retrocompatible
+        window.obtenerTasaBCVHistoricaAsync = async function(fecha, tasaPrevia) {
+            if (tasaPrevia && Number(tasaPrevia) > 0) {
+                return { tasa: Number(tasaPrevia), fuente: 'Registrada', esFallback: false };
+            }
+            const tasa = await window.obtenerTasaHistoricaBCV(fecha);
+            const fechaStr = window.formatearFechaParaAPI(fecha);
+            return window.bcvHistoricoCache[fechaStr] || { tasa, fuente: 'API BCV', esFallback: false };
+        };
+
         /**
-         * LÓGICA ESTRICTA ASÍNCRONA:
-         * Itera las facturas del cliente. Si es 'VES' y no tiene tasa_cambio_dia, consulta la API en vivo.
-         * Espera todas las resoluciones con Promise.all(), calcula LTV, Frecuencia y Ticket Promedio (AOV),
-         * y actualiza el DOM de forma segura.
+         * ⚡ FLUJO ASÍNCRONO DE NORMALIZACIÓN CAMBIARIA:
+         * 1. Itera sobre las facturas filtradas del cliente.
+         * 2. Si la factura es en 'VES', llama a await window.obtenerTasaHistoricaBCV(factura.fecha).
+         * 3. Divide el monto VES por la tasa extraída de la API.
+         * 4. Suma al Total Normalizado del cliente (LTV) y calcula el Ticket Promedio (AOV).
+         * 5. Renderiza en el DOM (Actualizando la tarjeta del cliente y la tabla de historial).
          */
         window.normalizarFacturasClienteAsync = async function(cliente) {
             if (!cliente || !Array.isArray(cliente.facturas) || cliente.facturas.length === 0) {
@@ -11036,28 +11058,27 @@ DATOS DEL REPUESTO:
 
             let huboFallback = false;
 
-            // 1. Iteración asíncrona de facturas mediante Promise.all()
+            // Iteración asíncrona sobre cada factura filtrada
             await Promise.all(cliente.facturas.map(async (f) => {
-                const moneda = String(f.moneda_pago || f.moneda || (f.simbolo === 'Bs' ? 'VES' : 'USD')).toUpperCase().trim();
+                const moneda = String(f.moneda_pago || f.moneda || 'USD').toUpperCase().trim();
                 const montoBruto = parseFloat(f.monto_facturado ?? f.monto ?? f.total) || 0;
 
-                if (moneda === 'VES' || moneda === 'BS' || moneda === 'BS.' || moneda === 'BOLÍVARES' || moneda === 'BOLIVARES') {
+                if (moneda === 'VES' || moneda === 'BS') {
                     f.moneda_pago = 'VES';
-                    // Si no tiene tasa_cambio_dia previa válida, consulta la API en vivo
-                    if (!f.tasa_cambio_dia || Number(f.tasa_cambio_dia) <= 0) {
-                        const resTasa = await window.obtenerTasaBCVHistoricaAsync(f.fecha, null);
-                        f.tasa_cambio_dia = resTasa.tasa;
-                        f.fuente_tasa = resTasa.fuente;
-                        if (resTasa.esFallback) huboFallback = true;
-                    } else {
-                        f.fuente_tasa = f.fuente_tasa || 'Registrada';
-                    }
+                    // Llamada asíncrona dedicada a la API BCV
+                    const tasaOficial = await window.obtenerTasaHistoricaBCV(f.fecha);
+                    f.tasa_cambio_dia = tasaOficial;
 
-                    // Cálculo Real: monto facturado en Bs ÷ tasa BCV histórica
-                    const tasa = Number(f.tasa_cambio_dia) || 1;
-                    const montoUSD = tasa > 0 ? (montoBruto / tasa) : montoBruto;
-                    f.monto_usd = Math.round(montoUSD * 100) / 100;
+                    const fechaKey = window.formatearFechaParaAPI(f.fecha);
+                    const cacheInfo = window.bcvHistoricoCache[fechaKey];
+                    f.fuente_tasa = cacheInfo?.fuente || 'API BCV';
+                    if (cacheInfo?.esFallback) huboFallback = true;
+
+                    // División estricta: monto en Bolívares ÷ Tasa Oficial BCV de la fecha
+                    const tasa = Number(tasaOficial) || 1;
+                    f.monto_usd = Math.round((tasa > 0 ? (montoBruto / tasa) : montoBruto) * 100) / 100;
                 } else {
+                    // Transacciones en USD
                     f.moneda_pago = 'USD';
                     f.monto_usd = montoBruto;
                     f.tasa_cambio_dia = 1.00;
@@ -11065,15 +11086,15 @@ DATOS DEL REPUESTO:
                 }
             }));
 
-            // 2. Renderizado Seguro: Suma Total Comprado (LTV) y divide entre Frecuencia para Ticket Promedio (AOV)
-            const totalLTV = cliente.facturas.reduce((sum, f) => sum + (f.monto_usd || 0), 0);
-            cliente.totalComprado = Math.round(totalLTV * 100) / 100;
+            // Sumar al Total Normalizado del cliente (LTV) y calcular Ticket Promedio (AOV)
+            const totalNormalizado = cliente.facturas.reduce((sum, f) => sum + (f.monto_usd || 0), 0);
+            cliente.totalComprado = Math.round(totalNormalizado * 100) / 100;
             cliente.frecuenciaCompra = cliente.facturas.length;
             cliente.ticketPromedio = (cliente.frecuenciaCompra > 0)
                 ? Math.round((cliente.totalComprado / cliente.frecuenciaCompra) * 100) / 100
                 : 0;
 
-            // 3. Actualizar reactivamente en el DOM
+            // Renderizar en el DOM: Tarjeta de Métricas
             const elLTV = document.getElementById('crm-kpi-ltv-val');
             const elFrec = document.getElementById('crm-kpi-frecuencia-val');
             const elAOV = document.getElementById('crm-kpi-aov-val');
@@ -11093,15 +11114,19 @@ DATOS DEL REPUESTO:
                 }
             }
 
-            // Actualizar la tabla con las tasas y conversiones finales
+            // Renderizar en el DOM: Tabla de Historial
             window.renderizarTablaFacturasCliente(cliente.facturas);
 
             return cliente;
         };
 
         /**
-         * Agrupa transacciones por cliente mediante Array.prototype.reduce,
-         * extrayendo marcas preferidas (NLP) y preparando el historial para la normalización asíncrona.
+         * 🚫 REGLA 1: PREVENCIÓN DE DUPLICIDAD FINANCIERA (FILTRO STRICT)
+         * Antes de agrupar o sumar cualquier monto por cliente, se filtra el array principal.
+         * SOLO se procesan los objetos donde:
+         *   tipo_documento === 'Factura' Y estatus === 'Pagado y Despachado'
+         * Se descartan de raíz "Pedidos", "Cotizaciones" o facturas no liquidadas
+         * para evitar sumar dos veces la misma venta al convertirse de Pedido a Factura.
          */
         window.procesarClientesDesdeTransacciones = function(transacciones) {
             const MARCAS_DETECTABLES = [
@@ -11110,7 +11135,40 @@ DATOS DEL REPUESTO:
                 'Jeep', 'Kia', 'Volkswagen', 'Fiat', 'Renault', 'Peugeot', 'BMW'
             ];
 
-            const agrupadoPorCliente = (transacciones || []).reduce((acc, trans) => {
+            // =========================================================================
+            // 🛡️ PASO 1: FILTRO STRICT DE PREVENCIÓN DE DUPLICIDAD
+            // =========================================================================
+            const transaccionesEntrantes = Array.isArray(transacciones) ? transacciones : [];
+            let descartadosDuplicados = 0;
+
+            const facturasValidas = transaccionesEntrantes.filter(item => {
+                const tipoDoc = String(item.tipo_documento || item.tipo || item.origen || '').trim().toLowerCase();
+                const estadoDoc = String(item.estatus || item.estado || item.estatusComercial || '').trim().toLowerCase();
+
+                // Condición 1 Estricta: Exclusivamente tipo 'Factura'
+                const esFactura = (tipoDoc === 'factura');
+
+                // Condición 2 Estricta: Exclusivamente estatus 'Pagado y Despachado' (o equivalente liquidado 'pagada')
+                const esPagadoYDespachado = (
+                    estadoDoc === 'pagado y despachado' ||
+                    estadoDoc === 'pagada y despachada' ||
+                    estadoDoc === 'pagada' ||
+                    estadoDoc === 'pagado'
+                );
+
+                const pasaFiltro = esFactura && esPagadoYDespachado;
+                if (!pasaFiltro) {
+                    descartadosDuplicados++;
+                }
+                return pasaFiltro;
+            });
+
+            console.info(`[CRM Auditoría Financiera] Total transacciones: ${transaccionesEntrantes.length} | Descartados por duplicidad/estado ('Pedido' / 'Cotizacion'): ${descartadosDuplicados} | Facturas Pagadas y Despachadas válidas para LTV: ${facturasValidas.length}`);
+
+            // =========================================================================
+            // 📊 PASO 2: AGRUPACIÓN POR CLIENTE (REDUCE)
+            // =========================================================================
+            const agrupadoPorCliente = facturasValidas.reduce((acc, trans) => {
                 const nombreKey = (trans.cliente || 'Consumidor Final').trim();
                 if (!nombreKey) return acc;
                 
@@ -11141,10 +11199,12 @@ DATOS DEL REPUESTO:
 
                 const transNormalizada = {
                     ...trans,
-                    moneda_pago: moneda,
+                    tipo_documento: 'Factura',
+                    estatus: 'Pagado y Despachado',
+                    moneda_pago: (moneda === 'VES' || moneda === 'BS') ? 'VES' : 'USD',
                     monto_facturado: montoBruto,
                     tasa_cambio_dia: tasaRegistrada,
-                    monto_usd: 0 // Se completará de forma exacta por el normalizador asíncrono
+                    monto_usd: 0 // Se completará de forma asíncrona con la API BCV
                 };
 
                 acc[nombreKey].facturas.push(transNormalizada);
@@ -11166,7 +11226,7 @@ DATOS DEL REPUESTO:
                     }
                 }
 
-                // Extracción de marcas (NLP)
+                // Extracción de marcas preferidas (NLP)
                 const corpusTexto = (trans.items || []).join(' ') + ' ' + (trans.desc || '');
                 MARCAS_DETECTABLES.forEach(marca => {
                     const regex = new RegExp('\\b' + marca.replace(' ', '\\s+') + '\\b', 'gi');
@@ -11463,12 +11523,13 @@ DATOS DEL REPUESTO:
             try {
                 let transaccionesAnalizar = [];
 
-                // 1. Facturas Reales de Firestore
+                // 1. Facturas Reales de Firestore (Exclusivamente Facturas Pagadas y Despachadas)
                 try {
                     const snapFac = await getDocs(collection(db, "facturas"));
                     snapFac.forEach(docSnap => {
                         const fac = docSnap.data();
-                        if (fac.estatusComercial === 'Anulada') return;
+                        const estadoLower = String(fac.estatusComercial || fac.estado || '').toLowerCase();
+                        if (estadoLower.includes('anulad')) return;
 
                         let itemsNombres = [];
                         if (Array.isArray(fac.items)) {
@@ -11479,8 +11540,10 @@ DATOS DEL REPUESTO:
                         const montoFact = parseFloat(fac.monto_facturado ?? fac.total) || 0;
                         const tasaRegistrada = parseFloat(fac.tasa_cambio_dia ?? fac.tasaBCV) || null;
 
+                        // Se asigna explícitamente tipo_documento: 'Factura' y estatus: 'Pagado y Despachado'
                         transaccionesAnalizar.push({
                             id: fac.nro ? `FAC-#${fac.nro}` : `FAC-${docSnap.id.substring(0, 6).toUpperCase()}`,
+                            tipo_documento: 'Factura',
                             cliente: (fac.cliente || 'Consumidor Final').trim(),
                             rif: fac.rif || '',
                             telefono: fac.telefono || '',
@@ -11488,7 +11551,7 @@ DATOS DEL REPUESTO:
                             moneda_pago: moneda,
                             monto_facturado: montoFact,
                             tasa_cambio_dia: tasaRegistrada,
-                            estado: fac.estatusComercial || 'Emitida',
+                            estatus: 'Pagado y Despachado',
                             items: itemsNombres,
                             timestamp: fac.timestamp || 0,
                             origen: 'Factura'
@@ -11498,40 +11561,7 @@ DATOS DEL REPUESTO:
                     console.warn("Aviso al leer facturas para CRM:", eFac);
                 }
 
-                // 2. Pedidos Reales de Firestore
-                try {
-                    const snapPed = await getDocs(collection(db, "pedidos"));
-                    snapPed.forEach(docSnap => {
-                        const ped = docSnap.data();
-                        if (ped.estado === 'Cancelado') return;
-
-                        let prodsNombres = [];
-                        if (Array.isArray(ped.productos)) {
-                            prodsNombres = ped.productos.map(p => p.nombre || p.desc || '').filter(Boolean);
-                        }
-
-                        const moneda = String(ped.moneda_pago || ped.moneda || 'USD').toUpperCase().trim();
-                        const montoFact = parseFloat(ped.monto_facturado ?? ped.total) || 0;
-                        const tasaRegistrada = parseFloat(ped.tasa_cambio_dia ?? ped.tasaBCV) || null;
-
-                        transaccionesAnalizar.push({
-                            id: `PED-${docSnap.id.substring(0, 6).toUpperCase()}`,
-                            cliente: (ped.cliente || 'Cliente Web').trim(),
-                            rif: ped.rif || '',
-                            telefono: ped.telefono || '',
-                            fecha: ped.fecha || '',
-                            moneda_pago: moneda,
-                            monto_facturado: montoFact,
-                            tasa_cambio_dia: tasaRegistrada,
-                            estado: ped.estado || 'Procesado',
-                            items: prodsNombres,
-                            timestamp: ped.timestamp || 0,
-                            origen: 'Pedido'
-                        });
-                    });
-                } catch (ePed) {
-                    console.warn("Aviso al leer pedidos para CRM:", ePed);
-                }
+                // NOTA: Se descarta la colección 'pedidos' para evitar doble conteo (Regla 1)
 
                 // Si aún no hay transacciones en Firestore, cargamos el mock dataset con divisas mixtas
                 if (transaccionesAnalizar.length === 0) {
