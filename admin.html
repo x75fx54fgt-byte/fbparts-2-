@@ -2362,113 +2362,6 @@
                     </div>
                 </div> <!-- Fin subtab-content-landed-nacional -->
             </div>
-                    
-                    <!-- Columna Izquierda: Gastos Globales del Embarque -->
-                    <div class="card-form" style="margin-bottom: 0;">
-                        <h3><i class="fas fa-file-invoice-dollar"></i> Desglose de Gastos Logísticos</h3>
-                        
-                        <div id="imp-gastos-container">
-                            <div class="imp-gasto-row" style="display: flex; gap: 8px; margin-bottom: 10px; align-items: center;">
-                                <input type="text" class="imp-gasto-desc" value="Flete Internacional" placeholder="Descripción del gasto" style="flex: 2; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; outline: none;">
-                                <input type="number" step="0.01" class="imp-gasto-monto" value="0.00" placeholder="$0.00" oninput="calcularLandedCost()" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; outline: none;">
-                                <button type="button" onclick="this.parentElement.remove(); calcularLandedCost();" style="background: #d9534f; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;" title="Eliminar Gasto"><i class="fas fa-times"></i></button>
-                            </div>
-                        </div>
-
-                        <button type="button" onclick="agregarFilaGastoVacia()" style="background: #17a2b8; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; margin-bottom: 15px;">
-                            <i class="fas fa-plus"></i> Añadir otro gasto
-                        </button>
-
-                        <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
-
-                        <div class="form-group">
-                            <label>Origen / Criterio de Distribución</label>
-                            <select id="imp-criterio" onchange="cambiarCriterioMedida()">
-                                <option value="cbm">🇨🇳 China / Marítimo - Por Volumen (CBM / m³)</option>
-                                <option value="cuft">🇺🇸 EE.UU. / Miami - Por Pie Cúbico (ft³ / cu ft)</option>
-                                <option value="peso">🇧🇷 Brasil / Terrestre - Por Peso (kg)</option>
-                                <option value="fob">💰 General - Por Valor FOB ($)</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label id="imp-label-medida-total">Volumen Total del Embarque (CBM / m³)</label>
-                            <input type="number" step="0.001" id="imp-cbm-total" value="1.000" oninput="calcularLandedCost()">
-                        </div>
-
-                        <div style="background: #e2f0d9; border: 1px solid #c3e6cb; padding: 12px; border-radius: 6px; margin-top: 15px;">
-                            <span style="display:block; font-size: 11px; color: #155724; font-weight: bold; text-transform: uppercase;">Total Gastos Logísticos</span>
-                            <strong style="font-size: 24px; color: #155724; font-family: 'Oswald', sans-serif;">$<span id="imp-total-gastos-display">0.00</span></strong>
-                        </div>
-                    </div>
-
-                    <!-- Columna Derecha: Detalle de Repuestos -->
-                    <div>
-                        <div class="card-form" style="margin-bottom: 20px;">
-                            <h3><i class="fas fa-boxes"></i> Repuestos en la Carga</h3>
-                            
-                            <div id="imp-items-container">
-                                <!-- Filas dinámicas de repuestos -->
-                            </div>
-
-                            <div style="display: flex; gap: 10px; margin-top: 15px;">
-                                <button type="button" onclick="agregarFilaImportacionVacia()" style="background: #1d6fa5; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold;">
-                                    <i class="fas fa-plus"></i> Agregar Repuesto
-                                </button>
-                                <button type="button" onclick="calcularLandedCost()" style="background: #385723; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold;">
-                                    <i class="fas fa-calculator"></i> Recalcular
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Resumen Total -->
-                        <div style="background: white; border: 1px solid #ccc; padding: 15px; border-radius: 8px; text-align: right; font-size: 13px;">
-                            <div>Inversión Total Compra (FOB): <strong>$<span id="imp-resumen-fob">0.00</span></strong></div>
-                            <div>Costo Total Puesto en Almacén: <strong style="color: #385723; font-size: 16px;">$<span id="imp-resumen-landed">0.00</span></strong></div>
-                        </div>
-                        
-                        <!-- BOTÓN DE GUARDAR CÁLCULO -->
-                        <!-- BOTONES DE ANÁLISIS IA Y GUARDAR CÁLCULO -->
-                        <div style="text-align: right; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; margin-top: 20px;">
-                            <input type="hidden" id="edit-imp-id">
-                            
-                            <button type="button" onclick="abrirAnalisisLandedIA()" style="font-size: 15px; padding: 12px; background: #1d6fa5; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                                <i class="fas fa-robot"></i> Analizar con IA
-                            </button>
-                            
-                            <button type="button" id="btn-save-imp" class="btn-action" onclick="guardarImportacion()" style="font-size: 15px; padding: 12px; background: #28a745; max-width: 300px;">
-                                <i class="fas fa-save"></i> Guardar en Historial
-                            </button>
-                        </div>
-                    </div>
-
-                </div>
-
-                <!-- TABLA DE HISTORIAL DE IMPORTACIONES -->
-                <div style="margin-top: 40px; border-top: 2px solid #eee; padding-top: 25px;">
-                    <div class="admin-header" style="margin-bottom: 15px;">
-                        <h3><i class="fas fa-history"></i> Historial de Cálculos Guardados</h3>
-                        <button class="refresh-btn" onclick="cargarHistorialImportaciones()"><i class="fas fa-sync-alt"></i> Actualizar</button>
-                    </div>
-                    <div style="overflow-x: auto;">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th>Origen / Medida</th>
-                                    <th>FOB Total</th>
-                                    <th>Gastos Logísticos</th>
-                                    <th>Costo Landed Total</th>
-                                    <th style="text-align: center; min-width: 100px;">Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody id="importaciones-table-body">
-                                <tr><td colspan="6" style="text-align: center;">Cargando historial...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
 
             <!-- PESTAÑA: CONTROL DE RUTAS GPS -->
             <div id="tab-rutas" class="tab-content">
@@ -4142,7 +4035,7 @@
             }
         }, 8000);
     </script>
-    <script type="module" src="admin_logic.js?v=20261114_subtabs_clientes_crm"></script>
+    <script type="module" src="admin_logic.js?v=20261114_fix_landed_duplicate"></script>
 
 
     <!-- MODAL AUDITORIA INTERNA -->
