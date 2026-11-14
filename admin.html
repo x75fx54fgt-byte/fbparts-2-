@@ -3,10 +3,15 @@
 <head>
     <script>
         window.onerror = function(msg, url, line, col, error) {
+            // Ignorar errores genéricos de scripts externos (cross-origin CDN)
+            if (msg === "Script error." || msg === "Script error") {
+                console.warn("Aviso de script externo cross-origin ignorado:", msg);
+                return true;
+            }
             alert("GLOBAL ERROR:\n" + msg + "\nLínea: " + line + "\n" + (error && error.stack ? error.stack : ""));
         };
         window.addEventListener("unhandledrejection", function(event) {
-            alert("UNHANDLED PROMISE REJECTION:\n" + (event.reason && event.reason.message ? event.reason.message : event.reason));
+            console.warn("Aviso de promesa no capturada:", event.reason);
         });
     </script>
     <meta charset="UTF-8" />
@@ -34,9 +39,9 @@
     <!-- LIBRERÍA PARA GRÁFICAS -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- 📊 MOTOR GRÁFICO 3D INTERACTIVO (APACHE ECHARTS & ECHARTS-GL) -->
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
+    <!-- 📊 MOTOR GRÁFICO 3D INTERACTIVO (THREE.JS + ORBIT CONTROLS) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
     <!-- LIBRERÍA DE MAPAS GRATIS (LEAFLET) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -1009,7 +1014,7 @@
                         <div>
                             <h3 style="margin: 0; display: flex; align-items: center; gap: 10px; color: #2c441b; font-size: 18px;">
                                 <i class="fas fa-cubes" style="color: #5e8877;"></i> Matriz 3D de Rentabilidad y Ganancia Neta
-                                <span style="background: #e8f4ec; color: #385723; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; border: 1px solid #c3e6cb; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px;">ECHARTS GL 3D</span>
+                                <span style="background: #e8f4ec; color: #385723; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; border: 1px solid #c3e6cb; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px;">THREE.JS 3D</span>
                             </h3>
                             <p style="font-size: 12px; color: #666; margin: 4px 0 0 0;">
                                 Inspección dimensional de rendimiento: <strong>Eje X</strong> (Meses) × <strong>Eje Y</strong> (Línea de Repuesto) → <strong>Eje Z</strong> (Ganancia Neta en USD).
@@ -1036,9 +1041,20 @@
                         </div>
                     </div>
 
-                    <!-- Lienzo WebGL ECharts GL 3D -->
+                    <!-- Lienzo WebGL Three.js 3D -->
                     <div id="contenedor-grafico-3d" style="position: relative; width: 100%; height: 480px; background: radial-gradient(circle at 50% 45%, #ffffff 0%, #f6f8f6 100%); border-radius: 10px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: inset 0 1px 4px rgba(0,0,0,0.04);">
-                        <div id="chart-3d-rentabilidad" style="width: 100%; height: 100%;"></div>
+                        <div id="chart-3d-rentabilidad" style="width: 100%; height: 100%; position: relative;"></div>
+                        <!-- Tooltip Flotante 3D -->
+                        <div id="tooltip-3d-rentabilidad" style="display: none; position: absolute; pointer-events: none; z-index: 100; background: rgba(255, 255, 255, 0.96); border: 1.5px solid #5e8877; border-radius: 8px; padding: 8px 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); transition: opacity 0.15s ease; font-family: 'Helvetica Neue', Arial, sans-serif;"></div>
+                        <!-- Barra de Escala de Colores (Visual Map) -->
+                        <div style="position: absolute; bottom: 15px; right: 15px; z-index: 10; background: rgba(255,255,255,0.92); border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); font-size: 11px; font-family: 'Oswald', sans-serif;">
+                            <span style="font-weight: bold; color: #2c441b; display: block; margin-bottom: 4px; font-size: 11px;">ESCALA DE GANANCIA</span>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span style="color: #666; font-size: 10px;">$250</span>
+                                <div style="width: 100px; height: 8px; border-radius: 4px; background: linear-gradient(to right, #a8d5ba, #5e8877, #385723, #233a16, #c9b065);"></div>
+                                <span style="color: #c9b065; font-weight: bold; font-size: 10px;">+$2,500</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
