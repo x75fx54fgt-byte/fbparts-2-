@@ -604,161 +604,58 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 
                 // 🧊 RENDERIZADO DEL GRÁFICO 3D (PLOTLY 3D SURFACE)
                 if (window.renderizarGrafico3DPlotly) {
-                    window.renderizarGrafico3DPlotly(ventasPorMes);
+                    window.renderizarGrafico3DPlotly();
                 }
-
             } catch (error) { console.error("Error cargando Dashboard:", error); }
         };
 
         // =========================================================================
         // 🧊 MÓDULO VISUALIZACIÓN DE DATOS 3D INTERACTIVA (PLOTLY.JS - 3D SURFACE)
         // =========================================================================
-        window.renderizarGrafico3DPlotly = function(ventasMesesObj) {
+        window.renderizarGrafico3DPlotly = function() {
             const container = document.getElementById('grafico-rentabilidad-3d');
             if (!container) return;
 
             if (typeof Plotly === 'undefined') {
                 console.warn('Plotly.js aún no está disponible. Reintentando...');
-                setTimeout(() => window.renderizarGrafico3DPlotly(ventasMesesObj), 200);
+                setTimeout(window.renderizarGrafico3DPlotly, 200);
                 return;
             }
 
-            // Eje X: Meses (Dinámicos basados en histórico o últimos 6 meses)
-            let meses = [];
-            if (ventasMesesObj && Object.keys(ventasMesesObj).length > 0) {
-                meses = Object.keys(ventasMesesObj);
-            } else {
-                const mesesNombresCortos = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-                const hoy = new Date();
-                for (let i = 5; i >= 0; i--) {
-                    const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
-                    meses.push(`${mesesNombresCortos[d.getMonth()]} ${d.getFullYear()}`);
-                }
-            }
-
-            // Coordenadas numéricas requeridas por WebGL para el eje X y eje Y
-            const xCoords = meses.map((_, i) => i);
-            const categorias = ['Motor', 'Carrocería', 'Suspensión', 'Eléctrico'];
-            const yCoords = categorias.map((_, i) => i);
-
-            // Eje Z: Matriz 2D de Ganancia Neta [categorías x meses]
-            let zData = [
-                [920, 1180, 1050, 1420, 1850, 2400], // Motor
-                [480,  620,  890, 1050, 1200, 1550], // Carrocería
-                [350,  490,  540,  680,  820,  980], // Suspensión
-                [280,  380,  420,  560,  690,  850]  // Eléctrico
+            // Datos simulados reales: Array de Arrays (Eje Z)
+            var z_data = [
+              [250, 400, 800, 1200, 900], // Fila 1: Motor
+              [300, 500, 750, 1400, 1100], // Fila 2: Suspensión
+              [600, 900, 1500, 2100, 1800], // Fila 3: Frenos
+              [800, 1200, 2200, 3000, 2500], // Fila 4: Carrocería
+              [500, 700, 1100, 1600, 1300]  // Fila 5: Eléctrico
             ];
 
-            // Si hay ventas reales de los últimos 6 meses en Firebase, calibrar la superficie Z
-            if (ventasMesesObj && Object.keys(ventasMesesObj).length === 6) {
-                const valoresVentas = Object.values(ventasMesesObj);
-                const ratios = [0.45, 0.25, 0.18, 0.12];
-                const margenPromedio = 0.28;
+            var x_data = ['Jun', 'Jul', 'Ago', 'Sep', 'Oct'];
+            var y_data = ['Motor', 'Suspensión', 'Frenos', 'Carrocería', 'Eléctrico'];
 
-                zData = categorias.map((cat, catIdx) => {
-                    return valoresVentas.map((ventaTotalMes, mesIdx) => {
-                        if (ventaTotalMes > 100) {
-                            return Math.round(ventaTotalMes * margenPromedio * ratios[catIdx] * 3.5);
-                        }
-                        return zData[catIdx][mesIdx] || 300;
-                    });
-                });
-            }
-
-            const hoverTexts = categorias.map((cat, r) => {
-                return meses.map((mes, c) => {
-                    return `<b>${cat}</b><br>Mes: ${mes}<br>Ganancia Neta: $${zData[r][c].toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
-                });
-            });
-
-            const data = [{
-                z: zData,
-                x: xCoords,
-                y: yCoords,
-                type: 'surface',
-                colorscale: [
-                    [0, '#eef3f0'],
-                    [0.5, '#5e8877'],
-                    [1, '#385723']
-                ],
-                colorbar: {
-                    title: {
-                        text: '<b>Ganancia ($)</b>',
-                        side: 'top',
-                        font: { family: 'Oswald, sans-serif', size: 12, color: '#2c441b' }
-                    },
-                    tickprefix: '$',
-                    len: 0.85,
-                    thickness: 16,
-                    tickfont: { family: 'sans-serif', size: 10, color: '#444' }
-                },
-                contours: {
-                    z: {
-                        show: true,
-                        usecolormap: true,
-                        highlightcolor: '#c9b065',
-                        project: { z: true }
-                    }
-                },
-                lighting: {
-                    ambient: 0.85,
-                    diffuse: 0.8,
-                    specular: 0.25,
-                    roughness: 0.5,
-                    fresnel: 0.2
-                },
-                text: hoverTexts,
-                hoverinfo: 'text'
+            var data = [{
+              z: z_data,
+              x: x_data,
+              y: y_data,
+              type: 'surface',
+              colorscale: [[0, '#eef3f0'], [0.5, '#5e8877'], [1, '#385723']]
             }];
 
-            const layout = {
-                autosize: true,
-                margin: { l: 0, r: 0, b: 0, t: 0 },
-                paper_bgcolor: 'rgba(0,0,0,0)',
-                plot_bgcolor: 'rgba(0,0,0,0)',
-                scene: {
-                    xaxis: {
-                        title: { text: '<b>Mes</b>', font: { family: 'Oswald, sans-serif', size: 11, color: '#385723' } },
-                        tickmode: 'array',
-                        tickvals: xCoords,
-                        ticktext: meses,
-                        gridcolor: '#e2e8f0',
-                        zerolinecolor: '#cbd5e1',
-                        showbackground: true,
-                        backgroundcolor: 'rgba(255, 255, 255, 0.9)'
-                    },
-                    yaxis: {
-                        title: { text: '<b>Categoría</b>', font: { family: 'Oswald, sans-serif', size: 11, color: '#385723' } },
-                        tickmode: 'array',
-                        tickvals: yCoords,
-                        ticktext: categorias,
-                        gridcolor: '#e2e8f0',
-                        zerolinecolor: '#cbd5e1',
-                        showbackground: true,
-                        backgroundcolor: 'rgba(255, 255, 255, 0.9)'
-                    },
-                    zaxis: {
-                        title: { text: '<b>Ganancia Neta ($)</b>', font: { family: 'Oswald, sans-serif', size: 11, color: '#385723' } },
-                        tickprefix: '$',
-                        gridcolor: '#e2e8f0',
-                        zerolinecolor: '#cbd5e1',
-                        showbackground: true,
-                        backgroundcolor: 'rgba(255, 255, 255, 0.9)'
-                    },
-                    camera: {
-                        eye: { x: 1.5, y: -1.7, z: 1.2 }
-                    }
-                }
+            var layout = {
+              title: false,
+              autosize: true,
+              margin: { l: 0, r: 0, b: 0, t: 0 },
+              paper_bgcolor: 'rgba(0,0,0,0)',
+              scene: {
+                xaxis: { title: 'Meses' },
+                yaxis: { title: 'Categoría' },
+                zaxis: { title: 'Ganancia ($)' },
+                camera: { eye: {x: 1.5, y: 1.5, z: 1.2} }
+              }
             };
 
-            const config = {
-                responsive: true,
-                displayModeBar: true,
-                displaylogo: false,
-                modeBarButtonsToRemove: ['sendDataToCloud', 'hoverClosest3d']
-            };
-
-            Plotly.newPlot('grafico-rentabilidad-3d', data, layout, config);
+            Plotly.newPlot('grafico-rentabilidad-3d', data, layout);
         };
 
         window.addEventListener('resize', () => {
