@@ -2062,158 +2062,286 @@
                 </div>
             </div>
 
-            <!-- PESTAÑA 8: GESTOR DE TARIFAS Y CALCULADORA LANDED COST -->
+            <!-- PESTAÑA 8: CALCULADORA DE IMPORTACIÓN (LANDED COST) -->
             <div id="tab-importacion" class="tab-content">
                 <div class="admin-header">
                     <div>
-                        <h2>Gestor de Tarifas y Calculadora Landed Cost</h2>
-                        <span style="font-size: 13px; color: #666;">Tabulador interno editable y cotización reactiva de encomiendas nacionales y delivery metropolitano</span>
+                        <h2>Cálculo de Landed Cost & Logística</h2>
+                        <span style="font-size: 13px; color: #666;">Gestión de importaciones internacionales (CBM) y cotización de envíos nacionales / delivery</span>
                     </div>
                 </div>
 
-                <!-- 📦 PANEL DE TARIFAS BASE INTERNAS (EDITABLE EN TIEMPO REAL) -->
-                <div class="card-form" style="margin-bottom: 25px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid #edf2f7; padding-bottom: 12px;">
-                        <div>
-                            <h3 style="margin: 0; font-size: 16px; font-family: 'Oswald', sans-serif; color: #2c441b; display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-sliders-h" style="color: #5e8877;"></i> Panel de Tarifas Base Internas (Editable)
-                            </h3>
-                            <p style="font-size: 12px; color: #64748b; margin: 3px 0 0 0;">Modifica cualquier costo base, tarifa por Kg o recargo. La calculadora se actualiza de inmediato.</p>
-                        </div>
-                        <button type="button" onclick="window.restablecerTarifasBaseDefault()" style="font-size: 11.5px; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 5px;">
-                            <i class="fas fa-undo"></i> Restaurar Tabulador
-                        </button>
-                    </div>
-
-                    <div style="overflow-x: auto;">
-                        <table class="data-table" style="width: 100%; font-size: 12.5px;">
-                            <thead>
-                                <tr style="background: #f8fafc; color: #475569;">
-                                    <th>Operador Logístico</th>
-                                    <th style="text-align: center;">Tarifa Base ($)</th>
-                                    <th style="text-align: center;">Costo por Kg ($/Kg)</th>
-                                    <th style="text-align: center;">Recargo Interior ($)</th>
-                                    <th>Zona Operativa</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tabla-tarifas-base-tbody">
-                                <!-- Filas editables renderizadas por JS -->
-                            </tbody>
-                        </table>
-                    </div>
+                <!-- Subnavegador de Pestañas Internas (Estilo Web Pública) -->
+                <div style="display: flex; gap: 8px; margin-bottom: 22px; border-bottom: 2px solid #e5e7eb; padding-bottom: 2px; flex-wrap: wrap;">
+                    <button type="button" id="subtab-btn-landed-intl" onclick="window.cambiarSubtabLanded('intl')" 
+                        style="padding: 10px 20px; border: none; background: #385723; color: white; border-radius: 8px 8px 0 0; font-family: 'Oswald', sans-serif; font-size: 14.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
+                        <i class="fas fa-ship"></i> Cálculo de Landed Cost (Importación & CBM)
+                    </button>
+                    <button type="button" id="subtab-btn-landed-nacional" onclick="window.cambiarSubtabLanded('nacional')" 
+                        style="padding: 10px 20px; border: none; background: #f3f4f6; color: #4b5563; border-radius: 8px 8px 0 0; font-family: 'Oswald', sans-serif; font-size: 14.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
+                        <i class="fas fa-truck"></i> Calculadora de Tarifas y Envíos Nacionales
+                    </button>
                 </div>
 
-                <!-- 🧮 CALCULADORA DINÁMICA DE LANDED COST -->
-                <div class="card-form" style="margin-bottom: 25px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; align-items: start;">
-                        <!-- Parámetros de la Cotización -->
-                        <div>
-                            <h3 style="margin: 0 0 15px 0; font-size: 16px; font-family: 'Oswald', sans-serif; color: #2c441b; display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-calculator" style="color: #5e8877;"></i> Formulario de Cotización de Envíos
-                            </h3>
+                <!-- ======================================================== -->
+                <!-- SUBTAB 1: CÁLCULO DE IMPORTACIÓN Y EMBARQUES (INTERNACIONAL) -->
+                <!-- ======================================================== -->
+                <div id="subtab-content-landed-intl" style="display: block;">
+                    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 30px; align-items: start;">
+                        
+                        <!-- Columna Izquierda: Gastos Globales del Embarque -->
+                        <div class="card-form" style="margin-bottom: 0;">
+                            <h3><i class="fas fa-file-invoice-dollar"></i> Desglose de Gastos Logísticos</h3>
                             
-                            <div style="display: flex; flex-direction: column; gap: 14px;">
-                                <div>
-                                    <label style="display: block; font-size: 11.5px; font-weight: bold; color: #475569; text-transform: uppercase; margin-bottom: 5px;">
-                                        Agencia / Operador de Envío
-                                    </label>
-                                    <select 
-                                        id="calc-agencia-select" 
-                                        onchange="window.ejecutarCalculoLandedCost()" 
-                                        style="width: 100%; padding: 10px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13.5px; background: #f8fafc; font-weight: 600; outline: none;"
-                                    >
-                                        <option value="tealca">Tealca (Flete Nacional)</option>
-                                        <option value="mrw">MRW (Encomiendas)</option>
-                                        <option value="zoom">Grupo Zoom (Terrestre / Aéreo)</option>
-                                        <option value="delivery_fb">Delivery Propio F&B Parts (Solo Caracas)</option>
-                                    </select>
+                            <div id="imp-gastos-container">
+                                <div class="imp-gasto-row" style="display: flex; gap: 8px; margin-bottom: 10px; align-items: center;">
+                                    <input type="text" class="imp-gasto-desc" value="Flete Internacional" placeholder="Descripción del gasto" style="flex: 2; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; outline: none;">
+                                    <input type="number" step="0.01" class="imp-gasto-monto" value="0.00" placeholder="$0.00" oninput="calcularLandedCost()" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; outline: none;">
+                                    <button type="button" onclick="this.parentElement.remove(); calcularLandedCost();" style="background: #d9534f; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;" title="Eliminar Gasto"><i class="fas fa-times"></i></button>
                                 </div>
+                            </div>
 
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                                    <div>
-                                        <label style="display: block; font-size: 11.5px; font-weight: bold; color: #475569; text-transform: uppercase; margin-bottom: 5px;">
-                                            Peso de Carga (Kg)
-                                        </label>
-                                        <input 
-                                            type="number" 
-                                            id="calc-peso-input" 
-                                            value="2.5" 
-                                            min="0.1" 
-                                            step="0.1" 
-                                            oninput="window.ejecutarCalculoLandedCost()"
-                                            style="width: 100%; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13.5px; font-weight: bold; background: #f8fafc; outline: none;"
-                                        />
-                                    </div>
+                            <button type="button" onclick="agregarFilaGastoVacia()" style="background: #17a2b8; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; margin-bottom: 15px;">
+                                <i class="fas fa-plus"></i> Añadir otro gasto
+                            </button>
 
-                                    <div>
-                                        <label style="display: block; font-size: 11.5px; font-weight: bold; color: #475569; text-transform: uppercase; margin-bottom: 5px;">
-                                            Zona Destino
-                                        </label>
-                                        <select 
-                                            id="calc-destino-select" 
-                                            onchange="window.ejecutarCalculoLandedCost()" 
-                                            style="width: 100%; padding: 8px 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13px; background: #f8fafc; font-weight: 600; outline: none;"
-                                        >
-                                            <option value="caracas_centro">Caracas Centro / Oeste</option>
-                                            <option value="caracas_este">Caracas Este / Hatillo</option>
-                                            <option value="interior" selected>Interior del País (Nacional)</option>
-                                        </select>
-                                    </div>
-                                </div>
+                            <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
+
+                            <div class="form-group">
+                                <label>Origen / Criterio de Distribución</label>
+                                <select id="imp-criterio" onchange="cambiarCriterioMedida()">
+                                    <option value="cbm">🇨🇳 China / Marítimo - Por Volumen (CBM / m³)</option>
+                                    <option value="cuft">🇺🇸 EE.UU. / Miami - Por Pie Cúbico (ft³ / cu ft)</option>
+                                    <option value="peso">🇧🇷 Brasil / Terrestre - Por Peso (kg)</option>
+                                    <option value="fob">💰 General - Por Valor FOB ($)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label id="imp-label-medida-total">Volumen Total del Embarque (CBM / m³)</label>
+                                <input type="number" step="0.001" id="imp-cbm-total" value="1.000" oninput="calcularLandedCost()">
+                            </div>
+
+                            <div style="background: #e2f0d9; border: 1px solid #c3e6cb; padding: 12px; border-radius: 6px; margin-top: 15px;">
+                                <span style="display:block; font-size: 11px; color: #155724; font-weight: bold; text-transform: uppercase;">Total Gastos Logísticos</span>
+                                <strong style="font-size: 24px; color: #155724; font-family: 'Oswald', sans-serif;">$<span id="imp-total-gastos-display">0.00</span></strong>
                             </div>
                         </div>
 
-                        <!-- Panel de Resultados Financieros (Cálculo Inmediato) -->
-                        <div style="background: linear-gradient(135deg, #eef3f0 0%, #ffffff 100%); border: 2px solid #c3e6cb; border-radius: 12px; padding: 22px; box-shadow: inset 0 1px 3px rgba(255,255,255,0.8);">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                                <span style="font-size: 10.5px; font-weight: 800; text-transform: uppercase; color: #385723; background: #ffffff; padding: 3px 8px; border-radius: 4px; border: 1px solid #c3e6cb;">
-                                    Landed Cost Estimado
-                                </span>
-                                <span id="calc-operador-badge" style="font-size: 11.5px; font-weight: bold; color: #475569;">Tealca</span>
-                            </div>
+                        <!-- Columna Derecha: Detalle de Repuestos -->
+                        <div>
+                            <div class="card-form" style="margin-bottom: 20px;">
+                                <h3><i class="fas fa-boxes"></i> Repuestos en la Carga</h3>
+                                
+                                <div id="imp-items-container">
+                                    <!-- Filas dinámicas de repuestos -->
+                                </div>
 
-                            <div style="font-size: 38px; font-weight: 900; color: #2c441b; font-family: 'Oswald', sans-serif; margin: 6px 0;">
-                                $<span id="calc-costo-total">0.00</span> <span style="font-size: 13px; font-weight: bold; color: #64748b;">USD NETOS</span>
-                            </div>
-
-                            <!-- Desglose Matemático Vinculado a la Tabla Editable -->
-                            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; font-size: 12px; color: #64748b; margin-top: 12px; display: flex; flex-direction: column; gap: 5px;">
-                                <div style="display: flex; justify-content: space-between;">
-                                    <span>Tarifa Base Aplicada:</span>
-                                    <strong id="calc-base-display" style="color: #334155;">$0.00</strong>
-                                </div>
-                                <div style="display: flex; justify-content: space-between;">
-                                    <span>Costo por Peso (<span id="calc-kg-label">0</span> Kg):</span>
-                                    <strong id="calc-peso-display" style="color: #334155;">$0.00</strong>
-                                </div>
-                                <div style="display: flex; justify-content: space-between;">
-                                    <span>Recargo Logístico Destino:</span>
-                                    <strong id="calc-recargo-display" style="color: #334155;">$0.00</strong>
-                                </div>
-                                <div style="border-top: 1px dashed #e2e8f0; padding-top: 4px; display: flex; justify-content: space-between; font-size: 11px;">
-                                    <span>Ecuación:</span>
-                                    <span id="calc-ecuacion-display" style="font-family: monospace; color: #0284c7;">Base + (Peso × Tarifa)</span>
+                                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                                    <button type="button" onclick="agregarFilaImportacionVacia()" style="background: #1d6fa5; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold;">
+                                        <i class="fas fa-plus"></i> Agregar Repuesto
+                                    </button>
+                                    <button type="button" onclick="calcularLandedCost()" style="background: #385723; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold;">
+                                        <i class="fas fa-calculator"></i> Recalcular
+                                    </button>
                                 </div>
                             </div>
 
-                            <p id="calc-mensaje-nota" style="font-size: 11.5px; color: #475569; margin: 10px 0 0 0; line-height: 1.4;">
-                                Cálculo en base a tabulador interno activo.
-                            </p>
+                            <!-- Resumen Total -->
+                            <div style="background: white; border: 1px solid #ccc; padding: 15px; border-radius: 8px; text-align: right; font-size: 13px;">
+                                <div>Inversión Total Compra (FOB): <strong>$<span id="imp-resumen-fob">0.00</span></strong></div>
+                                <div>Costo Total Puesto en Almacén: <strong style="color: #385723; font-size: 16px;">$<span id="imp-resumen-landed">0.00</span></strong></div>
+                            </div>
+                            
+                            <!-- BOTONES DE ANÁLISIS IA Y GUARDAR CÁLCULO -->
+                            <div style="text-align: right; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; margin-top: 20px;">
+                                <input type="hidden" id="edit-imp-id">
+                                
+                                <button type="button" onclick="abrirAnalisisLandedIA()" style="font-size: 15px; padding: 12px; background: #1d6fa5; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                    <i class="fas fa-robot"></i> Analizar con IA
+                                </button>
+                                
+                                <button type="button" id="btn-save-imp" class="btn-action" onclick="guardarImportacion()" style="font-size: 15px; padding: 12px; background: #28a745; max-width: 300px;">
+                                    <i class="fas fa-save"></i> Guardar en Historial
+                                </button>
+                            </div>
+                        </div>
 
-                            <button 
-                                type="button" 
-                                onclick="window.copiarCotizacionEnvio()" 
-                                style="margin-top: 14px; width: 100%; background: #385723; color: white; border: none; padding: 10px 14px; border-radius: 8px; font-size: 12.5px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s; box-shadow: 0 2px 4px rgba(56,87,35,0.25);"
-                                onmouseover="this.style.background='#2c441b'"
-                                onmouseout="this.style.background='#385723'"
-                            >
-                                <i class="fas fa-copy"></i> <span id="btn-copiar-calc-text">Copiar Resumen de Envío</span>
+                    </div>
+
+                    <!-- TABLA DE HISTORIAL DE IMPORTACIONES -->
+                    <div style="margin-top: 40px; border-top: 2px solid #eee; padding-top: 25px;">
+                        <div class="admin-header" style="margin-bottom: 15px;">
+                            <h3><i class="fas fa-history"></i> Historial de Cálculos Guardados</h3>
+                            <button class="refresh-btn" onclick="cargarHistorialImportaciones()"><i class="fas fa-sync-alt"></i> Actualizar</button>
+                        </div>
+                        <div style="overflow-x: auto;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Origen / Medida</th>
+                                        <th>FOB Total</th>
+                                        <th>Gastos Logísticos</th>
+                                        <th>Costo Landed Total</th>
+                                        <th style="text-align: center; min-width: 100px;">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="importaciones-table-body">
+                                    <tr><td colspan="6" style="text-align: center;">Cargando historial...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div> <!-- Fin subtab-content-landed-intl -->
+
+                <!-- ======================================================== -->
+                <!-- SUBTAB 2: CALCULADORA DE TARIFAS Y ENVÍOS NACIONALES -->
+                <!-- ======================================================== -->
+                <div id="subtab-content-landed-nacional" style="display: none;">
+                    <!-- 📦 PANEL DE TARIFAS BASE INTERNAS (EDITABLE EN TIEMPO REAL) -->
+                    <div class="card-form" style="margin-bottom: 25px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid #edf2f7; padding-bottom: 12px;">
+                            <div>
+                                <h3 style="margin: 0; font-size: 16px; font-family: 'Oswald', sans-serif; color: #2c441b; display: flex; align-items: center; gap: 8px;">
+                                    <i class="fas fa-sliders-h" style="color: #5e8877;"></i> Panel de Tarifas Base Internas (Editable)
+                                </h3>
+                                <p style="font-size: 12px; color: #64748b; margin: 3px 0 0 0;">Modifica cualquier costo base, tarifa por Kg o recargo. La calculadora se actualiza de inmediato.</p>
+                            </div>
+                            <button type="button" onclick="window.restablecerTarifasBaseDefault()" style="font-size: 11.5px; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 5px;">
+                                <i class="fas fa-undo"></i> Restaurar Tabulador
                             </button>
                         </div>
-                    </div>
-                </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 30px; align-items: start;">
+                        <div style="overflow-x: auto;">
+                            <table class="data-table" style="width: 100%; font-size: 12.5px;">
+                                <thead>
+                                    <tr style="background: #f8fafc; color: #475569;">
+                                        <th>Operador Logístico</th>
+                                        <th style="text-align: center;">Tarifa Base ($)</th>
+                                        <th style="text-align: center;">Costo por Kg ($/Kg)</th>
+                                        <th style="text-align: center;">Recargo Interior ($)</th>
+                                        <th>Zona Operativa</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabla-tarifas-base-tbody">
+                                    <!-- Filas editables renderizadas por JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 🧮 CALCULADORA DINÁMICA DE LANDED COST NACIONAL -->
+                    <div class="card-form" style="margin-bottom: 25px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; align-items: start;">
+                            <!-- Parámetros de la Cotización -->
+                            <div>
+                                <h3 style="margin: 0 0 15px 0; font-size: 16px; font-family: 'Oswald', sans-serif; color: #2c441b; display: flex; align-items: center; gap: 8px;">
+                                    <i class="fas fa-calculator" style="color: #5e8877;"></i> Formulario de Cotización de Envíos
+                                </h3>
+                                
+                                <div style="display: flex; flex-direction: column; gap: 14px;">
+                                    <div>
+                                        <label style="display: block; font-size: 11.5px; font-weight: bold; color: #475569; text-transform: uppercase; margin-bottom: 5px;">
+                                            Agencia / Operador de Envío
+                                        </label>
+                                        <select 
+                                            id="calc-agencia-select" 
+                                            onchange="window.ejecutarCalculoLandedCost()" 
+                                            style="width: 100%; padding: 10px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13.5px; background: #f8fafc; font-weight: 600; outline: none;"
+                                        >
+                                            <option value="tealca">Tealca (Flete Nacional)</option>
+                                            <option value="mrw">MRW (Encomiendas)</option>
+                                            <option value="zoom">Grupo Zoom (Terrestre / Aéreo)</option>
+                                            <option value="delivery_fb">Delivery Propio F&B Parts (Solo Caracas)</option>
+                                        </select>
+                                    </div>
+
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                        <div>
+                                            <label style="display: block; font-size: 11.5px; font-weight: bold; color: #475569; text-transform: uppercase; margin-bottom: 5px;">
+                                                Peso de Carga (Kg)
+                                            </label>
+                                            <input 
+                                                type="number" 
+                                                id="calc-peso-input" 
+                                                value="2.5" 
+                                                min="0.1" 
+                                                step="0.1" 
+                                                oninput="window.ejecutarCalculoLandedCost()"
+                                                style="width: 100%; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13.5px; font-weight: bold; background: #f8fafc; outline: none;"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label style="display: block; font-size: 11.5px; font-weight: bold; color: #475569; text-transform: uppercase; margin-bottom: 5px;">
+                                                Zona Destino
+                                            </label>
+                                            <select 
+                                                id="calc-destino-select" 
+                                                onchange="window.ejecutarCalculoLandedCost()" 
+                                                style="width: 100%; padding: 8px 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13px; background: #f8fafc; font-weight: 600; outline: none;"
+                                            >
+                                                <option value="caracas_centro">Caracas Centro / Oeste</option>
+                                                <option value="caracas_este">Caracas Este / Hatillo</option>
+                                                <option value="interior" selected>Interior del País (Nacional)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Panel de Resultados Financieros (Cálculo Inmediato) -->
+                            <div style="background: linear-gradient(135deg, #eef3f0 0%, #ffffff 100%); border: 2px solid #c3e6cb; border-radius: 12px; padding: 22px; box-shadow: inset 0 1px 3px rgba(255,255,255,0.8);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <span style="font-size: 10.5px; font-weight: 800; text-transform: uppercase; color: #385723; background: #ffffff; padding: 3px 8px; border-radius: 4px; border: 1px solid #c3e6cb;">
+                                        Landed Cost Estimado
+                                    </span>
+                                    <span id="calc-operador-badge" style="font-size: 11.5px; font-weight: bold; color: #475569;">Tealca</span>
+                                </div>
+
+                                <div style="font-size: 38px; font-weight: 900; color: #2c441b; font-family: 'Oswald', sans-serif; margin: 6px 0;">
+                                    $<span id="calc-costo-total">0.00</span> <span style="font-size: 13px; font-weight: bold; color: #64748b;">USD NETOS</span>
+                                </div>
+
+                                <!-- Desglose Matemático Vinculado a la Tabla Editable -->
+                                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; font-size: 12px; color: #64748b; margin-top: 12px; display: flex; flex-direction: column; gap: 5px;">
+                                    <div style="display: flex; justify-content: space-between;">
+                                        <span>Tarifa Base Aplicada:</span>
+                                        <strong id="calc-base-display" style="color: #334155;">$0.00</strong>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between;">
+                                        <span>Costo por Peso (<span id="calc-kg-label">0</span> Kg):</span>
+                                        <strong id="calc-peso-display" style="color: #334155;">$0.00</strong>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between;">
+                                        <span>Recargo Logístico Destino:</span>
+                                        <strong id="calc-recargo-display" style="color: #334155;">$0.00</strong>
+                                    </div>
+                                    <div style="border-top: 1px dashed #e2e8f0; padding-top: 4px; display: flex; justify-content: space-between; font-size: 11px;">
+                                        <span>Ecuación:</span>
+                                        <span id="calc-ecuacion-display" style="font-family: monospace; color: #0284c7;">Base + (Peso × Tarifa)</span>
+                                    </div>
+                                </div>
+
+                                <p id="calc-mensaje-nota" style="font-size: 11.5px; color: #475569; margin: 10px 0 0 0; line-height: 1.4;">
+                                    Cálculo en base a tabulador interno activo.
+                                </p>
+
+                                <button 
+                                    type="button" 
+                                    onclick="window.copiarCotizacionEnvio()" 
+                                    style="margin-top: 14px; width: 100%; background: #385723; color: white; border: none; padding: 10px 14px; border-radius: 8px; font-size: 12.5px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s; box-shadow: 0 2px 4px rgba(56,87,35,0.25);"
+                                    onmouseover="this.style.background='#2c441b'"
+                                    onmouseout="this.style.background='#385723'"
+                                >
+                                    <i class="fas fa-copy"></i> <span id="btn-copiar-calc-text">Copiar Resumen de Envío</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div> <!-- Fin subtab-content-landed-nacional -->
+            </div>
                     
                     <!-- Columna Izquierda: Gastos Globales del Embarque -->
                     <div class="card-form" style="margin-bottom: 0;">
@@ -3994,7 +4122,7 @@
             }
         }, 8000);
     </script>
-    <script type="module" src="admin_logic.js?v=20261114_fix_tabs"></script>
+    <script type="module" src="admin_logic.js?v=20261114_subtabs_landed"></script>
 
 
     <!-- MODAL AUDITORIA INTERNA -->

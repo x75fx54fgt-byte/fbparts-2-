@@ -368,8 +368,11 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
             if(id === 'historial-facturas') { window.cargarHistorialFacturas(); }
             if(id === 'importacion') { 
                 window.cargarHistorialImportaciones(); 
-                if (window.renderizarTablaTarifasBase) window.renderizarTablaTarifasBase();
-                if (window.ejecutarCalculoLandedCost) window.ejecutarCalculoLandedCost();
+                if (window.cambiarSubtabLanded) {
+                    window.cambiarSubtabLanded('intl');
+                } else if (window.calcularLandedCost) {
+                    window.calcularLandedCost();
+                }
             }
             if(id === 'reventas') { window.cargarHistorialReventas(); if(window.actualizarEstadoModoBsReventas) window.actualizarEstadoModoBsReventas(); }
             if(id === 'rutas') { setTimeout(() => { window.iniciarMapaAdmin(); window.cargarPuntosRuta(); window.cargarSelectorPedidosRuta(); }, 200); }
@@ -10420,6 +10423,28 @@ DATOS DEL REPUESTO:
                 if (contBanners) contBanners.style.display = 'none';
                 if (contDestacados) contDestacados.style.display = 'block';
                 window.cargarWebDestacados();
+            }
+        };
+
+        window.cambiarSubtabLanded = function(subtab) {
+            const btnIntl = document.getElementById('subtab-btn-landed-intl');
+            const btnNac = document.getElementById('subtab-btn-landed-nacional');
+            const contIntl = document.getElementById('subtab-content-landed-intl');
+            const contNac = document.getElementById('subtab-content-landed-nacional');
+
+            if (subtab === 'intl') {
+                if (btnIntl) { btnIntl.style.background = '#385723'; btnIntl.style.color = 'white'; }
+                if (btnNac) { btnNac.style.background = '#f3f4f6'; btnNac.style.color = '#4b5563'; }
+                if (contIntl) contIntl.style.display = 'block';
+                if (contNac) contNac.style.display = 'none';
+                if (window.calcularLandedCost) window.calcularLandedCost();
+            } else {
+                if (btnIntl) { btnIntl.style.background = '#f3f4f6'; btnIntl.style.color = '#4b5563'; }
+                if (btnNac) { btnNac.style.background = '#385723'; btnNac.style.color = 'white'; }
+                if (contIntl) contIntl.style.display = 'none';
+                if (contNac) contNac.style.display = 'block';
+                if (window.renderizarTablaTarifasBase) window.renderizarTablaTarifasBase();
+                if (window.ejecutarCalculoLandedCost) window.ejecutarCalculoLandedCost();
             }
         };
 
