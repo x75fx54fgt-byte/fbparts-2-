@@ -1531,130 +1531,150 @@
             <div id="tab-clientes" class="tab-content">
                 <div class="admin-header">
                     <div>
-                        <h2>Base de Datos de Clientes y Aseguradoras</h2>
-                        <span style="font-size: 13px; color: #666;">Gestión de clientes en Firestore y CRM analítico automatizado a partir de transacciones</span>
+                        <h2>Base de Clientes & CRM</h2>
+                        <span style="font-size: 13px; color: #666;">Directorio de clientes en Firestore y CRM analítico automatizado a partir de transacciones</span>
                     </div>
-                    <button class="refresh-btn" onclick="cargarBaseClientes()"><i class="fas fa-sync-alt"></i> Actualizar</button>
+                    <button class="refresh-btn" onclick="window.recargarSubtabClientesActual()"><i class="fas fa-sync-alt"></i> Actualizar</button>
                 </div>
 
-                <!-- 🚘 MÓDULO: CRM AUTOMATIZADO TRANSACCIONAL (ANALÍTICA AUTOMÁTICA) -->
-                <div class="card-form" style="margin-bottom: 25px; background: #ffffff; border: 1.5px solid #c3e6cb; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid #edf2f7; padding-bottom: 14px; margin-bottom: 16px;">
+                <!-- Subnavegador de Pestañas Internas (Base de Clientes & CRM) -->
+                <div style="display: flex; gap: 8px; margin-bottom: 22px; border-bottom: 2px solid #e5e7eb; padding-bottom: 2px; flex-wrap: wrap;">
+                    <button type="button" id="subtab-btn-clientes-db" onclick="window.cambiarSubtabClientes('db')" 
+                        style="padding: 10px 20px; border: none; background: #385723; color: white; border-radius: 8px 8px 0 0; font-family: 'Oswald', sans-serif; font-size: 14.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
+                        <i class="fas fa-address-book"></i> Directorio de Clientes (Firestore)
+                    </button>
+                    <button type="button" id="subtab-btn-clientes-crm" onclick="window.cambiarSubtabClientes('crm')" 
+                        style="padding: 10px 20px; border: none; background: #f3f4f6; color: #4b5563; border-radius: 8px 8px 0 0; font-family: 'Oswald', sans-serif; font-size: 14.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
+                        <i class="fas fa-chart-line"></i> CRM Analítico Transaccional
+                    </button>
+                </div>
+
+                <!-- ======================================================== -->
+                <!-- SUBTAB 1: BASE DE DATOS Y DIRECTORIO DE CLIENTES FIRESTORE -->
+                <!-- ======================================================== -->
+                <div id="subtab-content-clientes-db" style="display: block;">
+                    <div class="admin-grid">
                         <div>
-                            <h3 style="margin: 0; color: #2c441b; font-size: 17px; display: flex; align-items: center; gap: 8px; font-family: 'Oswald', sans-serif;">
-                                <i class="fas fa-brain" style="color: #5e8877;"></i> CRM TRANSACCIONAL AUTOMATIZADO
-                                <span style="background: #eef3f0; color: #385723; font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 4px; border: 1px solid #c3e6cb;">ANALÍTICA EN VIVO</span>
-                            </h3>
-                            <p style="font-size: 12px; color: #666; margin: 3px 0 0 0;">Métricas de compra, marcas preferidas y solvencia calculadas automáticamente de las transacciones.</p>
-                        </div>
-                        
-                        <div style="display: flex; gap: 8px; align-items: center; width: 100%; max-width: 380px;">
-                            <div style="position: relative; flex: 1;">
-                                <i class="fas fa-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #888; font-size: 12px;"></i>
-                                <input 
-                                    type="text" 
-                                    id="crm-search-transaccional" 
-                                    placeholder="Buscar cliente analizado, RIF o marca..." 
-                                    style="width: 100%; padding: 8px 12px 8px 30px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; outline: none;"
-                                    oninput="window.filtrarClientesTransaccionales()"
-                                />
+                            <div class="card-form" style="background: #e2f0d9; border-color: #c3e6cb;">
+                                <h3 style="color: #155724; border-color: #c3e6cb;"><i class="fas fa-users"></i> Carga Masiva de Clientes</h3>
+                                <p style="font-size: 12px; color: #155724; margin-top: 0; margin-bottom: 10px;">
+                                    Copia desde Excel y pega aquí para subir clientes de golpe. Se ignorarán los RIFs repetidos.<br>
+                                    <strong>Orden columnas:</strong> Nombre | RIF | Dirección | Teléfono
+                                </p>
+                                <textarea id="excel-paste-clientes" placeholder="Pega aquí las filas y columnas de tu Excel..." style="width: 100%; height: 90px; padding: 10px; border: 1px solid #c3e6cb; border-radius: 4px; font-size: 12px; font-family: monospace; outline: none; margin-bottom: 10px; resize: vertical;"></textarea>
+                                
+                                <button type="button" id="btn-excel-upload-clientes" onclick="procesarPegadoMasivoClientes()" style="background: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; width: 100%;">
+                                    Subir Clientes
+                                </button>
                             </div>
-                            <span id="crm-total-cuentas-badge" style="background: #eef3f0; color: #385723; border: 1px solid #c3e6cb; font-size: 11.5px; font-weight: bold; padding: 6px 10px; border-radius: 6px; white-space: nowrap;">
-                                0 Clientes
-                            </span>
+
+                            <!-- FORMULARIO DE REGISTRO / EDICIÓN EN FIRESTORE -->
+                            <div class="card-form">
+                                <h3 id="titulo-form-cliente"><i class="fas fa-user-plus"></i> Registrar Nuevo Cliente en Base de Datos</h3>
+                                <form id="form-cliente-db" onsubmit="guardarNuevoClienteDB(event)">
+                                    <input type="hidden" id="db-cliente-id">
+                                    <div class="form-group"><label>Nombre / Aseguradora</label><input type="text" id="db-cliente-nombre" placeholder="Ej: C.A. SEGUROS CATATUMBO" required></div>
+                                    <div class="form-group"><label>RIF o C.I.</label><input type="text" id="db-cliente-rif" placeholder="Ej: J-07001736-8" required></div>
+                                    <div class="form-group"><label>Dirección / Ciudad</label><input type="text" id="db-cliente-dir" placeholder="Ej: MARACAIBO, VENEZUELA" required></div>
+                                    <div class="form-group"><label>Teléfono</label><input type="text" id="db-cliente-tel" placeholder="Ej: 0261-700-5555" required></div>
+                                    
+                                    <div style="display: flex; gap: 10px;">
+                                        <button type="button" id="btn-cancelar-edicion-cli" onclick="cancelarEdicionCliente()" style="display: none; background: #6c757d; color: white; border: none; padding: 12px; font-family: 'Oswald', sans-serif; font-size: 15px; cursor: pointer; border-radius: 4px; width: 100%; transition: background .2s;">Cancelar</button>
+                                        <button type="submit" id="btn-guardar-cliente" class="btn-action">Guardar en Base de Datos</button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Mensaje si no se encuentra registro en el CRM -->
-                    <div id="crm-transaccional-not-found" style="display: none; background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 10px 14px; border-radius: 8px; font-size: 12px; margin-bottom: 15px; justify-content: space-between; align-items: center;">
-                        <span><i class="fas fa-exclamation-triangle" style="color: #d97706; margin-right: 6px;"></i> No se encontraron clientes en el CRM que coincidan.</span>
-                        <a href="javascript:void(0)" onclick="window.limpiarFiltroCRM()" style="color: #92400e; font-weight: bold; text-decoration: underline;">Restablecer filtro</a>
-                    </div>
-
-                    <!-- Tarjeta de Perfil y KPIs Generados Automáticamente -->
-                    <div id="crm-perfil-card-container">
-                        <!-- Generado dinámicamente vía JS -->
-                    </div>
-
-                    <!-- Tabla de Facturas del Cliente Seleccionado en el CRM -->
-                    <div style="margin-top: 18px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <h4 style="margin: 0; font-size: 13px; font-weight: bold; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; font-family: 'Oswald', sans-serif;">
-                                <i class="fas fa-receipt" style="color: #5e8877; margin-right: 5px;"></i> Historial Transaccional del Cliente Seleccionado
-                            </h4>
-                            <span id="crm-facturas-count-badge" style="font-size: 11px; font-weight: bold; background: #eef3f0; color: #385723; padding: 2px 8px; border-radius: 12px; border: 1px solid #c3e6cb;">
-                                0 Facturas
-                            </span>
-                        </div>
-                        <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
-                            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 12px;">
-                                <thead style="background: #f8fafc; color: #475569; font-size: 11px; text-transform: uppercase; border-bottom: 1px solid #e2e8f0;">
+                        <!-- TABLA DE CLIENTES EN FIRESTORE -->
+                        <div style="overflow-x: auto;">
+                            <table class="data-table">
+                                <thead>
                                     <tr>
-                                        <th style="padding: 8px 12px;">N° Factura</th>
-                                        <th style="padding: 8px 12px;">Fecha</th>
-                                        <th style="padding: 8px 12px;">Repuestos / Detalle</th>
-                                        <th style="padding: 8px 12px; text-align: right;">Total ($)</th>
-                                        <th style="padding: 8px 12px; text-align: center;">Estatus</th>
+                                        <th>Cliente / Aseguradora</th>
+                                        <th>RIF o C.I.</th>
+                                        <th>Dirección</th>
+                                        <th>Teléfono</th>
+                                        <th style="text-align: center; min-width: 100px;">Acción</th>
                                     </tr>
                                 </thead>
-                                <tbody id="crm-facturas-tbody" style="color: #334155;">
-                                    <!-- Inyectado por JS -->
+                                <tbody id="clients-table-body">
+                                    <tr><td colspan="5" style="text-align: center;">Cargando clientes de Firestore...</td></tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
 
-                <!-- 🗄️ BASE DE DATOS DE CLIENTES FIRESTORE (CARGA MASIVA & TABLA ORIGINAL) -->
-                <div class="admin-grid">
-                    <div>
-                        <div class="card-form" style="background: #e2f0d9; border-color: #c3e6cb;">
-                            <h3 style="color: #155724; border-color: #c3e6cb;"><i class="fas fa-users"></i> Carga Masiva de Clientes</h3>
-                            <p style="font-size: 12px; color: #155724; margin-top: 0; margin-bottom: 10px;">
-                                Copia desde Excel y pega aquí para subir clientes de golpe. Se ignorarán los RIFs repetidos.<br>
-                                <strong>Orden columnas:</strong> Nombre | RIF | Dirección | Teléfono
-                            </p>
-                            <textarea id="excel-paste-clientes" placeholder="Pega aquí las filas y columnas de tu Excel..." style="width: 100%; height: 90px; padding: 10px; border: 1px solid #c3e6cb; border-radius: 4px; font-size: 12px; font-family: monospace; outline: none; margin-bottom: 10px; resize: vertical;"></textarea>
+                <!-- ======================================================== -->
+                <!-- SUBTAB 2: CRM ANALÍTICO TRANSACCIONAL (MÉTRICAS AUTOMÁTICAS) -->
+                <!-- ======================================================== -->
+                <div id="subtab-content-clientes-crm" style="display: none;">
+                    <div class="card-form" style="margin-bottom: 25px; background: #ffffff; border: 1.5px solid #c3e6cb; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid #edf2f7; padding-bottom: 14px; margin-bottom: 16px;">
+                            <div>
+                                <h3 style="margin: 0; color: #2c441b; font-size: 17px; display: flex; align-items: center; gap: 8px; font-family: 'Oswald', sans-serif;">
+                                    <i class="fas fa-brain" style="color: #5e8877;"></i> CRM TRANSACCIONAL AUTOMATIZADO
+                                    <span style="background: #eef3f0; color: #385723; font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 4px; border: 1px solid #c3e6cb;">FIRESTORE EN VIVO</span>
+                                </h3>
+                                <p style="font-size: 12px; color: #666; margin: 3px 0 0 0;">Métricas acumuladas, marcas preferidas y solvencia calculadas en tiempo real de facturas y pedidos reales.</p>
+                            </div>
                             
-                            <button type="button" id="btn-excel-upload-clientes" onclick="procesarPegadoMasivoClientes()" style="background: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; width: 100%;">
-                                Subir Clientes
-                            </button>
-                        </div>
-
-                        <!-- FORMULARIO DE REGISTRO / EDICIÓN EN FIRESTORE -->
-                        <div class="card-form">
-                            <h3 id="titulo-form-cliente"><i class="fas fa-user-plus"></i> Registrar Nuevo Cliente en Base de Datos</h3>
-                            <form id="form-cliente-db" onsubmit="guardarNuevoClienteDB(event)">
-                                <input type="hidden" id="db-cliente-id">
-                                <div class="form-group"><label>Nombre / Aseguradora</label><input type="text" id="db-cliente-nombre" placeholder="Ej: C.A. SEGUROS CATATUMBO" required></div>
-                                <div class="form-group"><label>RIF o C.I.</label><input type="text" id="db-cliente-rif" placeholder="Ej: J-07001736-8" required></div>
-                                <div class="form-group"><label>Dirección / Ciudad</label><input type="text" id="db-cliente-dir" placeholder="Ej: MARACAIBO, VENEZUELA" required></div>
-                                <div class="form-group"><label>Teléfono</label><input type="text" id="db-cliente-tel" placeholder="Ej: 0261-700-5555" required></div>
-                                
-                                <div style="display: flex; gap: 10px;">
-                                    <button type="button" id="btn-cancelar-edicion-cli" onclick="cancelarEdicionCliente()" style="display: none; background: #6c757d; color: white; border: none; padding: 12px; font-family: 'Oswald', sans-serif; font-size: 15px; cursor: pointer; border-radius: 4px; width: 100%; transition: background .2s;">Cancelar</button>
-                                    <button type="submit" id="btn-guardar-cliente" class="btn-action">Guardar en Base de Datos</button>
+                            <div style="display: flex; gap: 8px; align-items: center; width: 100%; max-width: 380px;">
+                                <div style="position: relative; flex: 1;">
+                                    <i class="fas fa-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #888; font-size: 12px;"></i>
+                                    <input 
+                                        type="text" 
+                                        id="crm-search-transaccional" 
+                                        placeholder="Buscar por cliente, RIF o marca..." 
+                                        style="width: 100%; padding: 8px 12px 8px 30px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; outline: none;"
+                                        oninput="window.filtrarClientesTransaccionales()"
+                                    />
                                 </div>
-                            </form>
+                                <span id="crm-total-cuentas-badge" style="background: #eef3f0; color: #385723; border: 1px solid #c3e6cb; font-size: 11.5px; font-weight: bold; padding: 6px 10px; border-radius: 6px; white-space: nowrap;">
+                                    0 Cuentas
+                                </span>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- TABLA DE CLIENTES EN FIRESTORE -->
-                    <div style="overflow-x: auto;">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Cliente / Aseguradora</th>
-                                    <th>RIF o C.I.</th>
-                                    <th>Dirección</th>
-                                    <th>Teléfono</th>
-                                    <th style="text-align: center; min-width: 100px;">Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody id="clients-table-body">
-                                <tr><td colspan="5" style="text-align: center;">Cargando clientes de Firestore...</td></tr>
-                            </tbody>
-                        </table>
+                        <!-- Mensaje si no se encuentra registro en el CRM -->
+                        <div id="crm-transaccional-not-found" style="display: none; background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 10px 14px; border-radius: 8px; font-size: 12px; margin-bottom: 15px; justify-content: space-between; align-items: center;">
+                            <span><i class="fas fa-exclamation-triangle" style="color: #d97706; margin-right: 6px;"></i> No se encontraron clientes en el CRM que coincidan con la búsqueda.</span>
+                            <a href="javascript:void(0)" onclick="window.limpiarFiltroCRM()" style="color: #92400e; font-weight: bold; text-decoration: underline;">Restablecer filtro</a>
+                        </div>
+
+                        <!-- Tarjeta de Perfil y KPIs Generados Automáticamente -->
+                        <div id="crm-perfil-card-container">
+                            <!-- Generado dinámicamente vía JS -->
+                        </div>
+
+                        <!-- Tabla de Facturas del Cliente Seleccionado en el CRM -->
+                        <div style="margin-top: 18px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <h4 style="margin: 0; font-size: 13px; font-weight: bold; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; font-family: 'Oswald', sans-serif;">
+                                    <i class="fas fa-receipt" style="color: #5e8877; margin-right: 5px;"></i> Historial Transaccional del Cliente Seleccionado
+                                </h4>
+                                <span id="crm-facturas-count-badge" style="font-size: 11px; font-weight: bold; background: #eef3f0; color: #385723; padding: 2px 8px; border-radius: 12px; border: 1px solid #c3e6cb;">
+                                    0 Transacciones
+                                </span>
+                            </div>
+                            <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+                                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 12px;">
+                                    <thead style="background: #f8fafc; color: #475569; font-size: 11px; text-transform: uppercase; border-bottom: 1px solid #e2e8f0;">
+                                        <tr>
+                                            <th style="padding: 8px 12px;">N° Operación / Doc</th>
+                                            <th style="padding: 8px 12px;">Fecha</th>
+                                            <th style="padding: 8px 12px;">Repuestos / Detalle</th>
+                                            <th style="padding: 8px 12px; text-align: right;">Total ($)</th>
+                                            <th style="padding: 8px 12px; text-align: center;">Estatus</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="crm-facturas-tbody" style="color: #334155;">
+                                        <!-- Inyectado por JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -4122,7 +4142,7 @@
             }
         }, 8000);
     </script>
-    <script type="module" src="admin_logic.js?v=20261114_subtabs_landed"></script>
+    <script type="module" src="admin_logic.js?v=20261114_subtabs_clientes_crm"></script>
 
 
     <!-- MODAL AUDITORIA INTERNA -->

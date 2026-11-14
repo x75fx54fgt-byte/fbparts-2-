@@ -359,8 +359,11 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
             if(id === 'pedidos') { window._pedidosTodosCache = null; if(document.getElementById('pedidos-mes-filtro')) document.getElementById('pedidos-mes-filtro').innerHTML = ''; window.cargarPedidos(); }
             if(id === 'catalogo') { window.cargarCatalogoAdmin(); }
             if(id === 'clientes') { 
-                window.cargarBaseClientes();
-                if (window.recomputarCRMTransaccional) window.recomputarCRMTransaccional();
+                if (window.cambiarSubtabClientes) {
+                    window.cambiarSubtabClientes('db');
+                } else {
+                    window.cargarBaseClientes();
+                }
             }
             if(id === 'cotizaciones') { window.cargarBaseClientes(); window.actualizarPreview(); }
             if(id === 'historial-cotizaciones') { window.cargarHistorialCotizaciones(); }
@@ -10448,6 +10451,40 @@ DATOS DEL REPUESTO:
             }
         };
 
+        window._subtabClientesActiva = 'db';
+        window.cambiarSubtabClientes = function(subtab) {
+            const btnDb = document.getElementById('subtab-btn-clientes-db');
+            const btnCrm = document.getElementById('subtab-btn-clientes-crm');
+            const contDb = document.getElementById('subtab-content-clientes-db');
+            const contCrm = document.getElementById('subtab-content-clientes-crm');
+
+            if (subtab === 'db') {
+                if (btnDb) { btnDb.style.background = '#385723'; btnDb.style.color = 'white'; }
+                if (btnCrm) { btnCrm.style.background = '#f3f4f6'; btnCrm.style.color = '#4b5563'; }
+                if (contDb) contDb.style.display = 'block';
+                if (contCrm) contCrm.style.display = 'none';
+                window._subtabClientesActiva = 'db';
+                window.cargarBaseClientes();
+            } else {
+                if (btnDb) { btnDb.style.background = '#f3f4f6'; btnDb.style.color = '#4b5563'; }
+                if (btnCrm) { btnCrm.style.background = '#385723'; btnCrm.style.color = 'white'; }
+                if (contDb) contDb.style.display = 'none';
+                if (contCrm) contCrm.style.display = 'block';
+                window._subtabClientesActiva = 'crm';
+                if (window.recomputarCRMTransaccional) {
+                    window.recomputarCRMTransaccional();
+                }
+            }
+        };
+
+        window.recargarSubtabClientesActual = function() {
+            if (window._subtabClientesActiva === 'crm') {
+                if (window.recomputarCRMTransaccional) window.recomputarCRMTransaccional();
+            } else {
+                window.cargarBaseClientes();
+            }
+        };
+
         window.seleccionarPresetImagenBanner = function(url) {
             const inp = document.getElementById('web-banner-imagen');
             if (inp) {
@@ -10811,24 +10848,8 @@ DATOS DEL REPUESTO:
 
 
         // =========================================================================
-        // 🚘 VISTA 1: CRM AUTOMATIZADO TRANSACCIONAL (BASE DE CLIENTES DERIVADA)
+        // 🚘 VISTA 1: CRM ANALÍTICO TRANSACCIONAL (CONEXIÓN REAL CON FIRESTORE)
         // =========================================================================
-        window.transaccionesSimuladas = [
-            { id: "FAC-1045", cliente: "Taller Mecánico Hermanos Mendoza, C.A.", rif: "J-31458920-4", telefono: "+58 414-2394811", fecha: "2026-11-10", monto: 320.50, estado: "Pagada", items: ["Parrilla Frontal Mercedes Benz C180 C200 2007-2011", "Emblema Mercedes Benz"] },
-            { id: "FAC-1038", cliente: "Taller Mecánico Hermanos Mendoza, C.A.", rif: "J-31458920-4", telefono: "+58 414-2394811", fecha: "2026-10-28", monto: 410.00, estado: "Pagada", items: ["Parachoques Delantero Lancer GLX 1.6 Mitsubishi", "Faros Neblineros Mitsubishi Lancer"] },
-            { id: "FAC-1025", cliente: "Taller Mecánico Hermanos Mendoza, C.A.", rif: "J-31458920-4", telefono: "+58 414-2394811", fecha: "2026-10-14", monto: 185.00, estado: "Pagada", items: ["Kit Conchas Bancada y Biela Chevrolet Blazer 4.3 Vortec", "Empacadura Cárter Chevrolet"] },
-            { id: "FAC-1011", cliente: "Taller Mecánico Hermanos Mendoza, C.A.", rif: "J-31458920-4", telefono: "+58 414-2394811", fecha: "2026-09-30", monto: 540.00, estado: "Pagada", items: ["Meseta Superior Izquierda Toyota Hilux Kavak Fortuner", "Amortiguadores Delanteros Toyota Hilux"] },
-
-            { id: "FAC-1049", cliente: "Inversiones & Repuestos El Ávila 2021, C.A.", rif: "J-40981245-1", telefono: "+58 412-0192843", fecha: "2026-11-12", monto: 84.99, estado: "En Tránsito", items: ["Parachoques Trasero Dongfeng Rich P11 Zna 2024"] },
-            { id: "FAC-1041", cliente: "Inversiones & Repuestos El Ávila 2021, C.A.", rif: "J-40981245-1", telefono: "+58 412-0192843", fecha: "2026-11-04", monto: 195.00, estado: "Pendiente Pago", items: ["Bobinas de Encendido Ford Super Duty 6.2 8Cil Derecha e Izquierda"] },
-            { id: "FAC-1030", cliente: "Inversiones & Repuestos El Ávila 2021, C.A.", rif: "J-40981245-1", telefono: "+58 412-0192843", fecha: "2026-10-19", monto: 42.00, estado: "Pagada", items: ["Empacadura Cárter Motor Cummins 6BT"] },
-            { id: "FAC-1018", cliente: "Inversiones & Repuestos El Ávila 2021, C.A.", rif: "J-40981245-1", telefono: "+58 412-0192843", fecha: "2026-09-22", monto: 380.00, estado: "Pagada", items: ["Radiador Aeolus Dongfeng AX7 Pro 2021-2025", "Retrovisor Dongfeng Rich 7"] },
-
-            { id: "FAC-1047", cliente: "Multiservicios Automotrices Los Andes, C.A.", rif: "J-29837102-3", telefono: "+58 424-7128394", fecha: "2026-11-11", monto: 260.00, estado: "Pagada", items: ["Bomba Gasolina Pila Denso Toyota Yaris Original 2007-2017", "Pastillas de Freno Delanteras Toyota Yaris"] },
-            { id: "FAC-1033", cliente: "Multiservicios Automotrices Los Andes, C.A.", rif: "J-29837102-3", telefono: "+58 424-7128394", fecha: "2026-10-22", monto: 145.00, estado: "Pagada", items: ["Bujes Ejes Balanceadores Mazda BT50 2.6 B2600", "Anillos STD Honda Civic 1.6"] },
-            { id: "FAC-1020", cliente: "Multiservicios Automotrices Los Andes, C.A.", rif: "J-29837102-3", telefono: "+58 424-7128394", fecha: "2026-10-02", monto: 310.00, estado: "Pagada", items: ["Parrilla Inferior Toyota Levin GT 2020-2025", "Filtros de Aceite Toyota"] }
-        ];
-
         window.clientesAgrupadosCache = [];
         window.clienteSeleccionadoCRM = null;
 
@@ -10838,13 +10859,15 @@ DATOS DEL REPUESTO:
          */
         window.procesarClientesDesdeTransacciones = function(transacciones) {
             const MARCAS_DETECTABLES = [
-                'Toyota', 'Mercedes Benz', 'Mitsubishi', 'Chevrolet', 'Ford', 
-                'Dongfeng', 'Cummins', 'Honda', 'Mazda', 'Nissan', 'Chery', 'Hyundai'
+                'Toyota', 'Mercedes Benz', 'Mercedes', 'Mitsubishi', 'Chevrolet', 'Ford', 
+                'Dongfeng', 'Cummins', 'Honda', 'Mazda', 'Nissan', 'Chery', 'Hyundai',
+                'Jeep', 'Kia', 'Volkswagen', 'Fiat', 'Renault', 'Peugeot', 'BMW'
             ];
 
             // 1. Agrupación matemática mediante Array.prototype.reduce
-            const agrupadoPorCliente = transacciones.reduce((acc, trans) => {
+            const agrupadoPorCliente = (transacciones || []).reduce((acc, trans) => {
                 const nombreKey = (trans.cliente || 'Consumidor Final').trim();
+                if (!nombreKey) return acc;
                 
                 if (!acc[nombreKey]) {
                     acc[nombreKey] = {
@@ -10859,17 +10882,38 @@ DATOS DEL REPUESTO:
                     };
                 }
 
+                // Si viene RIF o teléfono más completo, actualizar
+                if ((!acc[nombreKey].rif || acc[nombreKey].rif === 'N/A') && trans.rif) {
+                    acc[nombreKey].rif = trans.rif;
+                }
+                if ((!acc[nombreKey].telefono || acc[nombreKey].telefono === 'N/A') && trans.telefono) {
+                    acc[nombreKey].telefono = trans.telefono;
+                }
+
                 // Acumulador financiero
                 const montoNum = parseFloat(trans.monto) || 0;
                 acc[nombreKey].facturas.push(trans);
                 acc[nombreKey].totalComprado += montoNum;
-                if (trans.estado === 'Pendiente Pago') {
+                
+                const estadoLower = String(trans.estado || '').toLowerCase();
+                if (estadoLower.includes('pendiente') || estadoLower.includes('crédito')) {
                     acc[nombreKey].deudaPendiente += montoNum;
                 }
 
                 // Registro cronológico
                 if (trans.fecha) {
-                    acc[nombreKey].fechas.push(new Date(trans.fecha));
+                    let d = null;
+                    if (typeof trans.fecha === 'string' && trans.fecha.includes('/')) {
+                        const parts = trans.fecha.split('/');
+                        if (parts.length === 3) {
+                            d = new Date(`${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`);
+                        }
+                    } else {
+                        d = new Date(trans.fecha);
+                    }
+                    if (d && !isNaN(d.getTime())) {
+                        acc[nombreKey].fechas.push(d);
+                    }
                 }
 
                 // Extracción analítica de marcas por Procesamiento de Texto (NLP ligero)
@@ -10887,15 +10931,13 @@ DATOS DEL REPUESTO:
 
             // 2. Mapeo a Array final con cálculo de derivadas
             return Object.values(agrupadoPorCliente).map(cuenta => {
-                // Ordenar marcas de mayor a menor frecuencia
                 const marcasOrdenadas = Object.entries(cuenta.frecuenciaMarcas)
                     .sort((a, b) => b[1] - a[1])
                     .map(entry => entry[0]);
 
-                // Determinar fecha más reciente
-                let fechaUltimo = 'Sin fecha';
+                let fechaUltimo = 'Sin transacciones aún';
                 if (cuenta.fechas.length > 0) {
-                    const fechaTimestamp = Math.max(...cuenta.fechas);
+                    const fechaTimestamp = Math.max(...cuenta.fechas.map(f => f.getTime()));
                     const d = new Date(fechaTimestamp);
                     fechaUltimo = d.toISOString().split('T')[0];
                 }
@@ -10906,10 +10948,10 @@ DATOS DEL REPUESTO:
                     telefono: cuenta.telefono,
                     totalComprado: Math.round(cuenta.totalComprado * 100) / 100,
                     deudaPendiente: Math.round(cuenta.deudaPendiente * 100) / 100,
-                    marcasPreferidas: marcasOrdenadas.length > 0 ? marcasOrdenadas.slice(0, 3) : ['Multimarca / Universal'],
+                    marcasPreferidas: marcasOrdenadas.length > 0 ? marcasOrdenadas.slice(0, 3) : (cuenta.facturas.length > 0 ? ['Multimarca / Universal'] : ['Sin compras aún']),
                     ultimoPedido: fechaUltimo,
                     totalFacturas: cuenta.facturas.length,
-                    facturas: cuenta.facturas.sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+                    facturas: cuenta.facturas.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
                 };
             }).sort((a, b) => b.totalComprado - a.totalComprado);
         };
@@ -10929,9 +10971,23 @@ DATOS DEL REPUESTO:
             if (notFound) notFound.style.display = 'none';
             window.clienteSeleccionadoCRM = cliente;
 
-            const estadoSolvencia = cliente.deudaPendiente > 0
-                ? `<span style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 6px;">Deuda Activa: $${cliente.deudaPendiente.toFixed(2)}</span>`
-                : `<span style="background: #eef3f0; color: #385723; border: 1px solid #c3e6cb; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 6px;">100% Solvente ($0.00)</span>`;
+            let estadoSolvencia = `<span style="background: #f8fafc; color: #64748b; border: 1px solid #cbd5e1; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 6px;">Sin Deudas Activas</span>`;
+            if (cliente.deudaPendiente > 0) {
+                estadoSolvencia = `<span style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 6px;">Deuda Activa: $${cliente.deudaPendiente.toFixed(2)}</span>`;
+            } else if (cliente.totalComprado > 0) {
+                estadoSolvencia = `<span style="background: #eef3f0; color: #385723; border: 1px solid #c3e6cb; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 6px;">100% Solvente ($0.00)</span>`;
+            }
+
+            const telLimpio = String(cliente.telefono || '').replace(/[^0-9]/g, '');
+            const botonWhatsApp = (telLimpio && telLimpio.length >= 10)
+                ? `<a href="https://wa.me/${telLimpio}" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; background: #25D366; color: white; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: bold; text-decoration: none; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <i class="fab fa-whatsapp"></i> Contactar
+                   </a>`
+                : '';
+
+            const badgeAuditoria = cliente.totalFacturas > 0
+                ? `<span style="background: #eef3f0; color: #385723; border: 1px solid #c3e6cb; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 12px;">CLIENTE ACTIVO</span>`
+                : `<span style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 12px;">EN DIRECTORIO</span>`;
 
             container.innerHTML = `
                 <div style="background: linear-gradient(135deg, #fbfdfb 0%, #f4f7f5 100%); border: 1.5px solid #c3e6cb; border-radius: 14px; padding: 22px; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
@@ -10942,20 +10998,16 @@ DATOS DEL REPUESTO:
                                 <h3 style="margin: 0; color: #1e293b; font-size: 18px; font-weight: 800; font-family: 'Oswald', sans-serif; letter-spacing: 0.3px;">
                                     ${SecuritySanitizer.escapeHtml(cliente.cliente)}
                                 </h3>
-                                <span style="background: #eef3f0; color: #385723; border: 1px solid #c3e6cb; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 12px;">
-                                    CUENTA AUDITADA
-                                </span>
+                                ${badgeAuditoria}
                             </div>
                             <p style="margin: 5px 0 0 0; font-size: 12.5px; color: #64748b;">
-                                <strong>RIF:</strong> ${SecuritySanitizer.escapeHtml(cliente.rif)} &bull; 
-                                <strong>Contacto Telefónico:</strong> ${SecuritySanitizer.escapeHtml(cliente.telefono)}
+                                <strong>RIF:</strong> ${SecuritySanitizer.escapeHtml(cliente.rif || 'N/A')} &bull; 
+                                <strong>Contacto Telefónico:</strong> ${SecuritySanitizer.escapeHtml(cliente.telefono || 'N/A')}
                             </p>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             ${estadoSolvencia}
-                            <a href="https://wa.me/${cliente.telefono.replace(/[^0-9]/g, '')}" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; background: #25D366; color: white; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: bold; text-decoration: none;">
-                                <i class="fab fa-whatsapp"></i> Contactar
-                            </a>
+                            ${botonWhatsApp}
                         </div>
                     </div>
 
@@ -10979,7 +11031,7 @@ DATOS DEL REPUESTO:
                             </span>
                             <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;">
                                 ${cliente.marcasPreferidas.map((m, idx) => `
-                                    <span style="background: ${idx === 0 ? '#eef3f0' : '#f8fafc'}; color: ${idx === 0 ? '#385723' : '#475569'}; border: 1px solid ${idx === 0 ? '#c3e6cb' : '#cbd5e1'}; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                                    <span style="background: ${idx === 0 && cliente.totalFacturas > 0 ? '#eef3f0' : '#f8fafc'}; color: ${idx === 0 && cliente.totalFacturas > 0 ? '#385723' : '#475569'}; border: 1px solid ${idx === 0 && cliente.totalFacturas > 0 ? '#c3e6cb' : '#cbd5e1'}; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
                                         <i class="fas fa-car" style="font-size: 9px;"></i> ${SecuritySanitizer.escapeHtml(m)}
                                     </span>
                                 `).join('')}
@@ -10991,10 +11043,10 @@ DATOS DEL REPUESTO:
                             <span style="display: block; font-size: 10.5px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">
                                 Fecha de Última Compra
                             </span>
-                            <div style="font-size: 18px; font-weight: 800; color: #334155; font-family: 'Oswald', sans-serif; margin-top: 6px;">
+                            <div style="font-size: 17px; font-weight: 800; color: #334155; font-family: 'Oswald', sans-serif; margin-top: 6px;">
                                 <i class="far fa-calendar-check" style="color: #5e8877; margin-right: 4px;"></i> ${cliente.ultimoPedido}
                             </div>
-                            <span style="font-size: 11px; color: #64748b;">Actividad comercial reciente</span>
+                            <span style="font-size: 11px; color: #64748b;">${cliente.totalFacturas > 0 ? 'Actividad transaccional registrada' : 'Sin compras registradas aún'}</span>
                         </div>
                     </div>
                 </div>
@@ -11008,34 +11060,40 @@ DATOS DEL REPUESTO:
             const badge = document.getElementById('crm-facturas-count-badge');
             if (!tbody) return;
 
-            if (badge) badge.innerText = `${facturas.length} Facturas Registradas`;
+            if (badge) badge.innerText = `${facturas.length} Operaciones`;
 
             if (facturas.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="padding: 24px; text-align: center; color: #94a3b8;">No hay transacciones registradas para este cliente.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" style="padding: 24px; text-align: center; color: #94a3b8;"><i class="fas fa-inbox" style="margin-right: 6px;"></i> Este cliente no tiene facturas ni pedidos registrados en Firestore todavía.</td></tr>`;
                 return;
             }
 
             tbody.innerHTML = facturas.map(f => {
                 let badgeStyle = 'background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;';
-                if (f.estado === 'Pagada') {
+                const estLower = String(f.estado || '').toLowerCase();
+                if (estLower.includes('pagad') || estLower.includes('aprobado') || estLower.includes('entregado')) {
                     badgeStyle = 'background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;';
-                } else if (f.estado === 'En Tránsito') {
+                } else if (estLower.includes('tránsito') || estLower.includes('camino') || estLower.includes('proces')) {
                     badgeStyle = 'background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe;';
-                } else if (f.estado === 'Pendiente Pago') {
+                } else if (estLower.includes('pendient') || estLower.includes('crédito')) {
                     badgeStyle = 'background: #fffbeb; color: #b45309; border: 1px solid #fde68a;';
                 }
 
-                const itemsStr = Array.isArray(f.items) ? f.items.join(' • ') : (f.desc || 'Repuestos automotrices');
+                const itemsStr = Array.isArray(f.items) && f.items.length > 0 
+                    ? f.items.join(' • ') 
+                    : (f.desc || 'Repuestos y autopartes');
 
                 return `
                     <tr style="border-bottom: 1px solid #f1f5f9;">
-                        <td style="padding: 10px 14px; font-weight: bold; font-family: monospace; color: #0f172a;">${SecuritySanitizer.escapeHtml(f.id)}</td>
-                        <td style="padding: 10px 14px; color: #64748b; font-size: 12px;">${SecuritySanitizer.escapeHtml(f.fecha)}</td>
+                        <td style="padding: 10px 14px; font-weight: bold; font-family: monospace; color: #0f172a;">
+                            <span style="font-size: 10px; background: #e2e8f0; color: #475569; padding: 1px 5px; border-radius: 4px; margin-right: 4px;">${SecuritySanitizer.escapeHtml(f.origen || 'Doc')}</span>
+                            ${SecuritySanitizer.escapeHtml(f.id)}
+                        </td>
+                        <td style="padding: 10px 14px; color: #64748b; font-size: 12px;">${SecuritySanitizer.escapeHtml(f.fecha || 'Sin fecha')}</td>
                         <td style="padding: 10px 14px; font-weight: 600; color: #334155; max-width: 420px;">${SecuritySanitizer.escapeHtml(itemsStr)}</td>
                         <td style="padding: 10px 14px; text-align: right; font-weight: 900; font-family: 'Oswald', sans-serif; color: #1e293b; font-size: 14px;">$${Number(f.monto).toFixed(2)}</td>
                         <td style="padding: 10px 14px; text-align: center;">
                             <span style="display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; ${badgeStyle}">
-                                ${SecuritySanitizer.escapeHtml(f.estado)}
+                                ${SecuritySanitizer.escapeHtml(f.estado || 'Emitido')}
                             </span>
                         </td>
                     </tr>
@@ -11052,7 +11110,7 @@ DATOS DEL REPUESTO:
 
             const coincidente = window.clientesAgrupadosCache.find(c => 
                 c.cliente.toLowerCase().includes(query) ||
-                c.rif.toLowerCase().includes(query) ||
+                (c.rif && c.rif.toLowerCase().includes(query)) ||
                 c.marcasPreferidas.some(m => m.toLowerCase().includes(query))
             );
 
@@ -11065,13 +11123,173 @@ DATOS DEL REPUESTO:
             window.renderizarPerfilClienteTransaccional(window.clientesAgrupadosCache[0] || null);
         };
 
-        window.recomputarCRMTransaccional = function() {
-            window.clientesAgrupadosCache = window.procesarClientesDesdeTransacciones(window.transaccionesSimuladas);
+        /**
+         * Lee transacciones REALES de Firestore (Facturas + Pedidos) y las cruza
+         * con el Directorio de Clientes. Cero datos simulados.
+         */
+        window.recomputarCRMTransaccional = async function() {
+            const container = document.getElementById('crm-perfil-card-container');
             const badgeCuentas = document.getElementById('crm-total-cuentas-badge');
-            if (badgeCuentas) {
-                badgeCuentas.innerHTML = `<i class="fas fa-users-cog"></i> ${window.clientesAgrupadosCache.length} Cuentas Procesadas`;
+            const tbody = document.getElementById('crm-facturas-tbody');
+
+            if (container) {
+                container.innerHTML = `
+                    <div style="padding: 35px 20px; text-align: center; color: #64748b;">
+                        <i class="fas fa-circle-notch fa-spin" style="font-size: 26px; color: #5e8877; margin-bottom: 10px;"></i>
+                        <p style="margin: 0; font-size: 13.5px; font-weight: 600;">Sincronizando con base de datos en tiempo real (Facturas & Pedidos)...</p>
+                    </div>
+                `;
             }
-            window.renderizarPerfilClienteTransaccional(window.clientesAgrupadosCache[0] || null);
+
+            try {
+                const transaccionesReales = [];
+
+                // 1. Facturas Reales de Firestore
+                try {
+                    const snapFac = await getDocs(collection(db, "facturas"));
+                    snapFac.forEach(docSnap => {
+                        const fac = docSnap.data();
+                        if (fac.estatusComercial === 'Anulada') return;
+
+                        let itemsNombres = [];
+                        if (Array.isArray(fac.items)) {
+                            itemsNombres = fac.items.map(it => it.desc || it.nombre || '').filter(Boolean);
+                        }
+
+                        transaccionesReales.push({
+                            id: fac.nro ? `FAC-#${fac.nro}` : `FAC-${docSnap.id.substring(0, 6).toUpperCase()}`,
+                            cliente: (fac.cliente || 'Consumidor Final').trim(),
+                            rif: fac.rif || '',
+                            telefono: fac.telefono || '',
+                            fecha: fac.fecha || '',
+                            monto: parseFloat(fac.total) || 0,
+                            estado: fac.estatusComercial || 'Emitida',
+                            items: itemsNombres,
+                            timestamp: fac.timestamp || 0,
+                            origen: 'Factura'
+                        });
+                    });
+                } catch (eFac) {
+                    console.warn("Aviso al leer facturas para CRM:", eFac);
+                }
+
+                // 2. Pedidos Reales de Firestore
+                try {
+                    const snapPed = await getDocs(collection(db, "pedidos"));
+                    snapPed.forEach(docSnap => {
+                        const ped = docSnap.data();
+                        if (ped.estado === 'Cancelado') return;
+
+                        let prodsNombres = [];
+                        if (Array.isArray(ped.productos)) {
+                            prodsNombres = ped.productos.map(p => p.nombre || p.desc || '').filter(Boolean);
+                        }
+
+                        transaccionesReales.push({
+                            id: `PED-${docSnap.id.substring(0, 6).toUpperCase()}`,
+                            cliente: (ped.cliente || 'Cliente Web').trim(),
+                            rif: ped.rif || '',
+                            telefono: ped.telefono || '',
+                            fecha: ped.fecha || '',
+                            monto: parseFloat(ped.total) || 0,
+                            estado: ped.estado || 'Procesado',
+                            items: prodsNombres,
+                            timestamp: ped.timestamp || 0,
+                            origen: 'Pedido'
+                        });
+                    });
+                } catch (ePed) {
+                    console.warn("Aviso al leer pedidos para CRM:", ePed);
+                }
+
+                // 3. Clientes Registrados en Firestore
+                const clientesDirectorio = {};
+                try {
+                    const snapCli = await getDocs(collection(db, "clientes"));
+                    snapCli.forEach(docSnap => {
+                        const cli = docSnap.data();
+                        const nom = (cli.nombre || '').trim();
+                        if (nom) {
+                            clientesDirectorio[nom.toLowerCase()] = {
+                                nombre: nom,
+                                rif: cli.rif || '',
+                                direccion: cli.direccion || '',
+                                telefono: cli.telefono || ''
+                            };
+                        }
+                    });
+                } catch (eCli) {
+                    console.warn("Aviso al leer directorio de clientes para CRM:", eCli);
+                }
+
+                // 4. Agrupación analítica de transacciones reales
+                const cuentasCalculadas = window.procesarClientesDesdeTransacciones(transaccionesReales);
+
+                // Enriquecer datos de contacto desde el directorio de clientes
+                cuentasCalculadas.forEach(c => {
+                    const infoDirectorio = clientesDirectorio[c.cliente.toLowerCase()];
+                    if (infoDirectorio) {
+                        if (!c.rif || c.rif === 'N/A') c.rif = infoDirectorio.rif;
+                        if (!c.telefono || c.telefono === 'N/A') c.telefono = infoDirectorio.telefono;
+                    }
+                });
+
+                // Incorporar clientes del directorio que aún no tengan compras para poder ver su perfil
+                const cuentasSet = new Set(cuentasCalculadas.map(c => c.cliente.toLowerCase()));
+                Object.values(clientesDirectorio).forEach(cliReg => {
+                    if (!cuentasSet.has(cliReg.nombre.toLowerCase())) {
+                        cuentasCalculadas.push({
+                            cliente: cliReg.nombre,
+                            rif: cliReg.rif || 'N/A',
+                            telefono: cliReg.telefono || 'N/A',
+                            totalComprado: 0,
+                            deudaPendiente: 0,
+                            marcasPreferidas: ['Sin compras aún'],
+                            ultimoPedido: 'Sin transacciones aún',
+                            totalFacturas: 0,
+                            facturas: []
+                        });
+                    }
+                });
+
+                window.clientesAgrupadosCache = cuentasCalculadas;
+
+                if (badgeCuentas) {
+                    badgeCuentas.innerHTML = `<i class="fas fa-users-cog"></i> ${window.clientesAgrupadosCache.length} Cuentas`;
+                }
+
+                // Caso sin datos en Firestore
+                if (window.clientesAgrupadosCache.length === 0) {
+                    if (container) {
+                        container.innerHTML = `
+                            <div style="background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 12px; padding: 40px 20px; text-align: center;">
+                                <i class="fas fa-user-friends" style="font-size: 36px; color: #94a3b8; margin-bottom: 12px;"></i>
+                                <h4 style="margin: 0 0 6px 0; color: #334155; font-size: 16px; font-weight: 700;">No hay clientes ni transacciones registradas aún</h4>
+                                <p style="margin: 0 auto; max-width: 520px; font-size: 12.5px; color: #64748b; line-height: 1.5;">
+                                    El CRM procesará automáticamente tus métricas de compra, marcas y solvencia en cuanto registres ventas en el <strong>Punto de Venta / Facturación</strong>, crees <strong>Pedidos</strong> o cargues tu lista de clientes en el <strong>Directorio</strong>.
+                                </p>
+                            </div>
+                        `;
+                    }
+                    if (tbody) {
+                        tbody.innerHTML = `<tr><td colspan="5" style="padding: 24px; text-align: center; color: #94a3b8;">Sin transacciones para analizar.</td></tr>`;
+                    }
+                    return;
+                }
+
+                // Renderizar el cliente de mayor volumen o primer registro
+                window.renderizarPerfilClienteTransaccional(window.clientesAgrupadosCache[0] || null);
+
+            } catch (err) {
+                console.error("Error al recomputar CRM con Firestore:", err);
+                if (container) {
+                    container.innerHTML = `
+                        <div style="background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; padding: 16px; border-radius: 8px; font-size: 13px;">
+                            <i class="fas fa-exclamation-circle"></i> Error al cargar datos transaccionales de Firestore: ${SecuritySanitizer.escapeHtml(err.message || String(err))}
+                        </div>
+                    `;
+                }
+            }
         };
 
 
