@@ -11688,6 +11688,29 @@ DATOS DEL REPUESTO:
         window.rankingClientesGlobalCache = [];
 
         /**
+         * Sanitiza y normaliza un RIF:
+         * 1. Convierte a mayúsculas.
+         * 2. Elimina guiones (-), puntos (.) y espacios en blanco usando Regex.
+         */
+        window.normalizarRIF = function(rifBruto) {
+            if (!rifBruto || typeof rifBruto !== 'string') return '';
+            return rifBruto.replace(/[-\s.]/g, '').toUpperCase().trim();
+        };
+
+        /**
+         * Formatea visualmente el RIF agregando el guion estándar al final
+         * (Ej: J070017368 -> J07001736-8)
+         */
+        window.formatearRIFVisual = function(rifNormalizado) {
+            if (!rifNormalizado) return 'N/A';
+            const limpio = String(rifNormalizado).replace(/[-\s.]/g, '').toUpperCase().trim();
+            if (limpio.length >= 3) {
+                return `${limpio.slice(0, -1)}-${limpio.slice(-1)}`;
+            }
+            return limpio;
+        };
+
+        /**
          * Recomputa las métricas de agregación global y el Leaderboard:
          * 1. Filtro estricto: Exclusivamente Facturas Pagadas y Despachadas (Cero duplicidad de Pedidos/Cotizaciones).
          * 2. Normalización multimoneda (Bs a USD) con la API BCV.
@@ -11816,26 +11839,44 @@ DATOS DEL REPUESTO:
 
                 // =========================================================================
                 // 📊 AGRUPACIÓN POR CLIENTE Y RANKING (LEADERBOARD LTV DESCENDENTE)
+                // Sanitización y normalización estricta por RIF para evitar duplicidad
                 // =========================================================================
-                const agrupadoClientes = {};
-                facturasValidas.forEach(fac => {
-                    const cliKey = (fac.cliente || 'Consumidor Final').trim();
-                    if (!agrupadoClientes[cliKey]) {
-                        agrupadoClientes[cliKey] = {
-                            cliente: cliKey,
-                            rif: fac.rif || 'N/A',
+                const agrupadoClientes = facturasValidas.reduce((acc, fac) => {
+                    const rifNorm = window.normalizarRIF(fac.rif);
+                    
+                    // Si tiene un RIF válido, la clave única de agrupación es el RIF sanitizado;
+                    // de lo contrario, se agrupa por nombre normalizado.
+                    const groupKey = (rifNorm && rifNorm !== 'NA' && rifNorm !== 'SN')
+                        ? rifNorm
+                        : (fac.cliente || 'Consumidor Final').trim().toLowerCase();
+
+                    if (!acc[groupKey]) {
+                        acc[groupKey] = {
+                            cliente: (fac.cliente || 'Consumidor Final').trim(),
+                            rif: window.formatearRIFVisual(rifNorm || fac.rif),
+                            rifNormalizado: rifNorm,
                             telefono: fac.telefono || 'N/A',
                             facturasEmitidas: 0,
                             totalComprado: 0,
-                            ticketPromedio: 0
+                            ticketPromedio: 0,
+                            ultimoTimestamp: fac.timestamp || 0
                         };
+                    } else {
+                        // Utiliza el último "Nombre de Cliente" registrado cronológicamente para ese RIF
+                        if ((fac.timestamp || 0) >= (acc[groupKey].ultimoTimestamp || 0)) {
+                            acc[groupKey].cliente = (fac.cliente || acc[groupKey].cliente).trim();
+                            acc[groupKey].ultimoTimestamp = fac.timestamp || 0;
+                            if (fac.telefono && fac.telefono !== 'N/A') {
+                                acc[groupKey].telefono = fac.telefono;
+                            }
+                        }
                     }
-                    if ((!agrupadoClientes[cliKey].rif || agrupadoClientes[cliKey].rif === 'N/A') && fac.rif) {
-                        agrupadoClientes[cliKey].rif = fac.rif;
-                    }
-                    agrupadoClientes[cliKey].facturasEmitidas += 1;
-                    agrupadoClientes[cliKey].totalComprado += (fac.monto_usd || 0);
-                });
+
+                    acc[groupKey].facturasEmitidas += 1;
+                    acc[groupKey].totalComprado += (fac.monto_usd || 0);
+
+                    return acc;
+                }, {});
 
                 const ranking = Object.values(agrupadoClientes).map(c => {
                     c.totalComprado = Math.round(c.totalComprado * 100) / 100;
