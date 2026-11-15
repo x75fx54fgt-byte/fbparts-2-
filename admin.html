@@ -1547,6 +1547,10 @@
                         style="padding: 10px 20px; border: none; background: #f3f4f6; color: #4b5563; border-radius: 8px 8px 0 0; font-family: 'Oswald', sans-serif; font-size: 14.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
                         <i class="fas fa-chart-line"></i> CRM Analítico Transaccional
                     </button>
+                    <button type="button" id="subtab-btn-clientes-inteligencia" onclick="window.cambiarSubtabClientes('inteligencia')" 
+                        style="padding: 10px 20px; border: none; background: #f3f4f6; color: #4b5563; border-radius: 8px 8px 0 0; font-family: 'Oswald', sans-serif; font-size: 14.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
+                        <i class="fas fa-trophy"></i> Inteligencia de Ventas Global
+                    </button>
                 </div>
 
                 <!-- ======================================================== -->
@@ -1677,6 +1681,131 @@
                                 </table>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- ======================================================== -->
+                <!-- SUBTAB 3: INTELIGENCIA DE VENTAS GLOBAL & RANKING -->
+                <!-- ======================================================== -->
+                <div id="vista-inteligencia-ventas" style="display: none;">
+                    <div class="card-form" style="margin-bottom: 25px; background: #ffffff; border: 1.5px solid #c3e6cb; border-radius: 12px; padding: 22px; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+                        <!-- Cabecera de Inteligencia Global -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid #edf2f7; padding-bottom: 14px; margin-bottom: 20px;">
+                            <div>
+                                <h3 style="margin: 0; color: #2c441b; font-size: 18px; display: flex; align-items: center; gap: 8px; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px;">
+                                    <i class="fas fa-trophy" style="color: #385723;"></i> INTELIGENCIA DE VENTAS GLOBAL & RANKING
+                                    <span id="global-kpi-badge-status" style="background: #eef3f0; color: #385723; font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 4px; border: 1px solid #c3e6cb;">AUDITORÍA EN VIVO</span>
+                                </h3>
+                                <p style="font-size: 12.5px; color: #64748b; margin: 4px 0 0 0;">
+                                    Agregación histórica de facturas liquidadas con normalización multimoneda (Bs/USD) y clasificación LTV de clientes.
+                                </p>
+                            </div>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <button type="button" onclick="window.recomputarInteligenciaVentasGlobal()" style="padding: 7px 14px; background: #eef3f0; color: #385723; border: 1px solid #c3e6cb; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                                    <i class="fas fa-sync-alt"></i> Recalcular Métricas
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- TARJETAS SUPERIORES DE KPIS GLOBALES -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 24px;">
+                            
+                            <!-- Tarjeta 1: Ticket Promedio Global (AOV) -->
+                            <div style="background: linear-gradient(135deg, #ffffff 0%, #f7fbf8 100%); border: 1.5px solid #c3e6cb; border-radius: 12px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.03);">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 11.5px; font-weight: 800; color: #385723; text-transform: uppercase; letter-spacing: 0.5px;">
+                                        <i class="fas fa-chart-line" style="margin-right: 5px;"></i> Ticket Promedio Global
+                                    </span>
+                                    <span style="background: #eef3f0; color: #385723; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px;">AOV HISTÓRICO</span>
+                                </div>
+                                <div id="global-kpi-aov" style="font-size: 30px; font-weight: 900; color: #2c441b; font-family: 'Oswald', sans-serif; margin-top: 8px;">
+                                    $0.00
+                                </div>
+                                <span id="global-kpi-aov-subtext" style="font-size: 11.5px; color: #64748b; display: block; margin-top: 4px;">
+                                    Total Facturado ÷ 0 Facturas emitidas
+                                </span>
+                            </div>
+
+                            <!-- Tarjeta 2: Mejor Cliente Histórico -->
+                            <div style="background: linear-gradient(135deg, #ffffff 0%, #fbfdf9 100%); border: 1.5px solid #a7d3af; border-radius: 12px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.03);">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 11.5px; font-weight: 800; color: #1e3a1e; text-transform: uppercase; letter-spacing: 0.5px;">
+                                        <i class="fas fa-crown" style="margin-right: 5px; color: #d97706;"></i> Mejor Cliente Histórico
+                                    </span>
+                                    <span style="background: #fef3c7; color: #92400e; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; border: 1px solid #fde68a;">TOP #1 LTV</span>
+                                </div>
+                                <div id="global-kpi-top-client-name" style="font-size: 20px; font-weight: 800; color: #1e293b; font-family: 'Oswald', sans-serif; margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Mejor Cliente">
+                                    Calculando...
+                                </div>
+                                <div id="global-kpi-top-client-ltv" style="font-size: 14.5px; font-weight: 800; color: #385723; margin-top: 4px;">
+                                    Total Comprado: $0.00
+                                </div>
+                            </div>
+
+                            <!-- Tarjeta 3: Total Facturado Normalizado (USD) -->
+                            <div style="background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.03);">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 11.5px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">
+                                        <i class="fas fa-file-invoice-dollar" style="margin-right: 5px; color: #5e8877;"></i> Volumen Facturado Auditado
+                                    </span>
+                                    <span style="background: #f1f5f9; color: #475569; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px;">USD NETO</span>
+                                </div>
+                                <div id="global-kpi-total-ventas" style="font-size: 30px; font-weight: 900; color: #1e293b; font-family: 'Oswald', sans-serif; margin-top: 8px;">
+                                    $0.00
+                                </div>
+                                <span id="global-kpi-total-ventas-subtext" style="font-size: 11.5px; color: #64748b; display: block; margin-top: 4px;">
+                                    Basado en facturas pagadas y despachadas
+                                </span>
+                            </div>
+
+                        </div>
+
+                        <!-- TABLA DE RANKING TOP CLIENTES (LEADERBOARD) -->
+                        <div style="margin-top: 10px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+                                <h4 style="margin: 0; font-size: 14px; font-weight: bold; color: #2c441b; text-transform: uppercase; letter-spacing: 0.5px; font-family: 'Oswald', sans-serif; display: flex; align-items: center; gap: 8px;">
+                                    <i class="fas fa-medal" style="color: #5e8877;"></i> RANKING DE CLIENTES (LEADERBOARD LTV)
+                                </h4>
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <div style="position: relative; width: 260px;">
+                                        <i class="fas fa-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #888; font-size: 12px;"></i>
+                                        <input 
+                                            type="text" 
+                                            id="global-ranking-search" 
+                                            placeholder="Buscar en el ranking..." 
+                                            style="width: 100%; padding: 6px 10px 6px 30px; font-size: 12.5px; border: 1px solid #cbd5e1; border-radius: 6px; background: #f8fafc; outline: none;"
+                                            oninput="window.filtrarRankingGlobal()"
+                                        />
+                                    </div>
+                                    <span id="global-ranking-count-badge" style="background: #eef3f0; color: #385723; border: 1px solid #c3e6cb; font-size: 11px; font-weight: bold; padding: 4px 8px; border-radius: 6px;">
+                                        0 Clientes
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div style="overflow-x: auto; border: 1.5px solid #e2e8f0; border-radius: 10px; background: white;">
+                                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 12.5px;">
+                                    <thead style="background: #f8fafc; color: #475569; font-size: 11px; text-transform: uppercase; border-bottom: 1.5px solid #e2e8f0;">
+                                        <tr>
+                                            <th style="padding: 10px 14px; text-align: center; width: 85px;">Posición</th>
+                                            <th style="padding: 10px 14px;">Cliente / Razón Social</th>
+                                            <th style="padding: 10px 14px; text-align: center;">Facturas Emitidas</th>
+                                            <th style="padding: 10px 14px; text-align: right;">Ticket Promedio Individual</th>
+                                            <th style="padding: 10px 14px; text-align: right;">Total Comprado (LTV)</th>
+                                            <th style="padding: 10px 14px; text-align: center; width: 110px;">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="global-ranking-tbody" style="color: #334155;">
+                                        <tr>
+                                            <td colspan="6" style="padding: 30px; text-align: center; color: #64748b;">
+                                                <i class="fas fa-spinner fa-spin" style="margin-right: 6px; color: #385723;"></i> Cargando ranking de inteligencia global...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -4037,7 +4166,7 @@
             }
         }, 8000);
     </script>
-    <script type="module" src="admin_logic.js?v=20261114_strict_filter_crom_api"></script>
+    <script type="module" src="admin_logic.js?v=20261114_global_sales_intelligence"></script>
 
 
     <!-- MODAL AUDITORIA INTERNA -->

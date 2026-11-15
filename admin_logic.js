@@ -360,7 +360,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
             if(id === 'catalogo') { window.cargarCatalogoAdmin(); }
             if(id === 'clientes') { 
                 if (window.cambiarSubtabClientes) {
-                    window.cambiarSubtabClientes('db');
+                    window.cambiarSubtabClientes(window._subtabClientesActiva || 'db');
                 } else {
                     window.cargarBaseClientes();
                 }
@@ -10455,24 +10455,39 @@ DATOS DEL REPUESTO:
         window.cambiarSubtabClientes = function(subtab) {
             const btnDb = document.getElementById('subtab-btn-clientes-db');
             const btnCrm = document.getElementById('subtab-btn-clientes-crm');
+            const btnInt = document.getElementById('subtab-btn-clientes-inteligencia');
             const contDb = document.getElementById('subtab-content-clientes-db');
             const contCrm = document.getElementById('subtab-content-clientes-crm');
+            const contInt = document.getElementById('vista-inteligencia-ventas');
+
+            // Resetear estilos de botones
+            if (btnDb) { btnDb.style.background = '#f3f4f6'; btnDb.style.color = '#4b5563'; }
+            if (btnCrm) { btnCrm.style.background = '#f3f4f6'; btnCrm.style.color = '#4b5563'; }
+            if (btnInt) { btnInt.style.background = '#f3f4f6'; btnInt.style.color = '#4b5563'; }
+
+            // Ocultar todas las sub-vistas
+            if (contDb) contDb.style.display = 'none';
+            if (contCrm) contCrm.style.display = 'none';
+            if (contInt) contInt.style.display = 'none';
 
             if (subtab === 'db') {
                 if (btnDb) { btnDb.style.background = '#385723'; btnDb.style.color = 'white'; }
-                if (btnCrm) { btnCrm.style.background = '#f3f4f6'; btnCrm.style.color = '#4b5563'; }
                 if (contDb) contDb.style.display = 'block';
-                if (contCrm) contCrm.style.display = 'none';
                 window._subtabClientesActiva = 'db';
                 window.cargarBaseClientes();
-            } else {
-                if (btnDb) { btnDb.style.background = '#f3f4f6'; btnDb.style.color = '#4b5563'; }
+            } else if (subtab === 'crm') {
                 if (btnCrm) { btnCrm.style.background = '#385723'; btnCrm.style.color = 'white'; }
-                if (contDb) contDb.style.display = 'none';
                 if (contCrm) contCrm.style.display = 'block';
                 window._subtabClientesActiva = 'crm';
                 if (window.recomputarCRMTransaccional) {
                     window.recomputarCRMTransaccional();
+                }
+            } else if (subtab === 'inteligencia') {
+                if (btnInt) { btnInt.style.background = '#385723'; btnInt.style.color = 'white'; }
+                if (contInt) contInt.style.display = 'block';
+                window._subtabClientesActiva = 'inteligencia';
+                if (window.recomputarInteligenciaVentasGlobal) {
+                    window.recomputarInteligenciaVentasGlobal();
                 }
             }
         };
@@ -10480,6 +10495,8 @@ DATOS DEL REPUESTO:
         window.recargarSubtabClientesActual = function() {
             if (window._subtabClientesActiva === 'crm') {
                 if (window.recomputarCRMTransaccional) window.recomputarCRMTransaccional();
+            } else if (window._subtabClientesActiva === 'inteligencia') {
+                if (window.recomputarInteligenciaVentasGlobal) window.recomputarInteligenciaVentasGlobal();
             } else {
                 window.cargarBaseClientes();
             }
@@ -11663,6 +11680,344 @@ DATOS DEL REPUESTO:
                     `;
                 }
             }
+        };
+
+        // =========================================================================
+        // 🏆 VISTA 3: INTELIGENCIA DE VENTAS GLOBAL & RANKING DE CLIENTES (LEADERBOARD)
+        // =========================================================================
+        window.rankingClientesGlobalCache = [];
+
+        /**
+         * Recomputa las métricas de agregación global y el Leaderboard:
+         * 1. Filtro estricto: Exclusivamente Facturas Pagadas y Despachadas (Cero duplicidad de Pedidos/Cotizaciones).
+         * 2. Normalización multimoneda (Bs a USD) con la API BCV.
+         * 3. Ticket Promedio Global (AOV): Total Facturado USD ÷ Total Facturas Emitidas.
+         * 4. Ranking (Leaderboard): Agrupa por cliente, calcula LTV y ordena de Mayor a Menor.
+         */
+        window.recomputarInteligenciaVentasGlobal = async function() {
+            const elAov = document.getElementById('global-kpi-aov');
+            const elAovSub = document.getElementById('global-kpi-aov-subtext');
+            const elTopName = document.getElementById('global-kpi-top-client-name');
+            const elTopLtv = document.getElementById('global-kpi-top-client-ltv');
+            const elTotalVentas = document.getElementById('global-kpi-total-ventas');
+            const elTotalVentasSub = document.getElementById('global-kpi-total-ventas-subtext');
+            const elBadgeStatus = document.getElementById('global-kpi-badge-status');
+            const tbody = document.getElementById('global-ranking-tbody');
+
+            if (tbody) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="padding: 30px; text-align: center; color: #64748b;">
+                            <i class="fas fa-circle-notch fa-spin" style="font-size: 24px; color: #385723; margin-bottom: 8px;"></i>
+                            <p style="margin: 0; font-size: 13px; font-weight: 600;">Audición en curso: Consultando tasas cambiarias y calculando ranking global...</p>
+                        </td>
+                    </tr>
+                `;
+            }
+
+            try {
+                let transaccionesAnalizar = [];
+
+                // 1. Obtener Facturas Reales de Firestore
+                try {
+                    const snapFac = await getDocs(collection(db, "facturas"));
+                    snapFac.forEach(docSnap => {
+                        const fac = docSnap.data();
+                        const estadoLower = String(fac.estatusComercial || fac.estado || '').toLowerCase();
+                        if (estadoLower.includes('anulad')) return;
+
+                        let itemsNombres = [];
+                        if (Array.isArray(fac.items)) {
+                            itemsNombres = fac.items.map(it => it.desc || it.nombre || '').filter(Boolean);
+                        }
+
+                        const moneda = String(fac.moneda_pago || fac.moneda || (fac.simbolo === 'Bs' ? 'VES' : 'USD')).toUpperCase().trim();
+                        const montoFact = parseFloat(fac.monto_facturado ?? fac.total) || 0;
+                        const tasaRegistrada = parseFloat(fac.tasa_cambio_dia ?? fac.tasaBCV) || null;
+
+                        transaccionesAnalizar.push({
+                            id: fac.nro ? `FAC-#${fac.nro}` : `FAC-${docSnap.id.substring(0, 6).toUpperCase()}`,
+                            tipo_documento: 'Factura',
+                            cliente: (fac.cliente || 'Consumidor Final').trim(),
+                            rif: fac.rif || '',
+                            telefono: fac.telefono || '',
+                            fecha: fac.fecha || '',
+                            moneda_pago: moneda,
+                            monto_facturado: montoFact,
+                            tasa_cambio_dia: tasaRegistrada,
+                            estatus: 'Pagado y Despachado',
+                            items: itemsNombres,
+                            timestamp: fac.timestamp || 0,
+                            origen: 'Factura'
+                        });
+                    });
+                } catch (eFac) {
+                    console.warn("Aviso al leer facturas para Inteligencia Global:", eFac);
+                }
+
+                // Si no hay transacciones en Firestore, utilizar el dataset transaccional con divisas
+                if (transaccionesAnalizar.length === 0 && Array.isArray(window.mockPedidosTransaccionales)) {
+                    transaccionesAnalizar = [...window.mockPedidosTransaccionales];
+                }
+
+                // =========================================================================
+                // 🛡️ REGLA 1: FILTRO STRICT (PREVENCIÓN DE DUPLICIDAD FINANCIERA)
+                // SOLO Facturas con Estatus 'Pagado y Despachado'
+                // =========================================================================
+                let descartadosCount = 0;
+                const facturasValidas = transaccionesAnalizar.filter(item => {
+                    const tipoDoc = String(item.tipo_documento || item.tipo || item.origen || '').trim().toLowerCase();
+                    const estadoDoc = String(item.estatus || item.estado || item.estatusComercial || '').trim().toLowerCase();
+
+                    const esFactura = (tipoDoc === 'factura');
+                    const esPagadoYDespachado = (
+                        estadoDoc === 'pagado y despachado' ||
+                        estadoDoc === 'pagada y despachada' ||
+                        estadoDoc === 'pagada' ||
+                        estadoDoc === 'pagado'
+                    );
+
+                    const pasa = esFactura && esPagadoYDespachado;
+                    if (!pasa) descartadosCount++;
+                    return pasa;
+                });
+
+                console.info(`[Inteligencia Ventas Global] Total registros: ${transaccionesAnalizar.length} | Descartados (Pedidos / Cotizaciones): ${descartadosCount} | Facturas Auditadas: ${facturasValidas.length}`);
+
+                // =========================================================================
+                // ⚡ REGLA 2: NORMALIZACIÓN CAMBIARIA ASÍNCRONA CON TASA BCV
+                // =========================================================================
+                let totalVentasUSD = 0;
+                await Promise.all(facturasValidas.map(async (fac) => {
+                    const moneda = String(fac.moneda_pago || fac.moneda || 'USD').toUpperCase().trim();
+                    const montoBruto = parseFloat(fac.monto_facturado ?? fac.monto ?? fac.total) || 0;
+
+                    if (moneda === 'VES' || moneda === 'BS') {
+                        fac.moneda_pago = 'VES';
+                        const tasa = await window.obtenerTasaHistoricaBCV(fac.fecha);
+                        fac.tasa_cambio_dia = tasa;
+                        const tasaNum = Number(tasa) || 1;
+                        fac.monto_usd = Math.round((tasaNum > 0 ? (montoBruto / tasaNum) : montoBruto) * 100) / 100;
+                    } else {
+                        fac.moneda_pago = 'USD';
+                        fac.monto_usd = montoBruto;
+                        fac.tasa_cambio_dia = 1.00;
+                    }
+                    totalVentasUSD += (fac.monto_usd || 0);
+                }));
+
+                totalVentasUSD = Math.round(totalVentasUSD * 100) / 100;
+                const totalFacturasGlobal = facturasValidas.length;
+
+                // Ticket Promedio Global (AOV): Total Facturado USD ÷ Total Facturas
+                const ticketPromedioGlobal = (totalFacturasGlobal > 0)
+                    ? Math.round((totalVentasUSD / totalFacturasGlobal) * 100) / 100
+                    : 0;
+
+                // =========================================================================
+                // 📊 AGRUPACIÓN POR CLIENTE Y RANKING (LEADERBOARD LTV DESCENDENTE)
+                // =========================================================================
+                const agrupadoClientes = {};
+                facturasValidas.forEach(fac => {
+                    const cliKey = (fac.cliente || 'Consumidor Final').trim();
+                    if (!agrupadoClientes[cliKey]) {
+                        agrupadoClientes[cliKey] = {
+                            cliente: cliKey,
+                            rif: fac.rif || 'N/A',
+                            telefono: fac.telefono || 'N/A',
+                            facturasEmitidas: 0,
+                            totalComprado: 0,
+                            ticketPromedio: 0
+                        };
+                    }
+                    if ((!agrupadoClientes[cliKey].rif || agrupadoClientes[cliKey].rif === 'N/A') && fac.rif) {
+                        agrupadoClientes[cliKey].rif = fac.rif;
+                    }
+                    agrupadoClientes[cliKey].facturasEmitidas += 1;
+                    agrupadoClientes[cliKey].totalComprado += (fac.monto_usd || 0);
+                });
+
+                const ranking = Object.values(agrupadoClientes).map(c => {
+                    c.totalComprado = Math.round(c.totalComprado * 100) / 100;
+                    c.ticketPromedio = c.facturasEmitidas > 0
+                        ? Math.round((c.totalComprado / c.facturasEmitidas) * 100) / 100
+                        : 0;
+                    return c;
+                });
+
+                // Ordenamiento Estricto Descendente por Total Comprado (LTV)
+                ranking.sort((a, b) => b.totalComprado - a.totalComprado);
+                window.rankingClientesGlobalCache = ranking;
+
+                // =========================================================================
+                // 🖥️ RENDERIZADO EN EL DOM DE TARJETAS Y LEADERBOARD
+                // =========================================================================
+                if (elAov) elAov.innerText = window.formatearMonedaUSD(ticketPromedioGlobal);
+                if (elAovSub) elAovSub.innerText = `${window.formatearMonedaUSD(totalVentasUSD)} ÷ ${totalFacturasGlobal} ${totalFacturasGlobal === 1 ? 'Factura emitida' : 'Facturas emitidas'}`;
+
+                if (ranking.length > 0) {
+                    const top1 = ranking[0];
+                    if (elTopName) elTopName.innerText = top1.cliente;
+                    if (elTopLtv) elTopLtv.innerText = `Total Comprado: ${window.formatearMonedaUSD(top1.totalComprado)} (${top1.facturasEmitidas} ${top1.facturasEmitidas === 1 ? 'factura' : 'facturas'})`;
+                } else {
+                    if (elTopName) elTopName.innerText = 'Sin registros válidos';
+                    if (elTopLtv) elTopLtv.innerText = 'Total Comprado: $0.00';
+                }
+
+                if (elTotalVentas) elTotalVentas.innerText = window.formatearMonedaUSD(totalVentasUSD);
+                if (elTotalVentasSub) elTotalVentasSub.innerText = `Basado en ${totalFacturasGlobal} ${totalFacturasGlobal === 1 ? 'factura liquidada' : 'facturas liquidadas'}`;
+
+                if (elBadgeStatus) {
+                    elBadgeStatus.innerHTML = `<i class="fas fa-check-circle" style="color: #166534;"></i> AUDITADO (${ranking.length} CLIENTES)`;
+                }
+
+                window.renderizarTablaRankingGlobal(ranking);
+
+            } catch (err) {
+                console.error("Error en recomputarInteligenciaVentasGlobal:", err);
+                if (tbody) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" style="padding: 24px; text-align: center; color: #dc2626; background: #fef2f2;">
+                                <i class="fas fa-exclamation-triangle" style="margin-right: 6px;"></i> Error al calcular inteligencia global: ${SecuritySanitizer.escapeHtml(err.message || String(err))}
+                            </td>
+                        </tr>
+                    `;
+                }
+            }
+        };
+
+        /**
+         * Renderiza la tabla de Ranking (Leaderboard) con resalte visual para los puestos #1, #2 y #3.
+         */
+        window.renderizarTablaRankingGlobal = function(rankingList) {
+            const tbody = document.getElementById('global-ranking-tbody');
+            const badge = document.getElementById('global-ranking-count-badge');
+            if (!tbody) return;
+
+            const list = Array.isArray(rankingList) ? rankingList : [];
+            if (badge) badge.innerText = `${list.length} ${list.length === 1 ? 'Cliente' : 'Clientes'}`;
+
+            if (list.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="padding: 30px; text-align: center; color: #94a3b8;">
+                            <i class="fas fa-inbox" style="margin-right: 6px;"></i> No se encontraron clientes en el ranking global.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = list.map((cli, index) => {
+                const posicion = index + 1;
+                let posBadge = '';
+                let rowBg = 'background: white;';
+
+                if (posicion === 1) {
+                    rowBg = 'background: #eef3f0;'; // Resalte visual corporativo F&B Parts
+                    posBadge = `
+                        <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                            <span style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: #fef3c7; color: #b45309; border: 1.5px solid #fde68a; border-radius: 50%; font-size: 12px; font-weight: 900; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+                                <i class="fas fa-crown"></i>
+                            </span>
+                            <strong style="color: #b45309; font-size: 14px; font-family: 'Oswald', sans-serif;">#1</strong>
+                        </div>
+                    `;
+                } else if (posicion === 2) {
+                    rowBg = 'background: #fbfdf9;'; // Resalte visual muy tenue
+                    posBadge = `
+                        <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                            <span style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: #f1f5f9; color: #475569; border: 1.5px solid #cbd5e1; border-radius: 50%; font-size: 12px; font-weight: 900; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+                                <i class="fas fa-medal"></i>
+                            </span>
+                            <strong style="color: #475569; font-size: 14px; font-family: 'Oswald', sans-serif;">#2</strong>
+                        </div>
+                    `;
+                } else if (posicion === 3) {
+                    rowBg = 'background: #fbfaf9;'; // Resalte visual muy tenue
+                    posBadge = `
+                        <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                            <span style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: #fff7ed; color: #c2410c; border: 1.5px solid #ffedd5; border-radius: 50%; font-size: 12px; font-weight: 900; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+                                <i class="fas fa-award"></i>
+                            </span>
+                            <strong style="color: #c2410c; font-size: 14px; font-family: 'Oswald', sans-serif;">#3</strong>
+                        </div>
+                    `;
+                } else {
+                    posBadge = `
+                        <span style="color: #64748b; font-weight: 700; font-family: monospace; font-size: 13px;">#${posicion}</span>
+                    `;
+                }
+
+                const safeCliente = SecuritySanitizer.escapeHtml(cli.cliente);
+                const safeRif = SecuritySanitizer.escapeHtml(cli.rif || 'N/A');
+
+                return `
+                    <tr style="${rowBg} border-bottom: 1px solid #f1f5f9; transition: background 0.15s;" onmouseover="this.style.background='#eef3f0'" onmouseout="this.style.background='${posicion === 1 ? '#eef3f0' : (posicion === 2 ? '#fbfdf9' : (posicion === 3 ? '#fbfaf9' : 'white'))}'">
+                        <td style="padding: 12px 14px; text-align: center;">
+                            ${posBadge}
+                        </td>
+                        <td style="padding: 12px 14px;">
+                            <div style="font-weight: 700; color: #1e293b; font-size: 13.5px; display: flex; align-items: center; gap: 6px;">
+                                ${safeCliente}
+                                ${posicion === 1 ? '<span style="font-size: 10px; background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; padding: 1px 6px; border-radius: 4px; font-weight: 800;">LÍDER LTV</span>' : ''}
+                            </div>
+                            <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
+                                RIF: ${safeRif}
+                            </div>
+                        </td>
+                        <td style="padding: 12px 14px; text-align: center;">
+                            <span style="display: inline-block; padding: 3px 10px; background: #ffffff; color: #334155; border: 1px solid #cbd5e1; border-radius: 12px; font-weight: 700; font-size: 11.5px; font-family: monospace;">
+                                ${cli.facturasEmitidas} ${cli.facturasEmitidas === 1 ? 'Factura' : 'Facturas'}
+                            </span>
+                        </td>
+                        <td style="padding: 12px 14px; text-align: right; font-weight: 700; font-family: monospace; color: #1e293b; font-size: 13.5px;">
+                            ${window.formatearMonedaUSD(cli.ticketPromedio)}
+                        </td>
+                        <td style="padding: 12px 14px; text-align: right; font-weight: 900; font-family: 'Oswald', sans-serif; color: #385723; font-size: 16px;">
+                            ${window.formatearMonedaUSD(cli.totalComprado)}
+                        </td>
+                        <td style="padding: 12px 14px; text-align: center;">
+                            <button type="button" 
+                                onclick="window.irACRMCliente('${safeCliente.replace(/'/g, "\\'")}')" 
+                                title="Ver ficha en CRM"
+                                style="padding: 6px 12px; background: #385723; color: white; border: none; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+                                <i class="fas fa-chart-line"></i> Ver CRM
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        };
+
+        /**
+         * Navega fluidamente a la pestaña de CRM individual filtrando de inmediato por el cliente seleccionado
+         */
+        window.irACRMCliente = function(nombreCliente) {
+            if (!nombreCliente) return;
+            window.cambiarSubtabClientes('crm');
+            const inputSearch = document.getElementById('crm-search-transaccional');
+            if (inputSearch) {
+                inputSearch.value = nombreCliente;
+                window.filtrarClientesTransaccionales();
+            }
+        };
+
+        /**
+         * Filtra reactivamente el Leaderboard por el buscador
+         */
+        window.filtrarRankingGlobal = function() {
+            const query = (document.getElementById('global-ranking-search')?.value || '').trim().toLowerCase();
+            if (!query) {
+                window.renderizarTablaRankingGlobal(window.rankingClientesGlobalCache || []);
+                return;
+            }
+            const filtrados = (window.rankingClientesGlobalCache || []).filter(c => 
+                c.cliente.toLowerCase().includes(query) ||
+                (c.rif && c.rif.toLowerCase().includes(query))
+            );
+            window.renderizarTablaRankingGlobal(filtrados);
         };
 
 
