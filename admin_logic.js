@@ -9187,56 +9187,81 @@ REGLAS DE EXTRACCIÓN:
                 tr.className = 'migrar-reventa-row';
                 tr.style.borderBottom = '1px solid #e2e8f0';
                 tr.innerHTML = `
-                    <td style="padding: 10px 12px; vertical-align: top;">
+                    <!-- 1. DESCRIPCIÓN -->
+                    <td style="padding: 10px 10px; vertical-align: top;">
+                        <div style="height: 20px; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;">
+                            <span style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Detalle de Pieza</span>
+                            <button type="button" onclick="window.eliminarFilaMigrarReventa(${index})" style="background: none; border: none; color: #ef4444; font-size: 10.5px; font-weight: 700; cursor: pointer; padding: 0; text-decoration: underline;" title="Quitar este repuesto de la migración">Excluir</button>
+                        </div>
                         <input type="text" id="migrar-desc-${index}" class="migrar-item-desc" value="${descTexto}" style="width: 100%; height: 34px; padding: 0 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12.5px; font-weight: 600; color: #1e293b; background: #fff; box-sizing: border-box; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#385723';" onblur="this.style.borderColor='#cbd5e1';">
                         <input type="hidden" id="migrar-interm-${index}" class="migrar-item-nombre-interm" value="">
-                        <div style="font-size: 11px; color: #64748b; margin-top: 4px; display: flex; align-items: center; justify-content: space-between;">
-                            <span>Cant: <strong>${cant}</strong> | Original: ${p.nombre || ''}</span>
-                            <button type="button" onclick="window.eliminarFilaMigrarReventa(${index})" style="background: none; border: none; color: #ef4444; font-size: 11px; font-weight: 600; cursor: pointer; padding: 0; text-decoration: underline;" title="Quitar este repuesto de la migración">Excluir</button>
+                        <div style="height: 16px; min-height: 16px; margin-top: 4px; display: flex; align-items: center; font-size: 10.5px; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            <span>Cant: <strong style="color: #1e293b;">${cant}</strong> | Original: ${p.nombre || ''}</span>
                         </div>
                     </td>
+
+                    <!-- 2. PRECIO VENTA -->
                     <td style="padding: 10px 8px; vertical-align: top;">
+                        <div style="height: 20px; margin-bottom: 4px; display: flex; align-items: center; justify-content: flex-end;">
+                            <span style="font-size: 10px; font-weight: 700; color: #047857; background: #eef5eb; border: 1px solid #c5e1a5; padding: 1px 6px; border-radius: 3px; letter-spacing: 0.3px;">Fijo USD</span>
+                        </div>
                         <div style="position: relative; width: 100%;">
                             <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: 12px; font-weight: bold; color: #047857; pointer-events: none;">$</span>
                             <input type="number" step="any" min="0" id="migrar-venta-inp-${index}" class="migrar-item-venta" value="${ventaLinea.toFixed(2)}" oninput="window.recalcularFilaYTotales(${index})" style="width: 100%; height: 34px; padding: 0 8px 0 22px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; font-weight: bold; text-align: right; color: #047857; background: #f0fdf4; box-sizing: border-box; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#385723';" onblur="this.style.borderColor='#cbd5e1';">
                         </div>
-                        <div id="migrar-venta-help-${index}" style="font-size: 10px; color: #047857; font-weight: 600; text-align: right; margin-top: 3px; min-height: 14px;"></div>
+                        <div id="migrar-venta-help-${index}" style="height: 16px; min-height: 16px; margin-top: 4px; font-size: 10px; color: #047857; font-weight: 600; text-align: right; display: flex; align-items: center; justify-content: flex-end; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></div>
                     </td>
+
+                    <!-- 3. COSTO COMPRA -->
                     <td style="padding: 10px 8px; vertical-align: top;">
-                        <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 4px;">
+                        <div style="height: 20px; margin-bottom: 4px; display: flex; align-items: center; justify-content: flex-end;">
                             <div style="display: inline-flex; border: 1px solid #cbd5e1; border-radius: 4px; overflow: hidden; background: #eef3f0; padding: 1px;">
-                                <button type="button" id="migrar-costo-curr-usd-${index}" onclick="window.cambiarMonedaFilaMigrar(${index}, 'costo', 'USD')" style="border: none; background: #385723; color: #ffffff; font-size: 10px; font-weight: bold; padding: 2px 7px; border-radius: 3px; cursor: pointer; transition: all 0.15s;">USD</button>
-                                <button type="button" id="migrar-costo-curr-ves-${index}" onclick="window.cambiarMonedaFilaMigrar(${index}, 'costo', 'VES')" style="border: none; background: transparent; color: #4b5563; font-size: 10px; font-weight: bold; padding: 2px 7px; border-radius: 3px; cursor: pointer; transition: all 0.15s;">Bs</button>
+                                <button type="button" id="migrar-costo-curr-usd-${index}" onclick="window.cambiarMonedaFilaMigrar(${index}, 'costo', 'USD')" style="border: none; background: #385723; color: #ffffff; font-size: 10px; font-weight: bold; padding: 1px 6px; border-radius: 2px; cursor: pointer; transition: all 0.15s; line-height: 1.2;">USD</button>
+                                <button type="button" id="migrar-costo-curr-ves-${index}" onclick="window.cambiarMonedaFilaMigrar(${index}, 'costo', 'VES')" style="border: none; background: transparent; color: #4b5563; font-size: 10px; font-weight: bold; padding: 1px 6px; border-radius: 2px; cursor: pointer; transition: all 0.15s; line-height: 1.2;">Bs</button>
                             </div>
                         </div>
                         <div style="position: relative; width: 100%;">
                             <span id="migrar-costo-pfx-${index}" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: 12px; font-weight: bold; color: #64748b; pointer-events: none;">$</span>
                             <input type="number" step="any" min="0" id="migrar-costo-inp-${index}" class="migrar-item-costo" value="0.00" placeholder="0.00" oninput="window.recalcularFilaYTotales(${index})" style="width: 100%; height: 34px; padding: 0 8px 0 22px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; text-align: right; color: #1e293b; background: #fff; box-sizing: border-box; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#385723';" onblur="this.style.borderColor='#cbd5e1';">
                         </div>
-                        <div id="migrar-costo-help-${index}" style="font-size: 10px; color: #166534; font-weight: 600; text-align: right; margin-top: 3px; min-height: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
+                        <div id="migrar-costo-help-${index}" style="height: 16px; min-height: 16px; margin-top: 4px; font-size: 10px; color: #166534; font-weight: 600; text-align: right; display: flex; align-items: center; justify-content: flex-end; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></div>
                     </td>
+
+                    <!-- 4. GASTOS OP. -->
                     <td style="padding: 10px 8px; vertical-align: top;">
-                        <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 4px;">
+                        <div style="height: 20px; margin-bottom: 4px; display: flex; align-items: center; justify-content: flex-end;">
                             <div style="display: inline-flex; border: 1px solid #cbd5e1; border-radius: 4px; overflow: hidden; background: #eef3f0; padding: 1px;">
-                                <button type="button" id="migrar-gastos-curr-usd-${index}" onclick="window.cambiarMonedaFilaMigrar(${index}, 'gastos', 'USD')" style="border: none; background: #385723; color: #ffffff; font-size: 10px; font-weight: bold; padding: 2px 7px; border-radius: 3px; cursor: pointer; transition: all 0.15s;">USD</button>
-                                <button type="button" id="migrar-gastos-curr-ves-${index}" onclick="window.cambiarMonedaFilaMigrar(${index}, 'gastos', 'VES')" style="border: none; background: transparent; color: #4b5563; font-size: 10px; font-weight: bold; padding: 2px 7px; border-radius: 3px; cursor: pointer; transition: all 0.15s;">Bs</button>
+                                <button type="button" id="migrar-gastos-curr-usd-${index}" onclick="window.cambiarMonedaFilaMigrar(${index}, 'gastos', 'USD')" style="border: none; background: #385723; color: #ffffff; font-size: 10px; font-weight: bold; padding: 1px 6px; border-radius: 2px; cursor: pointer; transition: all 0.15s; line-height: 1.2;">USD</button>
+                                <button type="button" id="migrar-gastos-curr-ves-${index}" onclick="window.cambiarMonedaFilaMigrar(${index}, 'gastos', 'VES')" style="border: none; background: transparent; color: #4b5563; font-size: 10px; font-weight: bold; padding: 1px 6px; border-radius: 2px; cursor: pointer; transition: all 0.15s; line-height: 1.2;">Bs</button>
                             </div>
                         </div>
                         <div style="position: relative; width: 100%;">
                             <span id="migrar-gastos-pfx-${index}" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: 12px; font-weight: bold; color: #64748b; pointer-events: none;">$</span>
                             <input type="number" step="any" min="0" id="migrar-gastos-inp-${index}" class="migrar-item-gastos" value="0.00" placeholder="0.00" oninput="window.recalcularFilaYTotales(${index})" style="width: 100%; height: 34px; padding: 0 8px 0 22px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; text-align: right; color: #1e293b; background: #fff; box-sizing: border-box; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#385723';" onblur="this.style.borderColor='#cbd5e1';">
                         </div>
-                        <div id="migrar-gastos-help-${index}" style="font-size: 10px; color: #166534; font-weight: 600; text-align: right; margin-top: 3px; min-height: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
+                        <div id="migrar-gastos-help-${index}" style="height: 16px; min-height: 16px; margin-top: 4px; font-size: 10px; color: #166534; font-weight: 600; text-align: right; display: flex; align-items: center; justify-content: flex-end; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></div>
                     </td>
+
+                    <!-- 5. % INTERMEDIARIO -->
                     <td style="padding: 10px 8px; vertical-align: top;">
+                        <div style="height: 20px; margin-bottom: 4px; display: flex; align-items: center; justify-content: flex-end;">
+                            <span style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase;">Comisión</span>
+                        </div>
                         <input type="number" step="0.1" min="0" max="100" id="migrar-pct-inp-${index}" class="migrar-item-porcentaje" value="0" placeholder="0" oninput="window.recalcularFilaYTotales(${index})" style="width: 100%; height: 34px; padding: 0 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; text-align: right; color: #1e293b; background: #fff; box-sizing: border-box; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#385723';" onblur="this.style.borderColor='#cbd5e1';">
-                        <div style="font-size: 10px; color: #64748b; text-align: right; margin-top: 3px; min-height: 14px;">% ganancia</div>
+                        <div style="height: 16px; min-height: 16px; margin-top: 4px; font-size: 10px; color: #64748b; text-align: right; display: flex; align-items: center; justify-content: flex-end; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">% ganancia</div>
                     </td>
+
+                    <!-- 6. NETA EMPRESA -->
                     <td style="padding: 10px 12px; vertical-align: top; text-align: right;">
-                        <div class="migrar-item-neta" style="line-height: 1.2;">
-                            <span id="migrar-neta-usd-${index}" class="neta-usd" style="font-size: 14px; font-weight: bold; color: #385723;">$${ventaLinea.toFixed(2)}</span>
-                            <span id="migrar-neta-ves-${index}" class="neta-ves" style="font-size: 10px; color: #64748b; display: block; margin-top: 2px;">Bs. 0.00</span>
-                            <span id="migrar-comis-usd-${index}" style="font-size: 9.5px; color: #d9534f; font-weight: 600; display: none; margin-top: 2px;"></span>
+                        <div style="height: 20px; margin-bottom: 4px; display: flex; align-items: center; justify-content: flex-end;">
+                            <span style="font-size: 10px; font-weight: 700; color: #385723; text-transform: uppercase;">Resultado</span>
+                        </div>
+                        <div style="height: 34px; display: flex; align-items: center; justify-content: flex-end;">
+                            <span id="migrar-neta-usd-${index}" class="neta-usd" style="font-size: 15px; font-weight: 800; color: #385723; line-height: 1;">$${ventaLinea.toFixed(2)}</span>
+                        </div>
+                        <div style="height: 16px; min-height: 16px; margin-top: 4px; display: flex; align-items: center; justify-content: flex-end; gap: 6px;">
+                            <span id="migrar-comis-usd-${index}" style="font-size: 9.5px; color: #d9534f; font-weight: 600; display: none;"></span>
+                            <span id="migrar-neta-ves-${index}" class="neta-ves" style="font-size: 10px; color: #64748b;">Bs. 0.00</span>
                         </div>
                     </td>
                 `;
@@ -9340,7 +9365,7 @@ REGLAS DE EXTRACCIÓN:
             // Actualizar referencias visuales (helper text) sin reconstruir DOM
             const helpCosto = document.getElementById(`migrar-costo-help-${index}`);
             if (helpCosto) {
-                if (item.costoRaw > 0 && tasaBCV > 0) {
+                if (tasaBCV > 0) {
                     if (item.monedaCosto === 'VES') {
                         helpCosto.textContent = `≈ $${item.costoUSD.toFixed(2)}`;
                     } else {
@@ -9348,13 +9373,13 @@ REGLAS DE EXTRACCIÓN:
                         helpCosto.textContent = `≈ Bs. ${eqVES}`;
                     }
                 } else {
-                    helpCosto.textContent = '';
+                    helpCosto.textContent = '≈ $0.00';
                 }
             }
 
             const helpGastos = document.getElementById(`migrar-gastos-help-${index}`);
             if (helpGastos) {
-                if (item.gastosRaw > 0 && tasaBCV > 0) {
+                if (tasaBCV > 0) {
                     if (item.monedaGastos === 'VES') {
                         helpGastos.textContent = `≈ $${item.gastosUSD.toFixed(2)}`;
                     } else {
@@ -9362,17 +9387,17 @@ REGLAS DE EXTRACCIÓN:
                         helpGastos.textContent = `≈ Bs. ${eqVES}`;
                     }
                 } else {
-                    helpGastos.textContent = '';
+                    helpGastos.textContent = '≈ $0.00';
                 }
             }
 
             const helpVenta = document.getElementById(`migrar-venta-help-${index}`);
             if (helpVenta) {
-                if (item.ventaUSD > 0 && tasaBCV > 0) {
+                if (tasaBCV > 0) {
                     const eqVES = (item.ventaUSD * tasaBCV).toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
                     helpVenta.textContent = `≈ Bs. ${eqVES}`;
                 } else {
-                    helpVenta.textContent = '';
+                    helpVenta.textContent = '≈ Bs. 0.00';
                 }
             }
 
