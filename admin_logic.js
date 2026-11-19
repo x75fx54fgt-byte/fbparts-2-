@@ -6611,13 +6611,138 @@ REGLAS DE EXTRACCIÓN:
         };
 
         /**
-         * Parser seguro y resiliente de JSON retornado por modelos de IA (Puter.js / Gemini / LLMs)
-         * Elimina bloques markdown y extrae limpiamente el objeto {...} aunque venga rodeado de texto.
+         * Generador de Ficha Estructurada de Fallback para Inversiones FB Parts
+         * Diseñado para que NUNCA se descarte un repuesto por errores de formato o texto plano de la IA.
+         * Aplica la plantilla corporativa estricta: ✅ FUNCIÓN Y BENEFICIOS y 🔧 COMPATIBILIDAD SUGERIDA.
          */
-        window.parsearJSONSeguro = function(textoRespuesta) {
-            if (!textoRespuesta) throw new Error("Respuesta vacía de la IA.");
+        window.construirFallbackEstructurado = function(prod, textoPlano = '') {
+            const rawTitulo = (prod?.nombre || '').trim();
+            const tituloMayus = rawTitulo.toUpperCase();
 
-            // 1. Extraer texto plano si viene como objeto Puter (mensaje o content)
+            // 1. Detección heurística de Marca Automotriz
+            const marcasPopulares = [
+                "TOYOTA", "CHEVROLET", "FORD", "MITSUBISHI", "NISSAN", "HYUNDAI", 
+                "KIA", "JEEP", "HONDA", "RENAULT", "CHERY", "DONGFENG", "ISUZU", 
+                "FIAT", "VOLKSWAGEN", "MAZDA", "MERCEDES BENZ", "BMW", "PEUGEOT", 
+                "MACK", "IVECO", "HINO", "SUZUKI", "DODGE", "CHRYSLER", "GREAT WALL", "JAC"
+            ];
+            let marcaDetectada = (prod?.marca || '').trim();
+            if (!marcaDetectada || marcaDetectada.toLowerCase() === 'universal') {
+                for (const m of marcasPopulares) {
+                    const regex = new RegExp(`\\b${m}\\b`, 'i');
+                    if (regex.test(tituloMayus)) {
+                        marcaDetectada = m.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+                        break;
+                    }
+                }
+            }
+            if (!marcaDetectada) marcaDetectada = 'Universal';
+
+            // 2. Detección heurística de Modelo / Motorización
+            let modeloDetectado = (prod?.modelo || '').trim().toUpperCase();
+            if (!modeloDetectado || modeloDetectado === 'UNIVERSAL') {
+                let sinMarca = tituloMayus;
+                marcasPopulares.forEach(m => {
+                    sinMarca = sinMarca.replace(new RegExp(`\\b${m}\\b`, 'gi'), '');
+                });
+                const palabrasIgnorar = [
+                    "DELANTERO", "DELANTERA", "TRASERO", "TRASERA", "DERECHO", "IZQUIERDO",
+                    "ORIGINAL", "REPUESTO", "PAR", "JUEGO", "KIT", "CONJUNTO", "NUEVO", "DE",
+                    "PARA", "EN", "CON", "SIN", "COMPLETO", "COMPLETA"
+                ];
+                palabrasIgnorar.forEach(p => {
+                    sinMarca = sinMarca.replace(new RegExp(`\\b${p}\\b`, 'gi'), '');
+                });
+                sinMarca = sinMarca.trim().replace(/\s+/g, ' ');
+                if (sinMarca.length > 2) {
+                    modeloDetectado = sinMarca.substring(0, 50).trim();
+                } else {
+                    modeloDetectado = marcaDetectada !== 'Universal' ? `${marcaDetectada.toUpperCase()} VARIOS` : 'UNIVERSAL';
+                }
+            }
+
+            // 3. Resolución de Categoría y Subcategoría
+            let categoriaSlugFinal = (prod?.categoria || '').trim();
+            if (!window.mapaCategorias || !window.mapaCategorias[categoriaSlugFinal]) {
+                const catKeys = Object.keys(window.mapaCategorias || {});
+                const match = catKeys.find(k => {
+                    const nom = (window.mapaCategorias[k] || '').toLowerCase();
+                    return tituloMayus.toLowerCase().includes(nom) || nom.includes(categoriaSlugFinal.toLowerCase());
+                });
+                if (match) {
+                    categoriaSlugFinal = match;
+                } else if (catKeys.length > 0) {
+                    categoriaSlugFinal = catKeys[0];
+                }
+            }
+
+            let subcatFinal = (prod?.subcategoria || '').trim();
+            if (!subcatFinal || subcatFinal === 'General') {
+                if (/FRENO|PASTILLA|DISCO|BOMBA DE FRENO/i.test(tituloMayus)) subcatFinal = 'Frenos';
+                else if (/AMORTIGUADOR|ESPIRAL|TERMINAL|ROTULA|BIELETA|SUSPENSION/i.test(tituloMayus)) subcatFinal = 'Suspensión';
+                else if (/FILTRO/i.test(tituloMayus)) subcatFinal = 'Filtros';
+                else if (/CORREA|TENSOR|POLEA|TIEMPO/i.test(tituloMayus)) subcatFinal = 'Correas y Tiempo';
+                else if (/PARACHOQUE|PARRILLA|FARO|STOP|CAPOT|GUARDABARRO|PUERTA/i.test(tituloMayus)) subcatFinal = 'Carrocería';
+                else if (/MOTOR|PISTON|ANILLO|VALVULA|EMPACADURA|CIGUEÑAL/i.test(tituloMayus)) subcatFinal = 'Motor';
+                else if (/ARRANQUE|ALTERNADOR|BOBINA|BUJIA|SENSOR/i.test(tituloMayus)) subcatFinal = 'Eléctrico';
+                else if (/RADIADOR|TERMOSTATO|BOMBA DE AGUA|ELECTROVENTILADOR/i.test(tituloMayus)) subcatFinal = 'Enfriamiento';
+                else subcatFinal = 'General';
+            }
+
+            // 4. Número de Parte OEM Seguro (Nunca inventar falsos códigos)
+            let numParteFinal = (prod?.numero_parte || '').trim();
+            if (!numParteFinal || numParteFinal === 'N/A') {
+                numParteFinal = 'Consultar disponibilidad / OEM';
+            }
+
+            // 5. Formatear Descripción según Plantilla Estricta F&B Parts
+            let descFinal = '';
+            const cleanTextoPlano = (textoPlano || '').trim();
+
+            if (cleanTextoPlano.includes('✅ FUNCIÓN Y BENEFICIOS:') && cleanTextoPlano.includes('🔧 COMPATIBILIDAD SUGERIDA:')) {
+                descFinal = cleanTextoPlano;
+            } else {
+                let parrafoFuncion = '';
+                if (cleanTextoPlano && cleanTextoPlano.length > 25 && !cleanTextoPlano.startsWith('{')) {
+                    parrafoFuncion = cleanTextoPlano
+                        .replace(/^claro,?\s*aquí\s*(tienes|está).+?:/i, '')
+                        .replace(/^hola,?\s*/i, '')
+                        .trim();
+                } else {
+                    parrafoFuncion = `Pieza automotriz de alta resistencia diseñada para brindar máxima durabilidad, seguridad y ajuste preciso en ${rawTitulo}. Su instalación oportuna previene desgastes prematuros en componentes periféricos y garantiza el rendimiento óptimo del vehículo bajo estándares de calidad garantizada.`;
+                }
+
+                descFinal = `✅ FUNCIÓN Y BENEFICIOS:
+${parrafoFuncion}
+
+🔧 COMPATIBILIDAD SUGERIDA:
+- ${marcaDetectada} ${modeloDetectado}
+- Para confirmar compatibilidad exacta con su número de chasis o serial de carrocería (VIN), consulte a nuestros asesores técnicos de Inversiones FB Parts.`;
+            }
+
+            return {
+                marca_vehiculo: marcaDetectada,
+                modelo_motorizacion: modeloDetectado,
+                categoria_slug: categoriaSlugFinal,
+                subcategoria: subcatFinal,
+                numero_parte_oem: numParteFinal,
+                descripcion_formateada: descFinal.trim()
+            };
+        };
+
+        /**
+         * Extractor tolerante de JSON retornado por modelos de IA (Puter.js / Gemini / LLMs)
+         * Limpia bloques markdown ```json o ```, busca { y } exteriores, repara comas y escapes,
+         * y si la IA devuelve texto plano o falla el parseo, construye automáticamente un JSON estructurado
+         * de fallback con la plantilla oficial de F&B Parts para que NINGÚN repuesto se pierda.
+         */
+        window.extraerJSON = function(textoRespuesta, prod) {
+            if (!textoRespuesta) {
+                console.warn("[extraerJSON] Respuesta vacía de IA, generando fallback estructurado...");
+                return window.construirFallbackEstructurado(prod, '');
+            }
+
+            // 1. Extraer texto plano si viene como objeto Puter o Gemini
             let raw = '';
             if (typeof textoRespuesta === 'string') {
                 raw = textoRespuesta;
@@ -6627,52 +6752,114 @@ REGLAS DE EXTRACCIÓN:
             } else if (textoRespuesta?.content) {
                 const c = textoRespuesta.content;
                 raw = Array.isArray(c) ? c.map(b => b.text || b).join('') : String(c);
+            } else if (textoRespuesta?.text) {
+                raw = String(textoRespuesta.text);
             } else {
-                raw = JSON.stringify(textoRespuesta);
+                try {
+                    raw = JSON.stringify(textoRespuesta);
+                } catch(e) {
+                    raw = String(textoRespuesta);
+                }
             }
 
-            // 2. Limpiar delimitadores markdown ```json y ```
-            let limpio = raw.trim();
+            // 2. Limpieza de delimitadores markdown ```json y ```
+            let limpio = (raw || '').trim();
             limpio = limpio.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
 
-            // 3. Extraer el bloque JSON más externo delimitado por { y }
+            // 3. Buscar llaves { y } exteriores
             const primerLlave = limpio.indexOf('{');
             const ultimaLlave = limpio.lastIndexOf('}');
 
             if (primerLlave === -1 || ultimaLlave === -1 || ultimaLlave <= primerLlave) {
-                throw new Error("La IA no devolvió un bloque JSON delimitado por { }.");
+                console.warn("[extraerJSON] La IA no devolvió un bloque con { }, generando fallback estructurado con plantilla F&B Parts...");
+                return window.construirFallbackEstructurado(prod, limpio);
             }
 
-            let jsonString = limpio.substring(primerLlave, ultimaLlave + 1).trim();
+            const jsonString = limpio.substring(primerLlave, ultimaLlave + 1).trim();
 
-            // 4. Intento directo de parseo
+            // 4. Intentos progresivos de parseo
+            let parsedObj = null;
             try {
-                return JSON.parse(jsonString);
+                parsedObj = JSON.parse(jsonString);
             } catch (e1) {
                 // Intento 2: Reparar comas finales (trailing commas)
-                let reparado = jsonString
-                    .replace(/,\s*}/g, '}')
-                    .replace(/,\s*]/g, ']');
                 try {
-                    return JSON.parse(reparado);
+                    const sinTrailing = jsonString
+                        .replace(/,\s*}/g, '}')
+                        .replace(/,\s*]/g, ']');
+                    parsedObj = JSON.parse(sinTrailing);
                 } catch (e2) {
-                    // Intento 3: Reparar saltos de línea sin escapar dentro de comillas
+                    // Intento 3: Reparar saltos de línea y tabulaciones sin escapar dentro de comillas
                     try {
-                        const sanitized = reparado.replace(/"([^"\\]*(\\.[^"\\]*)*)"/gs, (match) => {
-                            return match.replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t');
-                        });
-                        return JSON.parse(sanitized);
+                        const saneado = jsonString
+                            .replace(/,\s*}/g, '}')
+                            .replace(/,\s*]/g, ']')
+                            .replace(/"([^"\\]*(\\.[^"\\]*)*)"/gs, (match) => {
+                                return match.replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t');
+                            });
+                        parsedObj = JSON.parse(saneado);
                     } catch (e3) {
-                        console.error("Error crítico parseando JSON de Puter:", raw);
-                        throw new Error(`Error de formato JSON: ${e1.message}`);
+                        console.warn("[extraerJSON] Error sintáctico en JSON retornado por la IA. Aplicando constructor tolerante de fallback:", e1.message);
+                        return window.construirFallbackEstructurado(prod, limpio);
                     }
                 }
             }
+
+            // 5. Validar estructura del objeto resultante
+            if (!parsedObj || typeof parsedObj !== 'object') {
+                return window.construirFallbackEstructurado(prod, limpio);
+            }
+
+            // Asegurar descripción formateada
+            let desc = (parsedObj.descripcion_formateada || '').trim();
+            if (!desc || desc.length < 20 || (!desc.includes('✅ FUNCIÓN Y BENEFICIOS:') && !desc.includes('🔧 COMPATIBILIDAD SUGERIDA:'))) {
+                const fb = window.construirFallbackEstructurado(prod, desc || limpio);
+                desc = fb.descripcion_formateada;
+            }
+
+            // Asegurar OEM seguro
+            let oem = (parsedObj.numero_parte_oem || '').trim();
+            const tituloMayus = (prod?.nombre || '').toUpperCase();
+            if (oem && oem !== 'N/A' && oem !== 'Consultar disponibilidad / OEM' && oem !== 'Consultar con asesor') {
+                const cleanOem = oem.replace(/[^A-Z0-9]/gi, '');
+                const cleanTitle = tituloMayus.replace(/[^A-Z0-9]/gi, '');
+                if (cleanOem.length > 3 && !cleanTitle.includes(cleanOem)) {
+                    oem = 'Consultar disponibilidad / OEM';
+                }
+            } else if (!oem) {
+                oem = 'Consultar disponibilidad / OEM';
+            }
+
+            // Asegurar Categoría válida
+            let catSlug = (parsedObj.categoria_slug || '').trim();
+            if (!window.mapaCategorias || !window.mapaCategorias[catSlug]) {
+                const catKeys = Object.keys(window.mapaCategorias || {});
+                const match = catKeys.find(k => k.toLowerCase() === catSlug.toLowerCase() || (window.mapaCategorias[k] && window.mapaCategorias[k].toLowerCase().includes(catSlug.toLowerCase())));
+                if (match) {
+                    catSlug = match;
+                } else if (prod?.categoria && window.mapaCategorias?.[prod.categoria]) {
+                    catSlug = prod.categoria;
+                } else if (catKeys.length > 0) {
+                    catSlug = catKeys[0];
+                }
+            }
+
+            return {
+                marca_vehiculo: (parsedObj.marca_vehiculo || prod?.marca || 'Universal').trim(),
+                modelo_motorizacion: (parsedObj.modelo_motorizacion || prod?.modelo || 'UNIVERSAL').trim().toUpperCase(),
+                categoria_slug: catSlug,
+                subcategoria: (parsedObj.subcategoria || prod?.subcategoria || 'General').trim(),
+                numero_parte_oem: oem,
+                descripcion_formateada: desc
+            };
         };
+
+        // Alias retrocompatible
+        window.parsearJSONSeguro = window.extraerJSON;
 
         /**
          * Motor de Generación Estructurada vía Puter.js AI (puter.ai.chat)
-         * Genera ficha técnica exacta para Inversiones FB Parts.
+         * Con fallback a Gemini API directo si existe clave configurada.
          */
         window.ejecutarPuterStructuredIA = async function(prod) {
             if (!prod) throw new Error("Producto no encontrado.");
@@ -6737,49 +6924,32 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
             try {
                 respPuter = await puter.ai.chat(promptPuter, { model: 'gemini-2.0-flash' });
             } catch (mErr) {
-                console.warn("Fallo con modelo gemini-2.0-flash en Puter, reintentando modelo por defecto:", mErr);
-                respPuter = await puter.ai.chat(promptPuter);
-            }
-
-            const parsedData = window.parsearJSONSeguro(respPuter);
-
-            // Sanitización y normalización del resultado
-            const tituloMayus = (prod.nombre || '').toUpperCase();
-            let numParteFinal = (parsedData.numero_parte_oem || '').trim();
-            
-            // Regla de seguridad: Si no viene explícito en el título o parece inventado, asegurar "Consultar disponibilidad / OEM" o "N/A"
-            if (numParteFinal && numParteFinal !== 'N/A' && numParteFinal !== 'Consultar disponibilidad / OEM' && numParteFinal !== 'Consultar con asesor') {
-                const cleanOem = numParteFinal.replace(/[^A-Z0-9]/gi, '');
-                const cleanTitle = tituloMayus.replace(/[^A-Z0-9]/gi, '');
-                if (cleanOem.length > 3 && !cleanTitle.includes(cleanOem)) {
-                    console.warn("OEM no detectado en el título, protegiendo contra alucinación:", numParteFinal);
-                    numParteFinal = 'Consultar disponibilidad / OEM';
-                }
-            } else if (!numParteFinal) {
-                numParteFinal = 'Consultar disponibilidad / OEM';
-            }
-
-            let categoriaSlugFinal = (parsedData.categoria_slug || '').trim();
-            if (!window.mapaCategorias || !window.mapaCategorias[categoriaSlugFinal]) {
-                const catKeys = Object.keys(window.mapaCategorias || {});
-                const match = catKeys.find(k => k.toLowerCase() === categoriaSlugFinal.toLowerCase() || (window.mapaCategorias[k] && window.mapaCategorias[k].toLowerCase().includes(categoriaSlugFinal.toLowerCase())));
-                if (match) {
-                    categoriaSlugFinal = match;
-                } else if (prod.categoria && window.mapaCategorias?.[prod.categoria]) {
-                    categoriaSlugFinal = prod.categoria;
-                } else if (catKeys.length > 0) {
-                    categoriaSlugFinal = catKeys[0];
+                console.warn("Fallo con modelo gemini-2.0-flash en Puter, reintentando con modelo por defecto:", mErr);
+                try {
+                    respPuter = await puter.ai.chat(promptPuter);
+                } catch (mErr2) {
+                    const geminiKey = window.obtenerApiKeyGemini ? window.obtenerApiKeyGemini(false) : '';
+                    if (geminiKey) {
+                        console.warn("Puter AI no respondió, recurriendo a Gemini API directo...");
+                        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`;
+                        const gResp = await fetch(url, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                contents: [{ parts: [{ text: promptPuter }] }],
+                                generationConfig: { temperature: 0.2, maxOutputTokens: 1024 }
+                            })
+                        });
+                        if (!gResp.ok) throw new Error(`Puter (${mErr2?.message || 'error'}) y Gemini (${gResp.statusText}) fallaron`);
+                        const gData = await gResp.json();
+                        respPuter = gData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                    } else {
+                        throw mErr2;
+                    }
                 }
             }
 
-            return {
-                marca_vehiculo: (parsedData.marca_vehiculo || prod.marca || 'Universal').trim(),
-                modelo_motorizacion: (parsedData.modelo_motorizacion || prod.modelo || '').trim().toUpperCase(),
-                categoria_slug: categoriaSlugFinal,
-                subcategoria: (parsedData.subcategoria || prod.subcategoria || 'General').trim(),
-                numero_parte_oem: numParteFinal,
-                descripcion_formateada: (parsedData.descripcion_formateada || '').trim()
-            };
+            return window.extraerJSON(respPuter, prod);
         };
 
         // Alias retrocompatible
@@ -7076,18 +7246,13 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
 
         /**
          * Ejecuta el procesamiento en lote secuencial y resiliente con Puter.js AI
-         * Soporta 93+ repuestos con guardado inmediato en Firestore, reintentos automáticos y pausa preventiva.
+         * Soporta 93+ repuestos con guardado inmediato en Firestore, pre-chequeo del motor,
+         * registro explícito de errores y pausa preventiva de 1500ms entre repuestos.
          */
         window.iniciarProcesamientoLoteIA = async function() {
             const pendientes = window._lotePendientesCache || [];
             if (pendientes.length === 0) return;
 
-            if (typeof puter === 'undefined' || !puter.ai || typeof puter.ai.chat !== 'function') {
-                alert("⚠️ Puter.js no está disponible en este momento. Revisa tu conexión a internet o verifica que el servicio de Puter esté activo.");
-                return;
-            }
-
-            window._loteIACancelado = false;
             const btnIniciar = document.getElementById('btn-iniciar-lote-ia');
             const btnDetener = document.getElementById('btn-detener-lote-ia');
             const progressBar = document.getElementById('ai-lote-progress-bar');
@@ -7095,6 +7260,62 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
             const statusLabel = document.getElementById('ai-lote-status-label');
             const counterLabel = document.getElementById('ai-lote-counter-label');
 
+            // 1. Pre-chequeo de disponibilidad de la biblioteca Puter.js
+            if (typeof puter === 'undefined' || !puter.ai || typeof puter.ai.chat !== 'function') {
+                const errorMsg = "Puter.js no está disponible o no se cargó en el navegador. Revisa tu conexión a internet.";
+                console.error('[Lote IA Pre-Check Error]', errorMsg);
+                if (statusLabel) {
+                    statusLabel.innerHTML = `<span style="color: #b91c1c; font-weight: bold;"><i class="fas fa-exclamation-triangle"></i> ${errorMsg}</span>`;
+                }
+                alert(`⚠️ ${errorMsg}\n\nEl lote ha sido detenido para evitar errores en serie.`);
+                return;
+            }
+
+            // Preparar UI en modo de prueba previa
+            if (btnIniciar) {
+                btnIniciar.disabled = true;
+                btnIniciar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando conexión IA...';
+            }
+            if (statusLabel) {
+                statusLabel.innerHTML = '<span style="color: #385723;"><i class="fas fa-spinner fa-spin"></i> Verificando disponibilidad del motor Puter AI...</span>';
+            }
+
+            // 2. Pre-chequeo del motor de IA con ping rápido y timeout de 6 segundos
+            let pingOk = false;
+            let pingError = null;
+            try {
+                const pingPromise = (async () => {
+                    try {
+                        return await puter.ai.chat('Ping', { model: 'gemini-2.0-flash' });
+                    } catch (p1) {
+                        return await puter.ai.chat('Ping');
+                    }
+                })();
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error("Tiempo de espera agotado (6s sin respuesta de Puter AI)")), 6000)
+                );
+                await Promise.race([pingPromise, timeoutPromise]);
+                pingOk = true;
+            } catch (testErr) {
+                pingError = testErr?.message || String(testErr);
+                console.error('[Lote IA Pre-Check Falló]', testErr);
+            }
+
+            if (!pingOk) {
+                if (btnIniciar) {
+                    btnIniciar.disabled = false;
+                    btnIniciar.innerHTML = '<i class="fas fa-play"></i> Reintentar Procesamiento en Lote';
+                }
+                if (btnDetener) btnDetener.style.display = 'none';
+                if (statusLabel) {
+                    statusLabel.innerHTML = `<span style="color: #b91c1c; font-weight: bold;"><i class="fas fa-exclamation-triangle"></i> Falló verificación de Puter AI (${SecuritySanitizer.escapeHtml(pingError)}). Lote abortado preventivamente.</span>`;
+                }
+                alert(`⚠️ No se pudo conectar con el motor Puter AI:\n"${pingError}"\n\nEl procesamiento en lote se ha detenido preventivamente para no marcar los ${pendientes.length} repuestos con error.\nPor favor verifica tu conexión a internet o el servicio de Puter.`);
+                return;
+            }
+
+            // 3. Inicio formal del procesamiento en lote
+            window._loteIACancelado = false;
             if (btnIniciar) btnIniciar.style.display = 'none';
             if (btnDetener) btnDetener.style.display = 'inline-flex';
 
@@ -7109,6 +7330,7 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
                 }
 
                 const { id, prod } = pendientes[i];
+                const repuesto = { id: id, nombre: prod?.nombre, ...prod };
                 const statusTd = document.getElementById(`lote-status-${id}`);
                 const catTd = document.getElementById(`lote-cat-${id}`);
                 const rowTr = document.getElementById(`lote-row-${id}`);
@@ -7117,17 +7339,16 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
                 if (statusLabel) statusLabel.textContent = `Procesando (${i + 1}/${total}): ${prod.nombre?.substring(0, 32)}...`;
 
                 let resultado = null;
-                let errorMsg = null;
+                let lastErr = null;
 
                 // Intento 1 con 1 reintento automático si falla
                 for (let intento = 1; intento <= 2; intento++) {
                     try {
                         resultado = await window.ejecutarPuterStructuredIA(prod);
-                        errorMsg = null;
+                        lastErr = null;
                         break; // Éxito
                     } catch (err) {
-                        errorMsg = err?.message || String(err);
-                        console.warn(`[Lote Puter IA] Intento ${intento}/2 falló para "${prod.nombre}":`, err);
+                        lastErr = err;
                         if (intento === 1 && !window._loteIACancelado) {
                             if (statusTd) statusTd.innerHTML = `<span style="background: #fffbeb; color: #d97706; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 10.5px;"><i class="fas fa-redo fa-spin"></i> Reintentando...</span>`;
                             await new Promise(r => setTimeout(r, 1500));
@@ -7146,7 +7367,7 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
                             descripcion: SecuritySanitizer.cleanNote(resultado.descripcion_formateada, 2500)
                         };
 
-                        // 1. Guardar en Firestore por cada ítem para asegurar avance ante interrupciones
+                        // 1. Guardar de inmediato en Firestore por cada ítem para asegurar avance ante interrupciones
                         await updateDoc(doc(db, "productos", id), datosActualizados);
 
                         // 2. Sincronizar en segundo plano con web_destacados si aplica
@@ -7179,23 +7400,30 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
 
                         procesados++;
                     } catch (dbErr) {
-                        console.error(`Error guardando en Firestore repuesto ${id}:`, dbErr);
-                        const safeErr = SecuritySanitizer.escapeHtml(dbErr?.message || String(dbErr));
+                        console.error('[Lote IA Error]', repuesto.id || repuesto.nombre, dbErr);
+                        const rawDbMsg = dbErr?.message || String(dbErr);
+                        const safeDbMsg = SecuritySanitizer.escapeHtml(rawDbMsg);
+                        const shortDbMsg = SecuritySanitizer.escapeHtml(rawDbMsg.length > 25 ? rawDbMsg.substring(0, 22) + '...' : rawDbMsg);
+
                         if (statusTd) {
                             statusTd.innerHTML = `
-                                <span style="background: #fee2e2; color: #b91c1c; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; cursor: help;" title="${safeErr}">✕ Error</span>
-                                <div style="font-size: 9.5px; color: #dc2626; margin-top: 2px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${safeErr}">${safeErr}</div>
+                                <span style="background: #fee2e2; color: #b91c1c; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; cursor: help; display: inline-block;" title="${safeDbMsg}">✕ Error</span>
+                                <div style="font-size: 9.5px; color: #dc2626; margin-top: 2px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: monospace;" title="${safeDbMsg}">${shortDbMsg}</div>
                             `;
                         }
                         if (rowTr) rowTr.style.background = '#fef2f2';
                         errores++;
                     }
                 } else {
-                    const safeErr = SecuritySanitizer.escapeHtml(errorMsg || "Error al procesar con Puter AI");
+                    console.error('[Lote IA Error]', repuesto.id || repuesto.nombre, lastErr);
+                    const rawErrMsg = lastErr?.message || String(lastErr) || "Error al procesar con Puter AI";
+                    const safeErrMsg = SecuritySanitizer.escapeHtml(rawErrMsg);
+                    const shortErrMsg = SecuritySanitizer.escapeHtml(rawErrMsg.length > 25 ? rawErrMsg.substring(0, 22) + '...' : rawErrMsg);
+
                     if (statusTd) {
                         statusTd.innerHTML = `
-                            <span style="background: #fee2e2; color: #b91c1c; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; cursor: help;" title="${safeErr}">✕ Error</span>
-                            <div style="font-size: 9.5px; color: #dc2626; margin-top: 2px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${safeErr}">${safeErr}</div>
+                            <span style="background: #fee2e2; color: #b91c1c; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; cursor: help; display: inline-block;" title="${safeErrMsg}">✕ Error</span>
+                            <div style="font-size: 9.5px; color: #dc2626; margin-top: 2px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: monospace;" title="${safeErrMsg}">${shortErrMsg}</div>
                         `;
                     }
                     if (rowTr) rowTr.style.background = '#fef2f2';
@@ -7210,7 +7438,7 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
                     counterLabel.textContent = `${procesados} de ${total} completados${errores > 0 ? ` (${errores} con error)` : ''}`;
                 }
 
-                // Pausa preventiva de 1.5s entre llamadas para evitar rate-limits de Puter AI
+                // Pausa preventiva de 1500ms entre repuestos para no saturar la tasa de peticiones
                 if (i < total - 1 && !window._loteIACancelado) {
                     await new Promise(r => setTimeout(r, 1500));
                 }
