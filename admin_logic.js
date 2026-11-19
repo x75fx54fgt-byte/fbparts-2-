@@ -1603,7 +1603,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                         const safeDesc = (prod.descripcion || '').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, '\\n').replace(/\r/g, '');
 
                         tablaProd.innerHTML += `
-                            <tr class="admin-prod-row" data-category="${prod.categoria}">
+                            <tr class="admin-prod-row" data-category="${prod.categoria}" data-doc-id="${docId}">
                                 <td style="vertical-align: top; padding-top: 12px;"><img src="${SecuritySanitizer.formatImageUrl(prod.imagen || '', 500)}" width="60" style="border-radius:4px; border:1px solid #eee; background:#f0f0f0; object-fit:cover;" onerror="this.src='img/logo.png'"></td>
                                 <td class="prod-nombre-col" style="vertical-align: top; padding-top: 12px;">
                                     <div style="margin-bottom:3px; line-height: 1.2;"><strong>${prod.nombre}</strong> <br>${badgeEstado}</div>
@@ -1613,11 +1613,13 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                                     </div>
                                     ${bMod}
                                     ${prod.modelo ? `<div class="text-[11px] text-gray-500 mt-2"><i class="fas fa-cogs"></i> Mod/Motor: ${prod.modelo}</div>` : ''}
+                                    ${prod.numero_parte && prod.numero_parte !== 'N/A' && prod.numero_parte !== 'Consultar con asesor' ? `<div class="text-[10px] text-emerald-700 font-mono font-bold mt-1"><i class="fas fa-barcode"></i> OEM: ${prod.numero_parte}</div>` : ''}
                                 </td>
                                 <td style="vertical-align: top; padding-top: 12px;"><span style="background:#eee;padding:3px 8px;border-radius:10px;font-size:11px;font-weight:bold;">${prod.categoria}</span>${prod.subcategoria ? `<br><span style="font-size:10px; color:#777; display:block; margin-top:4px;">↳ ${prod.subcategoria}</span>` : ''}</td>
                                 <td><strong>$${Number(prod.precio).toFixed(2)}</strong><br><span style="font-size:12px;color:#666;">Stock: ${stock}</span></td>
-                                <td style="display: flex; gap: 5px; justify-content: center; align-items: center; min-width: 60px;">
-                                    <button type="button" onclick="abrirEdicion('${docId}')" style="background:#1d6fa5; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;"><i class="fas fa-edit"></i></button>
+                                <td style="display: flex; gap: 5px; justify-content: center; align-items: center; min-width: 100px;">
+                                    <button type="button" onclick="abrirEdicion('${docId}')" title="Editar Repuesto" style="background:#1d6fa5; color:white; border:none; padding:7px 10px; border-radius:5px; cursor:pointer; font-size:12px; transition:all 0.2s;"><i class="fas fa-edit"></i></button>
+                                    <button type="button" onclick="completarRepuestoConIA('${docId}')" title="Autocompletar Ficha con IA" style="background:#385723; color:white; border:none; padding:7px 10px; border-radius:5px; cursor:pointer; font-size:12px; font-weight:bold; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s;" onmouseover="this.style.background='#2d461c'" onmouseout="this.style.background='#385723'"><i class="fas fa-magic"></i> <span style="font-size:10.5px;">IA</span></button>
                                 </td>
                             </tr>`;
                     }
@@ -1630,6 +1632,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                     if(selectInventarioPed) selectInventarioPed.innerHTML += optCots;
                 });
             } catch (e) { console.error(e); }
+            if (window.actualizarContadorSinDescripcion) {
+                window.actualizarContadorSinDescripcion();
+            }
             window.filtrarTablaAdmin();
         };
 
@@ -1638,8 +1643,16 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
             const texto = document.getElementById('admin-search-filter')?.value.toLowerCase() || '';
             document.querySelectorAll('.admin-prod-row').forEach(fila => {
                 const cat = fila.getAttribute('data-category');
+                const docId = fila.getAttribute('data-doc-id');
+                const prod = window.productosDBLocal ? window.productosDBLocal[docId] : null;
                 const nom = fila.querySelector('.prod-nombre-col')?.textContent.toLowerCase() || '';
-                fila.style.display = ((filtroCat === 'todos' || cat === filtroCat) && nom.includes(texto)) ? '' : 'none';
+                
+                let pasaFiltroDesc = true;
+                if (window._filtroSoloSinDesc && prod) {
+                    pasaFiltroDesc = window.esProductoIncompleto(prod);
+                }
+
+                fila.style.display = (pasaFiltroDesc && (filtroCat === 'todos' || cat === filtroCat) && nom.includes(texto)) ? '' : 'none';
             });
         };
 
@@ -6459,6 +6472,684 @@ REGLAS DE EXTRACCIÓN:
                 alert(`¡Orden Importada! Total ${monedaBase}: $${totalDivisaRedondeado.toFixed(2)}`);
             }
         };
+
+        // =========================================================================
+        // ✨ ASISTENTE IA DE CATÁLOGO & AUTOCOMPLETADO ESTRUCTURADO (GEMINI API)
+        // =========================================================================
+        window._filtroSoloSinDesc = false;
+        window._loteIACancelado = false;
+        window._lotePendientesCache = [];
+
+        /**
+         * Determina si un repuesto carece de descripción o posee metadatos incompletos
+         */
+        window.esProductoIncompleto = function(prod) {
+            if (!prod) return false;
+            const desc = (prod.descripcion || '').trim();
+            const tieneDescCorta = desc.length < 20;
+            const faltaCategoria = !prod.categoria || prod.categoria === 'todos' || prod.categoria === 'general' || prod.categoria === '';
+            const faltaModelo = !prod.modelo || prod.modelo.trim() === '';
+            const faltaMarca = !prod.marca || prod.marca.trim() === '' || prod.marca === 'Universal/Multi-marca';
+            return tieneDescCorta || faltaCategoria || faltaModelo || faltaMarca;
+        };
+
+        /**
+         * Actualiza el badge numérico y estilo del botón toggle de repuestos incompletos
+         */
+        window.actualizarContadorSinDescripcion = function() {
+            let count = 0;
+            if (window.productosDBLocal) {
+                Object.values(window.productosDBLocal).forEach(p => {
+                    if (window.esProductoIncompleto(p)) count++;
+                });
+            }
+            const badge = document.getElementById('contador-sin-desc');
+            if (badge) badge.textContent = count;
+            
+            const btn = document.getElementById('btn-filtro-sin-desc');
+            if (btn) {
+                if (window._filtroSoloSinDesc) {
+                    btn.style.background = '#dc2626';
+                    btn.style.color = '#ffffff';
+                    btn.style.borderColor = '#b91c1c';
+                } else {
+                    btn.style.background = count > 0 ? '#fef3c7' : '#f1f5f9';
+                    btn.style.color = count > 0 ? '#92400e' : '#64748b';
+                    btn.style.borderColor = count > 0 ? '#f59e0b' : '#cbd5e1';
+                }
+            }
+            return count;
+        };
+
+        /**
+         * Alterna el filtro rápido para visualizar solo repuestos incompletos
+         */
+        window.toggleFiltroSinDescripcion = function() {
+            window._filtroSoloSinDesc = !window._filtroSoloSinDesc;
+            window.actualizarContadorSinDescripcion();
+            window.filtrarTablaAdmin();
+        };
+
+        /**
+         * Actualiza una fila de producto en el DOM en tiempo real a 60fps sin recarga
+         */
+        window.actualizarFilaProductoDOM = function(docId) {
+            const prod = window.productosDBLocal ? window.productosDBLocal[docId] : null;
+            if (!prod) return;
+            const fila = document.querySelector(`.admin-prod-row[data-doc-id="${docId}"]`);
+            if (!fila) return;
+
+            fila.setAttribute('data-category', prod.categoria || '');
+
+            const badgeEstado = prod.estado === 'activo' 
+                ? `<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-[10px] uppercase font-bold inline-block mt-1">Activo</span>` 
+                : `<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] uppercase font-bold inline-block mt-1">Inactivo</span>`;
+            
+            let bMarca = '';
+            if (prod.marca && prod.marca !== "Universal/Multi-marca" && prod.marca !== "") {
+                bMarca = `<span class="bg-gray-100 text-gray-700 border border-gray-200 px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide shadow-sm inline-flex items-center gap-1"><i class="fas fa-car-side"></i> ${prod.marca}</span>`;
+            }
+            
+            let bPos = '';
+            if (prod.posicion && prod.posicion !== "N/A" && prod.posicion !== "") {
+                bPos = `<span class="bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide shadow-sm inline-flex items-center gap-1"><i class="fas fa-arrows-alt-h"></i> ${prod.posicion}</span>`;
+            }
+            
+            let bMod = '';
+            if (prod.modalidad && prod.modalidad.toLowerCase().includes("importación")) {
+                bMod = `<span class="bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide shadow-sm inline-flex items-center gap-1 mt-1"><i class="fas fa-plane-arrival"></i> ${prod.modalidad}</span>`;
+            } else if (prod.modalidad) {
+                bMod = `<span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide shadow-sm inline-flex items-center gap-1 mt-1"><i class="fas fa-box"></i> ${prod.modalidad}</span>`;
+            }
+
+            const colNombre = fila.querySelector('.prod-nombre-col');
+            if (colNombre) {
+                colNombre.innerHTML = `
+                    <div style="margin-bottom:3px; line-height: 1.2;"><strong>${prod.nombre}</strong> <br>${badgeEstado}</div>
+                    <div class="flex flex-wrap gap-1 mt-2 mb-1">
+                        ${bMarca}
+                        ${bPos}
+                    </div>
+                    ${bMod}
+                    ${prod.modelo ? `<div class="text-[11px] text-gray-500 mt-2"><i class="fas fa-cogs"></i> Mod/Motor: ${prod.modelo}</div>` : ''}
+                    ${prod.numero_parte && prod.numero_parte !== 'N/A' && prod.numero_parte !== 'Consultar con asesor' ? `<div class="text-[10px] text-emerald-700 font-mono font-bold mt-1"><i class="fas fa-barcode"></i> OEM: ${prod.numero_parte}</div>` : ''}
+                `;
+            }
+
+            const celdas = fila.querySelectorAll('td');
+            if (celdas[2]) {
+                celdas[2].innerHTML = `<span style="background:#eee;padding:3px 8px;border-radius:10px;font-size:11px;font-weight:bold;">${prod.categoria}</span>${prod.subcategoria ? `<br><span style="font-size:10px; color:#777; display:block; margin-top:4px;">↳ ${prod.subcategoria}</span>` : ''}`;
+            }
+
+            // Si el filtro "solo sin descripción" está activo y el producto ya está completo, ocultar fila
+            if (window._filtroSoloSinDesc && !window.esProductoIncompleto(prod)) {
+                fila.style.display = 'none';
+            }
+        };
+
+        /**
+         * Obtiene o solicita la API Key de Gemini
+         */
+        window.obtenerApiKeyGemini = function(forzarPrompt = false) {
+            let key = sessionStorage.getItem('fb_gemini_api_key') || localStorage.getItem('fb_gemini_api_key') || '';
+            if (!key || forzarPrompt) {
+                const input = prompt("🔑 Ingresa tu Gemini API Key (Google AI Studio) para autocompletar repuestos con IA:\n(Se guardará únicamente en esta sesión)", key);
+                if (input !== null) {
+                    key = input.trim();
+                    if (key) {
+                        sessionStorage.setItem('fb_gemini_api_key', key);
+                        localStorage.setItem('fb_gemini_api_key', key);
+                    }
+                }
+            }
+            return key;
+        };
+
+        window.cambiarApiKeyGeminiRapido = function() {
+            const k = window.obtenerApiKeyGemini(true);
+            if (k) alert("✅ Gemini API Key configurada correctamente.");
+        };
+
+        /**
+         * Motor de Generación Estructurada (Gemini API con responseMimeType: 'application/json' y fallback Puter)
+         */
+        window.ejecutarGeminiStructuredIA = async function(prod) {
+            if (!prod) throw new Error("Producto no encontrado.");
+
+            // Preparar lista de categorías existentes válidas
+            const categoriasValidas = [];
+            if (window.mapaCategorias && Object.keys(window.mapaCategorias).length > 0) {
+                Object.entries(window.mapaCategorias).forEach(([id, nombre]) => {
+                    categoriasValidas.push(`- ID: "${id}" (Nombre: "${nombre}")`);
+                });
+            }
+            const listaCatTexto = categoriasValidas.length > 0 
+                ? categoriasValidas.join('\n')
+                : `- ID: "repuestos-automotrices" (Nombre: "Repuestos Automotrices")\n- ID: "motor" (Nombre: "Motor")\n- ID: "frenos" (Nombre: "Frenos")\n- ID: "carroceria" (Nombre: "Carrocería")`;
+
+            const systemInstruction = `Eres un Ingeniero Especialista en Catálogo de Repuestos Automotrices para "Inversiones F&B Parts, C.A.".
+Tu labor es estructurar fichas técnicas automotrices en formato JSON estricto basadas en el título del producto.`;
+
+            const promptUser = `Analiza el repuesto siguiente y devuelve ÚNICAMENTE un objeto JSON con la estructura solicitada.
+
+DATOS DEL REPUESTO:
+- Nombre / Título: "${prod.nombre || ''}"
+- Precio Actual: $${prod.precio || 0}
+- Stock: ${prod.stock !== undefined ? prod.stock : 1}
+- Categoría actual: "${prod.categoria || ''}"
+- Marca actual: "${prod.marca || ''}"
+- Modelo actual: "${prod.modelo || ''}"
+- OEM actual: "${prod.numero_parte || ''}"
+
+LISTA DE CATEGORÍAS VÁLIDAS EN EL SISTEMA:
+${listaCatTexto}
+
+REGLAS ESTRICTAS DE RESPUESTA:
+1. "marca_vehiculo": Nombre de la marca fabricante del vehículo (ej: "Toyota", "Ford", "Chevrolet", "Mercedes Benz", "Dongfeng", "Isuzu", "Mitsubishi", "Chery", "Hyundai"). Si no aplica a una marca particular, escribe "Universal".
+2. "modelo_motorizacion": Nombre del modelo y su cilindrada o motor en LETRAS MAYÚSCULAS (ej: "HILUX 2.7L", "COROLLA 1.8L", "MERCEDES BENZ C200", "SILVERADO 5.3L", "AVEO 1.6L", "DUOLIKA 5T"). Si el título no indica motorización, coloca el modelo en MAYÚSCULAS.
+3. "categoria_slug": Elige OBLIGATORIAMENTE el ID exacto de la lista de categorías válidas provistas que mejor clasifique la pieza.
+4. "subcategoria": Clasificación del subsistema vehicular (ej: "Motor", "Carrocería", "Frenos", "Suspensión", "Iluminación", "Eléctrico", "Enfriamiento", "Filtros", "Correas", "Accesorios").
+5. "numero_parte_oem": REGLA DE SEGURIDAD ESTRICTA: Extrae el código OEM ÚNICAMENTE si viene explícito en el título del producto o en los datos provistos. Si NO viene un número de parte evidente en el título, coloca estrictamente "Consultar con asesor" o "N/A". PROHIBIDO INVENTAR O ALUCINAR CÓDIGOS OEM.
+6. "descripcion_formateada": Redacta un texto profesional, técnico y persuasivo siguiendo ESTRICTAMENTE esta plantilla exacta (mantén los emojis y encabezados tal cual):
+
+✅ FUNCIÓN Y BENEFICIOS:
+[Escribe 1 párrafo claro, profesional y técnico sobre la función que cumple esta pieza y el beneficio de reemplazarla a tiempo para la vida útil del vehículo]
+
+🔧 COMPATIBILIDAD SUGERIDA:
+- [Marca Modelo Años]
+- [Marca Modelo Años]
+
+ESTRUCTURA EXACTA DEL JSON:
+{
+  "marca_vehiculo": "...",
+  "modelo_motorizacion": "...",
+  "categoria_slug": "...",
+  "subcategoria": "...",
+  "numero_parte_oem": "...",
+  "descripcion_formateada": "..."
+}`;
+
+            let apiKey = window.obtenerApiKeyGemini();
+            let parsedData = null;
+
+            if (apiKey) {
+                try {
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+                    const resp = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [
+                                {
+                                    role: 'user',
+                                    parts: [{ text: `${systemInstruction}\n\n${promptUser}` }]
+                                }
+                            ],
+                            generationConfig: {
+                                responseMimeType: 'application/json',
+                                temperature: 0.2
+                            }
+                        })
+                    });
+
+                    if (!resp.ok) {
+                        const errJson = await resp.json().catch(() => ({}));
+                        console.warn("Aviso en Gemini API:", resp.status, errJson);
+                        if (resp.status === 400 || resp.status === 403) {
+                            sessionStorage.removeItem('fb_gemini_api_key');
+                            localStorage.removeItem('fb_gemini_api_key');
+                        }
+                        throw new Error(`Gemini API respondió ${resp.status}: ${errJson.error?.message || 'Error en petición'}`);
+                    }
+
+                    const data = await resp.json();
+                    const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (textResponse) {
+                        parsedData = JSON.parse(textResponse);
+                    }
+                } catch (apiError) {
+                    console.warn("Fallo en llamada directa a Gemini API:", apiError);
+                    if (typeof puter !== 'undefined' && puter.ai) {
+                        console.log("Intentando fallback mediante Puter.ai (gemini-2.0-flash)...");
+                        const puterResp = await puter.ai.chat(`${systemInstruction}\n\n${promptUser}\n\nResponde ÚNICAMENTE con JSON válido sin bloques markdown.`, { model: 'gemini-2.0-flash' });
+                        let rawText = typeof puterResp === 'string' ? puterResp : (puterResp?.message?.content || JSON.stringify(puterResp));
+                        rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+                        parsedData = JSON.parse(rawText);
+                    } else {
+                        throw apiError;
+                    }
+                }
+            } else if (typeof puter !== 'undefined' && puter.ai) {
+                console.log("Generando con Puter.ai...");
+                const puterResp = await puter.ai.chat(`${systemInstruction}\n\n${promptUser}\n\nResponde ÚNICAMENTE con JSON válido sin bloques markdown.`, { model: 'gemini-2.0-flash' });
+                let rawText = typeof puterResp === 'string' ? puterResp : (puterResp?.message?.content || JSON.stringify(puterResp));
+                rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+                parsedData = JSON.parse(rawText);
+            } else {
+                throw new Error("No se ha configurado la Gemini API Key ni se dispone de Puter.");
+            }
+
+            if (!parsedData) throw new Error("No se pudo obtener un JSON estructurado de la IA.");
+
+            // Sanitización y normalización del resultado
+            const tituloMayus = (prod.nombre || '').toUpperCase();
+            let numParteFinal = (parsedData.numero_parte_oem || '').trim();
+            
+            // Regla de seguridad: Si no viene explícito en el título o parece inventado, asegurar "Consultar con asesor" o "N/A"
+            if (numParteFinal && numParteFinal !== 'N/A' && numParteFinal !== 'Consultar con asesor') {
+                const cleanOem = numParteFinal.replace(/[^A-Z0-9]/gi, '');
+                const cleanTitle = tituloMayus.replace(/[^A-Z0-9]/gi, '');
+                if (cleanOem.length > 3 && !cleanTitle.includes(cleanOem)) {
+                    console.warn("OEM no detectado en el título, protegiendo contra alucinación:", numParteFinal);
+                    numParteFinal = 'Consultar con asesor';
+                }
+            } else if (!numParteFinal) {
+                numParteFinal = 'Consultar con asesor';
+            }
+
+            let categoriaSlugFinal = (parsedData.categoria_slug || '').trim();
+            if (!window.mapaCategorias || !window.mapaCategorias[categoriaSlugFinal]) {
+                const catKeys = Object.keys(window.mapaCategorias || {});
+                const match = catKeys.find(k => k.toLowerCase() === categoriaSlugFinal.toLowerCase() || (window.mapaCategorias[k] && window.mapaCategorias[k].toLowerCase().includes(categoriaSlugFinal.toLowerCase())));
+                if (match) {
+                    categoriaSlugFinal = match;
+                } else if (prod.categoria && window.mapaCategorias?.[prod.categoria]) {
+                    categoriaSlugFinal = prod.categoria;
+                } else if (catKeys.length > 0) {
+                    categoriaSlugFinal = catKeys[0];
+                }
+            }
+
+            return {
+                marca_vehiculo: (parsedData.marca_vehiculo || prod.marca || 'Universal').trim(),
+                modelo_motorizacion: (parsedData.modelo_motorizacion || prod.modelo || '').trim().toUpperCase(),
+                categoria_slug: categoriaSlugFinal,
+                subcategoria: (parsedData.subcategoria || prod.subcategoria || 'General').trim(),
+                numero_parte_oem: numParteFinal,
+                descripcion_formateada: (parsedData.descripcion_formateada || '').trim()
+            };
+        };
+
+        /**
+         * Abre el modal individual de autocompletado y consulta la IA
+         */
+        window.completarRepuestoConIA = async function(docId) {
+            if (!docId) {
+                alert("ID de repuesto no válido.");
+                return;
+            }
+            const prod = window.productosDBLocal ? window.productosDBLocal[docId] : null;
+            if (!prod) {
+                alert("No se encontraron los datos del repuesto en memoria local.");
+                return;
+            }
+
+            const modal = document.getElementById('modal-ai-completar-repuesto');
+            if (!modal) return;
+
+            // Poblar tarjeta informativa
+            document.getElementById('ai-rep-doc-id').value = docId;
+            document.getElementById('ai-rep-nombre-display').textContent = prod.nombre || 'Sin título';
+            document.getElementById('ai-rep-badge-precio').textContent = `$${Number(prod.precio || 0).toFixed(2)}`;
+            document.getElementById('ai-rep-badge-stock').textContent = `Stock: ${prod.stock !== undefined ? prod.stock : 1}`;
+            
+            const imgEl = document.getElementById('ai-rep-img-preview');
+            if (imgEl) {
+                imgEl.src = prod.imagen ? SecuritySanitizer.formatImageUrl(prod.imagen, 200) : 'img/logo.png';
+            }
+
+            const badgeIncompleto = document.getElementById('ai-rep-badge-estado-desc');
+            if (badgeIncompleto) {
+                if (window.esProductoIncompleto(prod)) {
+                    badgeIncompleto.style.display = 'inline-block';
+                    badgeIncompleto.textContent = '⚠️ Ficha Incompleta';
+                    badgeIncompleto.style.background = '#fef2f2';
+                    badgeIncompleto.style.color = '#b91c1c';
+                    badgeIncompleto.style.borderColor = '#fecaca';
+                } else {
+                    badgeIncompleto.style.display = 'inline-block';
+                    badgeIncompleto.textContent = '✓ Ficha Completa';
+                    badgeIncompleto.style.background = '#f0fdf4';
+                    badgeIncompleto.style.color = '#15803d';
+                    badgeIncompleto.style.borderColor = '#bbf7d0';
+                }
+            }
+
+            // Poblar selector de categorías
+            const selCat = document.getElementById('ai-rep-categoria');
+            if (selCat) {
+                selCat.innerHTML = '';
+                if (window.mapaCategorias) {
+                    Object.entries(window.mapaCategorias).forEach(([id, nom]) => {
+                        const opt = document.createElement('option');
+                        opt.value = id;
+                        opt.textContent = nom;
+                        selCat.appendChild(opt);
+                    });
+                }
+            }
+
+            // Mostrar modal con loader
+            modal.style.display = 'flex';
+            const loader = document.getElementById('ai-rep-loading');
+            const form = document.getElementById('ai-rep-formulario');
+            const btnGuardar = document.getElementById('btn-ai-guardar-ficha');
+            if (loader) loader.style.display = 'block';
+            if (form) form.style.opacity = '0.5';
+            if (btnGuardar) btnGuardar.disabled = true;
+
+            try {
+                const resultado = await window.ejecutarGeminiStructuredIA(prod);
+
+                document.getElementById('ai-rep-marca').value = resultado.marca_vehiculo;
+                document.getElementById('ai-rep-modelo').value = resultado.modelo_motorizacion;
+                if (selCat && resultado.categoria_slug) selCat.value = resultado.categoria_slug;
+                document.getElementById('ai-rep-subcategoria').value = resultado.subcategoria;
+                document.getElementById('ai-rep-oem').value = resultado.numero_parte_oem;
+                document.getElementById('ai-rep-descripcion').value = resultado.descripcion_formateada;
+
+            } catch (err) {
+                console.error("Error al autocompletar repuesto:", err);
+                alert("⚠️ No se pudo generar la ficha con IA automáticamente:\n" + (err.message || err) + "\n\nPuedes ajustar los datos manualmente.");
+                document.getElementById('ai-rep-marca').value = prod.marca || '';
+                document.getElementById('ai-rep-modelo').value = (prod.modelo || '').toUpperCase();
+                if (selCat && prod.categoria) selCat.value = prod.categoria;
+                document.getElementById('ai-rep-subcategoria').value = prod.subcategoria || '';
+                document.getElementById('ai-rep-oem').value = prod.numero_parte || 'Consultar con asesor';
+                document.getElementById('ai-rep-descripcion').value = prod.descripcion || '';
+            } finally {
+                if (loader) loader.style.display = 'none';
+                if (form) form.style.opacity = '1';
+                if (btnGuardar) btnGuardar.disabled = false;
+            }
+        };
+
+        window.reintentarIAIndividual = function() {
+            const docId = document.getElementById('ai-rep-doc-id').value;
+            if (docId) window.completarRepuestoConIA(docId);
+        };
+
+        window.cerrarModalAIRepuesto = function() {
+            const modal = document.getElementById('modal-ai-completar-repuesto');
+            if (modal) modal.style.display = 'none';
+        };
+
+        /**
+         * Guarda y publica la ficha generada/editada en Firestore y web_destacados
+         */
+        window.guardarFichaCompletadaIA = async function() {
+            const docId = document.getElementById('ai-rep-doc-id').value;
+            if (!docId) return;
+
+            const btn = document.getElementById('btn-ai-guardar-ficha');
+            const textoOriginal = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+            }
+
+            try {
+                const marca = SecuritySanitizer.cleanText(document.getElementById('ai-rep-marca').value, 50);
+                const modelo = SecuritySanitizer.cleanText(document.getElementById('ai-rep-modelo').value.toUpperCase(), 100);
+                const categoria = document.getElementById('ai-rep-categoria').value;
+                const subcategoria = SecuritySanitizer.cleanText(document.getElementById('ai-rep-subcategoria').value, 50);
+                const numeroParte = SecuritySanitizer.cleanText(document.getElementById('ai-rep-oem').value, 50);
+                const descripcion = SecuritySanitizer.cleanNote(document.getElementById('ai-rep-descripcion').value, 2500);
+
+                const prodActual = window.productosDBLocal[docId] || {};
+
+                const datosActualizados = {
+                    marca: marca || 'Universal',
+                    modelo: modelo || '',
+                    categoria: categoria,
+                    subcategoria: subcategoria,
+                    numero_parte: numeroParte,
+                    descripcion: descripcion
+                };
+
+                // 1. Guardar en Firestore colección 'productos'
+                await updateDoc(doc(db, "productos", docId), datosActualizados);
+
+                // 2. Sincronizar en segundo plano con 'web_destacados' si aplica
+                try {
+                    const snapDest = await getDocs(collection(db, "web_destacados"));
+                    snapDest.forEach(async dSnap => {
+                        const d = dSnap.data();
+                        if (d.productoId === docId || d.nombre === prodActual.nombre) {
+                            await updateDoc(doc(db, "web_destacados", dSnap.id), {
+                                categoria: datosActualizados.categoria,
+                                marca: datosActualizados.marca,
+                                modelo: datosActualizados.modelo,
+                                subcategoria: datosActualizados.subcategoria
+                            });
+                        }
+                    });
+                } catch(eDest) { console.warn("Sync web_destacados:", eDest); }
+
+                // 3. Actualizar memoria local
+                if (window.productosDBLocal[docId]) {
+                    Object.assign(window.productosDBLocal[docId], datosActualizados);
+                }
+
+                // 4. Si el modal de edición clásico está abierto, sincronizar sus campos
+                const modalEdicion = document.getElementById('modal-edicion');
+                if (modalEdicion && modalEdicion.style.display !== 'none' && document.getElementById('edit-id').value === docId) {
+                    document.getElementById('edit-marca').value = datosActualizados.marca;
+                    document.getElementById('edit-modelo').value = datosActualizados.modelo;
+                    document.getElementById('edit-subcategoria').value = datosActualizados.subcategoria;
+                    document.getElementById('edit-numero-parte').value = datosActualizados.numero_parte;
+                    document.getElementById('edit-descripcion').value = datosActualizados.descripcion;
+                    let catName = (window.mapaCategorias && window.mapaCategorias[datosActualizados.categoria]) ? window.mapaCategorias[datosActualizados.categoria] : datosActualizados.categoria;
+                    document.getElementById('edit-categoria').value = catName;
+                }
+
+                // 5. Actualizar DOM de la fila en tiempo real
+                window.actualizarFilaProductoDOM(docId);
+
+                // 6. Actualizar contador de incompletos
+                window.actualizarContadorSinDescripcion();
+
+                // 7. Registro de Auditoría
+                if (window.registrarAuditoria) {
+                    window.registrarAuditoria("FICHA IA GUARDADA", `Ficha técnica completada para: ${prodActual.nombre || docId}`);
+                }
+
+                // 8. Cerrar modal y feedback
+                window.cerrarModalAIRepuesto();
+
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Ficha Publicada!',
+                        text: 'La ficha técnica ha sido guardada en Firestore y actualizada en el catálogo.',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                } else {
+                    alert("✅ Ficha técnica guardada y publicada exitosamente.");
+                }
+
+            } catch (error) {
+                console.error("Error al guardar ficha:", error);
+                alert("Ocurrió un error al guardar la ficha técnica: " + (error.message || error));
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = textoOriginal;
+                }
+            }
+        };
+
+        /**
+         * Abre el modal de procesamiento por lote
+         */
+        window.abrirModalLoteIA = function() {
+            const modal = document.getElementById('modal-ai-lote-repuestos');
+            if (!modal) return;
+
+            window._loteIACancelado = false;
+            const tbody = document.getElementById('ai-lote-items-tbody');
+            const summaryText = document.getElementById('ai-lote-summary-text');
+            const pctText = document.getElementById('ai-lote-pct-text');
+            const progressBar = document.getElementById('ai-lote-progress-bar');
+            const statusLabel = document.getElementById('ai-lote-status-label');
+            const counterLabel = document.getElementById('ai-lote-counter-label');
+            const btnIniciar = document.getElementById('btn-iniciar-lote-ia');
+            const btnDetener = document.getElementById('btn-detener-lote-ia');
+
+            if (btnIniciar) {
+                btnIniciar.style.display = 'inline-flex';
+                btnIniciar.disabled = false;
+                btnIniciar.innerHTML = '<i class="fas fa-play"></i> Iniciar Procesamiento en Lote';
+            }
+            if (btnDetener) btnDetener.style.display = 'none';
+
+            if (progressBar) progressBar.style.width = '0%';
+            if (pctText) pctText.textContent = '0%';
+            if (statusLabel) statusLabel.textContent = 'Listo para comenzar';
+
+            const pendientes = [];
+            if (window.productosDBLocal) {
+                Object.entries(window.productosDBLocal).forEach(([id, prod]) => {
+                    if (window.esProductoIncompleto(prod)) {
+                        pendientes.push({ id, prod });
+                    }
+                });
+            }
+
+            window._lotePendientesCache = pendientes;
+
+            if (summaryText) summaryText.textContent = `Detectados: ${pendientes.length} repuestos incompletos`;
+            if (counterLabel) counterLabel.textContent = `0 de ${pendientes.length} completados`;
+
+            if (tbody) {
+                if (pendientes.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 30px; color: #15803d; font-weight: bold;">🎉 ¡Felicitaciones! Todo el catálogo cuenta con ficha técnica completa.</td></tr>`;
+                    if (btnIniciar) btnIniciar.disabled = true;
+                } else {
+                    tbody.innerHTML = pendientes.map((item, index) => `
+                        <tr id="lote-row-${item.id}" style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 8px 12px; color: #64748b; font-weight: 700;">${index + 1}</td>
+                            <td style="padding: 8px 12px; font-weight: 700; color: #1e293b; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                ${SecuritySanitizer.escapeHtml(item.prod.nombre || 'Repuesto')}
+                            </td>
+                            <td style="padding: 8px 12px; color: #64748b;" id="lote-cat-${item.id}">
+                                ${item.prod.categoria || '<em style="color:#ef4444;">Sin categoría</em>'}
+                            </td>
+                            <td style="padding: 8px 12px; text-align: right;" id="lote-status-${item.id}">
+                                <span style="background: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px;">⏳ Pendiente</span>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            }
+
+            modal.style.display = 'flex';
+        };
+
+        window.cerrarModalLoteIA = function() {
+            window._loteIACancelado = true;
+            const modal = document.getElementById('modal-ai-lote-repuestos');
+            if (modal) modal.style.display = 'none';
+        };
+
+        window.detenerProcesamientoLoteIA = function() {
+            window._loteIACancelado = true;
+            const statusLabel = document.getElementById('ai-lote-status-label');
+            if (statusLabel) statusLabel.textContent = 'Deteniendo lote al finalizar la pieza actual...';
+        };
+
+        /**
+         * Ejecuta el procesamiento en lote secuencial
+         */
+        window.iniciarProcesamientoLoteIA = async function() {
+            const pendientes = window._lotePendientesCache || [];
+            if (pendientes.length === 0) return;
+
+            window._loteIACancelado = false;
+            const btnIniciar = document.getElementById('btn-iniciar-lote-ia');
+            const btnDetener = document.getElementById('btn-detener-lote-ia');
+            const progressBar = document.getElementById('ai-lote-progress-bar');
+            const pctText = document.getElementById('ai-lote-pct-text');
+            const statusLabel = document.getElementById('ai-lote-status-label');
+            const counterLabel = document.getElementById('ai-lote-counter-label');
+
+            if (btnIniciar) btnIniciar.style.display = 'none';
+            if (btnDetener) btnDetener.style.display = 'inline-flex';
+
+            let procesados = 0;
+            const total = pendientes.length;
+
+            for (let i = 0; i < total; i++) {
+                if (window._loteIACancelado) {
+                    if (statusLabel) statusLabel.textContent = '⛔ Procesamiento detenido por el usuario.';
+                    break;
+                }
+
+                const { id, prod } = pendientes[i];
+                const statusTd = document.getElementById(`lote-status-${id}`);
+                const catTd = document.getElementById(`lote-cat-${id}`);
+                const rowTr = document.getElementById(`lote-row-${id}`);
+
+                if (statusTd) statusTd.innerHTML = `<span style="background: #fef3c7; color: #b45309; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px;"><i class="fas fa-spinner fa-spin"></i> Generando...</span>`;
+                if (statusLabel) statusLabel.textContent = `Procesando (${i + 1}/${total}): ${prod.nombre?.substring(0, 32)}...`;
+
+                try {
+                    const resultado = await window.ejecutarGeminiStructuredIA(prod);
+
+                    const datosActualizados = {
+                        marca: SecuritySanitizer.cleanText(resultado.marca_vehiculo, 50),
+                        modelo: SecuritySanitizer.cleanText(resultado.modelo_motorizacion, 100),
+                        categoria: resultado.categoria_slug,
+                        subcategoria: SecuritySanitizer.cleanText(resultado.subcategoria, 50),
+                        numero_parte: SecuritySanitizer.cleanText(resultado.numero_parte_oem, 50),
+                        descripcion: SecuritySanitizer.cleanNote(resultado.descripcion_formateada, 2500)
+                    };
+
+                    // Guardar en Firestore
+                    await updateDoc(doc(db, "productos", id), datosActualizados);
+
+                    // Sincronizar en memoria y tabla principal
+                    if (window.productosDBLocal[id]) {
+                        Object.assign(window.productosDBLocal[id], datosActualizados);
+                    }
+                    window.actualizarFilaProductoDOM(id);
+
+                    // Actualizar fila del lote
+                    if (statusTd) statusTd.innerHTML = `<span style="background: #dcfce7; color: #15803d; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px;">✓ Listo</span>`;
+                    if (catTd) catTd.textContent = (window.mapaCategorias?.[resultado.categoria_slug] || resultado.categoria_slug) + (resultado.modelo_motorizacion ? ` (${resultado.modelo_motorizacion})` : '');
+                    if (rowTr) rowTr.style.background = '#f0fdf4';
+
+                    procesados++;
+                } catch (err) {
+                    console.error(`Error procesando repuesto ${id}:`, err);
+                    if (statusTd) statusTd.innerHTML = `<span style="background: #fee2e2; color: #b91c1c; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px;">✕ Error</span>`;
+                }
+
+                // Progreso visual
+                const pct = Math.round(((i + 1) / total) * 100);
+                if (progressBar) progressBar.style.width = `${pct}%`;
+                if (pctText) pctText.textContent = `${pct}%`;
+                if (counterLabel) counterLabel.textContent = `${procesados} de ${total} completados`;
+
+                // Pequeña pausa para respetar rate limits
+                await new Promise(r => setTimeout(r, 250));
+            }
+
+            if (btnDetener) btnDetener.style.display = 'none';
+            if (btnIniciar) {
+                btnIniciar.style.display = 'inline-flex';
+                btnIniciar.innerHTML = '<i class="fas fa-check"></i> Proceso Finalizado';
+                btnIniciar.disabled = true;
+            }
+
+            if (statusLabel && !window._loteIACancelado) {
+                statusLabel.textContent = `✅ ¡Lote completado! (${procesados} repuestos actualizados en Firestore)`;
+            }
+
+            window.actualizarContadorSinDescripcion();
+        };
+
         window.imprimirEtiquetaEnvio = function(docId) {
             const ped = window.pedidosDBLocal[docId];
             if(!ped) return;
