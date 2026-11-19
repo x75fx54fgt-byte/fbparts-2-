@@ -4297,7 +4297,7 @@
                             ASISTENTE IA: FICHA TÉCNICA DE REPUESTO
                         </h3>
                         <p style="margin: 2px 0 0 0; font-size: 11px; color: #d4ebd4;">
-                            Generación estructurada con Gemini API y catálogo oficial Inversiones F&B Parts
+                            Generación estructurada con Puter AI y catálogo oficial Inversiones F&B Parts
                         </p>
                     </div>
                 </div>
@@ -4334,10 +4334,10 @@
                 <div id="ai-rep-loading" style="display: none; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px; text-align: center; margin-bottom: 16px;">
                     <i class="fas fa-spinner fa-spin" style="font-size: 22px; color: #385723; margin-bottom: 6px;"></i>
                     <div style="font-size: 13px; font-weight: 700; color: #166534;" id="ai-rep-loading-text">
-                        Consultando Gemini API y analizando compatibilidad automotriz...
+                        Consultando Puter AI y analizando compatibilidad automotriz...
                     </div>
                     <div style="font-size: 11px; color: #5e8877; margin-top: 2px;">
-                        Extrayendo marca, motorización, categoría válida y redactando descripción técnica.
+                        Extrayendo marca, motorización, categoría válida y redactando descripción técnica oficial.
                     </div>
                 </div>
 
@@ -4419,9 +4419,9 @@
 
             <!-- Acciones del Modal -->
             <div style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;">
-                <button type="button" onclick="window.cambiarApiKeyGeminiRapido()" style="background: transparent; border: none; color: #64748b; font-size: 11.5px; cursor: pointer; text-decoration: underline;">
-                    <i class="fas fa-key"></i> Configurar Gemini API Key
-                </button>
+                <div style="display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #385723; font-weight: 700;">
+                    <i class="fas fa-robot"></i> <span>Motor: Puter.js AI</span>
+                </div>
                 <div style="display: flex; gap: 10px;">
                     <button type="button" onclick="window.cerrarModalAIRepuesto()" style="background: #e2e8f0; border: none; color: #334155; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer;">
                         Cancelar
@@ -4448,10 +4448,10 @@
                     </div>
                     <div>
                         <h3 style="margin: 0; color: white; font-size: 17.5px; font-weight: 700; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px;">
-                            AUTOCOMPLETAR CATÁLOGO EN LOTE (IA)
+                            AUTOCOMPLETAR CATÁLOGO EN LOTE (PUTER AI)
                         </h3>
                         <p style="margin: 2px 0 0 0; font-size: 11px; color: #d4ebd4;">
-                            Procesamiento inteligente secuencial de repuestos sin descripción
+                            Procesamiento inteligente secuencial con reintentos y guardado directo en Firestore
                         </p>
                     </div>
                 </div>
@@ -4558,7 +4558,7 @@
             }
         }, 8000);
     </script>
-    <script type="module" src="admin_logic.js?v=20261119_ia_completar_catalogo"></script>
+    <script type="module" src="admin_logic.js?v=20261119_ia_puter_lote_resiliente"></script>
 
 
     <!-- MODAL AUDITORIA INTERNA -->
