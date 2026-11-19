@@ -9053,8 +9053,22 @@ REGLAS DE EXTRACCIÓN:
         };
 
         // =========================================================================
-        // 💰 PUENTE DE DATOS: MIGRACIÓN DE PEDIDOS A CONTROL DE REVENTAS
+        // 💰 PUENTE DE DATOS: MIGRACIÓN DE PEDIDOS A CONTROL DE REVENTAS (ALTA FLUIDEZ + MULTIDIVISA)
         // =========================================================================
+
+        window._migrarReventasState = [];
+        window._rafMigrar = null;
+
+        function _obtenerTasaMigrarBCV() {
+            let t = (window.obtenerTasaBCVActual && window.obtenerTasaBCVActual()) || window.tasaVivaBCV || window._ultimoUsdBcv || window.tasaReventaBCV || 0;
+            if (t > 0) return t;
+            const tickerEl = document.getElementById('ticker-dolar-bcv');
+            if (tickerEl) {
+                const parsed = parseFloat(tickerEl.textContent.replace(/[^\d.,]/g, '').replace(',', '.'));
+                if (parsed > 0) return parsed;
+            }
+            return 42.00;
+        }
 
         window.abrirModalMigrarReventa = async function(docId) {
             let ped = (window.pedidosDBLocal && window.pedidosDBLocal[docId]) || 
@@ -9133,6 +9147,8 @@ REGLAS DE EXTRACCIÓN:
             const totalGeneral = parseFloat(ped.total) || 0;
             const tienePrecios = productos.some(p => parseFloat(p.precio) > 0);
 
+            window._migrarReventasState = [];
+
             productos.forEach((p, index) => {
                 const cant = parseInt(p.cantidad) || 1;
                 const nombreLimpio = (p.nombre || p.descripcion || p.producto || `Repuesto #${index + 1}`).trim();
@@ -9145,44 +9161,91 @@ REGLAS DE EXTRACCIÓN:
                     ventaLinea = Math.round((totalGeneral / productos.length) * 100) / 100;
                 }
 
+                const item = {
+                    index: index,
+                    desc: descTexto,
+                    originalName: p.nombre || '',
+                    cantidad: cant,
+                    nombreInterm: '',
+                    excluido: false,
+                    ventaUSD: ventaLinea,
+                    monedaCosto: 'USD',
+                    costoRaw: 0,
+                    costoUSD: 0,
+                    monedaGastos: 'USD',
+                    gastosRaw: 0,
+                    gastosUSD: 0,
+                    porcentaje: 0,
+                    gananciaBruta: ventaLinea,
+                    comisionTercero: 0,
+                    gananciaNeta: ventaLinea
+                };
+                window._migrarReventasState.push(item);
+
                 const tr = document.createElement('tr');
+                tr.id = `migrar-row-${index}`;
                 tr.className = 'migrar-reventa-row';
                 tr.style.borderBottom = '1px solid #e2e8f0';
                 tr.innerHTML = `
-                    <td style="padding: 10px 12px; vertical-align: middle;">
-                        <input type="text" class="migrar-item-desc" value="${descTexto}" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12.5px; font-weight: 600; color: #1e293b; background: #fff; box-sizing: border-box;">
-                        <input type="hidden" class="migrar-item-nombre-interm" value="">
-                        <div style="font-size: 11px; color: #64748b; margin-top: 3px; display: flex; align-items: center; justify-content: space-between;">
+                    <td style="padding: 10px 12px; vertical-align: top;">
+                        <input type="text" id="migrar-desc-${index}" class="migrar-item-desc" value="${descTexto}" style="width: 100%; height: 34px; padding: 0 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12.5px; font-weight: 600; color: #1e293b; background: #fff; box-sizing: border-box; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#385723';" onblur="this.style.borderColor='#cbd5e1';">
+                        <input type="hidden" id="migrar-interm-${index}" class="migrar-item-nombre-interm" value="">
+                        <div style="font-size: 11px; color: #64748b; margin-top: 4px; display: flex; align-items: center; justify-content: space-between;">
                             <span>Cant: <strong>${cant}</strong> | Original: ${p.nombre || ''}</span>
-                            <button type="button" onclick="window.eliminarFilaMigrarReventa(this)" style="background: none; border: none; color: #ef4444; font-size: 11px; cursor: pointer; padding: 0; text-decoration: underline;" title="Quitar este repuesto de la migración">Excluir</button>
+                            <button type="button" onclick="window.eliminarFilaMigrarReventa(${index})" style="background: none; border: none; color: #ef4444; font-size: 11px; font-weight: 600; cursor: pointer; padding: 0; text-decoration: underline;" title="Quitar este repuesto de la migración">Excluir</button>
                         </div>
                     </td>
-                    <td style="padding: 10px 8px; vertical-align: middle;">
-                        <input type="number" step="0.01" min="0" class="migrar-item-venta" value="${ventaLinea.toFixed(2)}" oninput="window.calcularFilaMigrarReventa(this)" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; font-weight: bold; text-align: right; color: #047857; background: #f0fdf4; box-sizing: border-box;">
+                    <td style="padding: 10px 8px; vertical-align: top;">
+                        <div style="position: relative; width: 100%;">
+                            <span style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: 12px; font-weight: bold; color: #047857; pointer-events: none;">$</span>
+                            <input type="number" step="any" min="0" id="migrar-venta-inp-${index}" class="migrar-item-venta" value="${ventaLinea.toFixed(2)}" oninput="window.recalcularFilaYTotales(${index})" style="width: 100%; height: 34px; padding: 0 8px 0 22px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; font-weight: bold; text-align: right; color: #047857; background: #f0fdf4; box-sizing: border-box; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#385723';" onblur="this.style.borderColor='#cbd5e1';">
+                        </div>
+                        <div id="migrar-venta-help-${index}" style="font-size: 10px; color: #047857; font-weight: 600; text-align: right; margin-top: 3px; min-height: 14px;"></div>
                     </td>
-                    <td style="padding: 10px 8px; vertical-align: middle;">
-                        <input type="number" step="0.01" min="0" class="migrar-item-costo" value="0.00" placeholder="0.00" oninput="window.calcularFilaMigrarReventa(this)" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; text-align: right; color: #1e293b; background: #fff; box-sizing: border-box;">
+                    <td style="padding: 10px 8px; vertical-align: top;">
+                        <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 4px;">
+                            <div style="display: inline-flex; border: 1px solid #cbd5e1; border-radius: 4px; overflow: hidden; background: #eef3f0; padding: 1px;">
+                                <button type="button" id="migrar-costo-curr-usd-${index}" onclick="window.cambiarMonedaFilaMigrar(${index}, 'costo', 'USD')" style="border: none; background: #385723; color: #ffffff; font-size: 10px; font-weight: bold; padding: 2px 7px; border-radius: 3px; cursor: pointer; transition: all 0.15s;">USD</button>
+                                <button type="button" id="migrar-costo-curr-ves-${index}" onclick="window.cambiarMonedaFilaMigrar(${index}, 'costo', 'VES')" style="border: none; background: transparent; color: #4b5563; font-size: 10px; font-weight: bold; padding: 2px 7px; border-radius: 3px; cursor: pointer; transition: all 0.15s;">Bs</button>
+                            </div>
+                        </div>
+                        <div style="position: relative; width: 100%;">
+                            <span id="migrar-costo-pfx-${index}" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: 12px; font-weight: bold; color: #64748b; pointer-events: none;">$</span>
+                            <input type="number" step="any" min="0" id="migrar-costo-inp-${index}" class="migrar-item-costo" value="0.00" placeholder="0.00" oninput="window.recalcularFilaYTotales(${index})" style="width: 100%; height: 34px; padding: 0 8px 0 22px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; text-align: right; color: #1e293b; background: #fff; box-sizing: border-box; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#385723';" onblur="this.style.borderColor='#cbd5e1';">
+                        </div>
+                        <div id="migrar-costo-help-${index}" style="font-size: 10px; color: #166534; font-weight: 600; text-align: right; margin-top: 3px; min-height: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
                     </td>
-                    <td style="padding: 10px 8px; vertical-align: middle;">
-                        <input type="number" step="0.01" min="0" class="migrar-item-gastos" value="0.00" placeholder="0.00" oninput="window.calcularFilaMigrarReventa(this)" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; text-align: right; color: #1e293b; background: #fff; box-sizing: border-box;">
+                    <td style="padding: 10px 8px; vertical-align: top;">
+                        <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 4px;">
+                            <div style="display: inline-flex; border: 1px solid #cbd5e1; border-radius: 4px; overflow: hidden; background: #eef3f0; padding: 1px;">
+                                <button type="button" id="migrar-gastos-curr-usd-${index}" onclick="window.cambiarMonedaFilaMigrar(${index}, 'gastos', 'USD')" style="border: none; background: #385723; color: #ffffff; font-size: 10px; font-weight: bold; padding: 2px 7px; border-radius: 3px; cursor: pointer; transition: all 0.15s;">USD</button>
+                                <button type="button" id="migrar-gastos-curr-ves-${index}" onclick="window.cambiarMonedaFilaMigrar(${index}, 'gastos', 'VES')" style="border: none; background: transparent; color: #4b5563; font-size: 10px; font-weight: bold; padding: 2px 7px; border-radius: 3px; cursor: pointer; transition: all 0.15s;">Bs</button>
+                            </div>
+                        </div>
+                        <div style="position: relative; width: 100%;">
+                            <span id="migrar-gastos-pfx-${index}" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: 12px; font-weight: bold; color: #64748b; pointer-events: none;">$</span>
+                            <input type="number" step="any" min="0" id="migrar-gastos-inp-${index}" class="migrar-item-gastos" value="0.00" placeholder="0.00" oninput="window.recalcularFilaYTotales(${index})" style="width: 100%; height: 34px; padding: 0 8px 0 22px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; text-align: right; color: #1e293b; background: #fff; box-sizing: border-box; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#385723';" onblur="this.style.borderColor='#cbd5e1';">
+                        </div>
+                        <div id="migrar-gastos-help-${index}" style="font-size: 10px; color: #166534; font-weight: 600; text-align: right; margin-top: 3px; min-height: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
                     </td>
-                    <td style="padding: 10px 8px; vertical-align: middle;">
-                        <input type="number" step="0.1" min="0" max="100" class="migrar-item-porcentaje" value="0" placeholder="0" oninput="window.calcularFilaMigrarReventa(this)" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; text-align: right; color: #1e293b; background: #fff; box-sizing: border-box;">
+                    <td style="padding: 10px 8px; vertical-align: top;">
+                        <input type="number" step="0.1" min="0" max="100" id="migrar-pct-inp-${index}" class="migrar-item-porcentaje" value="0" placeholder="0" oninput="window.recalcularFilaYTotales(${index})" style="width: 100%; height: 34px; padding: 0 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; text-align: right; color: #1e293b; background: #fff; box-sizing: border-box; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#385723';" onblur="this.style.borderColor='#cbd5e1';">
+                        <div style="font-size: 10px; color: #64748b; text-align: right; margin-top: 3px; min-height: 14px;">% ganancia</div>
                     </td>
-                    <td style="padding: 10px 12px; vertical-align: middle; text-align: right;">
+                    <td style="padding: 10px 12px; vertical-align: top; text-align: right;">
                         <div class="migrar-item-neta" style="line-height: 1.2;">
-                            <span class="neta-usd" style="font-size: 14px; font-weight: bold; color: #385723;">$0.00</span>
-                            <br><span class="neta-ves" style="font-size: 10px; color: #64748b;">Bs. 0.00</span>
+                            <span id="migrar-neta-usd-${index}" class="neta-usd" style="font-size: 14px; font-weight: bold; color: #385723;">$${ventaLinea.toFixed(2)}</span>
+                            <span id="migrar-neta-ves-${index}" class="neta-ves" style="font-size: 10px; color: #64748b; display: block; margin-top: 2px;">Bs. 0.00</span>
+                            <span id="migrar-comis-usd-${index}" style="font-size: 9.5px; color: #d9534f; font-weight: 600; display: none; margin-top: 2px;"></span>
                         </div>
                     </td>
                 `;
                 tbody.appendChild(tr);
 
-                const dummyInput = tr.querySelector('.migrar-item-venta');
-                window.calcularFilaMigrarReventa(dummyInput);
+                window.recalcularFilaYTotales(index);
             });
 
-            window.calcularTotalesModalMigrar();
+            window.actualizarTotalesModalMigrar();
             const modal = document.getElementById('modal-migrar-reventas');
             if (modal) modal.style.display = 'flex';
         };
@@ -9192,95 +9255,172 @@ REGLAS DE EXTRACCIÓN:
             if (modal) modal.style.display = 'none';
         };
 
-        window.eliminarFilaMigrarReventa = function(btn) {
-            const row = btn.closest('.migrar-reventa-row');
-            if (!row) return;
-            const tbody = row.parentElement;
-            row.remove();
-            if (tbody.querySelectorAll('.migrar-reventa-row').length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #64748b; padding: 20px;">Todos los ítems fueron excluidos de la migración.</td></tr>';
+        window.cambiarMonedaFilaMigrar = function(index, campo, targetCurrency) {
+            const item = window._migrarReventasState && window._migrarReventasState[index];
+            if (!item) return;
+
+            const prop = campo === 'costo' ? 'monedaCosto' : 'monedaGastos';
+            if (item[prop] === targetCurrency) return;
+
+            item[prop] = targetCurrency;
+
+            const btnUsd = document.getElementById(`migrar-${campo}-curr-usd-${index}`);
+            const btnVes = document.getElementById(`migrar-${campo}-curr-ves-${index}`);
+            const pfx = document.getElementById(`migrar-${campo}-pfx-${index}`);
+            const inp = document.getElementById(`migrar-${campo}-inp-${index}`);
+
+            if (targetCurrency === 'VES') {
+                if (btnUsd) { btnUsd.style.background = 'transparent'; btnUsd.style.color = '#4b5563'; }
+                if (btnVes) { btnVes.style.background = '#385723'; btnVes.style.color = '#ffffff'; }
+                if (pfx) { pfx.textContent = 'Bs.'; pfx.style.fontSize = '11px'; }
+                if (inp) {
+                    inp.style.paddingLeft = '28px';
+                    inp.focus();
+                }
+            } else {
+                if (btnUsd) { btnUsd.style.background = '#385723'; btnUsd.style.color = '#ffffff'; }
+                if (btnVes) { btnVes.style.background = 'transparent'; btnVes.style.color = '#4b5563'; }
+                if (pfx) { pfx.textContent = '$'; pfx.style.fontSize = '12px'; }
+                if (inp) {
+                    inp.style.paddingLeft = '22px';
+                    inp.focus();
+                }
             }
-            window.calcularTotalesModalMigrar();
+
+            window.recalcularFilaYTotales(index);
         };
 
-        window.aplicarIntermediarioGlobal = function() {
-            const globalInterm = (document.getElementById('migrar-global-intermediario')?.value || '').trim();
-            const globalPctRaw = parseFloat(document.getElementById('migrar-global-porcentaje')?.value);
-            const globalPct = isNaN(globalPctRaw) ? 0 : Math.max(0, Math.min(100, Math.round(globalPctRaw * 10) / 10));
+        window.recalcularFilaYTotales = function(index) {
+            const item = window._migrarReventasState && window._migrarReventasState[index];
+            if (!item || item.excluido) {
+                window.programarActualizacionTotales();
+                return;
+            }
 
-            const rows = document.querySelectorAll('#migrar-items-tbody tr.migrar-reventa-row');
-            rows.forEach(row => {
-                const inputPct = row.querySelector('.migrar-item-porcentaje');
-                const hiddenInterm = row.querySelector('.migrar-item-nombre-interm');
-                if (inputPct) inputPct.value = globalPct;
-                if (hiddenInterm) hiddenInterm.value = globalInterm;
-                window.calcularFilaMigrarReventa(inputPct);
-            });
-        };
+            const tasaBCV = _obtenerTasaMigrarBCV();
 
-        window.calcularFilaMigrarReventa = function(inputEl) {
-            if (!inputEl) return;
-            const row = inputEl.closest('.migrar-reventa-row');
-            if (!row) return;
+            const inpVenta = document.getElementById(`migrar-venta-inp-${index}`);
+            const inpCosto = document.getElementById(`migrar-costo-inp-${index}`);
+            const inpGastos = document.getElementById(`migrar-gastos-inp-${index}`);
+            const inpPct = document.getElementById(`migrar-pct-inp-${index}`);
 
-            const ventaRaw = parseFloat(row.querySelector('.migrar-item-venta')?.value) || 0;
-            const costoRaw = parseFloat(row.querySelector('.migrar-item-costo')?.value) || 0;
-            const gastosRaw = parseFloat(row.querySelector('.migrar-item-gastos')?.value) || 0;
-            const pctRaw = parseFloat(row.querySelector('.migrar-item-porcentaje')?.value) || 0;
+            const ventaVal = inpVenta ? (parseFloat(inpVenta.value) || 0) : item.ventaUSD;
+            const costoVal = inpCosto ? (parseFloat(inpCosto.value) || 0) : item.costoRaw;
+            const gastosVal = inpGastos ? (parseFloat(inpGastos.value) || 0) : item.gastosRaw;
+            const pctVal = inpPct ? (parseFloat(inpPct.value) || 0) : item.porcentaje;
 
-            const venta = Math.round(Math.max(0, ventaRaw) * 100) / 100;
-            const costo = Math.round(Math.max(0, costoRaw) * 100) / 100;
-            const gastos = Math.round(Math.max(0, gastosRaw) * 100) / 100;
-            const pct = Math.round(Math.max(0, Math.min(100, pctRaw)) * 100) / 100;
+            item.ventaUSD = Math.round(Math.max(0, ventaVal) * 100) / 100;
+            item.costoRaw = Math.round(Math.max(0, costoVal) * 100) / 100;
+            item.gastosRaw = Math.round(Math.max(0, gastosVal) * 100) / 100;
+            item.porcentaje = Math.round(Math.max(0, Math.min(100, pctVal)) * 10) / 10;
 
-            // Ganancia Bruta = Precio Venta - Costo - Gastos
-            const gananciaBruta = Math.round((venta - costo - gastos) * 100) / 100;
-            // Comisión Intermediario = (Ganancia Bruta > 0) ? Ganancia Bruta * % Intermediario : 0
-            const comisionTercero = (gananciaBruta > 0 && pct > 0) ? Math.round((gananciaBruta * (pct / 100)) * 100) / 100 : 0;
-            // Ganancia Neta Empresa = (Precio Venta - Costo - Gastos) - Comisión Intermediario
+            // Normalización a USD en tiempo real
+            if (item.monedaCosto === 'VES') {
+                item.costoUSD = tasaBCV > 0 ? (Math.round((item.costoRaw / tasaBCV) * 100) / 100) : 0;
+            } else {
+                item.costoUSD = item.costoRaw;
+            }
+
+            if (item.monedaGastos === 'VES') {
+                item.gastosUSD = tasaBCV > 0 ? (Math.round((item.gastosRaw / tasaBCV) * 100) / 100) : 0;
+            } else {
+                item.gastosUSD = item.gastosRaw;
+            }
+
+            // Ganancia Bruta = Venta - CostoUSD - GastosUSD
+            const gananciaBruta = Math.round((item.ventaUSD - item.costoUSD - item.gastosUSD) * 100) / 100;
+            const comisionTercero = (gananciaBruta > 0 && item.porcentaje > 0) ? (Math.round((gananciaBruta * (item.porcentaje / 100)) * 100) / 100) : 0;
             const gananciaNeta = Math.round((gananciaBruta - comisionTercero) * 100) / 100;
-
-            const tasaBCV = (window.obtenerTasaBCVActual && window.obtenerTasaBCVActual()) || window.tasaReventaBCV || 42.00;
             const netaVES = Math.round((gananciaNeta * tasaBCV) * 100) / 100;
 
-            const elNeta = row.querySelector('.migrar-item-neta');
-            if (elNeta) {
-                const color = gananciaNeta >= 0 ? '#385723' : '#dc2626';
-                elNeta.innerHTML = `
-                    <span class="neta-usd" style="font-size: 14px; font-weight: bold; color: ${color};">$${gananciaNeta.toFixed(2)}</span>
-                    <br><span class="neta-ves" style="font-size: 10px; color: #64748b;">Bs. ${netaVES.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                    ${comisionTercero > 0 ? `<br><span style="font-size: 9.5px; color: #d9534f; font-weight: 600;">Comis: $${comisionTercero.toFixed(2)}</span>` : ''}
-                `;
+            item.gananciaBruta = gananciaBruta;
+            item.comisionTercero = comisionTercero;
+            item.gananciaNeta = gananciaNeta;
+
+            // Actualizar referencias visuales (helper text) sin reconstruir DOM
+            const helpCosto = document.getElementById(`migrar-costo-help-${index}`);
+            if (helpCosto) {
+                if (item.costoRaw > 0 && tasaBCV > 0) {
+                    if (item.monedaCosto === 'VES') {
+                        helpCosto.textContent = `≈ $${item.costoUSD.toFixed(2)}`;
+                    } else {
+                        const eqVES = (item.costoUSD * tasaBCV).toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                        helpCosto.textContent = `≈ Bs. ${eqVES}`;
+                    }
+                } else {
+                    helpCosto.textContent = '';
+                }
             }
 
-            window.calcularTotalesModalMigrar();
+            const helpGastos = document.getElementById(`migrar-gastos-help-${index}`);
+            if (helpGastos) {
+                if (item.gastosRaw > 0 && tasaBCV > 0) {
+                    if (item.monedaGastos === 'VES') {
+                        helpGastos.textContent = `≈ $${item.gastosUSD.toFixed(2)}`;
+                    } else {
+                        const eqVES = (item.gastosUSD * tasaBCV).toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                        helpGastos.textContent = `≈ Bs. ${eqVES}`;
+                    }
+                } else {
+                    helpGastos.textContent = '';
+                }
+            }
+
+            const helpVenta = document.getElementById(`migrar-venta-help-${index}`);
+            if (helpVenta) {
+                if (item.ventaUSD > 0 && tasaBCV > 0) {
+                    const eqVES = (item.ventaUSD * tasaBCV).toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    helpVenta.textContent = `≈ Bs. ${eqVES}`;
+                } else {
+                    helpVenta.textContent = '';
+                }
+            }
+
+            // Actualizar Neta Empresa de la fila
+            const netaUsdEl = document.getElementById(`migrar-neta-usd-${index}`);
+            const netaVesEl = document.getElementById(`migrar-neta-ves-${index}`);
+            const comisEl = document.getElementById(`migrar-comis-usd-${index}`);
+
+            if (netaUsdEl) {
+                netaUsdEl.textContent = (gananciaNeta >= 0 ? '$' : '-$') + Math.abs(gananciaNeta).toFixed(2);
+                netaUsdEl.style.color = gananciaNeta >= 0 ? '#385723' : '#dc2626';
+            }
+            if (netaVesEl) {
+                netaVesEl.textContent = 'Bs. ' + netaVES.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            }
+            if (comisEl) {
+                if (comisionTercero > 0) {
+                    comisEl.style.display = 'block';
+                    comisEl.textContent = `Comis: $${comisionTercero.toFixed(2)}`;
+                } else {
+                    comisEl.style.display = 'none';
+                }
+            }
+
+            window.programarActualizacionTotales();
         };
 
-        window.calcularTotalesModalMigrar = function() {
-            const rows = document.querySelectorAll('#migrar-items-tbody tr.migrar-reventa-row');
+        window.programarActualizacionTotales = function() {
+            if (window._rafMigrar) {
+                cancelAnimationFrame(window._rafMigrar);
+            }
+            window._rafMigrar = requestAnimationFrame(() => {
+                window.actualizarTotalesModalMigrar();
+            });
+        };
+
+        window.actualizarTotalesModalMigrar = function() {
+            const items = window._migrarReventasState || [];
             let totVenta = 0, totCosto = 0, totGastos = 0, totComision = 0, totNeta = 0;
 
-            rows.forEach(row => {
-                const ventaRaw = parseFloat(row.querySelector('.migrar-item-venta')?.value) || 0;
-                const costoRaw = parseFloat(row.querySelector('.migrar-item-costo')?.value) || 0;
-                const gastosRaw = parseFloat(row.querySelector('.migrar-item-gastos')?.value) || 0;
-                const pctRaw = parseFloat(row.querySelector('.migrar-item-porcentaje')?.value) || 0;
-
-                const venta = Math.round(Math.max(0, ventaRaw) * 100) / 100;
-                const costo = Math.round(Math.max(0, costoRaw) * 100) / 100;
-                const gastos = Math.round(Math.max(0, gastosRaw) * 100) / 100;
-                const pct = Math.round(Math.max(0, Math.min(100, pctRaw)) * 100) / 100;
-
-                const bruta = Math.round((venta - costo - gastos) * 100) / 100;
-                const comision = (bruta > 0 && pct > 0) ? Math.round((bruta * (pct / 100)) * 100) / 100 : 0;
-                const neta = Math.round((bruta - comision) * 100) / 100;
-
-                totVenta += venta;
-                totCosto += costo;
-                totGastos += gastos;
-                totComision += comision;
-                totNeta += neta;
-            });
+            for (const item of items) {
+                if (item.excluido) continue;
+                totVenta += item.ventaUSD;
+                totCosto += item.costoUSD;
+                totGastos += item.gastosUSD;
+                totComision += item.comisionTercero;
+                totNeta += item.gananciaNeta;
+            }
 
             totVenta = Math.round(totVenta * 100) / 100;
             totCosto = Math.round(totCosto * 100) / 100;
@@ -9288,8 +9428,8 @@ REGLAS DE EXTRACCIÓN:
             totComision = Math.round(totComision * 100) / 100;
             totNeta = Math.round(totNeta * 100) / 100;
 
-            const tasaBCV = (window.obtenerTasaBCVActual && window.obtenerTasaBCVActual()) || window.tasaReventaBCV || 42.00;
-            const netaGlobalVES = Math.round((totNeta * tasaBCV) * 100) / 100;
+            const tasaBCV = _obtenerTasaMigrarBCV();
+            const totNetaVES = Math.round((totNeta * tasaBCV) * 100) / 100;
 
             const elVentas = document.getElementById('migrar-res-ventas');
             const elCostos = document.getElementById('migrar-res-costos');
@@ -9303,12 +9443,70 @@ REGLAS DE EXTRACCIÓN:
             if (elGastos) elGastos.textContent = '$' + totGastos.toFixed(2);
             if (elComis) elComis.textContent = '$' + totComision.toFixed(2);
             if (elNeta) {
-                elNeta.textContent = '$' + totNeta.toFixed(2);
+                elNeta.textContent = (totNeta >= 0 ? '$' : '-$') + Math.abs(totNeta).toFixed(2);
                 elNeta.style.color = totNeta >= 0 ? '#385723' : '#dc2626';
             }
             if (elNetaVES) {
-                elNetaVES.textContent = 'Bs. ' + netaGlobalVES.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                elNetaVES.textContent = 'Bs. ' + totNetaVES.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
             }
+        };
+
+        // Compatibilidad con llamadas previas
+        window.calcularFilaMigrarReventa = function(inputEl) {
+            if (!inputEl) return;
+            const row = inputEl.closest('.migrar-reventa-row');
+            if (!row) return;
+            const match = row.id && row.id.match(/migrar-row-(\d+)/);
+            if (match) {
+                window.recalcularFilaYTotales(parseInt(match[1]));
+            }
+        };
+
+        window.calcularTotalesModalMigrar = function() {
+            window.actualizarTotalesModalMigrar();
+        };
+
+        window.eliminarFilaMigrarReventa = function(indexOrBtn) {
+            let index = -1;
+            if (typeof indexOrBtn === 'number') {
+                index = indexOrBtn;
+            } else if (indexOrBtn && indexOrBtn.closest) {
+                const row = indexOrBtn.closest('.migrar-reventa-row');
+                const match = row && row.id && row.id.match(/migrar-row-(\d+)/);
+                if (match) index = parseInt(match[1]);
+            }
+            if (index < 0) return;
+
+            const item = window._migrarReventasState && window._migrarReventasState[index];
+            if (item) item.excluido = true;
+
+            const row = document.getElementById(`migrar-row-${index}`);
+            if (row) row.remove();
+
+            const tbody = document.getElementById('migrar-items-tbody');
+            const activos = (window._migrarReventasState || []).filter(it => !it.excluido);
+            if (activos.length === 0 && tbody) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #64748b; padding: 20px;">Todos los ítems fueron excluidos de la migración.</td></tr>';
+            }
+            window.actualizarTotalesModalMigrar();
+        };
+
+        window.aplicarIntermediarioGlobal = function() {
+            const globalInterm = (document.getElementById('migrar-global-intermediario')?.value || '').trim();
+            const globalPctRaw = parseFloat(document.getElementById('migrar-global-porcentaje')?.value);
+            const globalPct = isNaN(globalPctRaw) ? 0 : Math.max(0, Math.min(100, Math.round(globalPctRaw * 10) / 10));
+
+            const items = window._migrarReventasState || [];
+            items.forEach((item, i) => {
+                if (item.excluido) return;
+                item.nombreInterm = globalInterm;
+                item.porcentaje = globalPct;
+                const inputPct = document.getElementById(`migrar-pct-inp-${i}`);
+                const hiddenInterm = document.getElementById(`migrar-interm-${i}`);
+                if (inputPct) inputPct.value = globalPct;
+                if (hiddenInterm) hiddenInterm.value = globalInterm;
+                window.recalcularFilaYTotales(i);
+            });
         };
 
         window.guardarYRegistrarReventas = async function() {
@@ -9317,8 +9515,8 @@ REGLAS DE EXTRACCIÓN:
             const ped = (window.pedidosDBLocal && window.pedidosDBLocal[docId]) || {};
             const clienteFinal = ped.cliente || document.getElementById('migrar-pedido-cliente')?.textContent || 'Cliente';
 
-            const rows = document.querySelectorAll('#migrar-items-tbody tr.migrar-reventa-row');
-            if (rows.length === 0) {
+            const items = (window._migrarReventasState || []).filter(it => !it.excluido);
+            if (items.length === 0) {
                 alert("⚠️ No hay repuestos disponibles en la lista para migrar.");
                 return;
             }
@@ -9338,7 +9536,7 @@ REGLAS DE EXTRACCIÓN:
             try {
                 const hoyStr = new Date().toLocaleDateString("es-VE");
                 const timestamp = Date.now();
-                const tasaVES = (window.obtenerTasaBCVActual && window.obtenerTasaBCVActual()) || window.tasaReventaBCV || 42.00;
+                const tasaVES = _obtenerTasaMigrarBCV();
                 const tasaEUR = window.tasaReventaEUR || 1.08;
 
                 const globalInterm = (document.getElementById('migrar-global-intermediario')?.value || '').trim();
@@ -9346,16 +9544,16 @@ REGLAS DE EXTRACCIÓN:
                 let totalNetaAcumulada = 0;
                 let countRegistros = 0;
 
-                for (const row of rows) {
-                    const descInput = row.querySelector('.migrar-item-desc');
-                    const desc = SecuritySanitizer.cleanText(descInput ? descInput.value : '', 150) || 'Repuesto Reventa';
-                    
-                    const venta = Math.round(SecuritySanitizer.sanitizeAmount(row.querySelector('.migrar-item-venta')?.value) * 100) / 100;
-                    const costo = Math.round(SecuritySanitizer.sanitizeAmount(row.querySelector('.migrar-item-costo')?.value) * 100) / 100;
-                    const gastos = Math.round(SecuritySanitizer.sanitizeAmount(row.querySelector('.migrar-item-gastos')?.value) * 100) / 100;
-                    const pct = Math.round(SecuritySanitizer.sanitizeAmount(row.querySelector('.migrar-item-porcentaje')?.value) * 100) / 100;
-                    const intermFila = (row.querySelector('.migrar-item-nombre-interm')?.value || '').trim();
-                    const intermediario = intermFila || globalInterm || 'N/A';
+                for (const item of items) {
+                    const descInp = document.getElementById(`migrar-desc-${item.index}`);
+                    const desc = SecuritySanitizer.cleanText(descInp ? descInp.value : item.desc, 150) || 'Repuesto Reventa';
+
+                    // Todos los montos viajan ya normalizados en USD
+                    const venta = item.ventaUSD;
+                    const costo = item.costoUSD;
+                    const gastos = item.gastosUSD;
+                    const pct = item.porcentaje;
+                    const intermediario = item.nombreInterm || globalInterm || 'N/A';
 
                     const gananciaBruta = Math.round((venta - costo - gastos) * 100) / 100;
                     const comisionTercero = (gananciaBruta > 0 && pct > 0) ? Math.round((gananciaBruta * (pct / 100)) * 100) / 100 : 0;
@@ -9387,7 +9585,11 @@ REGLAS DE EXTRACCIÓN:
                         tasaCambioEUR: tasaEUR,
                         pedidoId: docId,
                         pedidoNumero: numOrden,
-                        origen: `Migrado de Pedido #${numOrden}`
+                        origen: `Migrado de Pedido #${numOrden}`,
+                        monedaCostoOriginal: item.monedaCosto,
+                        costoMontoOriginal: item.costoRaw,
+                        monedaGastosOriginal: item.monedaGastos,
+                        gastosMontoOriginal: item.gastosRaw
                     };
 
                     // Guardado en Firestore: reventas_gastos (utilizada por el panel de reventas) y reventas (respaldo)
