@@ -3141,7 +3141,7 @@
                     </div>
 
                     <!-- Controles de la Campaña en Grid -->
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; align-items: stretch;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; align-items: stretch;">
                         
                         <!-- 1. Switch de Activación -->
                         <div style="background: white; border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
@@ -3169,25 +3169,41 @@
                         </div>
 
                         <!-- 2. Nombre del Evento y Selector de Icono -->
-                        <div style="background: white; border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); box-sizing: border-box; overflow: hidden;">
+                        <div style="background: white; border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); box-sizing: border-box;">
                             <div>
-                                <label style="display: block; font-weight: 800; margin-bottom: 6px; font-size: 12px; text-transform: uppercase; color: #1e293b; letter-spacing: 0.5px;">
-                                    Nombre del Evento / Celebración <span style="color: #ef4444;">*</span>
-                                </label>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                    <label style="margin: 0; font-weight: 800; font-size: 12px; text-transform: uppercase; color: #1e293b; letter-spacing: 0.5px;">
+                                        Nombre del Evento <span style="color: #ef4444;">*</span>
+                                    </label>
+                                    <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">
+                                        Ícono
+                                    </span>
+                                </div>
                                 <div style="display: flex; gap: 8px; width: 100%; box-sizing: border-box; align-items: center;">
-                                    <input type="text" id="campana-nombre-input" value="BLACK FRIDAY" placeholder="Ej: NAVIDAD, BLACK FRIDAY..." 
-                                        oninput="actualizarEstadoCampanaLive()"
-                                        style="flex: 1; min-width: 0; width: 100%; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 13.5px; font-weight: bold; color: #0f172a; box-sizing: border-box; outline: none;">
-                                    <select id="campana-icono-select" onchange="actualizarEstadoCampanaLive()"
-                                        style="width: 110px; flex-shrink: 0; padding: 8px 8px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 13px; font-weight: bold; background: white; cursor: pointer; box-sizing: border-box; outline: none;">
-                                        <option value="fas fa-fire">🔥 Fuego</option>
-                                        <option value="fas fa-tree">🎄 Árbol</option>
-                                        <option value="fas fa-gift">🎁 Regalo</option>
-                                        <option value="fas fa-star">⭐ Estrella</option>
-                                        <option value="fas fa-bolt">⚡ Rayo</option>
-                                        <option value="fas fa-tag">🏷️ Etiqueta</option>
-                                        <option value="fas fa-sparkles">✨ Chispas</option>
-                                    </select>
+                                    <div style="flex: 1; min-width: 0;">
+                                        <input type="text" id="campana-nombre-input" value="BLACK FRIDAY" placeholder="Ej: NAVIDAD, BLACK FRIDAY..." 
+                                            oninput="actualizarEstadoCampanaLive()"
+                                            style="width: 100%; height: 38px; padding: 0 12px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 13.5px; font-weight: bold; color: #0f172a; box-sizing: border-box; outline: none; transition: border-color 0.2s, box-shadow 0.2s;"
+                                            onfocus="this.style.borderColor='#385723'; this.style.boxShadow='0 0 0 2px rgba(56, 87, 35, 0.15)';"
+                                            onblur="this.style.borderColor='#cbd5e1'; this.style.boxShadow='none';">
+                                    </div>
+                                    <div style="width: 112px; flex-shrink: 0; position: relative;">
+                                        <select id="campana-icono-select" onchange="actualizarEstadoCampanaLive()"
+                                            style="width: 100%; height: 38px; padding: 0 26px 0 10px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 13px; font-weight: bold; color: #1e293b; background: white; cursor: pointer; box-sizing: border-box; outline: none; -webkit-appearance: none; -moz-appearance: none; appearance: none; transition: border-color 0.2s, box-shadow 0.2s;"
+                                            onfocus="this.style.borderColor='#385723'; this.style.boxShadow='0 0 0 2px rgba(56, 87, 35, 0.15)';"
+                                            onblur="this.style.borderColor='#cbd5e1'; this.style.boxShadow='none';">
+                                            <option value="fas fa-fire">🔥 Fuego</option>
+                                            <option value="fas fa-tree">🎄 Árbol</option>
+                                            <option value="fas fa-gift">🎁 Regalo</option>
+                                            <option value="fas fa-star">⭐ Estrella</option>
+                                            <option value="fas fa-bolt">⚡ Rayo</option>
+                                            <option value="fas fa-tag">🏷️ Etiqueta</option>
+                                            <option value="fas fa-sparkles">✨ Chispas</option>
+                                        </select>
+                                        <span style="position: absolute; right: 9px; top: 50%; transform: translateY(-50%); pointer-events: none; color: #64748b; font-size: 11px;">
+                                            <i class="fas fa-chevron-down"></i>
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
 
@@ -3195,22 +3211,22 @@
                             <div>
                                 <span style="font-size: 10.5px; color: #64748b; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 4px;">Selección rápida:</span>
                                 <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-                                    <button type="button" onclick="seleccionarPresetCampana('BLACK FRIDAY', 'fas fa-fire')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                    <button type="button" onclick="seleccionarPresetCampana('BLACK FRIDAY', 'fas fa-fire')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; padding: 4px 8px; border-radius: 5px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.background='#e2e8f0'; this.style.borderColor='#94a3b8';" onmouseout="this.style.background='#f1f5f9'; this.style.borderColor='#cbd5e1';">
                                         🔥 Black Friday
                                     </button>
-                                    <button type="button" onclick="seleccionarPresetCampana('NAVIDAD', 'fas fa-tree')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                    <button type="button" onclick="seleccionarPresetCampana('NAVIDAD', 'fas fa-tree')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; padding: 4px 8px; border-radius: 5px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.background='#e2e8f0'; this.style.borderColor='#94a3b8';" onmouseout="this.style.background='#f1f5f9'; this.style.borderColor='#cbd5e1';">
                                         🎄 Navidad
                                     </button>
-                                    <button type="button" onclick="seleccionarPresetCampana('AÑO NUEVO', 'fas fa-star')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                    <button type="button" onclick="seleccionarPresetCampana('AÑO NUEVO', 'fas fa-star')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; padding: 4px 8px; border-radius: 5px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.background='#e2e8f0'; this.style.borderColor='#94a3b8';" onmouseout="this.style.background='#f1f5f9'; this.style.borderColor='#cbd5e1';">
                                         ✨ Año Nuevo
                                     </button>
-                                    <button type="button" onclick="seleccionarPresetCampana('CYBER WEEK', 'fas fa-bolt')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                    <button type="button" onclick="seleccionarPresetCampana('CYBER WEEK', 'fas fa-bolt')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; padding: 4px 8px; border-radius: 5px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.background='#e2e8f0'; this.style.borderColor='#94a3b8';" onmouseout="this.style.background='#f1f5f9'; this.style.borderColor='#cbd5e1';">
                                         ⚡ Cyber Week
                                     </button>
-                                    <button type="button" onclick="seleccionarPresetCampana('REYES MAGOS', 'fas fa-gift')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                    <button type="button" onclick="seleccionarPresetCampana('REYES MAGOS', 'fas fa-gift')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; padding: 4px 8px; border-radius: 5px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.background='#e2e8f0'; this.style.borderColor='#94a3b8';" onmouseout="this.style.background='#f1f5f9'; this.style.borderColor='#cbd5e1';">
                                         🎁 Reyes
                                     </button>
-                                    <button type="button" onclick="seleccionarPresetCampana('OFERTA ESPECIAL', 'fas fa-tag')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                                    <button type="button" onclick="seleccionarPresetCampana('OFERTA ESPECIAL', 'fas fa-tag')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; padding: 4px 8px; border-radius: 5px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.background='#e2e8f0'; this.style.borderColor='#94a3b8';" onmouseout="this.style.background='#f1f5f9'; this.style.borderColor='#cbd5e1';">
                                         ⭐ Especial
                                     </button>
                                 </div>
@@ -3896,8 +3912,8 @@
     <!-- ======================================================== -->
     <!-- 💰 MODAL: DESGLOSE DE GANANCIAS Y MIGRACIÓN A REVENTAS   -->
     <!-- ======================================================== -->
-    <div id="modal-migrar-reventas" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(2px); z-index: 10000; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box;">
-        <div class="modal-content" style="max-width: 960px; width: 100%; max-height: 90vh; overflow-y: auto; background: white; border-radius: 12px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.25); border: 1px solid #c5e1a5;">
+    <div id="modal-migrar-reventas" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 10000; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box;">
+        <div class="modal-content" style="max-width: 1040px; width: 100%; max-height: 90vh; overflow-y: auto; background: white; border-radius: 12px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.25); border: 1px solid #c5e1a5;">
             
             <!-- Encabezado del Modal -->
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #385723; padding-bottom: 12px; margin-bottom: 16px;">
@@ -3960,12 +3976,12 @@
                 <table class="data-table" style="width: 100%; border-collapse: collapse; font-size: 12px;">
                     <thead>
                         <tr style="background: #385723; color: white; font-family: 'Oswald', sans-serif; text-align: left;">
-                            <th style="padding: 10px 12px; width: 35%;">Descripción del Repuesto</th>
-                            <th style="padding: 10px 8px; width: 13%; text-align: right;">Precio Venta ($)</th>
-                            <th style="padding: 10px 8px; width: 13%; text-align: right;">Costo Compra ($)</th>
-                            <th style="padding: 10px 8px; width: 12%; text-align: right;">Gastos Op. ($)</th>
-                            <th style="padding: 10px 8px; width: 10%; text-align: right;">% Interm.</th>
-                            <th style="padding: 10px 12px; width: 17%; text-align: right;">Neta Empresa</th>
+                            <th style="padding: 10px 12px; width: 28%;">Descripción del Repuesto</th>
+                            <th style="padding: 10px 8px; width: 18%; text-align: right;">Precio Venta</th>
+                            <th style="padding: 10px 8px; width: 18%; text-align: right;">Costo Compra</th>
+                            <th style="padding: 10px 8px; width: 18%; text-align: right;">Gastos Op.</th>
+                            <th style="padding: 10px 8px; width: 8%; text-align: right;">% Interm.</th>
+                            <th style="padding: 10px 12px; width: 10%; text-align: right;">Neta Empresa</th>
                         </tr>
                     </thead>
                     <tbody id="migrar-items-tbody">
