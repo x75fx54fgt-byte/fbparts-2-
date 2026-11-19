@@ -6096,8 +6096,369 @@ DATOS DEL REPUESTO:
         };
 
         // ==========================================
-        // 🖨️ GENERADOR DE ETIQUETAS TÉRMICAS (58MM)
+        // ✨ IMPORTADOR INTELIGENTE DE ÓRDENES (IA)
         // ==========================================
+        window.abrirModalLeerOrdenIA = function() {
+            const modal = document.getElementById('modal-leer-orden-ia');
+            if (!modal) return;
+
+            const statusDiv = document.getElementById('leer-orden-status');
+            if (statusDiv) {
+                statusDiv.style.display = 'none';
+                statusDiv.innerHTML = '';
+            }
+
+            // Actualizar tasa según el selector de moneda y ticker actual
+            window.actualizarTasaModalLeerOrden();
+
+            modal.style.display = 'flex';
+            const txtArea = document.getElementById('leer-orden-texto');
+            if (txtArea) {
+                setTimeout(() => txtArea.focus(), 120);
+            }
+        };
+
+        window.cerrarModalLeerOrdenIA = function() {
+            const modal = document.getElementById('modal-leer-orden-ia');
+            if (modal) modal.style.display = 'none';
+        };
+
+        window.actualizarTasaModalLeerOrden = function() {
+            const selMoneda = document.getElementById('leer-orden-moneda')?.value || 'USD';
+            const inputTasa = document.getElementById('leer-orden-tasa');
+            if (!inputTasa) return;
+
+            if (selMoneda === 'EUR') {
+                let tasaEur = window.tasaVivaEUR || window.tasaReventaEUR || 0;
+                if (!tasaEur) {
+                    const elEur = document.getElementById('ticker-eur');
+                    if (elEur) {
+                        const m = elEur.innerText.match(/([0-9.,]+)/);
+                        if (m) tasaEur = parseFloat(m[1].replace(/\./g, '').replace(',', '.'));
+                    }
+                }
+                inputTasa.value = Number(tasaEur > 0 ? tasaEur : 45.00).toFixed(2);
+            } else {
+                let tasaUsd = window.tasaVivaBCV || window._ultimoUsdBcv || window.tasaReventaBCV || 0;
+                if (!tasaUsd) {
+                    const elUsd = document.getElementById('ticker-usd');
+                    if (elUsd) {
+                        const m = elUsd.innerText.match(/([0-9.,]+)/);
+                        if (m) tasaUsd = parseFloat(m[1].replace(/\./g, '').replace(',', '.'));
+                    }
+                }
+                inputTasa.value = Number(tasaUsd > 0 ? tasaUsd : 42.00).toFixed(2);
+            }
+        };
+
+        /**
+         * Extractor inteligente de respaldo con Expresiones Regulares
+         * Se activa si Puter no responde o no se puede conectar a internet.
+         */
+        window.extraerOrdenConRegexFallback = function(texto) {
+            const res = {
+                productos: [],
+                monto_bruto_bs: 0,
+                incluye_iva: true,
+                orden_compra: "",
+                cliente_detectado: null
+            };
+
+            if (!texto) return res;
+
+            // 1. Detectar intención de IVA
+            if (/mas\s*iva|\+\s*iva|sin\s*iva|no\s*incluye\s*iva/i.test(texto)) {
+                res.incluye_iva = false;
+            } else if (/iva\s*incluido|con\s*iva|ya\s*incluye/i.test(texto)) {
+                res.incluye_iva = true;
+            }
+
+            // 2. Detectar Orden de Compra (ej: "orden de compra 5420", "OC-1029", "pedido #331")
+            const ocMatch = texto.match(/(?:orden\s*(?:de\s*compra)?|o\/?c|pedido)\s*(?:nro|n°|#)?\s*([a-zA-Z0-9_-]+)/i);
+            if (ocMatch) {
+                res.orden_compra = ocMatch[1];
+            }
+
+            // 3. Detectar Nombre de Cliente o Empresa
+            const cliMatch = texto.match(/(?:para|cliente|taller|empresa)\s*:\s*([^\n,]+)/i);
+            if (cliMatch) {
+                res.cliente_detectado = cliMatch[1].trim();
+            } else {
+                const cliMatch2 = texto.match(/para\s+([A-Za-z0-9\s.,-]+?)(?:\s*:\s*|\n|$)/i);
+                if (cliMatch2 && cliMatch2[1].length < 60) {
+                    res.cliente_detectado = cliMatch2[1].trim();
+                }
+            }
+
+            // 4. Detectar Monto en Bolívares
+            const montoMatch = texto.match(/(?:bs\.?|ves|total|transferir|monto)[\s:]*([0-9]{1,3}(?:\.[0-9]{3})*(?:,[0-9]{1,2})|[0-9]+(?:[.,][0-9]{1,2})?)/i);
+            if (montoMatch) {
+                let rawNum = montoMatch[1].trim();
+                if (rawNum.includes('.') && rawNum.includes(',')) {
+                    rawNum = rawNum.replace(/\./g, '').replace(',', '.');
+                } else if (rawNum.includes(',')) {
+                    rawNum = rawNum.replace(',', '.');
+                }
+                res.monto_bruto_bs = parseFloat(rawNum) || 0;
+            }
+
+            // 5. Detectar Productos línea por línea
+            const lineas = texto.split(/\r?\n/);
+            lineas.forEach(linea => {
+                const limpia = linea.trim().replace(/^[-*•]\s*/, '');
+                if (!limpia) return;
+                if (/^(total|orden|cliente|buenas|hola|transferir|saludos|atentamente|gracias)/i.test(limpia)) return;
+
+                // Patrón estándar con número: "1 caucho 750R16", "2x tripa 650R10", "4 amortiguadores"
+                const prodMatch = limpia.match(/^(\d+)\s*(?:x|unid(?:ades?)?|pza(?:s)?)?\s+(.+)$/i);
+                if (prodMatch) {
+                    const cant = parseInt(prodMatch[1]) || 1;
+                    let desc = prodMatch[2].replace(/(?:a\s*transferir|total|bs\.?).*$/i, '').trim();
+                    if (desc.length > 2) {
+                        res.productos.push({
+                            cantidad: cant,
+                            descripcion: desc.toUpperCase()
+                        });
+                    }
+                } else if (limpia.length > 3 && !limpia.includes('Bs') && !limpia.includes('$') && !limpia.includes('transferir')) {
+                    // Línea descriptiva sin cantidad explícita (asume 1)
+                    res.productos.push({
+                        cantidad: 1,
+                        descripcion: limpia.toUpperCase()
+                    });
+                }
+            });
+
+            return res;
+        };
+
+        /**
+         * Procesa el texto de la orden con IA (Gemini vía Puter) y calcula divisas
+         */
+        window.procesarOrdenTextoConIA = async function() {
+            const txtArea = document.getElementById('leer-orden-texto');
+            const texto = (txtArea?.value || '').trim();
+            const btn = document.getElementById('btn-analizar-orden-ia');
+            const statusDiv = document.getElementById('leer-orden-status');
+            const monedaBase = document.getElementById('leer-orden-moneda')?.value || 'USD';
+            const inputTasa = document.getElementById('leer-orden-tasa');
+            const checkIva = document.getElementById('leer-orden-incluye-iva');
+
+            if (!texto) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Texto Vacío',
+                        text: 'Por favor pega el mensaje de WhatsApp, correo u orden antes de analizar.',
+                        confirmButtonColor: '#385723'
+                    });
+                } else {
+                    alert('Por favor pega el mensaje de la orden.');
+                }
+                return;
+            }
+
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analizando con IA...';
+            }
+
+            if (statusDiv) {
+                statusDiv.style.display = 'block';
+                statusDiv.style.background = '#eef3f0';
+                statusDiv.style.border = '1px solid #c3e6cb';
+                statusDiv.style.color = '#155724';
+                statusDiv.innerHTML = '<i class="fas fa-robot fa-spin"></i> Consultando a la IA y extrayendo repuestos...';
+            }
+
+            let parsedData = null;
+
+            // 1. Invocación a Gemini a través de Puter.js
+            if (typeof puter !== 'undefined' && puter.ai) {
+                try {
+                    const promptTexto = `Eres un asistente de ERP contable y financiero de "Inversiones FB Parts, C.A.".
+Extrae la información de este pedido o mensaje desordenado de WhatsApp/correo.
+
+TEXTO DEL CLIENTE:
+"""
+${texto}
+"""
+
+INSTRUCCIONES OBLIGATORIAS:
+Devuelve ÚNICAMENTE un objeto JSON estricto sin bloques de texto explicativos ni comentarios fuera del JSON, con esta estructura exacta:
+{
+  "productos": [
+    { "cantidad": 1, "descripcion": "NOMBRE DEL REPUESTO EN MAYÚSCULAS" }
+  ],
+  "monto_bruto_bs": 486420.80,
+  "incluye_iva": true,
+  "orden_compra": "NRO_ORDEN_O_VACIO",
+  "cliente_detectado": "NOMBRE_CLIENTE_O_NULL"
+}
+
+REGLAS DE EXTRACCIÓN:
+- "productos": array con cada pieza o repuesto y su cantidad entera (>= 1).
+- "monto_bruto_bs": número en Bolívares (float), eliminando puntos de miles y comas decimales. Si no hay monto en Bs, coloca 0.
+- "incluye_iva": boolean (true si dice 'con iva', 'iva incluido', 'ya incluye iva'; false si dice 'mas iva', 'sin iva', o si no se especifica).
+- "orden_compra": string con el código u orden de compra si se encuentra.
+- "cliente_detectado": string con el nombre del cliente/taller/empresa si se encuentra.`;
+
+                    let respuesta;
+                    try {
+                        respuesta = await puter.ai.chat(promptTexto, { model: 'gemini-2.0-flash' });
+                    } catch (eModel) {
+                        respuesta = await puter.ai.chat(promptTexto);
+                    }
+
+                    let rawContent = '';
+                    if (typeof respuesta === 'string') {
+                        rawContent = respuesta;
+                    } else if (respuesta?.message?.content) {
+                        const c = respuesta.message.content;
+                        rawContent = Array.isArray(c) ? c.map(b => b.text || b).join('') : String(c);
+                    } else if (respuesta?.text) {
+                        rawContent = String(respuesta.text);
+                    }
+
+                    // Extraer bloque JSON
+                    const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) {
+                        parsedData = JSON.parse(jsonMatch[0]);
+                    }
+                } catch (errAI) {
+                    console.warn("Fallo en llamada IA Puter, activando extractor de respaldo regex:", errAI);
+                }
+            }
+
+            // 2. Fallback inteligente con Regex si la IA no respondió o falló la respuesta
+            if (!parsedData || !Array.isArray(parsedData.productos) || parsedData.productos.length === 0) {
+                parsedData = window.extraerOrdenConRegexFallback(texto);
+            }
+
+            // Validar que se hayan obtenido productos
+            if (!parsedData || !Array.isArray(parsedData.productos) || parsedData.productos.length === 0) {
+                if (statusDiv) {
+                    statusDiv.style.background = '#fef2f2';
+                    statusDiv.style.border = '1px solid #fecaca';
+                    statusDiv.style.color = '#b91c1c';
+                    statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> No se pudieron identificar productos en el texto. Separa cada producto en una línea (Ej: 1 repuesto X).';
+                }
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-brain"></i> Analizar y Calcular con IA';
+                }
+                return;
+            }
+
+            // 3. Cálculos Financieros: Descuento de IVA y Conversión Cambiaria a Tasa BCV
+            if (typeof parsedData.incluye_iva === 'boolean' && checkIva) {
+                checkIva.checked = parsedData.incluye_iva;
+            }
+
+            const aplicaIVA = checkIva ? checkIva.checked : true;
+            const montoBrutoBs = parseFloat(parsedData.monto_bruto_bs) || 0;
+            const montoNetoBs = (aplicaIVA && montoBrutoBs > 0) ? (montoBrutoBs / 1.16) : montoBrutoBs;
+            const tasaAplicada = Math.max(0.01, parseFloat(inputTasa?.value) || 1);
+            const totalDivisa = tasaAplicada > 0 ? (montoNetoBs / tasaAplicada) : 0;
+            const totalDivisaRedondeado = Math.round(totalDivisa * 100) / 100;
+
+            // Distribuir el total neto en divisas entre los productos extraídos
+            const prods = parsedData.productos;
+            const totalUnidades = prods.reduce((sum, p) => sum + (parseInt(p.cantidad) || 1), 0);
+            const precioBaseUnitario = totalUnidades > 0 ? (totalDivisaRedondeado / totalUnidades) : 0;
+
+            let sumaAcumulada = 0;
+            prods.forEach((p, idx) => {
+                p.cantidad = parseInt(p.cantidad) || 1;
+                p.descripcion = String(p.descripcion || 'REPUESTO').toUpperCase().trim();
+                if (idx === prods.length - 1) {
+                    const restante = totalDivisaRedondeado - sumaAcumulada;
+                    p.precio = Math.max(0, Math.round((restante / p.cantidad) * 100) / 100);
+                } else {
+                    p.precio = Math.round(precioBaseUnitario * 100) / 100;
+                    sumaAcumulada += (p.cantidad * p.precio);
+                }
+            });
+
+            // 4. Inyectar filas en el contenedor dinámico del formulario de pedidos (#pedidos-items-container)
+            const container = document.getElementById('pedidos-items-container');
+            if (container) {
+                container.innerHTML = ''; // Limpiar filas vacías previas
+                prods.forEach(p => {
+                    const row = document.createElement('div');
+                    row.className = 'pedido-item-row';
+                    row.innerHTML = `
+                        <input type="number" class="ped-item-cant" value="${p.cantidad}" min="1" placeholder="Cant" oninput="calcularTotalPedido()">
+                        <input type="text" class="ped-item-desc" value="${SecuritySanitizer.escapeHtml(p.descripcion)}" placeholder="Descripción del repuesto" style="grid-column: span 3;">
+                        <input type="number" step="0.01" class="ped-item-precio" value="${p.precio.toFixed(2)}" placeholder="Precio" oninput="calcularTotalPedido()">
+                        <button type="button" onclick="this.parentElement.remove(); calcularTotalPedido();" style="background:#d9534f; color:white; border:none; border-radius:4px; cursor:pointer;"><i class="fas fa-times"></i></button>
+                    `;
+                    container.appendChild(row);
+                });
+                window.calcularTotalPedido();
+            }
+
+            // 5. Inyectar Nombre de Cliente y Orden si fueron detectados
+            if (parsedData.cliente_detectado) {
+                const inpCli = document.getElementById('client-name');
+                if (inpCli && !inpCli.value) {
+                    inpCli.value = parsedData.cliente_detectado;
+                }
+                const selCli = document.getElementById('ped-selector-clientes');
+                if (selCli) {
+                    for (let i = 0; i < selCli.options.length; i++) {
+                        if (selCli.options[i].text.toLowerCase().includes(parsedData.cliente_detectado.toLowerCase())) {
+                            selCli.selectedIndex = i;
+                            if (window.seleccionarClientePedido) window.seleccionarClientePedido();
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (parsedData.orden_compra) {
+                const inpTrack = document.getElementById('tracking-info');
+                if (inpTrack && !inpTrack.value) {
+                    inpTrack.value = `OC-${parsedData.orden_compra}`;
+                }
+            }
+
+            // Cerrar el modal
+            window.cerrarModalLeerOrdenIA();
+
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-brain"></i> Analizar y Calcular con IA';
+            }
+
+            // Feedback al usuario con resumen financiero
+            const resumenHTML = `
+                <div style="text-align: left; font-size: 13px; color: #374151; font-family: sans-serif;">
+                    <p style="margin-bottom: 8px;"><strong>${prods.length} repuestos</strong> cargados en el formulario de pedido:</p>
+                    <ul style="padding-left: 20px; margin-bottom: 12px; max-height: 140px; overflow-y: auto;">
+                        ${prods.map(p => `<li><b>${p.cantidad}x</b> ${SecuritySanitizer.escapeHtml(p.descripcion)} &rarr; $${p.precio.toFixed(2)} c/u</li>`).join('')}
+                    </ul>
+                    <hr style="margin: 8px 0; border: none; border-top: 1px dashed #cbd5e1;">
+                    <p style="margin: 4px 0;">Monto Bruto: <b>Bs. ${Number(montoBrutoBs).toLocaleString('es-VE', {minimumFractionDigits: 2})}</b></p>
+                    ${aplicaIVA ? `<p style="margin: 4px 0; color: #15803d;">Neto sin IVA (-16%): <b>Bs. ${Number(montoNetoBs).toLocaleString('es-VE', {minimumFractionDigits: 2})}</b></p>` : ''}
+                    <p style="margin: 6px 0 0 0; font-size: 15px; color: #385723; font-weight: bold;">
+                        Total Pedido (${monedaBase}): $${totalDivisaRedondeado.toFixed(2)} <span style="font-size: 11.5px; font-weight: normal; color: #64748b;">(Tasa Bs. ${tasaAplicada.toFixed(2)})</span>
+                    </p>
+                </div>
+            `;
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Orden Importada y Calculada!',
+                    html: resumenHTML,
+                    confirmButtonColor: '#385723',
+                    confirmButtonText: 'Aceptar'
+                });
+            } else {
+                alert(`¡Orden Importada! Total ${monedaBase}: $${totalDivisaRedondeado.toFixed(2)}`);
+            }
+        };
         window.imprimirEtiquetaEnvio = function(docId) {
             const ped = window.pedidosDBLocal[docId];
             if(!ped) return;
