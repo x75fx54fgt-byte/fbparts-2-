@@ -12456,7 +12456,81 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
         // =========================================================================
         window.clientesAgrupadosCache = [];
         window.clienteSeleccionadoCRM = null;
-        window.bcvHistoricoCache = {};
+
+        // 💾 CACHÉ PERSISTENTE EN LOCALSTORAGE PARA TASAS BCV HISTÓRICAS (0 ms / Cero 404 innecesarios)
+        const CACHE_KEY_BCV = 'bcv_historico_cache_v1';
+
+        function cargarCacheBCVLocalStorage() {
+            try {
+                const raw = localStorage.getItem(CACHE_KEY_BCV);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (parsed && typeof parsed === 'object') return parsed;
+                }
+            } catch (e) {
+                console.warn('[CRM Divisas BCV] Aviso al leer caché de localStorage:', e);
+            }
+            return {};
+        }
+
+        function guardarCacheBCVLocalStorage(cache) {
+            try {
+                localStorage.setItem(CACHE_KEY_BCV, JSON.stringify(cache));
+            } catch (e) {
+                console.warn('[CRM Divisas BCV] Aviso al guardar caché en localStorage:', e);
+            }
+        }
+
+        window.bcvHistoricoCache = cargarCacheBCVLocalStorage();
+
+        /**
+         * Ajusta automáticamente una fecha YYYY-MM-DD que caiga en Sábado o Domingo
+         * al viernes hábil inmediatamente anterior para evitar peticiones 404 innecesarias.
+         */
+        window.ajustarFechaFinDeSemana = function(fechaStr) {
+            if (!fechaStr || typeof fechaStr !== 'string') return fechaStr;
+            const parts = fechaStr.split('-');
+            if (parts.length !== 3) return fechaStr;
+            const year = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1;
+            const day = parseInt(parts[2], 10);
+            if (isNaN(year) || isNaN(month) || isNaN(day)) return fechaStr;
+
+            // Mediodía local (12:00) para evitar desajustes de zona horaria
+            const d = new Date(year, month, day, 12, 0, 0);
+            const dayOfWeek = d.getDay(); // 0 = Domingo, 6 = Sábado
+
+            if (dayOfWeek === 6) {
+                // Sábado -> restar 1 día (Viernes)
+                d.setDate(d.getDate() - 1);
+            } else if (dayOfWeek === 0) {
+                // Domingo -> restar 2 días (Viernes)
+                d.setDate(d.getDate() - 2);
+            } else {
+                return fechaStr;
+            }
+
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        };
+
+        /**
+         * Busca la tasa histórica válida más cercana (hacia atrás) dentro de la caché local persistente
+         */
+        function buscarTasaMasCercanaEnCache(fechaObjetivo) {
+            const keys = Object.keys(window.bcvHistoricoCache || {})
+                .filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k) && Number(window.bcvHistoricoCache[k]?.tasa) > 0)
+                .sort();
+            let mejor = null;
+            for (const k of keys) {
+                if (k <= fechaObjetivo) {
+                    mejor = { fecha: k, tasa: Number(window.bcvHistoricoCache[k].tasa) };
+                }
+            }
+            return mejor;
+        }
 
         // =========================================================================
         // ⚙️ CONFIGURACIÓN DE CONEXIÓN A API CAMBIARIA BCV (TASAS HISTÓRICAS)
@@ -12465,8 +12539,6 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
         // =========================================================================
         window.CONFIG_BCV_HISTORICO = {
             // 🌐 1. URL DEL ENDPOINT HISTÓRICO DE CROM STUDIO O TU PROPIO PROXY:
-            // 👉 Reemplaza esta URL por tu propio backend proxy si deseas centralizar la consulta:
-            // Ejemplo: 'https://mi-proxy-backend.com/api/bcv/historico/{FECHA_FORMATO_API}'
             urlBase: 'https://datos.cromstudio.com.ve/api/bcv/historico/{FECHA_FORMATO_API}',
 
             // 🌐 Endpoint alternativo en vivo de Crom Studio (CORS abierto *):
@@ -12550,18 +12622,37 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
          * @returns {Promise<number>} - Tasa numérica de cambio oficial del día
          */
         window.obtenerTasaHistoricaBCV = async function(fecha) {
-            const fechaFormatoAPI = window.formatearFechaParaAPI(fecha);
+            const fechaOriginal = window.formatearFechaParaAPI(fecha);
 
-            // 1. Caché en memoria para alta velocidad y evitar peticiones repetidas a la misma fecha
-            if (window.bcvHistoricoCache[fechaFormatoAPI]) {
-                return window.bcvHistoricoCache[fechaFormatoAPI].tasa;
+            // 1. Caché persistente en localStorage para fecha original
+            if (window.bcvHistoricoCache[fechaOriginal] && Number(window.bcvHistoricoCache[fechaOriginal].tasa) > 0) {
+                return Number(window.bcvHistoricoCache[fechaOriginal].tasa);
+            }
+
+            // 2. Ajuste de fin de semana: Sábado o Domingo -> Viernes hábil anterior
+            const fechaConsulta = window.ajustarFechaFinDeSemana(fechaOriginal);
+
+            // Si la fecha ajustada (viernes) ya está en caché, reutilizarla directamente sin petición
+            if (window.bcvHistoricoCache[fechaConsulta] && Number(window.bcvHistoricoCache[fechaConsulta].tasa) > 0) {
+                const itemCached = window.bcvHistoricoCache[fechaConsulta];
+                const tasaCached = Number(itemCached.tasa);
+                window.bcvHistoricoCache[fechaOriginal] = {
+                    tasa: tasaCached,
+                    fuente: fechaOriginal !== fechaConsulta ? `Viernes hábil (${fechaConsulta})` : itemCached.fuente,
+                    esFallback: itemCached.esFallback || false
+                };
+                guardarCacheBCVLocalStorage(window.bcvHistoricoCache);
+                return tasaCached;
             }
 
             const cfg = window.CONFIG_BCV_HISTORICO;
-            const urlConsulta = cfg.urlBase.replace('{FECHA_FORMATO_API}', encodeURIComponent(fechaFormatoAPI));
+            const urlConsulta = cfg.urlBase.replace('{FECHA_FORMATO_API}', encodeURIComponent(fechaConsulta));
 
             const controller = new AbortController();
             const timeoutTimer = setTimeout(() => controller.abort(), cfg.timeoutMs);
+
+            let tasaObtenida = null;
+            let fuenteObtenida = '';
 
             try {
                 const headers = { 'Accept': 'application/json' };
@@ -12569,7 +12660,7 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
                     headers['Authorization'] = cfg.apiKey.startsWith('Bearer ') ? cfg.apiKey : `Bearer ${cfg.apiKey.trim()}`;
                 }
 
-                // 2. Fetch real asíncrono
+                // Fetch real asíncrono a la API histórica
                 const response = await fetch(urlConsulta, {
                     method: 'GET',
                     headers: headers,
@@ -12586,55 +12677,62 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
                     );
 
                     if (tasaExtraida && !isNaN(tasaExtraida) && tasaExtraida > 0) {
-                        window.bcvHistoricoCache[fechaFormatoAPI] = {
-                            tasa: tasaExtraida,
-                            fuente: 'API Crom Studio (Histórico)',
-                            esFallback: false
-                        };
-                        return tasaExtraida;
+                        tasaObtenida = tasaExtraida;
+                        fuenteObtenida = 'API Crom Studio (Histórico)';
                     }
                 }
-                throw new Error(`Endpoint histórico no disponible (HTTP ${response.status})`);
-
             } catch (err) {
                 clearTimeout(timeoutTimer);
+            }
 
-                // Consulta de respaldo a la tasa en vivo de Crom Studio (con CORS abierto *)
-                try {
-                    const resVivo = await fetch(cfg.urlTasaEnVivo, { method: 'GET', headers: { 'Accept': 'application/json' } });
-                    if (resVivo.ok) {
-                        const dataVivo = await resVivo.json();
-                        const tasaVivo = parseFloat(dataVivo?.tasas?.USD ?? dataVivo?.current?.usd);
-                        if (tasaVivo && !isNaN(tasaVivo) && tasaVivo > 0) {
-                            window.bcvHistoricoCache[fechaFormatoAPI] = {
-                                tasa: tasaVivo,
-                                fuente: 'API Crom Studio (En Vivo)',
-                                esFallback: false
-                            };
-                            return tasaVivo;
-                        }
-                    }
-                } catch (eVivo) {
-                    // Fallback local
+            // Si la API histórica devolvió una tasa válida (> 0)
+            if (tasaObtenida && tasaObtenida > 0) {
+                window.bcvHistoricoCache[fechaConsulta] = {
+                    tasa: tasaObtenida,
+                    fuente: fuenteObtenida,
+                    esFallback: false
+                };
+                if (fechaOriginal !== fechaConsulta) {
+                    window.bcvHistoricoCache[fechaOriginal] = {
+                        tasa: tasaObtenida,
+                        fuente: `Viernes hábil (${fechaConsulta})`,
+                        esFallback: false
+                    };
                 }
+                guardarCacheBCVLocalStorage(window.bcvHistoricoCache);
+                return tasaObtenida;
+            }
 
-                // Simulación del retardo asíncrono del fetch tal como instruye la Regla 2
-                await new Promise(resolve => setTimeout(resolve, 300));
+            // 3. Respaldo para 404 / Feriados / Fin de semana sin registro / Error:
+            // Intentar recuperar primero la tasa del día hábil anterior más cercano registrada en la caché
+            let fallbackTasa = cfg.tasaFallback;
+            let fallbackFuente = `Fallback (${Number(cfg.tasaFallback).toFixed(2)} Bs/$)`;
 
-                console.warn(`[CRM Divisas BCV] ⚠️ Fallo al consultar API cambiaria para ${fechaFormatoAPI} (${err.message}). Utilizando tasa de respaldo de seguridad.`);
+            const tasaPrevia = buscarTasaMasCercanaEnCache(fechaConsulta);
+            if (tasaPrevia && tasaPrevia.tasa > 0) {
+                fallbackTasa = tasaPrevia.tasa;
+                fallbackFuente = `Día hábil anterior (${tasaPrevia.fecha}: ${Number(tasaPrevia.tasa).toFixed(2)} Bs/$)`;
+            } else if (typeof window.tasaBCVOficial !== 'undefined' && Number(window.tasaBCVOficial) > 0) {
+                fallbackTasa = Number(window.tasaBCVOficial);
+                fallbackFuente = `Tasa Actual Panel (${fallbackTasa.toFixed(2)} Bs/$)`;
+            }
 
-                const fallback = (typeof window.tasaBCVOficial !== 'undefined' && window.tasaBCVOficial > 0)
-                    ? window.tasaBCVOficial
-                    : cfg.tasaFallback;
-
-                window.bcvHistoricoCache[fechaFormatoAPI] = {
-                    tasa: fallback,
-                    fuente: `Fallback Seguridad (${Number(fallback).toFixed(2)} Bs/$)`,
+            // Se guarda en la caché persistente para no volver a intentar consultarla ni ensuciar la consola
+            window.bcvHistoricoCache[fechaConsulta] = {
+                tasa: fallbackTasa,
+                fuente: fallbackFuente,
+                esFallback: true
+            };
+            if (fechaOriginal !== fechaConsulta) {
+                window.bcvHistoricoCache[fechaOriginal] = {
+                    tasa: fallbackTasa,
+                    fuente: `Fin de semana (${fallbackFuente})`,
                     esFallback: true
                 };
-
-                return fallback;
             }
+            guardarCacheBCVLocalStorage(window.bcvHistoricoCache);
+
+            return fallbackTasa;
         };
 
         // Alias retrocompatible
