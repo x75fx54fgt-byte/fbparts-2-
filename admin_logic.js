@@ -11301,7 +11301,7 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
                 ? `onerror="if(!this.dataset.fb){this.dataset.fb=1;this.src='https://drive.google.com/thumbnail?id=${driveId}&sz=w1920';}else{this.onerror=null;this.src='img/logo-fb-parts.png';}"`
                 : `onerror="this.onerror=null; this.src='img/logo-fb-parts.png';"`;
 
-            const badgeHtml = tieneOferta ? `
+            const badgeHtml = (tieneOferta && pct > 0) ? `
                 <div style="position: absolute; top: 10px; left: 10px; z-index: 2; display: flex; flex-direction: column; gap: 4px; pointer-events: none;">
                     <span style="background: linear-gradient(135deg, #e63946 0%, #b7094c 100%); color: white; font-size: 10.5px; font-weight: 800; padding: 3px 8px; border-radius: 4px; box-shadow: 0 3px 6px rgba(230,57,70,0.4); text-transform: uppercase; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 4px;">
                         <i class="${campanaConfig.icono || 'fas fa-fire'}"></i> ${SecuritySanitizer.escapeHtml(campanaConfig.nombre || 'BLACK FRIDAY')}
@@ -11373,7 +11373,7 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
                 const tieneOferta = campanaActiva && of !== null && of > 0 && of < reg;
                 const pct = tieneOferta ? Math.round((1 - (of / reg)) * 100) : 0;
 
-                const badgeHtml = tieneOferta ? `
+                const badgeHtml = (tieneOferta && pct > 0) ? `
                     <div style="position: absolute; top: 10px; left: 10px; z-index: 2; display: flex; flex-direction: column; gap: 4px; pointer-events: none;">
                         <span style="background: linear-gradient(135deg, #e63946 0%, #b7094c 100%); color: white; font-size: 10px; font-weight: 800; padding: 3px 7px; border-radius: 4px; box-shadow: 0 2px 6px rgba(230,57,70,0.4); text-transform: uppercase; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 4px;">
                             <i class="${campanaConfig.icono || 'fas fa-fire'}"></i> ${SecuritySanitizer.escapeHtml(campanaConfig.nombre || 'BLACK FRIDAY')}

@@ -33,6 +33,111 @@ function escapeHtml(str) {
         .replace(/'/g, '&#039;');
 }
 
+// Mapeo exhaustivo de slugs de categorías a nombres limpios y profesionales
+const MAPA_CATEGORIAS_LEGIBLES = {
+    'manillas-eleva-vidrios-para-vehiculos': 'Manillas Eleva Vidrios',
+    'correas-de-tiempo-para-vehiculos': 'Correas de Tiempo',
+    'correas-poly-v-para-vehiculos': 'Correas Poly-V',
+    'kits-de-distribucion-para-vehiculos': 'Kits de Distribución',
+    'bombas-de-gasolina-para-vehiculos': 'Bombas de Gasolina',
+    'bombas-de-aceite-para-vehiculos': 'Bombas de Aceite',
+    'carters-de-motor-para-vehiculos': 'Cárters de Motor',
+    'ciguenales-para-vehiculos': 'Cigüeñales',
+    'bielas-de-motor-para-vehiculos': 'Bielas de Motor',
+    'arboles-de-levas-para-vehiculos': 'Árboles de Levas',
+    'juegos-de-anillos-de-piston-para-vehiculos': 'Juegos de Anillos de Pistón',
+    'juntas-de-culata-de-motor-para-vehiculos': 'Juntas de Culata de Motor',
+    'juntas-homocineticas-para-vehiculos': 'Juntas Homocinéticas',
+    'parrillas-de-parachoques-para-vehiculos': 'Parrillas de Parachoques',
+    'parachoques-traseros-para-vehiculos': 'Parachoques Traseros',
+    'parachoques': 'Parachoques',
+    'parachoque': 'Parachoques',
+    'bobinas-de-encendido-para-vehiculos': 'Bobinas de Encendido',
+    'distribuidores-para-vehiculos': 'Distribuidores',
+    'sensores-de-oxigeno-para-vehiculos': 'Sensores de Oxígeno',
+    'sensores-de-arbol-de-levas-para-vehiculos': 'Sensores de Árbol de Levas',
+    'termostatos-de-motores-para-vehiculos': 'Termostatos de Motores',
+    'reguladores-de-presion-de-combustible-para-vehiculos': 'Reguladores de Presión de Combustible',
+    'radiadores-de-agua-para-autos-y-camionetas': 'Radiadores de Agua',
+    'faros-y-micas': 'Faros y Micas',
+    'retrovisores': 'Retrovisores',
+    'emblemas-para-vehiculos': 'Emblemas',
+    'rines-para-automotores': 'Rines',
+    'tapas-de-tuercas-de-rines-para-vehiculos': 'Tapas de Tuercas de Rines',
+    'alarmas-para-vehiculos': 'Alarmas',
+    'fundas-de-asientos-para-vehiculos': 'Fundas de Asientos',
+    'aceites-de-cajas-automaticas-para-vehiculos': 'Aceites de Cajas Automáticas',
+    'plantas-electricas-portatiles': 'Plantas Eléctricas',
+    'repuestos-de-linea-liviana': 'Línea Liviana',
+    'repuestos-de-linea-pesada': 'Línea Pesada'
+};
+
+function formatearCategoriaLegible(slug) {
+    if (!slug) return 'Repuestos';
+    const slugMin = String(slug).toLowerCase().trim();
+    if (MAPA_CATEGORIAS_LEGIBLES[slugMin]) {
+        return MAPA_CATEGORIAS_LEGIBLES[slugMin];
+    }
+    if (!slug.includes('-') && !slug.includes('_')) {
+        return slug.charAt(0).toUpperCase() + slug.slice(1);
+    }
+    let limpio = slugMin
+        .replace(/-para-(?:vehiculos|autos-y-camionetas|automotores)$/i, '')
+        .replace(/-de-(?:vehiculos|motores)$/i, '')
+        .replace(/[-_]+/g, ' ')
+        .trim();
+
+    const palabrasMenores = new Set(['de', 'del', 'la', 'las', 'el', 'los', 'y', 'e', 'en', 'para', 'por', 'con']);
+    return limpio.split(' ').map((p, i) => {
+        if (i > 0 && palabrasMenores.has(p)) return p;
+        return p.charAt(0).toUpperCase() + p.slice(1);
+    }).join(' ');
+}
+
+// Generador de descripción rica y estructurada estándar F&B Parts
+function generarDescripcionEstructurada(prod, categoriaLegible) {
+    const nombre = prod.nombre || 'Repuesto Automotriz';
+    const marca = (prod.marca && prod.marca !== 'Universal/Multi-marca') ? prod.marca : 'Compatible según especificaciones';
+    const modelo = prod.modelo || 'Consultar compatibilidad exacta';
+    const numero_parte = prod.numero_parte || 'OEM según especificación';
+    const posiciones = Array.isArray(prod.posiciones) && prod.posiciones.length > 0
+        ? prod.posiciones.filter(p => p !== 'N/A').join(', ')
+        : (prod.posicion && prod.posicion !== 'N/A' ? prod.posicion : 'Ajuste estándar');
+
+    return `✅ FUNCIÓN Y BENEFICIOS:
+${nombre}. Pieza automotriz de alta resistencia y durabilidad, fabricada bajo estrictos estándares de equipo original para asegurar un ajuste exacto, máxima seguridad y óptimo rendimiento en tu vehículo. Su sustitución preventiva o correctiva previene daños mecánicos colaterales y garantiza una conducción confiable.
+
+🔧 COMPATIBILIDAD:
+- Marca: ${marca}
+- Modelo / Motorización: ${modelo}
+- Categoría: ${categoriaLegible}
+- Lado / Posición: ${posiciones || 'Ajuste estándar'}
+- Número OEM / Parte: ${numero_parte}
+
+📦 CONDICIONES DE ENVÍO Y ENTREGA:
+- Repuesto nuevo en su empaque y en perfecta condición garantizada.
+- Retiro en tienda física y servicio de delivery rápido en Caracas (ciertas condiciones aplican).
+- Envíos a nivel nacional cobro en destino a través de MRW, Tealca y Zoom asegurados.`;
+}
+
+function obtenerDescripcionProducto(prod, categoriaLegible) {
+    const desc = prod.descripcion;
+    if (!desc || typeof desc !== 'string' || desc.trim().length < 25 || desc.includes('Sin descripción detallada')) {
+        return generarDescripcionEstructurada(prod, categoriaLegible);
+    }
+    const bloqueEnvio = `\n\n📦 CONDICIONES DE ENVÍO Y ENTREGA:\n- Repuesto nuevo en su empaque y en perfecta condición garantizada.\n- Retiro en tienda física y servicio de delivery rápido en Caracas (ciertas condiciones aplican).\n- Envíos a nivel nacional cobro en destino a través de MRW, Tealca y Zoom asegurados.`;
+
+    // Asegurar que cuente con las condiciones completas de Caracas y envíos nacionales (MRW, Tealca y Zoom)
+    if (!desc.includes('MRW') || !desc.includes('Tealca') || !desc.includes('Zoom')) {
+        if (/📦 CONDICIONES/i.test(desc)) {
+            return desc.replace(/📦 CONDICIONES[\s\S]*$/i, bloqueEnvio.trim()).trim();
+        } else {
+            return (desc.trim() + bloqueEnvio).trim();
+        }
+    }
+    return desc.trim();
+}
+
 // Función para generar slugs limpios y aptos para SEO
 function crearSlug(texto) {
     if (!texto) return 'repuesto';
@@ -53,21 +158,20 @@ const toUrl = (u) => {
 
 const logoFallback = "https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png";
 
-function renderizarBreadcrumbEstatico(prod) {
+function renderizarBreadcrumbEstatico(prod, categoriaLegible) {
     const nombre = prod.nombre || 'Repuesto Automotriz';
-    const categoria = prod.categoria || 'Repuestos';
+    const categoriaSlug = prod.categoria || 'repuestos';
     return `
     <nav class="breadcrumb-nav" aria-label="Breadcrumb">
         <a href="index.html">Inicio</a> › 
         <a href="tienda.html">Tienda</a> › 
-        <a href="tienda.html?cat=${encodeURIComponent(categoria)}" id="breadcrumb-category">${escapeHtml(categoria)}</a> <span id="breadcrumb-category-separator">›</span> 
+        <a href="tienda.html?cat=${encodeURIComponent(categoriaSlug)}" id="breadcrumb-category">${escapeHtml(categoriaLegible)}</a> <span id="breadcrumb-category-separator">›</span> 
         <span id="breadcrumb-current">${escapeHtml(nombre)}</span>
     </nav>`;
 }
 
-function renderizarContenidoEstatico(prod, docId, slug, precioFinal, precioRegularFinal, tieneOferta, pctAhorro) {
+function renderizarContenidoEstatico(prod, docId, slug, precioFinal, precioRegularFinal, tieneOferta, pctAhorro, categoriaLegible, descContenido) {
     const nombre = prod.nombre || 'Repuesto Automotriz';
-    const categoria = prod.categoria || 'Repuestos';
     const marca = prod.marca || '';
     const modelo = prod.modelo || '';
     const subcategoria = prod.subcategoria || '';
@@ -80,10 +184,8 @@ function renderizarContenidoEstatico(prod, docId, slug, precioFinal, precioRegul
     const numParteTxt = numero_parte
         ? `<p style="margin: 5px 0;"><strong>Número de Parte / OEM:</strong> ${escapeHtml(numero_parte)}</p>`
         : '';
-    const descTxt = prod.descripcion
-        ? `<div style="margin: 15px 0; color: #444; font-size: 14px; line-height: 1.6; white-space: pre-wrap; font-family: inherit;">${escapeHtml(prod.descripcion)}</div>`
-        : '<p style="margin: 10px 0; color: #888; font-size: 13px;">Sin descripción detallada para este repuesto. Contáctanos para mayor información de compatibilidad.</p>';
-    const catSubtitle = `F&B PARTS • ${escapeHtml(categoria.toUpperCase())}`;
+    const descTxt = `<div style="margin: 15px 0; color: #444; font-size: 14px; line-height: 1.6; white-space: pre-wrap; font-family: inherit;">${escapeHtml(descContenido)}</div>`;
+    const catSubtitle = `F&B PARTS • ${escapeHtml(categoriaLegible.toUpperCase())}`;
 
     const imagenes = Array.isArray(prod.imagenes) && prod.imagenes.length > 0
         ? prod.imagenes.map(toUrl)
@@ -188,8 +290,55 @@ function renderizarContenidoEstatico(prod, docId, slug, precioFinal, precioRegul
     </div>`;
 }
 
+function generarSitemapXml(productSlugs) {
+    const today = new Date().toISOString().split('T')[0];
+    const paginasPrincipales = [
+        { loc: "https://www.fybparts.com/", lastmod: today, changefreq: "weekly", priority: "1.0" },
+        { loc: "https://www.fybparts.com/index.html", lastmod: today, changefreq: "weekly", priority: "1.0" },
+        { loc: "https://www.fybparts.com/tienda.html", lastmod: today, changefreq: "daily", priority: "0.9" },
+        { loc: "https://www.fybparts.com/quienes-somos.html", lastmod: today, changefreq: "monthly", priority: "0.7" },
+        { loc: "https://www.fybparts.com/politicas-devoluciones.html", lastmod: today, changefreq: "monthly", priority: "0.6" }
+    ];
+
+    const urlsUnicas = new Set();
+    const entradas = [];
+
+    // Agregar páginas principales
+    for (const p of paginasPrincipales) {
+        if (!urlsUnicas.has(p.loc)) {
+            urlsUnicas.add(p.loc);
+            entradas.push(`  <url>
+    <loc>${p.loc}</loc>
+    <lastmod>${p.lastmod}</lastmod>
+    <changefreq>${p.changefreq}</changefreq>
+    <priority>${p.priority}</priority>
+  </url>`);
+        }
+    }
+
+    // Agregar páginas de productos reales
+    for (const slug of productSlugs) {
+        const prodUrl = `https://www.fybparts.com/${slug}.html`;
+        if (!urlsUnicas.has(prodUrl)) {
+            urlsUnicas.add(prodUrl);
+            entradas.push(`  <url>
+    <loc>${prodUrl}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`);
+        }
+    }
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${entradas.join('\n')}
+</urlset>
+`;
+}
+
 async function generarPaginasEstaticas() {
-    console.log("🚀 Iniciando generación de páginas estáticas amigables para SEO con Pre-renderizado...");
+    console.log("🚀 Iniciando generación masiva de páginas estáticas amigables para SEO con Pre-renderizado...");
 
     // 2. Leer la plantilla base producto.html
     const plantillaPath = path.join(__dirname, 'producto.html');
@@ -212,6 +361,7 @@ async function generarPaginasEstaticas() {
 
     let generados = 0;
     const slugsUsados = new Set();
+    const listaSlugsGenerados = [];
 
     snap.forEach((docSnap) => {
         const prod = docSnap.data();
@@ -222,6 +372,12 @@ async function generarPaginasEstaticas() {
         const numero_parte = prod.numero_parte || '';
         const stock = prod.stock !== undefined ? Number(prod.stock) : 1;
         
+        // Categoría legible y limpia
+        const categoriaLegible = formatearCategoriaLegible(prod.categoria);
+
+        // Descripción rica y estructurada garantizada
+        const descContenido = obtenerDescripcionProducto(prod, categoriaLegible);
+
         // Generar el slug único amigable para la URL
         const baseSlug = crearSlug(nombre);
         let slug = baseSlug;
@@ -229,6 +385,7 @@ async function generarPaginasEstaticas() {
             slug = `${baseSlug}-${docId.slice(0, 5).toLowerCase()}`;
         }
         slugsUsados.add(slug);
+        listaSlugsGenerados.push(slug);
 
         const canonicalUrl = `https://www.fybparts.com/${slug}.html`;
 
@@ -296,7 +453,7 @@ async function generarPaginasEstaticas() {
             "@type": "Product",
             "name": nombre,
             "image": toUrl(prod.imagen) || logoFallback,
-            "description": prod.descripcion || `Repuesto automotriz ${nombre} disponible en F&B Parts Caracas.`,
+            "description": descContenido,
             "sku": numero_parte || docId,
             "mpn": numero_parte || "",
             "brand": {
@@ -325,14 +482,14 @@ async function generarPaginasEstaticas() {
             nuevoHtml = nuevoHtml.replace('</head>', `${schemaJsonTag}\n</head>`);
         }
 
-        // 6. Pre-renderizar Breadcrumb real
-        const preRenderedBreadcrumb = renderizarBreadcrumbEstatico(prod);
+        // 6. Pre-renderizar Breadcrumb real con categoría formateada
+        const preRenderedBreadcrumb = renderizarBreadcrumbEstatico(prod, categoriaLegible);
         nuevoHtml = nuevoHtml.replace(
             /<nav class="breadcrumb-nav"[\s\S]*?<\/nav>/i,
             preRenderedBreadcrumb.trim()
         );
 
-        // 7. Pre-renderizar Contenido Completo del Producto (h1, precios, badges, descripción, etc.)
+        // 7. Pre-renderizar Contenido Completo del Producto (h1, precios, badges, descripción rica, etc.)
         const preRenderedContainer = renderizarContenidoEstatico(
             prod,
             docId,
@@ -340,7 +497,9 @@ async function generarPaginasEstaticas() {
             precioFinal,
             precioRegularFinal,
             mostrarOferta,
-            pctAhorro
+            pctAhorro,
+            categoriaLegible,
+            descContenido
         );
         nuevoHtml = nuevoHtml.replace(
             /<div class="product-container" id="product-details-container">[\s\S]*?<\/div>\s*<\/div>/i,
@@ -350,7 +509,8 @@ async function generarPaginasEstaticas() {
         // 8. Inyección de datos precargados e ID para hidratación instantánea y sincronización
         const datosProducto = {
             id: docId,
-            ...prod
+            ...prod,
+            descripcion: descContenido
         };
         const jsonSeguro = JSON.stringify(datosProducto)
             .replace(/</g, '\\u003c')
@@ -370,10 +530,18 @@ async function generarPaginasEstaticas() {
     });
 
     console.log(`🎉 ¡Éxito! Se generaron ${generados} archivos HTML con contenido pre-renderizado completo y URLs amigables.`);
+
+    // 10. Generar y actualizar sitemap.xml
+    console.log("🗺️ Generando y actualizando sitemap.xml con URLs canónicas únicas...");
+    const sitemapContenido = generarSitemapXml(listaSlugsGenerados);
+    const sitemapPath = path.join(__dirname, 'sitemap.xml');
+    fs.writeFileSync(sitemapPath, sitemapContenido, 'utf-8');
+    console.log(`✅ sitemap.xml generado con éxito (${listaSlugsGenerados.length} páginas de productos + páginas principales).`);
+
     process.exit(0);
 }
 
 generarPaginasEstaticas().catch((err) => {
-    console.error("❌ Error durante la generación:", err);
+    console.error("❌ Error durante la generación masiva:", err);
     process.exit(1);
 });
