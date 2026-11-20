@@ -3,6 +3,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
         import { getFirestore, collection, getDocs, getDoc, setDoc, addDoc, doc, updateDoc, deleteDoc, query, where, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
+        // 🤫 Silenciar banner promocional de Puter.js en consola
+        if (typeof puter !== 'undefined') puter.quiet = true;
+
         // ==========================================
         // 🛡️ MÓDULO DE SANITIZACIÓN AUTÓNOMO (INLINE PARA COMPATIBILIDAD TOTAL)
         // ==========================================
