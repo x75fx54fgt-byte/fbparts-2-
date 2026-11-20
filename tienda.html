@@ -1036,15 +1036,16 @@
                 const precioRegularFinal = tieneOferta ? Number(oferta.precioRegular || precioNum) : precioNum;
                 const precioFinal = tieneOferta ? Number(oferta.precioOferta) : precioNum;
                 const pctAhorro = tieneOferta ? (oferta.porcentaje || Math.round((1 - (precioFinal / precioRegularFinal)) * 100)) : 0;
+                const mostrarBadgeOferta = tieneOferta && pctAhorro > 0;
 
-                const badgeOfertaHTML = tieneOferta ? `
+                const badgeOfertaHTML = mostrarBadgeOferta ? `
                     <div class="badge-black-friday-catalogo">
                         <span class="tag-bf"><i class="${iconoCampana}"></i> ${nombreCampana}</span>
                         <span class="tag-pct">-${pctAhorro}% OFF</span>
                     </div>
                 ` : '';
 
-                const precioHTML = tieneOferta ? `
+                const precioHTML = mostrarBadgeOferta ? `
                     <div class="prod-price-box">
                         <span class="prod-price-old">$${precioRegularFinal.toFixed(2)}</span>
                         <span class="prod-price-offer">$${precioFinal.toFixed(2)}</span>

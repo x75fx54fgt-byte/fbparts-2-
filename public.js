@@ -313,8 +313,10 @@ export async function cargarDestacadosPublico() {
             const productUrl = `${slug}.html`;
 
             // Lógica de Descuentos (depende de que la campaña esté activa)
-            const tieneOferta = campanaActiva && precioOferta !== null && precioOferta > 0 && precioOferta < precioRegular;
-            const pctAhorro = tieneOferta ? Math.round((1 - (precioOferta / precioRegular)) * 100) : 0;
+            const pctAhorro = (precioOferta !== null && precioOferta > 0 && precioOferta < precioRegular)
+                ? Math.round((1 - (precioOferta / precioRegular)) * 100)
+                : 0;
+            const tieneOferta = campanaActiva && pctAhorro > 0;
 
             // Badge de Oferta dinámico en la esquina superior izquierda
             const badgeOfertaHtml = tieneOferta ? `

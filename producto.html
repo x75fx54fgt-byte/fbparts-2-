@@ -7,6 +7,7 @@
     <!-- 🚀 ETIQUETAS SEO DINÁMICAS -->
     <title>Cargando repuesto... | F&B Parts</title>
     <meta name="description" content="Encuentra los mejores repuestos automotrices al mejor precio en F&B Parts, Caracas." id="meta-desc">
+    <meta name="robots" content="noindex, follow">
     
     <!-- Etiquetas Open Graph (Para la vista previa bonita en WhatsApp, Facebook, etc) -->
     <meta property="og:type" content="product">
@@ -676,9 +677,10 @@
                 const precioRegularFinal = tieneOferta ? Number(ofertaInfo.precioRegular || precioRegularProd) : precioRegularProd;
                 const precioFinal = tieneOferta ? Number(ofertaInfo.precioOferta) : precioRegularProd;
                 const pctAhorro = tieneOferta ? (ofertaInfo.porcentaje || Math.round((1 - (precioFinal / precioRegularFinal)) * 100)) : 0;
+                const mostrarBadgeOferta = tieneOferta && pctAhorro > 0;
 
                 const badgeOfertaProdHTML = `
-                    <div id="badge-oferta-contenedor" style="${tieneOferta ? 'display: inline-flex;' : 'display: none;'} align-items: center; gap: 6px; margin: 8px 0 14px 0;">
+                    <div id="badge-oferta-contenedor" style="${mostrarBadgeOferta ? 'display: inline-flex;' : 'display: none;'} align-items: center; gap: 6px; margin: 8px 0 14px 0;">
                         <span style="background: linear-gradient(135deg, #e63946 0%, #b7094c 100%); color: white; font-size: 11.5px; font-weight: 800; padding: 4px 10px; border-radius: 4px; box-shadow: 0 3px 8px rgba(230,57,70,0.45); text-transform: uppercase; font-family: 'Oswald', sans-serif; letter-spacing: 0.6px; display: inline-flex; align-items: center; gap: 5px;">
                             <i id="badge-icono-oferta" class="${iconoCampana}"></i> <span id="badge-texto-campana">${nombreCampana}</span>
                         </span>
@@ -688,7 +690,7 @@
                     </div>
                 `;
 
-                const precioProdHTML = tieneOferta ? `
+                const precioProdHTML = mostrarBadgeOferta ? `
                     <div id="precio-producto-contenedor" style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
                         <span style="text-decoration: line-through; color: #ef4444; font-size: 20px; font-weight: 600;">$${precioRegularFinal.toFixed(2)}</span>
                         <span style="font-size: 32px; color: #2c441b; font-weight: 800; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px;">$${precioFinal.toFixed(2)}</span>
@@ -856,23 +858,33 @@
                         const regPrice = Number(ofRemota.precioRegular || precioRegularProd);
                         const pct = ofRemota.porcentaje || Math.round((1 - (ofPrice / regPrice)) * 100);
 
-                        if (txtEl) txtEl.innerText = cNombre;
-                        if (icoEl) icoEl.className = cIcono;
-                        if (pctEl) pctEl.innerText = `-${pct}% OFF`;
-                        if (bEl) bEl.style.display = 'inline-flex';
+                        if (pct > 0) {
+                            if (txtEl) txtEl.innerText = cNombre;
+                            if (icoEl) icoEl.className = cIcono;
+                            if (pctEl) pctEl.innerText = `-${pct}% OFF`;
+                            if (bEl) bEl.style.display = 'inline-flex';
 
-                        if (pEl) {
-                            pEl.className = '';
-                            pEl.style.display = 'flex';
-                            pEl.style.alignItems = 'baseline';
-                            pEl.style.gap = '12px';
-                            pEl.style.marginBottom = '20px';
-                            pEl.style.flexWrap = 'wrap';
-                            pEl.innerHTML = `
-                                <span style="text-decoration: line-through; color: #ef4444; font-size: 20px; font-weight: 600;">$${regPrice.toFixed(2)}</span>
-                                <span style="font-size: 32px; color: #2c441b; font-weight: 800; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px;">$${ofPrice.toFixed(2)}</span>
-                            `;
+                            if (pEl) {
+                                pEl.className = '';
+                                pEl.style.display = 'flex';
+                                pEl.style.alignItems = 'baseline';
+                                pEl.style.gap = '12px';
+                                pEl.style.marginBottom = '20px';
+                                pEl.style.flexWrap = 'wrap';
+                                pEl.innerHTML = `
+                                    <span style="text-decoration: line-through; color: #ef4444; font-size: 20px; font-weight: 600;">$${regPrice.toFixed(2)}</span>
+                                    <span style="font-size: 32px; color: #2c441b; font-weight: 800; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px;">$${ofPrice.toFixed(2)}</span>
+                                `;
+                            }
+                            if (btnEl) {
+                                btnEl.setAttribute("onclick", `agregarAlCarrito('${finalId}', '${(currentProdData?.nombre || prod.nombre).replace(/'/g, "\\'")}', ${ofPrice})`);
+                            }
+                        } else {
+                            if (bEl) bEl.style.display = 'none';
                         }
+                    } else {
+                        if (bEl) bEl.style.display = 'none';
+                    }
 
                         if (btnEl) {
                             btnEl.setAttribute('onclick', `agregarAlCarrito('${activeId}', '${safeName}', ${ofPrice})`);
@@ -985,7 +997,8 @@
                     renderizarFichaProducto(merged, finalId, pathId);
                     cargarProductosRelacionadosPorOEMyNombre(finalId, merged.categoria, merged.nombre, merged.numero_parte || "");
                 } else if (!currentProdData) {
-                    if (container) {
+                    const yaTieneContenido = container && container.querySelector('h1');
+                    if (!yaTieneContenido && container) {
                         container.innerHTML = '<div style="text-align:center; grid-column: 1/-1; padding: 40px;">El repuesto solicitado no existe o fue retirado. <a href="tienda.html" style="color:#5e8877; font-weight:bold;">Ir a la tienda</a></div>';
                     }
                 }
@@ -1077,8 +1090,9 @@
                     const precioFinalRel = tieneOfRel ? Number(ofRel.precioOferta) : precioBaseRel;
                     const precioRegRel = tieneOfRel ? Number(ofRel.precioRegular || precioBaseRel) : precioBaseRel;
                     const pctRel = tieneOfRel ? (ofRel.porcentaje || Math.round((1 - (precioFinalRel / precioRegRel)) * 100)) : 0;
+                    const mostrarOfRel = tieneOfRel && pctRel > 0;
 
-                    const badgeRelHTML = tieneOfRel ? `
+                    const badgeRelHTML = mostrarOfRel ? `
                         <div style="position: absolute; top: 8px; left: 8px; z-index: 2; display: flex; flex-direction: column; gap: 2px;">
                             <span style="background: linear-gradient(135deg, #e63946 0%, #b7094c 100%); color: white; font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 3px; font-family: 'Oswald', sans-serif; display: inline-flex; align-items: center; gap: 4px;">
                                 <i class="${iconoCampana}"></i> ${nombreCampana}
@@ -1089,7 +1103,7 @@
                         </div>
                     ` : '';
 
-                    const precioRelHTML = tieneOfRel ? `
+                    const precioRelHTML = mostrarOfRel ? `
                         <div style="display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px;">
                             <span style="text-decoration: line-through; color: #ef4444; font-size: 12px; font-weight: 600;">$${precioRegRel.toFixed(2)}</span>
                             <span style="font-size: 17px; color: #2c441b; font-weight: 800; font-family: 'Oswald', sans-serif;">$${precioFinalRel.toFixed(2)}</span>
