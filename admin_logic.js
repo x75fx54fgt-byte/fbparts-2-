@@ -1604,7 +1604,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 
                         tablaProd.innerHTML += `
                             <tr class="admin-prod-row" data-category="${prod.categoria}" data-doc-id="${docId}">
-                                <td style="vertical-align: top; padding-top: 12px;"><img src="${SecuritySanitizer.formatImageUrl(prod.imagen || '', 500)}" width="60" style="border-radius:4px; border:1px solid #eee; background:#f0f0f0; object-fit:cover;" onerror="this.src='img/logo.png'"></td>
+                                <td style="vertical-align: top; padding-top: 12px;"><img src="${SecuritySanitizer.formatImageUrl(prod.imagen || '', 500)}" width="60" style="border-radius:4px; border:1px solid #eee; background:#f0f0f0; object-fit:cover;" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';"></td>
                                 <td class="prod-nombre-col" style="vertical-align: top; padding-top: 12px;">
                                     <div style="margin-bottom:3px; line-height: 1.2;"><strong>${prod.nombre}</strong> <br>${badgeEstado}</div>
                                     <div class="flex flex-wrap gap-1 mt-2 mb-1">
@@ -1888,7 +1888,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                     oninput="window._actualizarPreviewGaleria(this)"
                     onblur="window._actualizarPreviewGaleria(this)">
                 <img src="" style="width:40px; height:40px; object-fit:cover; border-radius:4px; border:1px solid #eee; background:#f5f5f5; display:none;" 
-                    id="prev-${idx}" onerror="this.style.display='none'">
+                    id="prev-${idx}" onerror="this.onerror=null; this.style.display='none';">
                 ${esPrimera ? '' : `<button type="button" onclick="window._eliminarCampoImagen('galeria-row-${idx}')" style="background:#d9534f; color:white; border:none; width:28px; height:28px; border-radius:4px; cursor:pointer; flex-shrink:0;"><i class='fas fa-trash'></i></button>`}
             `;
             contenedor.appendChild(div);
@@ -6980,7 +6980,7 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
             
             const imgEl = document.getElementById('ai-rep-img-preview');
             if (imgEl) {
-                imgEl.src = prod.imagen ? SecuritySanitizer.formatImageUrl(prod.imagen, 200) : 'img/logo.png';
+                imgEl.src = prod.imagen ? SecuritySanitizer.formatImageUrl(prod.imagen, 200) : 'img/logo-fb-parts.png';
             }
 
             const badgeIncompleto = document.getElementById('ai-rep-badge-estado-desc');

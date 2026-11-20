@@ -180,7 +180,7 @@
 }
     </script>
     <!-- Datos precargados del repuesto para carga instantánea (Zero-Delay) y SEO -->
-    <script>window.FIREBASE_PRODUCT_ID = "YnD403Qfo5kWvCZTTZoS"; window.PRODUCTO_PRECARGADO = {"id":"YnD403Qfo5kWvCZTTZoS","imagen":"https://http2.mlstatic.com/D_NQ_NP_2X_927235-MLV113161881531_062026-F.webp","precio":44.99,"categoria":"termostatos-de-motores-para-vehiculos","descripcion":"✅ FUNCIÓN Y BENEFICIOS:\nEl termostato regula la temperatura de funcionamiento del motor controlando el paso del refrigerante hacia el sistema de enfriamiento. Reemplazarlo a tiempo ayuda a mantener la temperatura en rango óptimo, mejorando la eficiencia térmica, reduciendo el desgaste por sobrecalentamiento o funcionamiento en frío y contribuyendo a la durabilidad de componentes como la culata, empaques y radiador.\n\n🔧 COMPATIBILIDAD SUGERIDA:\n- Hino 300 RTC\n- Toyota (según aplicación y referencia OEM)\n\n📦 CONDICIONES DE ENVÍO Y ENTREGA:\n- Repuesto nuevo en su empaque y en perfecta condición garantizada.\n- Retiro en tienda física y servicio de delivery rápido en Caracas (ciertas condiciones aplican).\n- Envíos a nivel nacional cobro en destino a través de MRW, Tealca y Zoom asegurados.","modelo":"300 RTC","stock":1,"ml_id":"MLV1014619584","nombre":"Termostato Hino 300 Rtc","numero_parte":"Consultar disponibilidad / OEM","subcategoria":"Enfriamiento","estado":"activo","marca":"Hino"};</script>
+    <script>window.FIREBASE_PRODUCT_ID = "YnD403Qfo5kWvCZTTZoS"; window.PRODUCTO_PRECARGADO = {"id":"YnD403Qfo5kWvCZTTZoS","imagen":"https://http2.mlstatic.com/D_NQ_NP_2X_927235-MLV113161881531_062026-F.webp","stock":1,"categoria":"termostatos-de-motores-para-vehiculos","subcategoria":"Enfriamiento","precio":44.99,"ml_id":"MLV1014619584","descripcion":"✅ FUNCIÓN Y BENEFICIOS:\nEl termostato regula la temperatura de funcionamiento del motor controlando el paso del refrigerante hacia el sistema de enfriamiento. Reemplazarlo a tiempo ayuda a mantener la temperatura en rango óptimo, mejorando la eficiencia térmica, reduciendo el desgaste por sobrecalentamiento o funcionamiento en frío y contribuyendo a la durabilidad de componentes como la culata, empaques y radiador.\n\n🔧 COMPATIBILIDAD SUGERIDA:\n- Hino 300 RTC\n- Toyota (según aplicación y referencia OEM)\n\n📦 CONDICIONES DE ENVÍO Y ENTREGA:\n- Repuesto nuevo en su empaque y en perfecta condición garantizada.\n- Retiro en tienda física y servicio de delivery rápido en Caracas (ciertas condiciones aplican).\n- Envíos a nivel nacional cobro en destino a través de MRW, Tealca y Zoom asegurados.","estado":"activo","modelo":"300 RTC","nombre":"Termostato Hino 300 Rtc","marca":"Hino","numero_parte":"Consultar disponibilidad / OEM"};</script>
 </head>
 <body>
 
@@ -231,7 +231,7 @@
 
     <div class="product-container" id="product-details-container">
         <div class="product-img-box">
-            <img id="img-principal" src="https://http2.mlstatic.com/D_NQ_NP_2X_927235-MLV113161881531_062026-F.webp" alt="Repuesto original Termostato Hino 300 Rtc en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png'">
+            <img id="img-principal" src="https://http2.mlstatic.com/D_NQ_NP_2X_927235-MLV113161881531_062026-F.webp" alt="Repuesto original Termostato Hino 300 Rtc en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
         </div>
         <div class="product-details">
             <span style="font-size: 12px; color: #888; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">F&B PARTS • TERMOSTATOS DE MOTORES</span>
@@ -909,7 +909,7 @@ El termostato regula la temperatura de funcionamiento del motor controlando el p
 
                 const galeriaHTML = imagenes.length > 1 ? `
                     <div id="galeria-thumbs" style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
-                        ${imagenes.map((url, i) => `<img src="${url}" data-idx="${i}" onclick="cambiarFotoPrincipal(this)" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:2px solid ${i===0?'#5B8266':'#ddd'}; cursor:pointer; transition:border 0.2s;" onerror="this.style.display='none'">`).join('')}
+                        ${imagenes.map((url, i) => `<img src="${url}" data-idx="${i}" onclick="cambiarFotoPrincipal(this)" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:2px solid ${i===0?'#5B8266':'#ddd'}; cursor:pointer; transition:border 0.2s;" onerror="this.onerror=null; this.style.display='none';">`).join('')}
                     </div>` : '';
 
                 // Badges de info técnica: MARCA, MODELO, SUBCATEGORÍA, POSICIÓN
@@ -954,7 +954,7 @@ El termostato regula la temperatura de funcionamiento del motor controlando el p
 
                 container.innerHTML = `
                     <div class="product-img-box">
-                        <img id="img-principal" src="${imagenes[0] || logoFallback}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='${logoFallback}'">
+                        <img id="img-principal" src="${imagenes[0] || 'img/logo-fb-parts.png'}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
                         ${galeriaHTML}
                     </div>
                     <div class="product-details">

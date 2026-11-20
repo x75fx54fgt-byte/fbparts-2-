@@ -180,7 +180,7 @@
 }
     </script>
     <!-- Datos precargados del repuesto para carga instantánea (Zero-Delay) y SEO -->
-    <script>window.FIREBASE_PRODUCT_ID = "xoXGcSgbZSPXt3KZ5U60"; window.PRODUCTO_PRECARGADO = {"id":"xoXGcSgbZSPXt3KZ5U60","marca":"Mitsubishi","estado":"activo","subcategoria":"Motor","numero_parte":"Consultar disponibilidad / OEM","nombre":"Kit Empacadura Montero Dakar 3.0","ml_id":"MLV1018344742","categoria":"juntas-de-culata-de-motor-para-vehiculos","stock":1,"descripcion":"✅ FUNCIÓN Y BENEFICIOS:\nEl Kit Empacadura para Montero Dakar 3.0 está diseñado para sellar correctamente las superficies de unión del sistema de junta, ayudando a prevenir fugas de compresión y fluidos (como gases y líquidos) que pueden comprometer el rendimiento del motor. Reemplazarlo a tiempo contribuye a mantener una buena estanqueidad, reducir el riesgo de sobrecalentamiento y proteger la vida útil de componentes internos, preservando la eficiencia de combustión y la confiabilidad del vehículo.\n\n🔧 COMPATIBILIDAD SUGERIDA:\n- Mitsubishi Montero Dakar 3.0L (Años por confirmar)\n\n📦 CONDICIONES DE ENVÍO Y ENTREGA:\n- Repuesto nuevo en su empaque y en perfecta condición garantizada.\n- Retiro en tienda física y servicio de delivery rápido en Caracas (ciertas condiciones aplican).\n- Envíos a nivel nacional cobro en destino a través de MRW, Tealca y Zoom asegurados.","modelo":"MONTERO DAKAR 3.0L","precio":54.99,"imagen":"https://http2.mlstatic.com/D_NQ_NP_2X_852606-MLV113974048729_062026-F.webp"};</script>
+    <script>window.FIREBASE_PRODUCT_ID = "xoXGcSgbZSPXt3KZ5U60"; window.PRODUCTO_PRECARGADO = {"id":"xoXGcSgbZSPXt3KZ5U60","precio":54.99,"categoria":"juntas-de-culata-de-motor-para-vehiculos","imagen":"https://http2.mlstatic.com/D_NQ_NP_2X_852606-MLV113974048729_062026-F.webp","marca":"Mitsubishi","numero_parte":"Consultar disponibilidad / OEM","subcategoria":"Motor","nombre":"Kit Empacadura Montero Dakar 3.0","modelo":"MONTERO DAKAR 3.0L","estado":"activo","stock":1,"ml_id":"MLV1018344742","descripcion":"✅ FUNCIÓN Y BENEFICIOS:\nEl Kit Empacadura para Montero Dakar 3.0 está diseñado para sellar correctamente las superficies de unión del sistema de junta, ayudando a prevenir fugas de compresión y fluidos (como gases y líquidos) que pueden comprometer el rendimiento del motor. Reemplazarlo a tiempo contribuye a mantener una buena estanqueidad, reducir el riesgo de sobrecalentamiento y proteger la vida útil de componentes internos, preservando la eficiencia de combustión y la confiabilidad del vehículo.\n\n🔧 COMPATIBILIDAD SUGERIDA:\n- Mitsubishi Montero Dakar 3.0L (Años por confirmar)\n\n📦 CONDICIONES DE ENVÍO Y ENTREGA:\n- Repuesto nuevo en su empaque y en perfecta condición garantizada.\n- Retiro en tienda física y servicio de delivery rápido en Caracas (ciertas condiciones aplican).\n- Envíos a nivel nacional cobro en destino a través de MRW, Tealca y Zoom asegurados."};</script>
 </head>
 <body>
 
@@ -231,7 +231,7 @@
 
     <div class="product-container" id="product-details-container">
         <div class="product-img-box">
-            <img id="img-principal" src="https://http2.mlstatic.com/D_NQ_NP_2X_852606-MLV113974048729_062026-F.webp" alt="Repuesto original Kit Empacadura Montero Dakar 3.0 en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png'">
+            <img id="img-principal" src="https://http2.mlstatic.com/D_NQ_NP_2X_852606-MLV113974048729_062026-F.webp" alt="Repuesto original Kit Empacadura Montero Dakar 3.0 en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
         </div>
         <div class="product-details">
             <span style="font-size: 12px; color: #888; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">F&B PARTS • JUNTAS DE CULATA DE MOTOR</span>
@@ -908,7 +908,7 @@ El Kit Empacadura para Montero Dakar 3.0 está diseñado para sellar correctamen
 
                 const galeriaHTML = imagenes.length > 1 ? `
                     <div id="galeria-thumbs" style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
-                        ${imagenes.map((url, i) => `<img src="${url}" data-idx="${i}" onclick="cambiarFotoPrincipal(this)" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:2px solid ${i===0?'#5B8266':'#ddd'}; cursor:pointer; transition:border 0.2s;" onerror="this.style.display='none'">`).join('')}
+                        ${imagenes.map((url, i) => `<img src="${url}" data-idx="${i}" onclick="cambiarFotoPrincipal(this)" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:2px solid ${i===0?'#5B8266':'#ddd'}; cursor:pointer; transition:border 0.2s;" onerror="this.onerror=null; this.style.display='none';">`).join('')}
                     </div>` : '';
 
                 // Badges de info técnica: MARCA, MODELO, SUBCATEGORÍA, POSICIÓN
@@ -953,7 +953,7 @@ El Kit Empacadura para Montero Dakar 3.0 está diseñado para sellar correctamen
 
                 container.innerHTML = `
                     <div class="product-img-box">
-                        <img id="img-principal" src="${imagenes[0] || logoFallback}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='${logoFallback}'">
+                        <img id="img-principal" src="${imagenes[0] || 'img/logo-fb-parts.png'}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
                         ${galeriaHTML}
                     </div>
                     <div class="product-details">

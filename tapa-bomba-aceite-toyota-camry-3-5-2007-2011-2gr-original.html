@@ -180,7 +180,7 @@
 }
     </script>
     <!-- Datos precargados del repuesto para carga instantánea (Zero-Delay) y SEO -->
-    <script>window.FIREBASE_PRODUCT_ID = "jQ2iVAkXA3mcFp6lePjw"; window.PRODUCTO_PRECARGADO = {"id":"jQ2iVAkXA3mcFp6lePjw","estado":"activo","categoria":"bombas-de-aceite-para-vehiculos","marca":"Toyota","nombre":"Tapa Bomba Aceite Toyota Camry 3.5 2007-2011 2gr Original","ml_id":"MLV1018317538","numero_parte":"Consultar disponibilidad / OEM","subcategoria":"Motor","stock":1,"modelo":"CAMRY 3.5L","descripcion":"✅ FUNCIÓN Y BENEFICIOS:\nLa Tapa de la bomba de aceite es el componente que sella y cierra el conjunto de la bomba para mantener el correcto circuito de lubricación del motor. Su función es contribuir a que el sistema mantenga presión y caudal adecuados, reduciendo el desgaste prematuro de componentes internos. Reemplazarla a tiempo ayuda a evitar fugas de aceite, pérdida de presión y posibles daños por lubricación insuficiente, garantizando una operación más estable y confiable del motor.\n\n🔧 COMPATIBILIDAD SUGERIDA:\n- Toyota Camry 3.5L 2007-2011\n- Toyota Camry 3.5L 2007-2011\n\n📦 CONDICIONES DE ENVÍO Y ENTREGA:\n- Repuesto nuevo en su empaque y en perfecta condición garantizada.\n- Retiro en tienda física y servicio de delivery rápido en Caracas (ciertas condiciones aplican).\n- Envíos a nivel nacional cobro en destino a través de MRW, Tealca y Zoom asegurados.","imagen":"https://http2.mlstatic.com/D_NQ_NP_2X_957722-MLV112779771820_062026-F.webp","precio":104.99};</script>
+    <script>window.FIREBASE_PRODUCT_ID = "jQ2iVAkXA3mcFp6lePjw"; window.PRODUCTO_PRECARGADO = {"id":"jQ2iVAkXA3mcFp6lePjw","ml_id":"MLV1018317538","subcategoria":"Motor","imagen":"https://http2.mlstatic.com/D_NQ_NP_2X_957722-MLV112779771820_062026-F.webp","descripcion":"✅ FUNCIÓN Y BENEFICIOS:\nLa Tapa de la bomba de aceite es el componente que sella y cierra el conjunto de la bomba para mantener el correcto circuito de lubricación del motor. Su función es contribuir a que el sistema mantenga presión y caudal adecuados, reduciendo el desgaste prematuro de componentes internos. Reemplazarla a tiempo ayuda a evitar fugas de aceite, pérdida de presión y posibles daños por lubricación insuficiente, garantizando una operación más estable y confiable del motor.\n\n🔧 COMPATIBILIDAD SUGERIDA:\n- Toyota Camry 3.5L 2007-2011\n- Toyota Camry 3.5L 2007-2011\n\n📦 CONDICIONES DE ENVÍO Y ENTREGA:\n- Repuesto nuevo en su empaque y en perfecta condición garantizada.\n- Retiro en tienda física y servicio de delivery rápido en Caracas (ciertas condiciones aplican).\n- Envíos a nivel nacional cobro en destino a través de MRW, Tealca y Zoom asegurados.","categoria":"bombas-de-aceite-para-vehiculos","stock":1,"precio":104.99,"marca":"Toyota","numero_parte":"Consultar disponibilidad / OEM","modelo":"CAMRY 3.5L","nombre":"Tapa Bomba Aceite Toyota Camry 3.5 2007-2011 2gr Original","estado":"activo"};</script>
 </head>
 <body>
 
@@ -231,7 +231,7 @@
 
     <div class="product-container" id="product-details-container">
         <div class="product-img-box">
-            <img id="img-principal" src="https://http2.mlstatic.com/D_NQ_NP_2X_957722-MLV112779771820_062026-F.webp" alt="Repuesto original Tapa Bomba Aceite Toyota Camry 3.5 2007-2011 2gr Original en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png'">
+            <img id="img-principal" src="https://http2.mlstatic.com/D_NQ_NP_2X_957722-MLV112779771820_062026-F.webp" alt="Repuesto original Tapa Bomba Aceite Toyota Camry 3.5 2007-2011 2gr Original en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
         </div>
         <div class="product-details">
             <span style="font-size: 12px; color: #888; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">F&B PARTS • BOMBAS DE ACEITE</span>
@@ -909,7 +909,7 @@ La Tapa de la bomba de aceite es el componente que sella y cierra el conjunto de
 
                 const galeriaHTML = imagenes.length > 1 ? `
                     <div id="galeria-thumbs" style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
-                        ${imagenes.map((url, i) => `<img src="${url}" data-idx="${i}" onclick="cambiarFotoPrincipal(this)" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:2px solid ${i===0?'#5B8266':'#ddd'}; cursor:pointer; transition:border 0.2s;" onerror="this.style.display='none'">`).join('')}
+                        ${imagenes.map((url, i) => `<img src="${url}" data-idx="${i}" onclick="cambiarFotoPrincipal(this)" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:2px solid ${i===0?'#5B8266':'#ddd'}; cursor:pointer; transition:border 0.2s;" onerror="this.onerror=null; this.style.display='none';">`).join('')}
                     </div>` : '';
 
                 // Badges de info técnica: MARCA, MODELO, SUBCATEGORÍA, POSICIÓN
@@ -954,7 +954,7 @@ La Tapa de la bomba de aceite es el componente que sella y cierra el conjunto de
 
                 container.innerHTML = `
                     <div class="product-img-box">
-                        <img id="img-principal" src="${imagenes[0] || logoFallback}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='${logoFallback}'">
+                        <img id="img-principal" src="${imagenes[0] || 'img/logo-fb-parts.png'}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
                         ${galeriaHTML}
                     </div>
                     <div class="product-details">

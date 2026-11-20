@@ -846,7 +846,7 @@
 
                 const galeriaHTML = imagenes.length > 1 ? `
                     <div id="galeria-thumbs" style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
-                        ${imagenes.map((url, i) => `<img src="${url}" data-idx="${i}" onclick="cambiarFotoPrincipal(this)" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:2px solid ${i===0?'#5B8266':'#ddd'}; cursor:pointer; transition:border 0.2s;" onerror="this.style.display='none'">`).join('')}
+                        ${imagenes.map((url, i) => `<img src="${url}" data-idx="${i}" onclick="cambiarFotoPrincipal(this)" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:2px solid ${i===0?'#5B8266':'#ddd'}; cursor:pointer; transition:border 0.2s;" onerror="this.onerror=null; this.style.display='none';">`).join('')}
                     </div>` : '';
 
                 // Badges de info técnica: MARCA, MODELO, SUBCATEGORÍA, POSICIÓN
@@ -891,7 +891,7 @@
 
                 container.innerHTML = `
                     <div class="product-img-box">
-                        <img id="img-principal" src="${imagenes[0] || logoFallback}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='${logoFallback}'">
+                        <img id="img-principal" src="${imagenes[0] || 'img/logo-fb-parts.png'}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
                         ${galeriaHTML}
                     </div>
                     <div class="product-details">

@@ -180,7 +180,7 @@
 }
     </script>
     <!-- Datos precargados del repuesto para carga instantánea (Zero-Delay) y SEO -->
-    <script>window.FIREBASE_PRODUCT_ID = "qSrqE03HAg6dQ1VSHqUs"; window.PRODUCTO_PRECARGADO = {"id":"qSrqE03HAg6dQ1VSHqUs","estado":"activo","ml_id":"MLV777135783","nombre":"Copa Caja Ford Festiva Turpial 20 X 22","categoria":"juntas-homocineticas-para-vehiculos","marca":"Ford","modelo":"FESTIVA / TURPIAL 20 X 22","descripcion":"✅ FUNCIÓN Y BENEFICIOS:\nLa “Copa Caja Ford Festiva Turpial 20 x 22” es una pieza asociada al conjunto de transmisión/caja, que ayuda a mantener el alineamiento y el correcto funcionamiento del sistema para evitar holguras y desgaste prematuro por mala fijación o deterioro de componentes. Reemplazarla a tiempo contribuye a conservar la suavidad de operación, reducir vibraciones y prolongar la vida útil de la transmisión, mejorando la confiabilidad del vehículo.\n\n🔧 COMPATIBILIDAD SUGERIDA:\n- Ford Festiva (Años por confirmar)\n- Turpial / TVP / Saipa MZ513 (Años por confirmar)\n\n📦 CONDICIONES DE ENVÍO Y ENTREGA:\n- Repuesto nuevo en su empaque y en perfecta condición garantizada.\n- Retiro en tienda física y servicio de delivery rápido en Caracas (ciertas condiciones aplican).\n- Envíos a nivel nacional cobro en destino a través de MRW, Tealca y Zoom asegurados.","imagen":"https://http2.mlstatic.com/D_NQ_NP_2X_975184-MLV111671320146_062026-F.webp","precio":44.99,"numero_parte":"Consultar disponibilidad / OEM","subcategoria":"Transmisión","stock":1};</script>
+    <script>window.FIREBASE_PRODUCT_ID = "qSrqE03HAg6dQ1VSHqUs"; window.PRODUCTO_PRECARGADO = {"id":"qSrqE03HAg6dQ1VSHqUs","stock":1,"estado":"activo","nombre":"Copa Caja Ford Festiva Turpial 20 X 22","modelo":"FESTIVA / TURPIAL 20 X 22","numero_parte":"Consultar disponibilidad / OEM","ml_id":"MLV777135783","subcategoria":"Transmisión","imagen":"https://http2.mlstatic.com/D_NQ_NP_2X_975184-MLV111671320146_062026-F.webp","precio":44.99,"descripcion":"✅ FUNCIÓN Y BENEFICIOS:\nLa “Copa Caja Ford Festiva Turpial 20 x 22” es una pieza asociada al conjunto de transmisión/caja, que ayuda a mantener el alineamiento y el correcto funcionamiento del sistema para evitar holguras y desgaste prematuro por mala fijación o deterioro de componentes. Reemplazarla a tiempo contribuye a conservar la suavidad de operación, reducir vibraciones y prolongar la vida útil de la transmisión, mejorando la confiabilidad del vehículo.\n\n🔧 COMPATIBILIDAD SUGERIDA:\n- Ford Festiva (Años por confirmar)\n- Turpial / TVP / Saipa MZ513 (Años por confirmar)\n\n📦 CONDICIONES DE ENVÍO Y ENTREGA:\n- Repuesto nuevo en su empaque y en perfecta condición garantizada.\n- Retiro en tienda física y servicio de delivery rápido en Caracas (ciertas condiciones aplican).\n- Envíos a nivel nacional cobro en destino a través de MRW, Tealca y Zoom asegurados.","categoria":"juntas-homocineticas-para-vehiculos","marca":"Ford"};</script>
 </head>
 <body>
 
@@ -231,7 +231,7 @@
 
     <div class="product-container" id="product-details-container">
         <div class="product-img-box">
-            <img id="img-principal" src="https://http2.mlstatic.com/D_NQ_NP_2X_975184-MLV111671320146_062026-F.webp" alt="Repuesto original Copa Caja Ford Festiva Turpial 20 X 22 en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png'">
+            <img id="img-principal" src="https://http2.mlstatic.com/D_NQ_NP_2X_975184-MLV111671320146_062026-F.webp" alt="Repuesto original Copa Caja Ford Festiva Turpial 20 X 22 en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
         </div>
         <div class="product-details">
             <span style="font-size: 12px; color: #888; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">F&B PARTS • JUNTAS HOMOCINÉTICAS</span>
@@ -909,7 +909,7 @@ La “Copa Caja Ford Festiva Turpial 20 x 22” es una pieza asociada al conjunt
 
                 const galeriaHTML = imagenes.length > 1 ? `
                     <div id="galeria-thumbs" style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
-                        ${imagenes.map((url, i) => `<img src="${url}" data-idx="${i}" onclick="cambiarFotoPrincipal(this)" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:2px solid ${i===0?'#5B8266':'#ddd'}; cursor:pointer; transition:border 0.2s;" onerror="this.style.display='none'">`).join('')}
+                        ${imagenes.map((url, i) => `<img src="${url}" data-idx="${i}" onclick="cambiarFotoPrincipal(this)" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:2px solid ${i===0?'#5B8266':'#ddd'}; cursor:pointer; transition:border 0.2s;" onerror="this.onerror=null; this.style.display='none';">`).join('')}
                     </div>` : '';
 
                 // Badges de info técnica: MARCA, MODELO, SUBCATEGORÍA, POSICIÓN
@@ -954,7 +954,7 @@ La “Copa Caja Ford Festiva Turpial 20 x 22” es una pieza asociada al conjunt
 
                 container.innerHTML = `
                     <div class="product-img-box">
-                        <img id="img-principal" src="${imagenes[0] || logoFallback}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='${logoFallback}'">
+                        <img id="img-principal" src="${imagenes[0] || 'img/logo-fb-parts.png'}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
                         ${galeriaHTML}
                     </div>
                     <div class="product-details">

@@ -180,7 +180,7 @@
 }
     </script>
     <!-- Datos precargados del repuesto para carga instantánea (Zero-Delay) y SEO -->
-    <script>window.FIREBASE_PRODUCT_ID = "KFihxiWOImCDchV5qbl1"; window.PRODUCTO_PRECARGADO = {"id":"KFihxiWOImCDchV5qbl1","estado":"activo","marca":"Toyota","descripcion":"✅ FUNCIÓN Y BENEFICIOS:\nEste rin para Toyota Yaris (2017 a 2023) está diseñado para soportar el peso del vehículo y transmitir de forma segura el movimiento y el frenado hacia las ruedas, contribuyendo a una conducción estable y un desgaste uniforme de los neumáticos. Reemplazarlo cuando presenta deformaciones, daños o fatiga asegura mejor desempeño, mejora la respuesta al manejo y ayuda a mantener la integridad del conjunto rueda-neumático para prolongar la vida útil del sistema de suspensión.\n\n🔧 COMPATIBILIDAD SUGERIDA:\n- Toyota Yaris 2017-2023\n\n📦 CONDICIONES DE ENVÍO Y ENTREGA:\n- Repuesto nuevo en su empaque y en perfecta condición garantizada.\n- Retiro en tienda física y servicio de delivery rápido en Caracas (ciertas condiciones aplican).\n- Envíos a nivel nacional cobro en destino a través de MRW, Tealca y Zoom asegurados.","subcategoria":"Suspensión","ml_id":"MLV776144781","precioRegular":830,"stock":1,"modelo":"YARIS 2017-2023","imagen":"https://http2.mlstatic.com/D_NQ_NP_2X_715244-MLV110353649618_052026-F.webp","fechaOfertaActualizada":"11/11/2026","precioOferta":650,"numero_parte":"Consultar disponibilidad / OEM","nombre":"Rin Toyota Yaris 2017 - 2023 15","categoria":"rines-para-automotores","precio":830};</script>
+    <script>window.FIREBASE_PRODUCT_ID = "KFihxiWOImCDchV5qbl1"; window.PRODUCTO_PRECARGADO = {"id":"KFihxiWOImCDchV5qbl1","categoria":"rines-para-automotores","fechaOfertaActualizada":"11/11/2026","numero_parte":"Consultar disponibilidad / OEM","precioRegular":830,"marca":"Toyota","precio":830,"ml_id":"MLV776144781","subcategoria":"Suspensión","stock":1,"estado":"activo","descripcion":"✅ FUNCIÓN Y BENEFICIOS:\nEste rin para Toyota Yaris (2017 a 2023) está diseñado para soportar el peso del vehículo y transmitir de forma segura el movimiento y el frenado hacia las ruedas, contribuyendo a una conducción estable y un desgaste uniforme de los neumáticos. Reemplazarlo cuando presenta deformaciones, daños o fatiga asegura mejor desempeño, mejora la respuesta al manejo y ayuda a mantener la integridad del conjunto rueda-neumático para prolongar la vida útil del sistema de suspensión.\n\n🔧 COMPATIBILIDAD SUGERIDA:\n- Toyota Yaris 2017-2023\n\n📦 CONDICIONES DE ENVÍO Y ENTREGA:\n- Repuesto nuevo en su empaque y en perfecta condición garantizada.\n- Retiro en tienda física y servicio de delivery rápido en Caracas (ciertas condiciones aplican).\n- Envíos a nivel nacional cobro en destino a través de MRW, Tealca y Zoom asegurados.","nombre":"Rin Toyota Yaris 2017 - 2023 15","modelo":"YARIS 2017-2023","precioOferta":650,"imagen":"https://http2.mlstatic.com/D_NQ_NP_2X_715244-MLV110353649618_052026-F.webp"};</script>
 </head>
 <body>
 
@@ -231,7 +231,7 @@
 
     <div class="product-container" id="product-details-container">
         <div class="product-img-box">
-            <img id="img-principal" src="https://http2.mlstatic.com/D_NQ_NP_2X_715244-MLV110353649618_052026-F.webp" alt="Repuesto original Rin Toyota Yaris 2017 - 2023 15 en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png'">
+            <img id="img-principal" src="https://http2.mlstatic.com/D_NQ_NP_2X_715244-MLV110353649618_052026-F.webp" alt="Repuesto original Rin Toyota Yaris 2017 - 2023 15 en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
         </div>
         <div class="product-details">
             <span style="font-size: 12px; color: #888; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">F&B PARTS • RINES</span>
@@ -918,7 +918,7 @@ Este rin para Toyota Yaris (2017 a 2023) está diseñado para soportar el peso d
 
                 const galeriaHTML = imagenes.length > 1 ? `
                     <div id="galeria-thumbs" style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
-                        ${imagenes.map((url, i) => `<img src="${url}" data-idx="${i}" onclick="cambiarFotoPrincipal(this)" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:2px solid ${i===0?'#5B8266':'#ddd'}; cursor:pointer; transition:border 0.2s;" onerror="this.style.display='none'">`).join('')}
+                        ${imagenes.map((url, i) => `<img src="${url}" data-idx="${i}" onclick="cambiarFotoPrincipal(this)" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:2px solid ${i===0?'#5B8266':'#ddd'}; cursor:pointer; transition:border 0.2s;" onerror="this.onerror=null; this.style.display='none';">`).join('')}
                     </div>` : '';
 
                 // Badges de info técnica: MARCA, MODELO, SUBCATEGORÍA, POSICIÓN
@@ -963,7 +963,7 @@ Este rin para Toyota Yaris (2017 a 2023) está diseñado para soportar el peso d
 
                 container.innerHTML = `
                     <div class="product-img-box">
-                        <img id="img-principal" src="${imagenes[0] || logoFallback}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='${logoFallback}'">
+                        <img id="img-principal" src="${imagenes[0] || 'img/logo-fb-parts.png'}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
                         ${galeriaHTML}
                     </div>
                     <div class="product-details">

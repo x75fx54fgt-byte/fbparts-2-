@@ -180,7 +180,7 @@
 }
     </script>
     <!-- Datos precargados del repuesto para carga instantánea (Zero-Delay) y SEO -->
-    <script>window.FIREBASE_PRODUCT_ID = "wFA7kmS2KwaLM0umVCKq"; window.PRODUCTO_PRECARGADO = {"id":"wFA7kmS2KwaLM0umVCKq","modelo":"MONTERO DAKAR","ml_id":"MLV1018319088","marca":"Mitsubishi","precio":71.99,"imagen":"https://http2.mlstatic.com/D_NQ_NP_2X_852606-MLV113974048729_062026-F.webp","descripcion":"✅ FUNCIÓN Y BENEFICIOS:\nEste juego de empacaduras original para Mitsubishi Montero Dakar está diseñado para garantizar el correcto sellado entre superficies de unión del motor, ayudando a prevenir fugas de fluidos (aceite y/o refrigerante) y a mantener la presión y el funcionamiento óptimo de los componentes. Reemplazar estas empacaduras a tiempo reduce el riesgo de fallas por desgaste, minimiza la contaminación de sistemas y contribuye a extender la vida útil del motor, preservando su desempeño y confiabilidad.\n\n🔧 COMPATIBILIDAD SUGERIDA:\n- Mitsubishi Montero Dakar (años a consultar)\n\n📦 CONDICIONES DE ENVÍO Y ENTREGA:\n- Repuesto nuevo en su empaque y en perfecta condición garantizada.\n- Retiro en tienda física y servicio de delivery rápido en Caracas (ciertas condiciones aplican).\n- Envíos a nivel nacional cobro en destino a través de MRW, Tealca y Zoom asegurados.","subcategoria":"Motor","numero_parte":"Consultar disponibilidad / OEM","estado":"activo","stock":1,"nombre":"Juego Kit Empacaduras Original Mitsubishi Montero Dakar","categoria":"repuestos-de-linea-liviana"};</script>
+    <script>window.FIREBASE_PRODUCT_ID = "wFA7kmS2KwaLM0umVCKq"; window.PRODUCTO_PRECARGADO = {"id":"wFA7kmS2KwaLM0umVCKq","ml_id":"MLV1018319088","imagen":"https://http2.mlstatic.com/D_NQ_NP_2X_852606-MLV113974048729_062026-F.webp","categoria":"repuestos-de-linea-liviana","numero_parte":"Consultar disponibilidad / OEM","precio":71.99,"stock":1,"marca":"Mitsubishi","descripcion":"✅ FUNCIÓN Y BENEFICIOS:\nEste juego de empacaduras original para Mitsubishi Montero Dakar está diseñado para garantizar el correcto sellado entre superficies de unión del motor, ayudando a prevenir fugas de fluidos (aceite y/o refrigerante) y a mantener la presión y el funcionamiento óptimo de los componentes. Reemplazar estas empacaduras a tiempo reduce el riesgo de fallas por desgaste, minimiza la contaminación de sistemas y contribuye a extender la vida útil del motor, preservando su desempeño y confiabilidad.\n\n🔧 COMPATIBILIDAD SUGERIDA:\n- Mitsubishi Montero Dakar (años a consultar)\n\n📦 CONDICIONES DE ENVÍO Y ENTREGA:\n- Repuesto nuevo en su empaque y en perfecta condición garantizada.\n- Retiro en tienda física y servicio de delivery rápido en Caracas (ciertas condiciones aplican).\n- Envíos a nivel nacional cobro en destino a través de MRW, Tealca y Zoom asegurados.","modelo":"MONTERO DAKAR","nombre":"Juego Kit Empacaduras Original Mitsubishi Montero Dakar","estado":"activo","subcategoria":"Motor"};</script>
 </head>
 <body>
 
@@ -231,7 +231,7 @@
 
     <div class="product-container" id="product-details-container">
         <div class="product-img-box">
-            <img id="img-principal" src="https://http2.mlstatic.com/D_NQ_NP_2X_852606-MLV113974048729_062026-F.webp" alt="Repuesto original Juego Kit Empacaduras Original Mitsubishi Montero Dakar en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png'">
+            <img id="img-principal" src="https://http2.mlstatic.com/D_NQ_NP_2X_852606-MLV113974048729_062026-F.webp" alt="Repuesto original Juego Kit Empacaduras Original Mitsubishi Montero Dakar en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
         </div>
         <div class="product-details">
             <span style="font-size: 12px; color: #888; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">F&B PARTS • LÍNEA LIVIANA</span>
@@ -908,7 +908,7 @@ Este juego de empacaduras original para Mitsubishi Montero Dakar está diseñado
 
                 const galeriaHTML = imagenes.length > 1 ? `
                     <div id="galeria-thumbs" style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
-                        ${imagenes.map((url, i) => `<img src="${url}" data-idx="${i}" onclick="cambiarFotoPrincipal(this)" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:2px solid ${i===0?'#5B8266':'#ddd'}; cursor:pointer; transition:border 0.2s;" onerror="this.style.display='none'">`).join('')}
+                        ${imagenes.map((url, i) => `<img src="${url}" data-idx="${i}" onclick="cambiarFotoPrincipal(this)" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:2px solid ${i===0?'#5B8266':'#ddd'}; cursor:pointer; transition:border 0.2s;" onerror="this.onerror=null; this.style.display='none';">`).join('')}
                     </div>` : '';
 
                 // Badges de info técnica: MARCA, MODELO, SUBCATEGORÍA, POSICIÓN
@@ -953,7 +953,7 @@ Este juego de empacaduras original para Mitsubishi Montero Dakar está diseñado
 
                 container.innerHTML = `
                     <div class="product-img-box">
-                        <img id="img-principal" src="${imagenes[0] || logoFallback}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='${logoFallback}'">
+                        <img id="img-principal" src="${imagenes[0] || 'img/logo-fb-parts.png'}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
                         ${galeriaHTML}
                     </div>
                     <div class="product-details">

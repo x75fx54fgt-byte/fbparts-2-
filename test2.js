@@ -1266,7 +1266,7 @@
 
                         tablaProd.innerHTML += `
                             <tr class="admin-prod-row" data-category="${prod.categoria}">
-                                <td style="vertical-align: top; padding-top: 12px;"><img src="${prod.imagen}" width="60" style="border-radius:4px; border:1px solid #eee; background:#f0f0f0; object-fit:cover;" onerror="this.src='img/logo.png'"></td>
+                                <td style="vertical-align: top; padding-top: 12px;"><img src="${prod.imagen}" width="60" style="border-radius:4px; border:1px solid #eee; background:#f0f0f0; object-fit:cover;" onerror="this.onerror=null; this.src='img/logo-fb-parts.png'"></td>
                                 <td class="prod-nombre-col" style="vertical-align: top; padding-top: 12px;">
                                     <div style="margin-bottom:3px; line-height: 1.2;"><strong>${prod.nombre}</strong> <br>${badgeEstado}</div>
                                     <div class="flex flex-wrap gap-1 mt-2 mb-1">

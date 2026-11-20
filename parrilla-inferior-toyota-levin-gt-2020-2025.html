@@ -180,7 +180,7 @@
 }
     </script>
     <!-- Datos precargados del repuesto para carga instantánea (Zero-Delay) y SEO -->
-    <script>window.FIREBASE_PRODUCT_ID = "WUETX9RvyGOxfE2NFz4d"; window.PRODUCTO_PRECARGADO = {"id":"WUETX9RvyGOxfE2NFz4d","nombre":"Parrilla Inferior Toyota Levin Gt 2020 - 2025","precioOferta":351,"stock":1,"numero_parte":"Consultar disponibilidad / OEM","marca":"Toyota","precio":561.23,"ml_id":"MLV1015016960","precioRegular":561.23,"descripcion":"✅ FUNCIÓN Y BENEFICIOS:\nLa parrilla inferior para Toyota Levin GT está diseñada para integrarse al conjunto frontal del parachoques, aportando soporte, alineación estética y protección parcial de las zonas de entrada de aire y elementos cercanos del sistema de enfriamiento. Reemplazarla cuando presenta daños, deformaciones o desprendimientos ayuda a mantener el correcto flujo y el acabado original del vehículo, evitando vibraciones, filtraciones de polvo y un desmejoramiento progresivo de otros componentes del frente.\n\n🔧 COMPATIBILIDAD SUGERIDA:\n- Toyota Levin GT 2020 - 2025\n\n📦 CONDICIONES DE ENVÍO Y ENTREGA:\n- Repuesto nuevo en su empaque y en perfecta condición garantizada.\n- Retiro en tienda física y servicio de delivery rápido en Caracas (ciertas condiciones aplican).\n- Envíos a nivel nacional cobro en destino a través de MRW, Tealca y Zoom asegurados.","subcategoria":"Carrocería","estado":"activo","fechaOfertaActualizada":"11/11/2026","categoria":"parrillas-de-parachoques-para-vehiculos","imagen":"https://http2.mlstatic.com/D_NQ_NP_2X_832660-MLV112172736738_062026-F.webp","modelo":"LEVIN GT 2020 - 2025"};</script>
+    <script>window.FIREBASE_PRODUCT_ID = "WUETX9RvyGOxfE2NFz4d"; window.PRODUCTO_PRECARGADO = {"id":"WUETX9RvyGOxfE2NFz4d","ml_id":"MLV1015016960","imagen":"https://http2.mlstatic.com/D_NQ_NP_2X_832660-MLV112172736738_062026-F.webp","numero_parte":"Consultar disponibilidad / OEM","stock":1,"precioRegular":561.23,"modelo":"LEVIN GT 2020 - 2025","nombre":"Parrilla Inferior Toyota Levin Gt 2020 - 2025","estado":"activo","precioOferta":351,"precio":561.23,"marca":"Toyota","subcategoria":"Carrocería","descripcion":"✅ FUNCIÓN Y BENEFICIOS:\nLa parrilla inferior para Toyota Levin GT está diseñada para integrarse al conjunto frontal del parachoques, aportando soporte, alineación estética y protección parcial de las zonas de entrada de aire y elementos cercanos del sistema de enfriamiento. Reemplazarla cuando presenta daños, deformaciones o desprendimientos ayuda a mantener el correcto flujo y el acabado original del vehículo, evitando vibraciones, filtraciones de polvo y un desmejoramiento progresivo de otros componentes del frente.\n\n🔧 COMPATIBILIDAD SUGERIDA:\n- Toyota Levin GT 2020 - 2025\n\n📦 CONDICIONES DE ENVÍO Y ENTREGA:\n- Repuesto nuevo en su empaque y en perfecta condición garantizada.\n- Retiro en tienda física y servicio de delivery rápido en Caracas (ciertas condiciones aplican).\n- Envíos a nivel nacional cobro en destino a través de MRW, Tealca y Zoom asegurados.","categoria":"parrillas-de-parachoques-para-vehiculos","fechaOfertaActualizada":"11/11/2026"};</script>
 </head>
 <body>
 
@@ -231,7 +231,7 @@
 
     <div class="product-container" id="product-details-container">
         <div class="product-img-box">
-            <img id="img-principal" src="https://http2.mlstatic.com/D_NQ_NP_2X_832660-MLV112172736738_062026-F.webp" alt="Repuesto original Parrilla Inferior Toyota Levin Gt 2020 - 2025 en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png'">
+            <img id="img-principal" src="https://http2.mlstatic.com/D_NQ_NP_2X_832660-MLV112172736738_062026-F.webp" alt="Repuesto original Parrilla Inferior Toyota Levin Gt 2020 - 2025 en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
         </div>
         <div class="product-details">
             <span style="font-size: 12px; color: #888; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">F&B PARTS • PARRILLAS DE PARACHOQUES</span>
@@ -918,7 +918,7 @@ La parrilla inferior para Toyota Levin GT está diseñada para integrarse al con
 
                 const galeriaHTML = imagenes.length > 1 ? `
                     <div id="galeria-thumbs" style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
-                        ${imagenes.map((url, i) => `<img src="${url}" data-idx="${i}" onclick="cambiarFotoPrincipal(this)" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:2px solid ${i===0?'#5B8266':'#ddd'}; cursor:pointer; transition:border 0.2s;" onerror="this.style.display='none'">`).join('')}
+                        ${imagenes.map((url, i) => `<img src="${url}" data-idx="${i}" onclick="cambiarFotoPrincipal(this)" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:2px solid ${i===0?'#5B8266':'#ddd'}; cursor:pointer; transition:border 0.2s;" onerror="this.onerror=null; this.style.display='none';">`).join('')}
                     </div>` : '';
 
                 // Badges de info técnica: MARCA, MODELO, SUBCATEGORÍA, POSICIÓN
@@ -963,7 +963,7 @@ La parrilla inferior para Toyota Levin GT está diseñada para integrarse al con
 
                 container.innerHTML = `
                     <div class="product-img-box">
-                        <img id="img-principal" src="${imagenes[0] || logoFallback}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='${logoFallback}'">
+                        <img id="img-principal" src="${imagenes[0] || 'img/logo-fb-parts.png'}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
                         ${galeriaHTML}
                     </div>
                     <div class="product-details">

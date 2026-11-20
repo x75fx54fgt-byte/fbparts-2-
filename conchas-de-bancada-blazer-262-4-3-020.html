@@ -180,7 +180,7 @@
 }
     </script>
     <!-- Datos precargados del repuesto para carga instantánea (Zero-Delay) y SEO -->
-    <script>window.FIREBASE_PRODUCT_ID = "1PyrWlQ3o7Axne7R8yFC"; window.PRODUCTO_PRECARGADO = {"id":"1PyrWlQ3o7Axne7R8yFC","posiciones":["N/A"],"categoria":"ciguenales-para-vehiculos","nombre":"Conchas De Bancada Blazer 262 4.3 020","imagenes":["https://http2.mlstatic.com/D_NQ_NP_2X_611099-MLV113414561811_062026-F.webp"],"numero_parte":"ACL / 4M1454A-020","stock":1,"precio":39.99,"ml_id":"MLV777542231","modalidad":"Entrega Inmediata","marca":"Chevrolet","descripcion":"✅ FUNCIÓN Y BENEFICIOS:\nLas conchas de bancada son componentes clave del motor que trabajan como soporte para el cigüeñal, garantizando el correcto deslizamiento y la distribución del lubricante. \n\n🔧 COMPATIBILIDAD SUGERIDA:\n- Aplica para motores 4.3L (V6) diésel/gasolina de Chevrolet Blazer con cigüeñal para medida 020.  \n- Aplica para varios modelos compatibles con bielas y bancada para medida 020 (según aplicación de motor).\n- Aplica para varios modelos. Por favor consultar compatibilidad indicando el modelo y año de su vehículo.\n\n📦 CONDICIONES DE ENVÍO Y ENTREGA:\n- Repuesto nuevo en su empaque y en perfecta condición garantizada.\n- Retiro en tienda física y servicio de delivery rápido en Caracas (ciertas condiciones aplican).\n- Envíos a nivel nacional cobro en destino a través de MRW, Tealca y Zoom asegurados.","posicion":"N/A","subcategoria":"Motor","estado":"activo","imagen":"https://http2.mlstatic.com/D_NQ_NP_2X_611099-MLV113414561811_062026-F.webp","modelo":"BLAZER 4.3"};</script>
+    <script>window.FIREBASE_PRODUCT_ID = "1PyrWlQ3o7Axne7R8yFC"; window.PRODUCTO_PRECARGADO = {"id":"1PyrWlQ3o7Axne7R8yFC","numero_parte":"ACL / 4M1454A-020","precio":39.99,"marca":"Chevrolet","imagen":"https://http2.mlstatic.com/D_NQ_NP_2X_611099-MLV113414561811_062026-F.webp","imagenes":["https://http2.mlstatic.com/D_NQ_NP_2X_611099-MLV113414561811_062026-F.webp"],"descripcion":"✅ FUNCIÓN Y BENEFICIOS:\nLas conchas de bancada son componentes clave del motor que trabajan como soporte para el cigüeñal, garantizando el correcto deslizamiento y la distribución del lubricante. \n\n🔧 COMPATIBILIDAD SUGERIDA:\n- Aplica para motores 4.3L (V6) diésel/gasolina de Chevrolet Blazer con cigüeñal para medida 020.  \n- Aplica para varios modelos compatibles con bielas y bancada para medida 020 (según aplicación de motor).\n- Aplica para varios modelos. Por favor consultar compatibilidad indicando el modelo y año de su vehículo.\n\n📦 CONDICIONES DE ENVÍO Y ENTREGA:\n- Repuesto nuevo en su empaque y en perfecta condición garantizada.\n- Retiro en tienda física y servicio de delivery rápido en Caracas (ciertas condiciones aplican).\n- Envíos a nivel nacional cobro en destino a través de MRW, Tealca y Zoom asegurados.","posiciones":["N/A"],"stock":1,"ml_id":"MLV777542231","categoria":"ciguenales-para-vehiculos","subcategoria":"Motor","nombre":"Conchas De Bancada Blazer 262 4.3 020","modelo":"BLAZER 4.3","estado":"activo","posicion":"N/A","modalidad":"Entrega Inmediata"};</script>
 </head>
 <body>
 
@@ -231,7 +231,7 @@
 
     <div class="product-container" id="product-details-container">
         <div class="product-img-box">
-            <img id="img-principal" src="https://http2.mlstatic.com/D_NQ_NP_2X_611099-MLV113414561811_062026-F.webp" alt="Repuesto original Conchas De Bancada Blazer 262 4.3 020 en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png'">
+            <img id="img-principal" src="https://http2.mlstatic.com/D_NQ_NP_2X_611099-MLV113414561811_062026-F.webp" alt="Repuesto original Conchas De Bancada Blazer 262 4.3 020 en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
         </div>
         <div class="product-details">
             <span style="font-size: 12px; color: #888; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">F&B PARTS • CIGÜEÑALES</span>
@@ -910,7 +910,7 @@ Las conchas de bancada son componentes clave del motor que trabajan como soporte
 
                 const galeriaHTML = imagenes.length > 1 ? `
                     <div id="galeria-thumbs" style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
-                        ${imagenes.map((url, i) => `<img src="${url}" data-idx="${i}" onclick="cambiarFotoPrincipal(this)" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:2px solid ${i===0?'#5B8266':'#ddd'}; cursor:pointer; transition:border 0.2s;" onerror="this.style.display='none'">`).join('')}
+                        ${imagenes.map((url, i) => `<img src="${url}" data-idx="${i}" onclick="cambiarFotoPrincipal(this)" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:2px solid ${i===0?'#5B8266':'#ddd'}; cursor:pointer; transition:border 0.2s;" onerror="this.onerror=null; this.style.display='none';">`).join('')}
                     </div>` : '';
 
                 // Badges de info técnica: MARCA, MODELO, SUBCATEGORÍA, POSICIÓN
@@ -955,7 +955,7 @@ Las conchas de bancada son componentes clave del motor que trabajan como soporte
 
                 container.innerHTML = `
                     <div class="product-img-box">
-                        <img id="img-principal" src="${imagenes[0] || logoFallback}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='${logoFallback}'">
+                        <img id="img-principal" src="${imagenes[0] || 'img/logo-fb-parts.png'}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
                         ${galeriaHTML}
                     </div>
                     <div class="product-details">

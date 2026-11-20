@@ -194,7 +194,7 @@ function renderizarContenidoEstatico(prod, docId, slug, precioFinal, precioRegul
 
     const galeriaHTML = imagenes.length > 1
         ? `\n                    <div id="galeria-thumbs" style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">\n` +
-          imagenes.map((url, i) => `                        <img src="${url}" data-idx="${i}" onclick="cambiarFotoPrincipal(this)" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:2px solid ${i===0?'#5B8266':'#ddd'}; cursor:pointer; transition:border 0.2s;" onerror="this.style.display='none'">`).join('\n') +
+          imagenes.map((url, i) => `                        <img src="${url}" data-idx="${i}" onclick="cambiarFotoPrincipal(this)" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:2px solid ${i===0?'#5B8266':'#ddd'}; cursor:pointer; transition:border 0.2s;" onerror="this.onerror=null; this.style.display='none';">`).join('\n') +
           `\n                    </div>`
         : '';
 
@@ -267,7 +267,7 @@ function renderizarContenidoEstatico(prod, docId, slug, precioFinal, precioRegul
     return `
     <div class="product-container" id="product-details-container">
         <div class="product-img-box">
-            <img id="img-principal" src="${mainImg}" alt="Repuesto original ${escapeHtml(nombre)} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='${logoFallback}'">${galeriaHTML}
+            <img id="img-principal" src="${mainImg}" alt="Repuesto original ${escapeHtml(nombre)} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">${galeriaHTML}
         </div>
         <div class="product-details">
             <span style="font-size: 12px; color: #888; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">${catSubtitle}</span>

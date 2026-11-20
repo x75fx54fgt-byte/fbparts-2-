@@ -3905,7 +3905,7 @@
                                                 style="flex: 1; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13.5px; box-sizing: border-box;">
                                             <div id="preview-img-container" style="width: 40px; height: 40px; border: 1px solid #d1d5db; border-radius: 6px; background: #f9fafb; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
                                                 <i class="fas fa-image" style="color: #9ca3af; font-size: 16px;" id="preview-placeholder"></i>
-                                                <img id="preview-img" src="" style="width: 100%; height: 100%; object-fit: contain; display: none;" onerror="this.style.display='none'; document.getElementById('preview-placeholder').style.display='block';">
+                                                <img id="preview-img" src="" style="width: 100%; height: 100%; object-fit: contain; display: none;" onerror="this.onerror=null; this.style.display='none'; document.getElementById('preview-placeholder').style.display='block';">
                                             </div>
                                         </div>
                                         <div id="web-dest-imagen-status" style="margin-top: 5px; font-size: 11.5px; font-weight: 600;"></div>
@@ -5968,7 +5968,7 @@
 
                         tablaProd.innerHTML += `
                             <tr class="admin-prod-row" data-category="${prod.categoria}">
-                                <td><img src="${prod.imagen}" width="60" style="border-radius:4px; border:1px solid #eee; background:#f0f0f0; object-fit:cover;" onerror="this.src='img/logo.png'"></td>
+                                <td><img src="${prod.imagen}" width="60" style="border-radius:4px; border:1px solid #eee; background:#f0f0f0; object-fit:cover;" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';"></td>
                                 <td class="prod-nombre-col"><strong>${prod.nombre}</strong><br>${badgeEstado}</td>
                                 <td><span style="background:#eee;padding:3px 8px;border-radius:10px;font-size:11px;">${prod.categoria}</span></td>
                                 <td><strong>$${Number(prod.precio).toFixed(2)}</strong><br><span style="font-size:12px;color:#666;">Stock: ${stock}</span></td>
@@ -14284,7 +14284,7 @@ window.cargarHistorialFacturas = async function() {
                     <!-- Encabezado Institucional -->
                     <div class="flex items-center justify-between gap-4 pb-4 border-b border-slate-200">
                         <div class="flex items-center gap-3">
-                            <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logo F&B Parts" class="h-14 object-contain" onerror="this.onerror=null; this.src='assets/logo.png';">
+                            <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logo F&B Parts" class="h-14 object-contain" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
                             <div>
                                 <span class="block text-[10px] font-black tracking-widest text-[#2c441b] uppercase">Inversiones FB Parts, C.A.</span>
                                 <span class="block text-[11px] font-semibold text-slate-500">División Corporativa & Procura</span>
@@ -14386,7 +14386,7 @@ window.cargarHistorialFacturas = async function() {
                     <!-- Encabezado Hoja 2 -->
                     <div class="flex items-center justify-between pb-3 border-b border-slate-200">
                         <div class="flex items-center gap-2">
-                            <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logo F&B Parts" class="h-8 object-contain" onerror="this.onerror=null; this.src='assets/logo.png';">
+                            <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logo F&B Parts" class="h-8 object-contain" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
                             <span class="text-xs font-bold text-slate-800">INVERSIONES FB PARTS, C.A. • DOSSIER CORPORATIVO</span>
                         </div>
                         <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Sección Operativa</span>
@@ -14510,7 +14510,7 @@ window.cargarHistorialFacturas = async function() {
                     <!-- Encabezado Hoja 3 -->
                     <div class="flex items-center justify-between pb-2.5 border-b border-slate-200">
                         <div class="flex items-center gap-2">
-                            <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logo F&B Parts" class="h-8 object-contain" onerror="this.onerror=null; this.src='assets/logo.png';">
+                            <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logo F&B Parts" class="h-8 object-contain" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
                             <span class="text-xs font-bold text-slate-800">INVERSIONES FB PARTS, C.A. • CATÁLOGO VISUAL</span>
                         </div>
                         <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Vitrina de Procura OEM</span>
@@ -14718,7 +14718,7 @@ window.cargarHistorialFacturas = async function() {
                     <!-- Encabezado Hoja 4 -->
                     <div class="flex items-center justify-between pb-2 border-b border-slate-200">
                         <div class="flex items-center gap-2">
-                            <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logo F&B Parts" class="h-7 object-contain" onerror="this.onerror=null; this.src='assets/logo.png';">
+                            <img src="https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png" alt="Logo F&B Parts" class="h-7 object-contain" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
                             <span class="text-xs font-bold text-slate-800">INVERSIONES FB PARTS, C.A. • MARCAS Y CONTACTO</span>
                         </div>
                         <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Alianzas & Confianza</span>

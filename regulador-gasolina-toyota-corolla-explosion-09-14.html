@@ -180,7 +180,7 @@
 }
     </script>
     <!-- Datos precargados del repuesto para carga instantánea (Zero-Delay) y SEO -->
-    <script>window.FIREBASE_PRODUCT_ID = "VmANwzPGUfDEb56DJpbG"; window.PRODUCTO_PRECARGADO = {"id":"VmANwzPGUfDEb56DJpbG","nombre":"Regulador Gasolina Toyota Corolla Explosion 09-14","stock":1,"categoria":"reguladores-de-presion-de-combustible-para-vehiculos","descripcion":"✅ FUNCIÓN Y BENEFICIOS:\nEl regulador de presión de gasolina se encarga de mantener estable la presión del sistema de alimentación, controlando el flujo hacia los inyectores para asegurar una combustión eficiente. Un regulador con desgaste o fuga puede provocar fallas de encendido, tirones, pérdida de potencia y consumo elevado; reemplazarlo a tiempo ayuda a recuperar el desempeño original y a prolongar la vida útil de componentes del sistema de inyección.\n\n🔧 COMPATIBILIDAD SUGERIDA:\n- Toyota Corolla 2009-2014\n\n📦 CONDICIONES DE ENVÍO Y ENTREGA:\n- Repuesto nuevo en su empaque y en perfecta condición garantizada.\n- Retiro en tienda física y servicio de delivery rápido en Caracas (ciertas condiciones aplican).\n- Envíos a nivel nacional cobro en destino a través de MRW, Tealca y Zoom asegurados.","numero_parte":"Consultar disponibilidad / OEM","subcategoria":"Motor","estado":"activo","precio":24.99,"ml_id":"MLV1014633286","imagen":"https://http2.mlstatic.com/D_NQ_NP_2X_728413-MLV113164055753_062026-F.webp","modelo":"COROLLA 09-14","marca":"Toyota"};</script>
+    <script>window.FIREBASE_PRODUCT_ID = "VmANwzPGUfDEb56DJpbG"; window.PRODUCTO_PRECARGADO = {"id":"VmANwzPGUfDEb56DJpbG","precio":24.99,"subcategoria":"Motor","descripcion":"✅ FUNCIÓN Y BENEFICIOS:\nEl regulador de presión de gasolina se encarga de mantener estable la presión del sistema de alimentación, controlando el flujo hacia los inyectores para asegurar una combustión eficiente. Un regulador con desgaste o fuga puede provocar fallas de encendido, tirones, pérdida de potencia y consumo elevado; reemplazarlo a tiempo ayuda a recuperar el desempeño original y a prolongar la vida útil de componentes del sistema de inyección.\n\n🔧 COMPATIBILIDAD SUGERIDA:\n- Toyota Corolla 2009-2014\n\n📦 CONDICIONES DE ENVÍO Y ENTREGA:\n- Repuesto nuevo en su empaque y en perfecta condición garantizada.\n- Retiro en tienda física y servicio de delivery rápido en Caracas (ciertas condiciones aplican).\n- Envíos a nivel nacional cobro en destino a través de MRW, Tealca y Zoom asegurados.","imagen":"https://http2.mlstatic.com/D_NQ_NP_2X_728413-MLV113164055753_062026-F.webp","marca":"Toyota","stock":1,"estado":"activo","modelo":"COROLLA 09-14","nombre":"Regulador Gasolina Toyota Corolla Explosion 09-14","categoria":"reguladores-de-presion-de-combustible-para-vehiculos","ml_id":"MLV1014633286","numero_parte":"Consultar disponibilidad / OEM"};</script>
 </head>
 <body>
 
@@ -231,7 +231,7 @@
 
     <div class="product-container" id="product-details-container">
         <div class="product-img-box">
-            <img id="img-principal" src="https://http2.mlstatic.com/D_NQ_NP_2X_728413-MLV113164055753_062026-F.webp" alt="Repuesto original Regulador Gasolina Toyota Corolla Explosion 09-14 en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png'">
+            <img id="img-principal" src="https://http2.mlstatic.com/D_NQ_NP_2X_728413-MLV113164055753_062026-F.webp" alt="Repuesto original Regulador Gasolina Toyota Corolla Explosion 09-14 en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
         </div>
         <div class="product-details">
             <span style="font-size: 12px; color: #888; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">F&B PARTS • REGULADORES DE PRESIÓN DE COMBUSTIBLE</span>
@@ -908,7 +908,7 @@ El regulador de presión de gasolina se encarga de mantener estable la presión 
 
                 const galeriaHTML = imagenes.length > 1 ? `
                     <div id="galeria-thumbs" style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
-                        ${imagenes.map((url, i) => `<img src="${url}" data-idx="${i}" onclick="cambiarFotoPrincipal(this)" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:2px solid ${i===0?'#5B8266':'#ddd'}; cursor:pointer; transition:border 0.2s;" onerror="this.style.display='none'">`).join('')}
+                        ${imagenes.map((url, i) => `<img src="${url}" data-idx="${i}" onclick="cambiarFotoPrincipal(this)" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:2px solid ${i===0?'#5B8266':'#ddd'}; cursor:pointer; transition:border 0.2s;" onerror="this.onerror=null; this.style.display='none';">`).join('')}
                     </div>` : '';
 
                 // Badges de info técnica: MARCA, MODELO, SUBCATEGORÍA, POSICIÓN
@@ -953,7 +953,7 @@ El regulador de presión de gasolina se encarga de mantener estable la presión 
 
                 container.innerHTML = `
                     <div class="product-img-box">
-                        <img id="img-principal" src="${imagenes[0] || logoFallback}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='${logoFallback}'">
+                        <img id="img-principal" src="${imagenes[0] || 'img/logo-fb-parts.png'}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
                         ${galeriaHTML}
                     </div>
                     <div class="product-details">

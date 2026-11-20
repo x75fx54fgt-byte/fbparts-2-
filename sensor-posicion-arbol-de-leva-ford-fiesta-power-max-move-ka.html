@@ -180,7 +180,7 @@
 }
     </script>
     <!-- Datos precargados del repuesto para carga instantánea (Zero-Delay) y SEO -->
-    <script>window.FIREBASE_PRODUCT_ID = "2PDOXnE9uUDEopx9Lx7W"; window.PRODUCTO_PRECARGADO = {"id":"2PDOXnE9uUDEopx9Lx7W","descripcion":"✅ FUNCIÓN Y BENEFICIOS:\nEl Sensor de Posición del Árbol de Levas permite al sistema de inyección y encendido conocer la posición/temporización de la distribución del motor. Con esta señal, la ECU gestiona de forma precisa la sincronización para lograr mejor funcionamiento, arranques más confiables y una combustión estable; su reemplazo oportuno ayuda a prevenir fallas de encendido, pérdida de potencia y posibles códigos de avería asociados a la sincronía del motor.\n\n🔧 COMPATIBILIDAD SUGERIDA:\n- Ford Fiesta (Años por confirmar)\n- Ford Power Max (Años por confirmar)\n- Ford Move Ka (Años por confirmar)\n\n📦 CONDICIONES DE ENVÍO Y ENTREGA:\n- Repuesto nuevo en su empaque y en perfecta condición garantizada.\n- Retiro en tienda física y servicio de delivery rápido en Caracas (ciertas condiciones aplican).\n- Envíos a nivel nacional cobro en destino a través de MRW, Tealca y Zoom asegurados.","ml_id":"MLV1014740440","estado":"activo","marca":"Ford","nombre":"Sensor Posicion Arbol De Leva Ford Fiesta Power Max Move Ka","modelo":"FIESTA / POWER MAX / MOVE KA","subcategoria":"Eléctrico","numero_parte":"Consultar disponibilidad / OEM","stock":1,"precio":19.99,"imagen":"https://http2.mlstatic.com/D_NQ_NP_2X_928491-MLV112027682300_062026-F.webp","categoria":"sensores-de-arbol-de-levas-para-vehiculos"};</script>
+    <script>window.FIREBASE_PRODUCT_ID = "2PDOXnE9uUDEopx9Lx7W"; window.PRODUCTO_PRECARGADO = {"id":"2PDOXnE9uUDEopx9Lx7W","stock":1,"estado":"activo","subcategoria":"Eléctrico","modelo":"FIESTA / POWER MAX / MOVE KA","nombre":"Sensor Posicion Arbol De Leva Ford Fiesta Power Max Move Ka","descripcion":"✅ FUNCIÓN Y BENEFICIOS:\nEl Sensor de Posición del Árbol de Levas permite al sistema de inyección y encendido conocer la posición/temporización de la distribución del motor. Con esta señal, la ECU gestiona de forma precisa la sincronización para lograr mejor funcionamiento, arranques más confiables y una combustión estable; su reemplazo oportuno ayuda a prevenir fallas de encendido, pérdida de potencia y posibles códigos de avería asociados a la sincronía del motor.\n\n🔧 COMPATIBILIDAD SUGERIDA:\n- Ford Fiesta (Años por confirmar)\n- Ford Power Max (Años por confirmar)\n- Ford Move Ka (Años por confirmar)\n\n📦 CONDICIONES DE ENVÍO Y ENTREGA:\n- Repuesto nuevo en su empaque y en perfecta condición garantizada.\n- Retiro en tienda física y servicio de delivery rápido en Caracas (ciertas condiciones aplican).\n- Envíos a nivel nacional cobro en destino a través de MRW, Tealca y Zoom asegurados.","ml_id":"MLV1014740440","numero_parte":"Consultar disponibilidad / OEM","categoria":"sensores-de-arbol-de-levas-para-vehiculos","imagen":"https://http2.mlstatic.com/D_NQ_NP_2X_928491-MLV112027682300_062026-F.webp","precio":19.99,"marca":"Ford"};</script>
 </head>
 <body>
 
@@ -231,7 +231,7 @@
 
     <div class="product-container" id="product-details-container">
         <div class="product-img-box">
-            <img id="img-principal" src="https://http2.mlstatic.com/D_NQ_NP_2X_928491-MLV112027682300_062026-F.webp" alt="Repuesto original Sensor Posicion Arbol De Leva Ford Fiesta Power Max Move Ka en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='https://static.wixstatic.com/media/5c1748_5dd249cea38c4c4ba294cdd8edb75b6c~mv2.png/v1/crop/x_0,y_547,w_2395,h_1307/fill/w_135,h_74,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LOGO-FB-PARTS-COLORES-NUEVOS-_edited_edi.png'">
+            <img id="img-principal" src="https://http2.mlstatic.com/D_NQ_NP_2X_928491-MLV112027682300_062026-F.webp" alt="Repuesto original Sensor Posicion Arbol De Leva Ford Fiesta Power Max Move Ka en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
         </div>
         <div class="product-details">
             <span style="font-size: 12px; color: #888; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">F&B PARTS • SENSORES DE ÁRBOL DE LEVAS</span>
@@ -910,7 +910,7 @@ El Sensor de Posición del Árbol de Levas permite al sistema de inyección y en
 
                 const galeriaHTML = imagenes.length > 1 ? `
                     <div id="galeria-thumbs" style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
-                        ${imagenes.map((url, i) => `<img src="${url}" data-idx="${i}" onclick="cambiarFotoPrincipal(this)" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:2px solid ${i===0?'#5B8266':'#ddd'}; cursor:pointer; transition:border 0.2s;" onerror="this.style.display='none'">`).join('')}
+                        ${imagenes.map((url, i) => `<img src="${url}" data-idx="${i}" onclick="cambiarFotoPrincipal(this)" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:2px solid ${i===0?'#5B8266':'#ddd'}; cursor:pointer; transition:border 0.2s;" onerror="this.onerror=null; this.style.display='none';">`).join('')}
                     </div>` : '';
 
                 // Badges de info técnica: MARCA, MODELO, SUBCATEGORÍA, POSICIÓN
@@ -955,7 +955,7 @@ El Sensor de Posición del Árbol de Levas permite al sistema de inyección y en
 
                 container.innerHTML = `
                     <div class="product-img-box">
-                        <img id="img-principal" src="${imagenes[0] || logoFallback}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.src='${logoFallback}'">
+                        <img id="img-principal" src="${imagenes[0] || 'img/logo-fb-parts.png'}" alt="Repuesto original ${prod.nombre} en Caracas - F&B Parts" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='img/logo-fb-parts.png';">
                         ${galeriaHTML}
                     </div>
                     <div class="product-details">
