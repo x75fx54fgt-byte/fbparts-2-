@@ -1618,14 +1618,14 @@ REGLAS CRÍTICAS:
 
             window._guiaDatosExtraidos = dataExtraida;
 
-            // Buscar pedidos candidatos en la base de datos local
-            const candidatos = window.buscarPedidosCandidatosGuia(dataExtraida, preselectedDocId);
+            // Buscar pedidos candidatos en la base de datos local (solo pendientes)
+            const candidatos = window.buscarPedidosCandidatosGuia(dataExtraida, preselectedDocId, false);
 
-            // Regla de dudas estricta: Notificar ambigüedades en pedidos
+            // Regla de dudas estricta: Notificar ambigüedades en pedidos pendientes
             if (candidatos.length > 1) {
-                dataExtraida.dudas.push(`Existen ${candidatos.length} pedidos activos que podrían coincidir. Por favor selecciona el correcto.`);
+                dataExtraida.dudas.push(`Existen ${candidatos.length} pedidos pendientes de envío que podrían coincidir. Por favor selecciona el correcto.`);
             } else if (candidatos.length === 0 && !preselectedDocId) {
-                dataExtraida.dudas.push("No se encontró ningún pedido pendiente que coincida automáticamente. Selecciona el pedido manualmente.");
+                dataExtraida.dudas.push("No se encontró ningún pedido pendiente de guía que coincida automáticamente. Selecciona el pedido manualmente o marca 'Incluir ya asignados'.");
             }
 
             if (statusEl) {
@@ -1672,10 +1672,57 @@ REGLAS CRÍTICAS:
         };
 
         /**
-         * Algoritmo de emparejamiento inteligente de candidatos
+         * Determina si un pedido es apto y está pendiente para asociarle una guía de envío.
+         * Filtra pedidos anulados, cancelados, entregados, de solo retiro o que ya tengan guía asignada.
          */
-        window.buscarPedidosCandidatosGuia = function(datosGuia, preselectedDocId = null) {
-            const pedidos = window._pedidosTodosCache || [];
+        window.esPedidoPendienteDeGuia = function(pedido, incluirAsignados = false) {
+            if (!pedido) return false;
+
+            const estadoNorm = (pedido.estado || '').toLowerCase().trim();
+
+            // 1. Excluir pedidos cancelados o anulados
+            if (estadoNorm.includes('cancelad') || estadoNorm.includes('anulad')) {
+                return false;
+            }
+
+            // 2. Excluir pedidos ya entregados, completados o finalizados
+            if (estadoNorm.includes('entregad') || estadoNorm.includes('completad') || estadoNorm.includes('finalizad')) {
+                return false;
+            }
+
+            // 3. Excluir pedidos de solo retiro en tienda/local (a menos que se fuerce la inclusión)
+            const envioNorm = (pedido.envio || '').toLowerCase().trim();
+            const esRetiro = envioNorm.includes('retiro en tienda') || envioNorm.includes('retiro en local') || envioNorm === 'retiro';
+            if (esRetiro && !incluirAsignados) {
+                return false;
+            }
+
+            // 4. Verificar si ya tiene número de guía asignado
+            const tracking = (pedido.tracking || '').trim();
+            const trackingMot = (pedido.trackingMotorizado || '').trim();
+            const tieneGuiaReal = (tracking && tracking.toLowerCase() !== 'pendiente' && tracking !== '-') ||
+                                  (trackingMot && trackingMot.toLowerCase() !== 'pendiente' && trackingMot !== '-');
+
+            if (tieneGuiaReal && !incluirAsignados) {
+                return false;
+            }
+
+            return true;
+        };
+
+        /**
+         * Algoritmo de emparejamiento inteligente de candidatos enfocado en pedidos pendientes
+         */
+        window.buscarPedidosCandidatosGuia = function(datosGuia, preselectedDocId = null, incluirAsignados = false) {
+            const todos = window._pedidosTodosCache || [];
+            if (todos.length === 0) return [];
+
+            // Filtrar únicamente pedidos pendientes (o incluir asignados según el checkbox)
+            const pedidos = todos.filter(p => {
+                if (preselectedDocId && p.id === preselectedDocId) return true;
+                return window.esPedidoPendienteDeGuia(p, incluirAsignados);
+            });
+
             if (pedidos.length === 0) return [];
 
             const norm = (str) => (str || '')
@@ -1698,21 +1745,22 @@ REGLAS CRÍTICAS:
 
                 if (preselectedDocId && p.id === preselectedDocId) {
                     score += 1000;
-                    razonCoincidencia.push("Seleccionado directamente en la tabla");
+                    razonCoincidencia.push("Seleccionado en tabla");
                 }
 
                 const pedCliente = norm(p.cliente);
                 const pedEnvio = norm(p.envio);
                 const pedRuta = norm(p.rutasMotorizado);
+                const pedEstado = (p.estado || '').toLowerCase();
 
                 // 1. Coincidencia de Nombre
                 if (targetCliente && targetCliente.length >= 3) {
                     if (pedCliente === targetCliente) {
-                        score += 80;
+                        score += 90;
                         razonCoincidencia.push("Nombre exacto");
                     } else if (pedCliente.includes(targetCliente) || targetCliente.includes(pedCliente)) {
-                        score += 60;
-                        razonCoincidencia.push("Coincidencia de nombre");
+                        score += 65;
+                        razonCoincidencia.push("Nombre coincidente");
                     } else {
                         const tokensTarget = targetCliente.split(/\s+/).filter(t => t.length > 2);
                         const tokensPed = pedCliente.split(/\s+/).filter(t => t.length > 2);
@@ -1722,7 +1770,7 @@ REGLAS CRÍTICAS:
                         });
                         if (matchesTokens > 0) {
                             score += matchesTokens * 25;
-                            razonCoincidencia.push(`${matchesTokens} palabra(s) del nombre coinciden`);
+                            razonCoincidencia.push(`${matchesTokens} palabra(s) en común`);
                         }
                     }
                 }
@@ -1739,23 +1787,29 @@ REGLAS CRÍTICAS:
                 if (targetAgencia) {
                     if (targetAgencia === 'motorizado' && pedEnvio.includes('motorizado')) {
                         score += 25;
-                        razonCoincidencia.push("Método Motorizado");
+                        razonCoincidencia.push("Envío Motorizado");
                     } else if (['tealca', 'zoom', 'mrw'].includes(targetAgencia) && (pedEnvio.includes('encomienda') || pedEnvio.includes(targetAgencia))) {
                         score += 25;
-                        razonCoincidencia.push(`Envío encomienda (${targetAgencia})`);
+                        razonCoincidencia.push(`Encomienda ${targetAgencia}`);
                     }
                 }
 
-                // 4. Estado de la guía: Los pedidos que NO tienen guía tienen prioridad
+                // 4. Prioridad para pedidos en estado Pendiente o Procesando
+                if (pedEstado === 'pendiente' || pedEstado === 'procesando') {
+                    score += 20;
+                    razonCoincidencia.push("Pendiente de despacho");
+                }
+
+                // 5. Estado de la guía
                 const tieneGuia = (p.tracking && p.tracking.trim() !== '' && p.tracking.trim() !== 'Pendiente') ||
                                   (p.trackingMotorizado && p.trackingMotorizado.trim() !== '' && p.trackingMotorizado.trim() !== 'Pendiente');
 
                 if (!tieneGuia && (!p.envio || !p.envio.includes('Retiro'))) {
-                    score += 30;
-                    razonCoincidencia.push("Pedido pendiente de guía");
+                    score += 25;
+                    razonCoincidencia.push("Sin guía asignada");
                 } else if (tieneGuia && targetGuiaNum && (p.tracking === targetGuiaNum || p.trackingMotorizado === targetGuiaNum)) {
                     score += 150;
-                    razonCoincidencia.push("Ya tiene este número de guía registrado");
+                    razonCoincidencia.push("Coincide con número actual");
                 }
 
                 if (score >= 35) {
@@ -1804,11 +1858,174 @@ REGLAS CRÍTICAS:
         };
 
         /**
+         * Renderiza la lista de tarjetas candidatas y el selector manual de pedidos
+         */
+        window.renderizarCandidatosYSelectorGuia = function(candidatos, preselectedDocId = null, incluirAsignados = false) {
+            const containerCandidatos = document.getElementById('modal-guia-candidatos-lista');
+            const countEl = document.getElementById('modal-guia-candidatos-count');
+
+            if (countEl) {
+                const num = candidatos.length;
+                countEl.textContent = `${num} ${num === 1 ? 'coincidencia' : 'candidatos'}`;
+                if (num > 0) {
+                    countEl.style.background = '#dcfce7';
+                    countEl.style.color = '#15803d';
+                    countEl.style.borderColor = '#bbf7d0';
+                } else {
+                    countEl.style.background = '#f1f5f9';
+                    countEl.style.color = '#64748b';
+                    countEl.style.borderColor = '#e2e8f0';
+                }
+            }
+
+            let defaultDocId = preselectedDocId;
+
+            if (containerCandidatos) {
+                containerCandidatos.innerHTML = '';
+
+                if (candidatos.length === 0) {
+                    containerCandidatos.innerHTML = `
+                        <div style="background: #ffffff; border: 1.5px dashed #cbd5e1; border-radius: 8px; padding: 18px 14px; text-align: center; color: #64748b; font-size: 12.5px;">
+                            <i class="fas fa-search" style="font-size: 22px; margin-bottom: 8px; display: block; color: #94a3b8;"></i>
+                            <b>No se encontraron pedidos pendientes coincidentes.</b><br>
+                            <span style="font-size: 11.5px; color: #94a3b8; display: block; margin-top: 4px;">
+                                Puedes elegirlo en el menú desplegable inferior o marcar <i>"Incluir ya asignados"</i>.
+                            </span>
+                        </div>
+                    `;
+                } else {
+                    if (!defaultDocId && candidatos.length > 0) {
+                        defaultDocId = candidatos[0].pedido.id;
+                    }
+
+                    candidatos.forEach((cand) => {
+                        const ped = cand.pedido;
+                        const isSelected = (ped.id === defaultDocId);
+                        const prodsAbrev = Array.isArray(ped.productos) 
+                            ? ped.productos.map(p => `${p.cantidad}x ${p.nombre}`).join(', ') 
+                            : (ped.producto || 'Productos varios');
+
+                        const card = document.createElement('div');
+                        card.id = `cand-card-${ped.id}`;
+                        card.className = `cand-card-pedido ${isSelected ? 'active' : ''}`;
+                        card.style.cssText = `
+                            background: ${isSelected ? '#eef3f0' : '#ffffff'};
+                            border: 1.5px solid ${isSelected ? '#385723' : '#cbd5e1'};
+                            border-radius: 8px;
+                            padding: 12px;
+                            cursor: pointer;
+                            transition: all 0.15s ease;
+                            position: relative;
+                            min-width: 0;
+                            max-width: 100%;
+                            box-sizing: border-box;
+                            overflow: hidden;
+                        `;
+                        card.onclick = () => window.seleccionarPedidoCandidatoGuia(ped.id);
+
+                        card.innerHTML = `
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; width: 100%; box-sizing: border-box;">
+                                <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; overflow: hidden;">
+                                    <input type="radio" name="radio-guia-pedido" value="${ped.id}" ${isSelected ? 'checked' : ''} style="accent-color: #385723; cursor: pointer; flex-shrink: 0; width: 16px; height: 16px; margin: 0;">
+                                    <div style="min-width: 0; flex: 1 1 auto; overflow: hidden;">
+                                        <div style="font-weight: 800; font-size: 13.5px; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${SecuritySanitizer.escapeHtml(ped.cliente || 'Sin nombre')}">
+                                            ${SecuritySanitizer.escapeHtml(ped.cliente || 'Sin nombre')}
+                                        </div>
+                                        <div style="display: flex; gap: 6px; align-items: center; margin-top: 3px; flex-wrap: wrap;">
+                                            <span style="font-size: 10.5px; background: #e2f0d9; color: #276738; padding: 2px 7px; border-radius: 4px; font-weight: 700; flex-shrink: 0;">
+                                                ${SecuritySanitizer.escapeHtml(ped.fecha || 'N/A')} • ${SecuritySanitizer.escapeHtml(ped.envio || 'Envío')}
+                                            </span>
+                                            ${cand.razon ? `<span style="font-size: 10.5px; color: #b45309; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${SecuritySanitizer.escapeHtml(cand.razon)}">${SecuritySanitizer.escapeHtml(cand.razon)}</span>` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="flex-shrink: 0; text-align: right; min-width: 75px;">
+                                    <div style="font-family: 'Oswald', sans-serif; font-weight: 700; color: #385723; font-size: 15px; letter-spacing: 0.3px; white-space: nowrap;">
+                                        $${Number(ped.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </div>
+                                    <span style="font-size: 9.5px; color: #64748b; font-weight: 700; text-transform: uppercase; background: #f1f5f9; padding: 1px 6px; border-radius: 4px; display: inline-block; margin-top: 2px;">
+                                        ${SecuritySanitizer.escapeHtml(ped.estado || 'Pendiente')}
+                                    </span>
+                                </div>
+                            </div>
+                            <div style="font-size: 11.5px; color: #64748b; margin-top: 7px; padding-left: 26px; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${SecuritySanitizer.escapeHtml(prodsAbrev)}">
+                                <i class="fas fa-cube" style="font-size: 10px; color: #94a3b8; margin-right: 4px;"></i>${SecuritySanitizer.escapeHtml(prodsAbrev)}
+                            </div>
+                        `;
+                        containerCandidatos.appendChild(card);
+                    });
+                }
+            }
+
+            // Poblar selector manual con pedidos filtrados
+            window.poblarSelectorManualGuia(defaultDocId, incluirAsignados);
+
+            window._guiaPedidoSeleccionadoId = defaultDocId;
+
+            // Mostrar botón de copiar mensaje si ya está asignado o preseleccionado
+            const btnCopiar = document.getElementById('btn-copiar-msg-modal-guia');
+            if (btnCopiar) {
+                btnCopiar.style.display = defaultDocId ? 'inline-flex' : 'none';
+            }
+        };
+
+        /**
+         * Puebla el select manual con pedidos pendientes relevantes
+         */
+        window.poblarSelectorManualGuia = function(selectedDocId = null, incluirAsignados = false) {
+            const selManual = document.getElementById('modal-guia-selector-manual-pedido');
+            if (!selManual) return;
+
+            selManual.innerHTML = '<option value="">-- Elige un pedido pendiente --</option>';
+            const todos = [...(window._pedidosTodosCache || [])].sort((a,b) => (b.fecha || '').localeCompare(a.fecha || ''));
+            const filtrados = todos.filter(p => {
+                if (selectedDocId && p.id === selectedDocId) return true;
+                return window.esPedidoPendienteDeGuia(p, incluirAsignados);
+            });
+
+            filtrados.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                const tieneGuia = (p.tracking && p.tracking !== 'Pendiente') || (p.trackingMotorizado && p.trackingMotorizado !== 'Pendiente');
+                const tagGuia = tieneGuia ? ' [Ya tiene guía]' : '';
+                opt.textContent = `${p.fecha || ''} | ${p.cliente || 'Sin nombre'} - $${Number(p.total||0).toFixed(2)} (${p.envio || 'Envío'})${tagGuia}`;
+                if (p.id === selectedDocId) opt.selected = true;
+                selManual.appendChild(opt);
+            });
+        };
+
+        /**
+         * Maneja el cambio del checkbox 'Incluir ya asignados'
+         */
+        window.toggleIncluirAsignadosGuia = function(checked) {
+            window._guiaIncluirAsignados = !!checked;
+            if (window._guiaDatosExtraidos) {
+                const nuevosCandidatos = window.buscarPedidosCandidatosGuia(
+                    window._guiaDatosExtraidos,
+                    window._guiaPreselectedDocId,
+                    window._guiaIncluirAsignados
+                );
+                window.renderizarCandidatosYSelectorGuia(
+                    nuevosCandidatos,
+                    window._guiaPedidoSeleccionadoId || window._guiaPreselectedDocId,
+                    window._guiaIncluirAsignados
+                );
+            }
+        };
+
+        /**
          * Abre y renderiza el modal de aclaración de dudas y vinculación de guía
          */
         window.abrirModalAclaracionGuia = function(datosGuia, candidatos, preselectedDocId = null) {
             const modal = document.getElementById('modal-aclaracion-guia');
             if (!modal) return;
+
+            window._guiaDatosExtraidos = datosGuia;
+            window._guiaPreselectedDocId = preselectedDocId;
+            window._guiaIncluirAsignados = false;
+
+            const checkAsignados = document.getElementById('modal-guia-check-incluir-asignados');
+            if (checkAsignados) checkAsignados.checked = false;
 
             // Miniatura
             const imgEl = document.getElementById('modal-guia-img-preview');
@@ -1867,107 +2084,8 @@ REGLAS CRÍTICAS:
             // Agencia seleccionada
             window.seleccionarAgenciaModalGuia(datosGuia.agencia_detectada || 'Tealca');
 
-            // Renderizar candidatos
-            const containerCandidatos = document.getElementById('modal-guia-candidatos-lista');
-            const countEl = document.getElementById('modal-guia-candidatos-count');
-
-            if (countEl) {
-                countEl.textContent = `${candidatos.length} candidato${candidatos.length !== 1 ? 's' : ''}`;
-            }
-
-            let defaultDocId = preselectedDocId;
-
-            if (containerCandidatos) {
-                containerCandidatos.innerHTML = '';
-
-                if (candidatos.length === 0) {
-                    containerCandidatos.innerHTML = `
-                        <div style="background: #fff; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 14px; text-align: center; color: #64748b; font-size: 12px;">
-                            <i class="fas fa-search" style="font-size: 18px; margin-bottom: 6px; display: block; color: #94a3b8;"></i>
-                            No se detectó un pedido coincidente automáticamente.<br>
-                            Por favor selecciona el pedido en el menú desplegable inferior.
-                        </div>
-                    `;
-                } else {
-                    if (!defaultDocId && candidatos.length > 0) {
-                        defaultDocId = candidatos[0].pedido.id;
-                    }
-
-                    candidatos.forEach((cand) => {
-                        const ped = cand.pedido;
-                        const isSelected = ped.id === defaultDocId;
-                        const prodsAbrev = Array.isArray(ped.productos) 
-                            ? ped.productos.map(p => `${p.cantidad}x ${p.nombre}`).join(', ') 
-                            : (ped.producto || 'Productos varios');
-
-                        const card = document.createElement('div');
-                        card.id = `cand-card-${ped.id}`;
-                        card.className = `cand-card-pedido ${isSelected ? 'active' : ''}`;
-                        card.style.cssText = `
-                            background: ${isSelected ? '#eef3f0' : '#ffffff'};
-                            border: 1.5px solid ${isSelected ? '#385723' : '#cbd5e1'};
-                            border-radius: 6px;
-                            padding: 10px 12px;
-                            cursor: pointer;
-                            transition: all 0.15s ease;
-                            position: relative;
-                            min-width: 0;
-                            max-width: 100%;
-                            box-sizing: border-box;
-                            overflow: hidden;
-                        `;
-                        card.onclick = () => window.seleccionarPedidoCandidatoGuia(ped.id);
-
-                        card.innerHTML = `
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; min-width: 0; max-width: 100%;">
-                                <div style="display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1;">
-                                    <input type="radio" name="radio-guia-pedido" value="${ped.id}" ${isSelected ? 'checked' : ''} style="accent-color: #385723; cursor: pointer; flex-shrink: 0;">
-                                    <span style="font-weight: 800; font-size: 13px; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                        ${SecuritySanitizer.escapeHtml(ped.cliente || 'Sin nombre')}
-                                    </span>
-                                </div>
-                                <span style="font-family: 'Oswald', sans-serif; font-weight: 700; color: #385723; font-size: 13.5px; flex-shrink: 0;">
-                                    $${Number(ped.total || 0).toFixed(2)}
-                                </span>
-                            </div>
-                            <div style="font-size: 11.5px; color: #475569; margin: 4px 0 4px 22px; line-height: 1.35; word-break: break-word; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
-                                ${SecuritySanitizer.escapeHtml(prodsAbrev)}
-                            </div>
-                            <div style="display: flex; gap: 6px; align-items: center; margin-top: 4px; margin-left: 22px; flex-wrap: wrap;">
-                                <span style="font-size: 10px; background: #e2f0d9; color: #276738; padding: 1px 6px; border-radius: 4px; font-weight: 600; flex-shrink: 0;">
-                                    ${ped.fecha || 'N/A'} • ${ped.envio || 'Envío'}
-                                </span>
-                                <span style="font-size: 10px; color: #b45309; font-weight: 700; word-break: break-word;">
-                                    ${SecuritySanitizer.escapeHtml(cand.razon)}
-                                </span>
-                            </div>
-                        `;
-                        containerCandidatos.appendChild(card);
-                    });
-                }
-            }
-
-            // Poblar selector manual con todos los pedidos activos
-            const selManual = document.getElementById('modal-guia-selector-manual-pedido');
-            if (selManual) {
-                selManual.innerHTML = '<option value="">-- Elige un pedido del sistema --</option>';
-                const todos = [...(window._pedidosTodosCache || [])].sort((a,b) => (b.fecha || '').localeCompare(a.fecha || ''));
-                todos.forEach(p => {
-                    const opt = document.createElement('option');
-                    opt.value = p.id;
-                    opt.textContent = `${p.fecha || ''} | ${p.cliente || 'Sin nombre'} - $${Number(p.total||0).toFixed(2)} (${p.envio || 'Envío'})`;
-                    if (p.id === defaultDocId) opt.selected = true;
-                    selManual.appendChild(opt);
-                });
-            }
-
-            window._guiaPedidoSeleccionadoId = defaultDocId;
-
-            // Mostrar botón de copiar mensaje si ya está asignado o preseleccionado
-            const btnCopiar = document.getElementById('btn-copiar-msg-modal-guia');
-            if (btnCopiar) {
-                btnCopiar.style.display = defaultDocId ? 'inline-flex' : 'none';
-            }
+            // Renderizar candidatos filtrados y selector manual
+            window.renderizarCandidatosYSelectorGuia(candidatos, preselectedDocId, false);
 
             // Actualizar estado del botón de confirmación de forma ligera
             window._actualizarEstadoGuiaInputsLigero();

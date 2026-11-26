@@ -144,9 +144,10 @@
             background: #ffffff;
             border: 1.5px solid #cbd5e1;
             color: #475569;
-            padding: 8px 10px;
-            border-radius: 6px;
-            font-size: 12px;
+            padding: 9px 12px;
+            min-height: 40px;
+            border-radius: 7px;
+            font-size: 12.5px;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.15s ease;
@@ -154,7 +155,7 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
+            gap: 7px;
             width: 100%;
             box-sizing: border-box;
             user-select: none;
@@ -184,8 +185,6 @@
         .cand-card-pedido.active {
             background: #eef3f0 !important;
             border-color: #385723 !important;
-            box-shadow: 0 2px 8px rgba(56, 87, 35, 0.12);
-        }
             box-shadow: 0 2px 8px rgba(56, 87, 35, 0.15);
         }
 
@@ -4411,7 +4410,7 @@
     <!-- ======================================================== -->
     <!-- 📦 MODAL: VALIDACIÓN Y VINCULACIÓN DE GUÍA DE ENVÍO (IA)  -->
     <!-- ======================================================== -->
-    <div id="modal-aclaracion-guia" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.72); backdrop-filter: blur(2px); z-index: 10002; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box;">
+    <div id="modal-aclaracion-guia" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 10002; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box;">
         <div class="modal-content" style="max-width: 880px; width: 100%; max-height: 92vh; display: flex; flex-direction: column; background: #ffffff; border-radius: 12px; border: 1.5px solid #5e8877; box-shadow: 0 20px 45px rgba(0,0,0,0.3); padding: 0; overflow: hidden; box-sizing: border-box;">
             
             <!-- Encabezado Corporativo (Fijo) -->
@@ -4453,17 +4452,17 @@
                 </div>
 
                 <!-- Layout 2 Columnas Limpio y Sin Desbordamientos -->
-                <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 18px; align-items: start; box-sizing: border-box; width: 100%;">
+                <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.18fr); gap: 18px; align-items: start; box-sizing: border-box; width: 100%;">
                     
                     <!-- Columna Izquierda: Datos de la Guía -->
                     <div style="background: #f8faf9; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; min-width: 0; max-width: 100%; box-sizing: border-box;">
                         
-                        <!-- Encabezado que respira bien -->
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0; gap: 10px; flex-wrap: wrap;">
+                        <!-- Encabezado que respira bien con gap y flex-wrap -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0; gap: 12px; flex-wrap: wrap;">
                             <span style="font-family: 'Oswald', sans-serif; font-size: 14.5px; font-weight: 700; color: #385723; text-transform: uppercase; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 6px;">
-                                <i class="fas fa-barcode" style="color: #5e8877;"></i> Datos de la Guía
+                                <i class="fas fa-barcode" style="color: #5e8877;"></i> DATOS DE LA GUÍA
                             </span>
-                            <span id="modal-guia-badge-confianza" style="font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 14px; background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; display: inline-flex; align-items: center; gap: 4px;">
+                            <span id="modal-guia-badge-confianza" style="font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 14px; background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;">
                                 <i class="fas fa-shield-alt"></i> Confianza: Alta
                             </span>
                         </div>
@@ -4474,7 +4473,7 @@
                             <span style="font-size: 10.5px; color: #64748b; margin-top: 4px; display: block;">🔍 Clic en la imagen para ampliar</span>
                         </div>
 
-                        <!-- Agencia Detectada: Grilla compacta de 2 columnas -->
+                        <!-- Agencia Detectada: Grilla compacta de 2 columnas con Otra Empresa al ancho completo -->
                         <div style="margin-bottom: 14px;">
                             <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 6px;">
                                 Empresa de Envíos / Transporte:
@@ -4528,29 +4527,37 @@
 
                     </div>
 
-                    <!-- Columna Derecha: Selección del Pedido (Ajuste Estricto) -->
+                    <!-- Columna Derecha: Selección del Pedido (Ajuste Estricto y Filtrado Limpio) -->
                     <div style="background: #f8faf9; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; min-width: 0; max-width: 100%; box-sizing: border-box; overflow: hidden;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0; gap: 10px; flex-wrap: wrap;">
-                            <span style="font-family: 'Oswald', sans-serif; font-size: 14.5px; font-weight: 700; color: #385723; text-transform: uppercase; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 6px;">
-                                <i class="fas fa-boxes" style="color: #5e8877;"></i> Pedido Asociado
-                            </span>
-                            <span id="modal-guia-candidatos-count" style="font-size: 11px; font-weight: 600; color: #64748b; background: #ffffff; padding: 3px 8px; border-radius: 12px; border: 1px solid #e2e8f0;">
-                                0 coincidencias
-                            </span>
+                        
+                        <!-- Encabezado con Contador y Checkbox de Asignados -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0; gap: 10px; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-family: 'Oswald', sans-serif; font-size: 14.5px; font-weight: 700; color: #385723; text-transform: uppercase; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 6px;">
+                                    <i class="fas fa-boxes" style="color: #5e8877;"></i> PEDIDO ASOCIADO
+                                </span>
+                                <span id="modal-guia-candidatos-count" style="font-size: 11px; font-weight: 700; color: #166534; background: #dcfce7; padding: 2px 8px; border-radius: 12px; border: 1px solid #bbf7d0;">
+                                    0 coincidencias
+                                </span>
+                            </div>
+                            <label style="font-size: 11px; color: #64748b; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; user-select: none;">
+                                <input type="checkbox" id="modal-guia-check-incluir-asignados" onchange="window.toggleIncluirAsignadosGuia(this.checked)" style="accent-color: #385723; cursor: pointer; width: 14px; height: 14px;">
+                                Incluir ya asignados
+                            </label>
                         </div>
 
-                        <!-- Lista de Candidatos Inteligentes -->
-                        <div id="modal-guia-candidatos-lista" style="max-height: 250px; overflow-y: auto; margin-bottom: 14px; display: flex; flex-direction: column; gap: 8px; min-width: 0; max-width: 100%; box-sizing: border-box;">
+                        <!-- Lista de Candidatos Inteligentes (Scroll Acotado max-h-60) -->
+                        <div id="modal-guia-candidatos-lista" style="max-height: 240px; overflow-y: auto; margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0; max-width: 100%; padding-right: 4px; box-sizing: border-box;">
                             <!-- Renderizado dinámico de tarjetas candidatas -->
                         </div>
 
                         <!-- Selector Manual en caso de que no esté en los candidatos -->
-                        <div style="border-top: 1px dashed #cbd5e1; padding-top: 12px; min-width: 0; max-width: 100%; box-sizing: border-box;">
-                            <label style="display: block; font-size: 11.5px; font-weight: 700; color: #475569; margin-bottom: 6px;">
-                                O selecciona manualmente cualquier pedido activo:
+                        <div style="border-top: 1px dashed #cbd5e1; padding-top: 10px; min-width: 0; max-width: 100%; box-sizing: border-box;">
+                            <label style="display: block; font-size: 11.5px; font-weight: 700; color: #475569; margin-bottom: 5px;">
+                                O selecciona manualmente entre pedidos pendientes:
                             </label>
                             <select id="modal-guia-selector-manual-pedido" onchange="window.cambiarPedidoManualModalGuia(this.value)"
-                                    style="width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; padding: 8px 10px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; background: white; outline: none; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+                                    style="width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; padding: 8px 10px; font-size: 12px; border: 1.5px solid #cbd5e1; border-radius: 6px; background: white; outline: none; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
                                 <option value="">Selecciona un pedido...</option>
                             </select>
                         </div>
