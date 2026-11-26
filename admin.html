@@ -139,6 +139,43 @@
         .btn-note { background: #f1f1f1; border: 1px solid #ccc; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; color: #555; }
         .btn-note:hover { background: #e2e2e2; }
 
+        /* 📦 ESTILOS: ASISTENTE INTELIGENTE DE GUÍAS DE ENVÍO */
+        .btn-toggle-agencia {
+            background: #ffffff;
+            border: 1.5px solid #cbd5e1;
+            color: #475569;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            outline: none;
+        }
+        .btn-toggle-agencia:hover {
+            border-color: #5e8877;
+            color: #385723;
+            background: #f8faf9;
+        }
+        .btn-toggle-agencia.active {
+            background: #385723 !important;
+            border-color: #2c441b !important;
+            color: #ffffff !important;
+            box-shadow: 0 2px 6px rgba(56, 87, 35, 0.25);
+        }
+        .cand-card-pedido {
+            transition: all 0.15s ease;
+        }
+        .cand-card-pedido:hover {
+            border-color: #5e8877 !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .cand-card-pedido.active {
+            background: #eef3f0 !important;
+            border-color: #385723 !important;
+            box-shadow: 0 2px 8px rgba(56, 87, 35, 0.15);
+        }
+
         /* ESTILOS DASHBOARD KITS */
         .dash-card { background: white; padding: 20px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,.03); text-align: center; }
         .dash-card h4 { margin: 0 0 10px 0; font-size: 14px; color: #666; text-transform: uppercase; }
@@ -1365,11 +1402,78 @@
 
                     <!-- Lista derecha: filtro + tabla -->
                     <div>
-                    <!-- 📅 FILTRO DE MES -->
+
+                    <!-- 📦 ASISTENTE INTELIGENTE DE GUÍAS DE ENVÍO (IA VISION) -->
+                    <div id="card-asistente-guias" style="background: linear-gradient(135deg, #f7faf8 0%, #eef3f0 100%); border: 1.5px dashed #5e8877; border-radius: 10px; padding: 14px 18px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="background: #385723; color: white; width: 26px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 13px;">
+                                    <i class="fas fa-camera"></i>
+                                </span>
+                                <span style="font-family: 'Oswald', sans-serif; font-size: 14px; font-weight: 700; color: #2c441b; letter-spacing: 0.3px; text-transform: uppercase;">
+                                    Lector Inteligente de Guías de Envío (IA)
+                                </span>
+                                <span style="font-size: 11px; background: #e2f0d9; color: #276738; padding: 2px 7px; border-radius: 10px; font-weight: 600;">
+                                    Tealca • Zoom • MRW • Motorizado
+                                </span>
+                            </div>
+                            <div style="font-size: 11px; color: #666;">
+                                💡 Presiona <kbd style="background:#fff; border:1px solid #ccc; padding:1px 5px; border-radius:3px; font-weight:bold;">Ctrl+V</kbd> o arrastra la foto de la guía
+                            </div>
+                        </div>
+
+                        <!-- Dropzone / Input / Miniatura -->
+                        <div id="dropzone-guia-envio" onclick="document.getElementById('input-guia-file').click()" 
+                             style="background: #ffffff; border: 1.5px dashed #a3c2b2; border-radius: 8px; padding: 14px; text-align: center; cursor: pointer; transition: all 0.2s ease; position: relative; min-height: 65px; display: flex; align-items: center; justify-content: center;">
+                            
+                            <input type="file" id="input-guia-file" accept="image/*" style="display: none;" onchange="window.manejarArchivoGuia(event)">
+                            
+                            <!-- Estado Inicial (Sin archivo) -->
+                            <div id="dropzone-guia-prompt" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center;">
+                                <div style="width: 38px; height: 38px; border-radius: 50%; background: #eef3f0; color: #385723; display: flex; align-items: center; justify-content: center; font-size: 16px;">
+                                    <i class="fas fa-file-invoice"></i>
+                                </div>
+                                <div style="text-align: left;">
+                                    <div style="font-size: 13px; font-weight: 700; color: #385723;">Haz clic para seleccionar, arrastra una foto o pega con Ctrl+V</div>
+                                    <div style="font-size: 11px; color: #64748b;">La IA detectará el número de guía, la agencia y buscará el pedido para vincularlo</div>
+                                </div>
+                            </div>
+
+                            <!-- Estado Con Imagen Cargada (Miniatura + Acciones) -->
+                            <div id="dropzone-guia-preview" style="display: none; width: 100%; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <img id="img-preview-guia" src="" style="width: 52px; height: 52px; object-fit: cover; border-radius: 6px; border: 1px solid #cbd5e1; box-shadow: 0 2px 4px rgba(0,0,0,0.08);" alt="Vista previa guía">
+                                    <div style="text-align: left;">
+                                        <div id="txt-nombre-guia-archivo" style="font-size: 12px; font-weight: 700; color: #1e293b;">guia_captura.jpg</div>
+                                        <div id="txt-dimensiones-guia" style="font-size: 11px; color: #64748b;">Lista para analizar</div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <button type="button" id="btn-analizar-guia-ia" onclick="event.stopPropagation(); window.procesarGuiaEnvioConIA()" style="background: #385723; color: white; border: none; padding: 7px 15px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                                        <i class="fas fa-bolt"></i> Analizar con IA
+                                    </button>
+                                    <button type="button" onclick="event.stopPropagation(); window.limpiarZonaGuiaIA()" style="background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; padding: 7px 11px; border-radius: 6px; font-size: 12px; cursor: pointer;" title="Quitar imagen">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Barra de progreso / Estado -->
+                        <div id="status-guia-ia" style="display: none; margin-top: 10px; padding: 8px 12px; border-radius: 6px; font-size: 12px;"></div>
+                    </div>
+
+                    <!-- 📅 FILTRO DE MES Y ACCIONES RÁPIDAS -->
                     <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap;">
                         <label style="font-weight:bold; font-size:13px; color:#555;">📅 Filtrando mes:</label>
                         <select id="pedidos-mes-filtro" onchange="window.cargarPedidos()" style="padding:6px 12px; border:1px solid #ccc; border-radius:6px; font-size:13px; background:#fff;"></select>
                         <span id="pedidos-contador" style="font-size:12px; color:#888; margin-left:4px;"></span>
+
+                        <!-- ⚠️ FILTRO RÁPIDO: PEDIDOS SIN GUÍA -->
+                        <button type="button" id="btn-filtro-sin-guia" onclick="window.toggleFiltroPedidosSinGuia()" 
+                                style="margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 6px 13px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; border: 1px solid #d97706; background: #fffbeb; color: #92400e;">
+                            <i class="fas fa-exclamation-triangle"></i> ⚠️ Sin Guía <span id="contador-sin-guia" style="background: #d97706; color: white; padding: 1px 6px; border-radius: 10px; font-size: 11px;">0</span>
+                        </button>
                     </div>
                     <div style="overflow-x: auto;">
                         <table class="data-table">
@@ -4277,6 +4381,157 @@
                         <i class="fas fa-brain"></i> Analizar y Calcular con IA
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- 📦 MODAL: VALIDACIÓN Y VINCULACIÓN DE GUÍA DE ENVÍO (IA)  -->
+    <!-- ======================================================== -->
+    <div id="modal-aclaracion-guia" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(2px); z-index: 10002; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box;">
+        <div class="modal-content" style="max-width: 860px; width: 100%; max-height: 92vh; overflow-y: auto; background: #ffffff; border-radius: 12px; border: 1.5px solid #a3c2b2; box-shadow: 0 20px 45px rgba(0,0,0,0.3); padding: 0; overflow-x: hidden;">
+            
+            <!-- Encabezado Corporativo -->
+            <div style="background: linear-gradient(135deg, #385723 0%, #2c441b 100%); color: white; padding: 16px 22px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #5e8877;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                        📦
+                    </div>
+                    <div>
+                        <h3 id="modal-guia-header-title" style="margin: 0; color: white; font-size: 17.5px; font-weight: 700; font-family: 'Oswald', sans-serif; letter-spacing: 0.5px; border-bottom: none; padding: 0;">
+                            VINCULAR GUÍA DE ENVÍO CON IA
+                        </h3>
+                        <p style="margin: 2px 0 0 0; font-size: 11.5px; color: #d4ebd4;">
+                            Verificación y resolución de dudas antes de registrar en el pedido
+                        </p>
+                    </div>
+                </div>
+                <button type="button" onclick="window.cerrarModalAclaracionGuia()" style="background: transparent; border: none; color: white; font-size: 22px; cursor: pointer; opacity: 0.85;" title="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Cuerpo del Modal -->
+            <div style="padding: 20px 24px;">
+
+                <!-- Alerta de Dudas / Ambigüedades de la IA (Se activa si dudas.length > 0) -->
+                <div id="modal-guia-dudas-box" style="display: none; background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 8px; padding: 12px 16px; margin-bottom: 18px;">
+                    <div style="font-weight: 800; color: #92400e; font-size: 13px; display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                        <i class="fas fa-exclamation-triangle"></i> La IA detectó dudas importantes antes de guardar:
+                    </div>
+                    <ul id="modal-guia-dudas-lista" style="margin: 4px 0 0 20px; padding: 0; color: #b45309; font-size: 12px; line-height: 1.5;">
+                    </ul>
+                </div>
+
+                <!-- Banner Verde de Alta Confianza (Si no hay dudas) -->
+                <div id="modal-guia-ok-box" style="display: none; background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 8px; padding: 10px 14px; margin-bottom: 18px; color: #166534; font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-check-circle" style="color: #22c55e; font-size: 16px;"></i>
+                    <span>Datos de guía detectados con alta precisión. Revisa y confirma la asociación al pedido.</span>
+                </div>
+
+                <!-- Layout 2 Columnas -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start;">
+                    
+                    <!-- Columna Izquierda: Datos de la Guía -->
+                    <div style="background: #f8faf9; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <span style="font-family: 'Oswald', sans-serif; font-size: 14px; font-weight: 700; color: #385723; text-transform: uppercase;">
+                                <i class="fas fa-barcode"></i> Datos de la Guía
+                            </span>
+                            <span id="modal-guia-badge-confianza" style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 12px; background: #e2e8f0; color: #475569;">
+                                Confianza: Alta
+                            </span>
+                        </div>
+
+                        <!-- Miniatura Imagen con enlace para ampliar -->
+                        <div style="text-align: center; margin-bottom: 14px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px; position: relative;">
+                            <img id="modal-guia-img-preview" src="" style="max-height: 140px; max-width: 100%; object-fit: contain; border-radius: 4px; display: block; margin: 0 auto; cursor: zoom-in;" onclick="window.abrirVisorImagenGuia(this.src)" alt="Guía">
+                            <span style="font-size: 10.5px; color: #64748b; margin-top: 4px; display: block;">🔍 Clic en la imagen para ampliar</span>
+                        </div>
+
+                        <!-- Agencia Detectada (Toggles rápidos) -->
+                        <div style="margin-bottom: 14px;">
+                            <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 6px;">
+                                Empresa de Envíos / Transporte:
+                            </label>
+                            <div id="modal-guia-agencias-toggles" style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                <button type="button" class="btn-toggle-agencia active" data-agencia="Tealca" onclick="window.seleccionarAgenciaModalGuia('Tealca')">Tealca</button>
+                                <button type="button" class="btn-toggle-agencia" data-agencia="Zoom" onclick="window.seleccionarAgenciaModalGuia('Zoom')">Zoom</button>
+                                <button type="button" class="btn-toggle-agencia" data-agencia="MRW" onclick="window.seleccionarAgenciaModalGuia('MRW')">MRW</button>
+                                <button type="button" class="btn-toggle-agencia" data-agencia="Motorizado" onclick="window.seleccionarAgenciaModalGuia('Motorizado')">Motorizado</button>
+                                <button type="button" class="btn-toggle-agencia" data-agencia="Otra" onclick="window.seleccionarAgenciaModalGuia('Otra')">Otra</button>
+                            </div>
+                            <input type="hidden" id="modal-guia-agencia-val" value="Tealca">
+                        </div>
+
+                        <!-- Número de Guía (Editable) -->
+                        <div style="margin-bottom: 12px;">
+                            <label style="display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">
+                                Número de Guía / Tracking: <span style="color:#b91c1c;">*</span>
+                            </label>
+                            <input type="text" id="modal-guia-numero-val" placeholder="Ej: 20145678" style="width: 100%; padding: 8px 10px; font-family: monospace; font-size: 14px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; background: white; color: #1e293b;">
+                        </div>
+
+                        <!-- Destinatario / Ciudad detectados -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <div>
+                                <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 3px;">Destinatario Leído:</label>
+                                <input type="text" id="modal-guia-destinatario-val" placeholder="Nombre destinatario" style="width: 100%; padding: 6px 8px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; background: white;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 3px;">Ciudad Destino:</label>
+                                <input type="text" id="modal-guia-ciudad-val" placeholder="Ej: Valencia, Maracay" style="width: 100%; padding: 6px 8px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; background: white;">
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Columna Derecha: Selección del Pedido -->
+                    <div style="background: #f8faf9; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <span style="font-family: 'Oswald', sans-serif; font-size: 14px; font-weight: 700; color: #385723; text-transform: uppercase;">
+                                <i class="fas fa-boxes"></i> Pedido Asociado
+                            </span>
+                            <span id="modal-guia-candidatos-count" style="font-size: 11px; color: #64748b;">
+                                0 coincidencias
+                            </span>
+                        </div>
+
+                        <!-- Lista de Candidatos Inteligentes -->
+                        <div id="modal-guia-candidatos-lista" style="max-height: 250px; overflow-y: auto; margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px;">
+                            <!-- Renderizado dinámico de tarjetas candidatas -->
+                        </div>
+
+                        <!-- Selector Manual en caso de que no esté en los candidatos -->
+                        <div style="border-top: 1px dashed #cbd5e1; padding-top: 10px;">
+                            <label style="display: block; font-size: 11.5px; font-weight: 700; color: #475569; margin-bottom: 5px;">
+                                O selecciona manualmente cualquier pedido activo:
+                            </label>
+                            <select id="modal-guia-selector-manual-pedido" onchange="window.cambiarPedidoManualModalGuia(this.value)" style="width: 100%; padding: 8px 10px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; background: white; outline: none;">
+                                <option value="">Selecciona un pedido...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Botones y Acciones del Modal -->
+                <div style="margin-top: 22px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-top: 1px solid #e2e8f0; padding-top: 16px;">
+                    <div>
+                        <button type="button" onclick="window.cerrarModalAclaracionGuia()" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 9px 16px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer;">
+                            Descartar
+                        </button>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="button" id="btn-copiar-msg-modal-guia" onclick="window.copiarMensajePreAsignadoModal()" style="display: none; background: #1d6fa5; color: white; border: none; padding: 9px 16px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer;">
+                            <i class="fab fa-whatsapp"></i> Copiar Mensaje
+                        </button>
+                        <button type="button" id="btn-guardar-asignacion-guia" onclick="window.confirmarAsignacionGuia()" style="background: #385723; color: white; border: none; padding: 9px 22px; border-radius: 6px; font-size: 13.5px; font-weight: 700; font-family: 'Oswald', sans-serif; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(56, 87, 35, 0.25);">
+                            <i class="fas fa-check"></i> Confirmar y Guardar Guía
+                        </button>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>

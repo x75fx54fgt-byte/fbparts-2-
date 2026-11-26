@@ -1163,7 +1163,27 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                 // Filtrar y ordenar DESCENDENTE por fecha
                 let pedidosFiltrados = [...window._pedidosTodosCache];
 
-                if (filtroMes !== 'todos') {
+                // Contador en tiempo real de pedidos sin guía (excluyendo Retiro en Local)
+                const pedidosSinGuiaGlobal = (window._pedidosTodosCache || []).filter(p => {
+                    const esRetiro = p.envio && p.envio.toLowerCase().includes('retiro');
+                    if (esRetiro) return false;
+                    const tieneGuia = (p.tracking && p.tracking.trim() !== '' && p.tracking.trim() !== 'Pendiente') ||
+                                      (p.trackingMotorizado && p.trackingMotorizado.trim() !== '' && p.trackingMotorizado.trim() !== 'Pendiente');
+                    return !tieneGuia;
+                });
+                const badgeSinGuia = document.getElementById('contador-sin-guia');
+                if (badgeSinGuia) badgeSinGuia.textContent = pedidosSinGuiaGlobal.length;
+
+                // Aplicar filtro rápido "Solo Sin Guía" si está activo
+                if (window._filtroSoloSinGuia) {
+                    pedidosFiltrados = pedidosFiltrados.filter(p => {
+                        const esRetiro = p.envio && p.envio.toLowerCase().includes('retiro');
+                        if (esRetiro) return false;
+                        const tieneGuia = (p.tracking && p.tracking.trim() !== '' && p.tracking.trim() !== 'Pendiente') ||
+                                          (p.trackingMotorizado && p.trackingMotorizado.trim() !== '' && p.trackingMotorizado.trim() !== 'Pendiente');
+                        return !tieneGuia;
+                    });
+                } else if (filtroMes !== 'todos') {
                     pedidosFiltrados = pedidosFiltrados.filter(p => {
                         if (!p.fecha) return false;
                         const partes = p.fecha.split('/');
@@ -1192,7 +1212,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                 const contador = document.getElementById('pedidos-contador');
 
                 if (pedidosFiltrados.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No hay pedidos en este período.</td></tr>';
+                    const msgVacio = window._filtroSoloSinGuia 
+                        ? '¡Excelente! No hay pedidos pendientes de guía en este momento.' 
+                        : 'No hay pedidos en este período.';
+                    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #64748b; padding: 20px;">${msgVacio}</td></tr>`;
                     if (contador) contador.textContent = '(0 pedidos)';
                     return;
                 }
@@ -1214,16 +1237,31 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                         productosStr = `${ped.cantidad}x ${ped.producto}`;
                     }
 
+                    let tieneGuiaAsignada = false;
                     let trackingHtml = '';
                     if (ped.envio && ped.envio.includes('Motorizado')) {
                         let guiaReal = ped.trackingMotorizado || ped.tracking || 'Pendiente';
+                        if (guiaReal && guiaReal !== 'Pendiente') tieneGuiaAsignada = true;
                         trackingHtml = `<span style="font-size:11px; color:#1d6fa5;">🏍️ Guía Moto: <b>${guiaReal}</b></span><br>`;
                     } else if (ped.envio && ped.envio.includes('Encomienda')) {
+                        const agenciaNombre = ped.agenciaEnvio || 'Tealca/Zoom';
                         if (ped.trackingMotorizado) trackingHtml += `<span style="font-size:11px; color:#1d6fa5;">🏍️ Traslado Agencia: <b>${ped.trackingMotorizado}</b></span><br>`;
-                        if (ped.tracking) trackingHtml += `<span style="font-size:11px; color:#d35400;">📦 Guía Tealca/Zoom: <b>${ped.tracking}</b></span><br>`;
+                        if (ped.tracking) {
+                            tieneGuiaAsignada = true;
+                            trackingHtml += `<span style="font-size:11px; color:#d35400;">📦 Guía ${agenciaNombre}: <b>${ped.tracking}</b></span><br>`;
+                        }
                         if (!ped.tracking && !ped.trackingMotorizado) trackingHtml += `<span style="font-size:11px; color:#999;">Sin guías asignadas</span><br>`;
                     } else {
                         trackingHtml = `<span style="font-size:11px; color:#999;">Sin guía (Retiro en Local)</span><br>`;
+                    }
+
+                    // Botón de acción de Guía (WhatsApp si ya tiene / Asignar si no tiene)
+                    let btnGuiaAccion = '';
+                    const esRetiroLocal = ped.envio && ped.envio.toLowerCase().includes('retiro');
+                    if (tieneGuiaAsignada) {
+                        btnGuiaAccion = `<button type="button" onclick="window.copiarMensajeGuiaPedido('${docId}')" style="background:#25D366; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="📲 Copiar Mensaje de Guía para WhatsApp"><i class="fab fa-whatsapp"></i></button>`;
+                    } else if (!esRetiroLocal) {
+                        btnGuiaAccion = `<button type="button" onclick="window.abrirAsignadorGuiaParaPedido('${docId}')" style="background:#d97706; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="📦 Asignar Guía con Foto o Manual"><i class="fas fa-barcode"></i></button>`;
                     }
 
                     // Badge de cambio/devolución
@@ -1243,6 +1281,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                                 <span class="${badgeClass}" style="margin-top:4px; display:inline-block;">${ped.estado || 'Pendiente'}</span>
                             </td>
                             <td style="display: flex; gap: 5px; justify-content: center; align-items: center; flex-wrap:wrap;">
+                                ${btnGuiaAccion}
                                 <button type="button" onclick="abrirModalPedido('${docId}')" style="background:#1d6fa5; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="Editar Envío"><i class="fas fa-edit"></i></button>
                                 <button type="button" onclick="enviarPedidoAFacturacion('${docId}')" style="background:#28a745; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="Facturar / Nota de Entrega"><i class="fas fa-file-invoice"></i></button>
                                 <button type="button" onclick="imprimirEtiquetaEnvio('${docId}')" style="background:#333; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;" title="Imprimir Etiqueta (58mm)"><i class="fas fa-print"></i></button>
@@ -1257,6 +1296,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                 tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: red;">Error al conectar con la base de datos de pedidos.</td></tr>';
             }
             if (typeof window.cargarSelectorPedidosRuta === 'function') window.cargarSelectorPedidosRuta();
+            if (typeof window.inicializarEventosGuiaDropzone === 'function') window.inicializarEventosGuiaDropzone();
         };
 
         // Forzar recarga limpia (borra caché local)
@@ -1265,6 +1305,921 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
             const sel = document.getElementById('pedidos-mes-filtro');
             if (sel) sel.innerHTML = '';
             window._pedidosTodosCache = null; if(document.getElementById('pedidos-mes-filtro')) document.getElementById('pedidos-mes-filtro').innerHTML = ''; window.cargarPedidos();
+        };
+
+        // =========================================================================
+        // 📦 ASISTENTE INTELIGENTE DE GUÍAS DE ENVÍO (IA VISION & RESOLUCIÓN DE DUDAS)
+        // =========================================================================
+        window._guiaImagenActualBlob = null;
+        window._guiaImagenActualBase64 = null;
+        window._guiaDatosExtraidos = null;
+        window._guiaPedidoSeleccionadoId = null;
+        window._filtroSoloSinGuia = false;
+        window._dropzoneGuiaEventosIniciados = false;
+
+        /**
+         * Alterna el filtro rápido para ver solo pedidos pendientes de guía
+         */
+        window.toggleFiltroPedidosSinGuia = function() {
+            window._filtroSoloSinGuia = !window._filtroSoloSinGuia;
+            const btn = document.getElementById('btn-filtro-sin-guia');
+            if (btn) {
+                if (window._filtroSoloSinGuia) {
+                    btn.style.background = '#b45309';
+                    btn.style.color = '#ffffff';
+                    btn.style.borderColor = '#78350f';
+                } else {
+                    btn.style.background = '#fffbeb';
+                    btn.style.color = '#92400e';
+                    btn.style.borderColor = '#d97706';
+                }
+            }
+            window.cargarPedidos();
+        };
+
+        /**
+         * Manejador al seleccionar archivo de guía desde el input file
+         */
+        window.manejarArchivoGuia = function(event) {
+            const file = event.target?.files?.[0];
+            if (file) window.procesarArchivoGuiaBlob(file, file.name);
+        };
+
+        /**
+         * Carga y previsualiza cualquier Blob / File de imagen (Paste, Drag&Drop o File input)
+         */
+        window.procesarArchivoGuiaBlob = function(blob, filename = 'guia_captura.png') {
+            if (!blob || !blob.type || !blob.type.startsWith('image/')) {
+                alert("Por favor selecciona o pega una imagen válida (PNG, JPG, WEBP).");
+                return;
+            }
+            window._guiaImagenActualBlob = blob;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                window._guiaImagenActualBase64 = e.target.result;
+
+                const dropPrompt = document.getElementById('dropzone-guia-prompt');
+                const dropPreview = document.getElementById('dropzone-guia-preview');
+                const imgEl = document.getElementById('img-preview-guia');
+                const txtName = document.getElementById('txt-nombre-guia-archivo');
+                const txtDim = document.getElementById('txt-dimensiones-guia');
+
+                if (dropPrompt) dropPrompt.style.display = 'none';
+                if (dropPreview) dropPreview.style.display = 'flex';
+                if (imgEl) imgEl.src = window._guiaImagenActualBase64;
+                if (txtName) txtName.textContent = filename;
+                if (txtDim) txtDim.textContent = `Tamaño: ${(blob.size / 1024).toFixed(1)} KB (Listo para analizar)`;
+
+                const statusEl = document.getElementById('status-guia-ia');
+                if (statusEl) {
+                    statusEl.style.display = 'block';
+                    statusEl.style.background = '#eef3f0';
+                    statusEl.style.border = '1px solid #c3e6cb';
+                    statusEl.style.color = '#155724';
+                    statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Imagen cargada. Analizando datos con IA...';
+                }
+
+                // Iniciar análisis automático con IA tras breve retardo UX
+                setTimeout(() => {
+                    window.procesarGuiaEnvioConIA();
+                }, 250);
+            };
+            reader.readAsDataURL(blob);
+        };
+
+        /**
+         * Limpia la zona de subida de guías
+         */
+        window.limpiarZonaGuiaIA = function() {
+            window._guiaImagenActualBlob = null;
+            window._guiaImagenActualBase64 = null;
+            window._guiaDatosExtraidos = null;
+            window._guiaPedidoSeleccionadoId = null;
+
+            const input = document.getElementById('input-guia-file');
+            if (input) input.value = '';
+
+            const dropPrompt = document.getElementById('dropzone-guia-prompt');
+            const dropPreview = document.getElementById('dropzone-guia-preview');
+            const statusEl = document.getElementById('status-guia-ia');
+
+            if (dropPrompt) dropPrompt.style.display = 'flex';
+            if (dropPreview) dropPreview.style.display = 'none';
+            if (statusEl) {
+                statusEl.style.display = 'none';
+                statusEl.innerHTML = '';
+            }
+        };
+
+        /**
+         * Inicializa eventos Drag & Drop y Paste global para guías
+         */
+        window.inicializarEventosGuiaDropzone = function() {
+            if (window._dropzoneGuiaEventosIniciados) return;
+            window._dropzoneGuiaEventosIniciados = true;
+
+            const dropzone = document.getElementById('dropzone-guia-envio');
+            if (dropzone) {
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    dropzone.addEventListener(eventName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        dropzone.style.borderColor = '#385723';
+                        dropzone.style.background = '#eef3f0';
+                    }, false);
+                });
+
+                ['dragleave', 'drop'].forEach(eventName => {
+                    dropzone.addEventListener(eventName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        dropzone.style.borderColor = '#a3c2b2';
+                        dropzone.style.background = '#ffffff';
+                    }, false);
+                });
+
+                dropzone.addEventListener('drop', (e) => {
+                    const dt = e.dataTransfer;
+                    const files = dt?.files;
+                    if (files && files.length > 0) {
+                        window.procesarArchivoGuiaBlob(files[0], files[0].name);
+                    }
+                }, false);
+            }
+
+            // Escuchador global de pegar imágenes (Ctrl+V / Cmd+V)
+            window.addEventListener('paste', (e) => {
+                const tabPedidos = document.getElementById('tab-pedidos');
+                const modalGuia = document.getElementById('modal-aclaracion-guia');
+                const isTabActive = tabPedidos && (tabPedidos.style.display === 'block' || tabPedidos.classList.contains('active'));
+                const isModalOpen = modalGuia && modalGuia.style.display === 'flex';
+
+                if (!isTabActive && !isModalOpen) return;
+
+                const items = (e.clipboardData || e.originalEvent?.clipboardData)?.items;
+                if (!items) return;
+
+                for (const item of items) {
+                    if (item.type && item.type.indexOf('image') !== -1) {
+                        const blob = item.getAsFile();
+                        if (blob) {
+                            e.preventDefault();
+                            window.procesarArchivoGuiaBlob(blob, 'guia_pegada_' + Date.now() + '.png');
+                            break;
+                        }
+                    }
+                }
+            });
+        };
+
+        /**
+         * Extracción con IA Multimodal (Puter AI + Fallback Gemini)
+         */
+        window.procesarGuiaEnvioConIA = async function(preselectedDocId = null) {
+            if (!window._guiaImagenActualBase64) {
+                alert("Por favor sube o pega una foto de la guía primero.");
+                return;
+            }
+
+            const btnAnalizar = document.getElementById('btn-analizar-guia-ia');
+            const statusEl = document.getElementById('status-guia-ia');
+
+            if (btnAnalizar) {
+                btnAnalizar.disabled = true;
+                btnAnalizar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Leyendo con IA...';
+            }
+
+            if (statusEl) {
+                statusEl.style.display = 'block';
+                statusEl.style.background = '#eef3f0';
+                statusEl.style.border = '1px solid #5e8877';
+                statusEl.style.color = '#2c441b';
+                statusEl.innerHTML = '<i class="fas fa-robot fa-spin"></i> Analizando guía de despacho (Tealca, Zoom, MRW o Motorizado)...';
+            }
+
+            const promptIA = `Eres un asistente de logística y despacho para "Inversiones FB Parts, C.A." en Caracas, Venezuela.
+Analiza minuciosamente esta imagen de una GUÍA DE ENVÍO o COMPROBANTE DE DESPACHO (Tealca, Grupo Zoom, MRW, Motorizado u otra).
+
+Extrae los datos y responde ÚNICAMENTE con un objeto JSON estricto (sin explicaciones ni formato markdown):
+{
+  "numero_guia": "STRING_NUMERO_DE_GUIA_O_NULL",
+  "agencia_detectada": "Tealca" | "Zoom" | "MRW" | "Motorizado" | "Otra" | null,
+  "cliente_o_destinatario": "NOMBRE_DESTINATARIO_O_CLIENTE_O_NULL",
+  "destino_ciudad": "CIUDAD_O_DESTINO_O_NULL",
+  "confianza": "alta" | "media" | "baja",
+  "dudas": [
+    "DESCRIBE_CADA_DUDA_O_AMBIGUEDAD_SI_EXISTE"
+  ]
+}
+
+REGLAS CRÍTICAS:
+1. "agencia_detectada":
+   - "Tealca": si dice Tealca, tracking de 8 a 10 dígitos.
+   - "Zoom": si dice Zoom o Grupo Zoom.
+   - "MRW": si dice MRW.
+   - "Motorizado": si es una nota de entrega en moto, recibo o guía local interna con código tipo MOT-XXXX o despacho en Caracas.
+   - "Otra": si es otra empresa de transporte (ej. Liberty Express, Domesa, Fletes GAG).
+2. "numero_guia": número de rastreo o guía principal. Elimina letras si es estrictamente numérico o consérvalas si el código es alfanumérico.
+3. "cliente_o_destinatario": nombre de la persona o razón social que RECIBE el envío.
+4. "destino_ciudad": ciudad destino (ej: Valencia, Maracay, Barquisimeto, Puerto La Cruz, Caracas, etc.).
+5. "confianza":
+   - "alta": la agencia y el número de guía son 100% nítidos, legibles e inequívocos.
+   - "media": se detecta la guía pero la agencia es ambigua o algún dígito genera dudas.
+   - "baja": la foto es borrosa, ilegible, cortada o no parece una guía de envío.
+6. "dudas": array de strings en español indicando motivos específicos de incertidumbre (ej: "No se distingue con claridad si es Zoom o MRW", "Número de guía con posible confusión entre 0 y O"). Si todo es claro, devuelve [] vacío.`;
+
+            let dataExtraida = null;
+            let errorMsg = null;
+
+            try {
+                if (typeof puter !== 'undefined' && puter.ai) {
+                    try {
+                        const resp = await puter.ai.chat(promptIA, window._guiaImagenActualBase64, { model: 'gemini-2.0-flash' });
+                        dataExtraida = window.parsearJSONRespuestaGuia(resp);
+                    } catch (eModel) {
+                        try {
+                            const resp = await puter.ai.chat(promptIA, window._guiaImagenActualBase64);
+                            dataExtraida = window.parsearJSONRespuestaGuia(resp);
+                        } catch (ePuterDef) {
+                            console.warn("Fallo Puter AI, intentando Gemini directo si hay clave...", ePuterDef);
+                        }
+                    }
+                }
+
+                // Fallback directo a Gemini API si Puter no respondió
+                if (!dataExtraida) {
+                    const geminiKey = window.obtenerApiKeyGemini ? window.obtenerApiKeyGemini(false) : '';
+                    if (geminiKey) {
+                        const base64Data = window._guiaImagenActualBase64.split(',')[1];
+                        const mimeType = window._guiaImagenActualBase64.substring(
+                            window._guiaImagenActualBase64.indexOf(':') + 1, 
+                            window._guiaImagenActualBase64.indexOf(';')
+                        ) || 'image/jpeg';
+
+                        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`;
+                        const gResp = await fetch(url, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                contents: [{
+                                    parts: [
+                                        { text: promptIA },
+                                        { inline_data: { mime_type: mimeType, data: base64Data } }
+                                    ]
+                                }],
+                                generationConfig: { temperature: 0.1, maxOutputTokens: 1024 }
+                            })
+                        });
+
+                        if (gResp.ok) {
+                            const gData = await gResp.json();
+                            const rawText = gData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                            dataExtraida = window.parsearJSONRespuestaGuia(rawText);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Error al procesar guía con IA:", err);
+                errorMsg = err.message || String(err);
+            }
+
+            if (btnAnalizar) {
+                btnAnalizar.disabled = false;
+                btnAnalizar.innerHTML = '<i class="fas fa-bolt"></i> Analizar con IA';
+            }
+
+            // Si falló por completo la IA o la imagen no se pudo procesar
+            if (!dataExtraida) {
+                dataExtraida = {
+                    numero_guia: "",
+                    agencia_detectada: null,
+                    cliente_o_destinatario: null,
+                    destino_ciudad: null,
+                    confianza: "baja",
+                    dudas: [
+                        errorMsg 
+                            ? `No se pudo conectar con el servicio de IA (${errorMsg}). Puedes ingresar los datos manualmente.`
+                            : "No se pudo extraer información automática de la imagen. Por favor ingresa los datos de la guía manualmente."
+                    ]
+                };
+            }
+
+            if (!Array.isArray(dataExtraida.dudas)) dataExtraida.dudas = [];
+            if (!dataExtraida.confianza) dataExtraida.confianza = "media";
+
+            // Validar agencia conocida
+            const agenciasValidas = ['Tealca', 'Zoom', 'MRW', 'Motorizado', 'Otra'];
+            if (!agenciasValidas.includes(dataExtraida.agencia_detectada)) {
+                if (dataExtraida.agencia_detectada) {
+                    dataExtraida.dudas.push(`Agencia "${dataExtraida.agencia_detectada}" no habitual. Confirma si es Tealca, Zoom, MRW o Motorizado.`);
+                }
+                dataExtraida.agencia_detectada = 'Tealca';
+            }
+
+            window._guiaDatosExtraidos = dataExtraida;
+
+            // Buscar pedidos candidatos en la base de datos local
+            const candidatos = window.buscarPedidosCandidatosGuia(dataExtraida, preselectedDocId);
+
+            // Regla de dudas estricta: Notificar ambigüedades en pedidos
+            if (candidatos.length > 1) {
+                dataExtraida.dudas.push(`Existen ${candidatos.length} pedidos activos que podrían coincidir. Por favor selecciona el correcto.`);
+            } else if (candidatos.length === 0 && !preselectedDocId) {
+                dataExtraida.dudas.push("No se encontró ningún pedido pendiente que coincida automáticamente. Selecciona el pedido manualmente.");
+            }
+
+            if (statusEl) {
+                statusEl.style.display = 'block';
+                if (dataExtraida.dudas.length > 0 || dataExtraida.confianza !== 'alta') {
+                    statusEl.style.background = '#fffbeb';
+                    statusEl.style.border = '1px solid #fde68a';
+                    statusEl.style.color = '#b45309';
+                    statusEl.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <b>Guía analizada con dudas/observaciones:</b> Se requiere confirmación del operador antes de vincular.`;
+                } else {
+                    statusEl.style.background = '#f0fdf4';
+                    statusEl.style.border = '1px solid #bbf7d0';
+                    statusEl.style.color = '#166534';
+                    statusEl.innerHTML = `<i class="fas fa-check-circle"></i> <b>Guía detectada:</b> Número <b>${dataExtraida.numero_guia || 'Pendiente'}</b> (${dataExtraida.agencia_detectada}) con alta confianza.`;
+                }
+            }
+
+            // Abrir modal de aclaración y confirmación
+            window.abrirModalAclaracionGuia(dataExtraida, candidatos, preselectedDocId);
+        };
+
+        /**
+         * Parsea tolerante el JSON devuelto por la IA
+         */
+        window.parsearJSONRespuestaGuia = function(rawResp) {
+            if (!rawResp) return null;
+            let rawStr = '';
+            if (typeof rawResp === 'string') rawStr = rawResp;
+            else if (rawResp?.message?.content) {
+                const c = rawResp.message.content;
+                rawStr = Array.isArray(c) ? c.map(b => b.text || b).join('') : String(c);
+            } else if (rawResp?.text) {
+                rawStr = String(rawResp.text);
+            }
+
+            const jsonMatch = rawStr.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) return null;
+            try {
+                return JSON.parse(jsonMatch[0]);
+            } catch (e) {
+                console.warn("Error parseando JSON de guía:", e);
+                return null;
+            }
+        };
+
+        /**
+         * Algoritmo de emparejamiento inteligente de candidatos
+         */
+        window.buscarPedidosCandidatosGuia = function(datosGuia, preselectedDocId = null) {
+            const pedidos = window._pedidosTodosCache || [];
+            if (pedidos.length === 0) return [];
+
+            const norm = (str) => (str || '')
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9\s]/g, ' ')
+                .trim();
+
+            const targetCliente = norm(datosGuia.cliente_o_destinatario);
+            const targetCiudad = norm(datosGuia.destino_ciudad);
+            const targetAgencia = (datosGuia.agencia_detectada || '').toLowerCase();
+            const targetGuiaNum = (datosGuia.numero_guia || '').trim();
+
+            const candidatos = [];
+
+            pedidos.forEach(p => {
+                let score = 0;
+                const razonCoincidencia = [];
+
+                if (preselectedDocId && p.id === preselectedDocId) {
+                    score += 1000;
+                    razonCoincidencia.push("Seleccionado directamente en la tabla");
+                }
+
+                const pedCliente = norm(p.cliente);
+                const pedEnvio = norm(p.envio);
+                const pedRuta = norm(p.rutasMotorizado);
+
+                // 1. Coincidencia de Nombre
+                if (targetCliente && targetCliente.length >= 3) {
+                    if (pedCliente === targetCliente) {
+                        score += 80;
+                        razonCoincidencia.push("Nombre exacto");
+                    } else if (pedCliente.includes(targetCliente) || targetCliente.includes(pedCliente)) {
+                        score += 60;
+                        razonCoincidencia.push("Coincidencia de nombre");
+                    } else {
+                        const tokensTarget = targetCliente.split(/\s+/).filter(t => t.length > 2);
+                        const tokensPed = pedCliente.split(/\s+/).filter(t => t.length > 2);
+                        let matchesTokens = 0;
+                        tokensTarget.forEach(t => {
+                            if (tokensPed.includes(t)) matchesTokens++;
+                        });
+                        if (matchesTokens > 0) {
+                            score += matchesTokens * 25;
+                            razonCoincidencia.push(`${matchesTokens} palabra(s) del nombre coinciden`);
+                        }
+                    }
+                }
+
+                // 2. Coincidencia de Ciudad / Destino
+                if (targetCiudad && targetCiudad.length >= 3) {
+                    if (pedRuta.includes(targetCiudad) || pedCliente.includes(targetCiudad)) {
+                        score += 35;
+                        razonCoincidencia.push(`Destino coincide (${datosGuia.destino_ciudad})`);
+                    }
+                }
+
+                // 3. Coincidencia de Agencia
+                if (targetAgencia) {
+                    if (targetAgencia === 'motorizado' && pedEnvio.includes('motorizado')) {
+                        score += 25;
+                        razonCoincidencia.push("Método Motorizado");
+                    } else if (['tealca', 'zoom', 'mrw'].includes(targetAgencia) && (pedEnvio.includes('encomienda') || pedEnvio.includes(targetAgencia))) {
+                        score += 25;
+                        razonCoincidencia.push(`Envío encomienda (${targetAgencia})`);
+                    }
+                }
+
+                // 4. Estado de la guía: Los pedidos que NO tienen guía tienen prioridad
+                const tieneGuia = (p.tracking && p.tracking.trim() !== '' && p.tracking.trim() !== 'Pendiente') ||
+                                  (p.trackingMotorizado && p.trackingMotorizado.trim() !== '' && p.trackingMotorizado.trim() !== 'Pendiente');
+
+                if (!tieneGuia && (!p.envio || !p.envio.includes('Retiro'))) {
+                    score += 30;
+                    razonCoincidencia.push("Pedido pendiente de guía");
+                } else if (tieneGuia && targetGuiaNum && (p.tracking === targetGuiaNum || p.trackingMotorizado === targetGuiaNum)) {
+                    score += 150;
+                    razonCoincidencia.push("Ya tiene este número de guía registrado");
+                }
+
+                if (score >= 35) {
+                    candidatos.push({
+                        pedido: p,
+                        score: score,
+                        razon: razonCoincidencia.join(" • ")
+                    });
+                }
+            });
+
+            candidatos.sort((a, b) => b.score - a.score);
+            return candidatos;
+        };
+
+        /**
+         * Abre y renderiza el modal de aclaración de dudas y vinculación de guía
+         */
+        window.abrirModalAclaracionGuia = function(datosGuia, candidatos, preselectedDocId = null) {
+            const modal = document.getElementById('modal-aclaracion-guia');
+            if (!modal) return;
+
+            // Miniatura
+            const imgEl = document.getElementById('modal-guia-img-preview');
+            if (imgEl && window._guiaImagenActualBase64) {
+                imgEl.src = window._guiaImagenActualBase64;
+            }
+
+            // Badge de Confianza
+            const badgeConfianza = document.getElementById('modal-guia-badge-confianza');
+            if (badgeConfianza) {
+                const conf = (datosGuia.confianza || 'media').toLowerCase();
+                if (conf === 'alta') {
+                    badgeConfianza.textContent = 'Confianza: Alta';
+                    badgeConfianza.style.background = '#dcfce7';
+                    badgeConfianza.style.color = '#15803d';
+                } else if (conf === 'media') {
+                    badgeConfianza.textContent = 'Confianza: Media';
+                    badgeConfianza.style.background = '#fef9c3';
+                    badgeConfianza.style.color = '#854d0e';
+                } else {
+                    badgeConfianza.textContent = 'Confianza: Baja / Manual';
+                    badgeConfianza.style.background = '#fee2e2';
+                    badgeConfianza.style.color = '#b91c1c';
+                }
+            }
+
+            // Box de Dudas
+            const dudasBox = document.getElementById('modal-guia-dudas-box');
+            const dudasLista = document.getElementById('modal-guia-dudas-lista');
+            const okBox = document.getElementById('modal-guia-ok-box');
+
+            if (datosGuia.dudas && datosGuia.dudas.length > 0) {
+                if (dudasBox) dudasBox.style.display = 'block';
+                if (okBox) okBox.style.display = 'none';
+                if (dudasLista) {
+                    dudasLista.innerHTML = datosGuia.dudas.map(d => `<li>${SecuritySanitizer.escapeHtml(d)}</li>`).join('');
+                }
+            } else {
+                if (dudasBox) dudasBox.style.display = 'none';
+                if (okBox) okBox.style.display = 'flex';
+            }
+
+            // Valores de inputs
+            const numInput = document.getElementById('modal-guia-numero-val');
+            if (numInput) numInput.value = datosGuia.numero_guia || '';
+
+            const destInput = document.getElementById('modal-guia-destinatario-val');
+            if (destInput) destInput.value = datosGuia.cliente_o_destinatario || '';
+
+            const ciudadInput = document.getElementById('modal-guia-ciudad-val');
+            if (ciudadInput) ciudadInput.value = datosGuia.destino_ciudad || '';
+
+            // Agencia seleccionada
+            window.seleccionarAgenciaModalGuia(datosGuia.agencia_detectada || 'Tealca');
+
+            // Renderizar candidatos
+            const containerCandidatos = document.getElementById('modal-guia-candidatos-lista');
+            const countEl = document.getElementById('modal-guia-candidatos-count');
+
+            if (countEl) {
+                countEl.textContent = `${candidatos.length} candidato${candidatos.length !== 1 ? 's' : ''}`;
+            }
+
+            let defaultDocId = preselectedDocId;
+
+            if (containerCandidatos) {
+                containerCandidatos.innerHTML = '';
+
+                if (candidatos.length === 0) {
+                    containerCandidatos.innerHTML = `
+                        <div style="background: #fff; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 14px; text-align: center; color: #64748b; font-size: 12px;">
+                            <i class="fas fa-search" style="font-size: 18px; margin-bottom: 6px; display: block; color: #94a3b8;"></i>
+                            No se detectó un pedido coincidente automáticamente.<br>
+                            Por favor selecciona el pedido en el menú desplegable inferior.
+                        </div>
+                    `;
+                } else {
+                    if (!defaultDocId && candidatos.length > 0) {
+                        defaultDocId = candidatos[0].pedido.id;
+                    }
+
+                    candidatos.forEach((cand) => {
+                        const ped = cand.pedido;
+                        const isSelected = ped.id === defaultDocId;
+                        const prodsAbrev = Array.isArray(ped.productos) 
+                            ? ped.productos.map(p => `${p.cantidad}x ${p.nombre}`).join(', ') 
+                            : (ped.producto || 'Productos varios');
+
+                        const card = document.createElement('div');
+                        card.id = `cand-card-${ped.id}`;
+                        card.className = `cand-card-pedido ${isSelected ? 'active' : ''}`;
+                        card.style.cssText = `
+                            background: ${isSelected ? '#eef3f0' : '#ffffff'};
+                            border: 1.5px solid ${isSelected ? '#385723' : '#cbd5e1'};
+                            border-radius: 6px;
+                            padding: 10px 12px;
+                            cursor: pointer;
+                            transition: all 0.15s ease;
+                            position: relative;
+                        `;
+                        card.onclick = () => window.seleccionarPedidoCandidatoGuia(ped.id);
+
+                        card.innerHTML = `
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="radio" name="radio-guia-pedido" value="${ped.id}" ${isSelected ? 'checked' : ''} style="accent-color: #385723; cursor: pointer;">
+                                    <span style="font-weight: 800; font-size: 13px; color: #1e293b;">
+                                        ${ped.cliente || 'Sin nombre'}
+                                    </span>
+                                </div>
+                                <span style="font-family: 'Oswald', sans-serif; font-weight: 700; color: #385723; font-size: 13.5px;">
+                                    $${Number(ped.total || 0).toFixed(2)}
+                                </span>
+                            </div>
+                            <div style="font-size: 11px; color: #64748b; margin: 3px 0 2px 22px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                ${SecuritySanitizer.escapeHtml(prodsAbrev)}
+                            </div>
+                            <div style="display: flex; gap: 6px; align-items: center; margin-top: 4px; margin-left: 22px; flex-wrap: wrap;">
+                                <span style="font-size: 10px; background: #e2f0d9; color: #276738; padding: 1px 6px; border-radius: 4px; font-weight: 600;">
+                                    ${ped.fecha || 'N/A'} • ${ped.envio || 'Envío'}
+                                </span>
+                                <span style="font-size: 10px; color: #b45309; font-weight: 700;">
+                                    ${cand.razon}
+                                </span>
+                            </div>
+                        `;
+                        containerCandidatos.appendChild(card);
+                    });
+                }
+            }
+
+            // Poblar selector manual con todos los pedidos activos
+            const selManual = document.getElementById('modal-guia-selector-manual-pedido');
+            if (selManual) {
+                selManual.innerHTML = '<option value="">-- Elige un pedido del sistema --</option>';
+                const todos = [...(window._pedidosTodosCache || [])].sort((a,b) => (b.fecha || '').localeCompare(a.fecha || ''));
+                todos.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = `${p.fecha || ''} | ${p.cliente || 'Sin nombre'} - $${Number(p.total||0).toFixed(2)} (${p.envio || 'Envío'})`;
+                    if (p.id === defaultDocId) opt.selected = true;
+                    selManual.appendChild(opt);
+                });
+            }
+
+            window._guiaPedidoSeleccionadoId = defaultDocId;
+
+            // Mostrar botón de copiar mensaje si ya está asignado o preseleccionado
+            const btnCopiar = document.getElementById('btn-copiar-msg-modal-guia');
+            if (btnCopiar) {
+                btnCopiar.style.display = defaultDocId ? 'inline-flex' : 'none';
+            }
+
+            modal.style.display = 'flex';
+        };
+
+        /**
+         * Selecciona agencia en el modal de guía
+         */
+        window.seleccionarAgenciaModalGuia = function(agencia) {
+            const valInput = document.getElementById('modal-guia-agencia-val');
+            if (valInput) valInput.value = agencia;
+
+            const buttons = document.querySelectorAll('.btn-toggle-agencia');
+            buttons.forEach(btn => {
+                if (btn.getAttribute('data-agencia').toLowerCase() === (agencia || '').toLowerCase()) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        };
+
+        /**
+         * Selecciona un pedido candidato desde su tarjeta
+         */
+        window.seleccionarPedidoCandidatoGuia = function(docId) {
+            window._guiaPedidoSeleccionadoId = docId;
+            const cards = document.querySelectorAll('.cand-card-pedido');
+            cards.forEach(c => {
+                const isMatch = (c.id === `cand-card-${docId}`);
+                c.style.background = isMatch ? '#eef3f0' : '#ffffff';
+                c.style.borderColor = isMatch ? '#385723' : '#cbd5e1';
+                const radio = c.querySelector('input[type="radio"]');
+                if (radio) radio.checked = isMatch;
+            });
+
+            const selManual = document.getElementById('modal-guia-selector-manual-pedido');
+            if (selManual) selManual.value = docId;
+
+            const btnCopiar = document.getElementById('btn-copiar-msg-modal-guia');
+            if (btnCopiar) btnCopiar.style.display = docId ? 'inline-flex' : 'none';
+        };
+
+        /**
+         * Selecciona un pedido desde el menú desplegable manual
+         */
+        window.cambiarPedidoManualModalGuia = function(docId) {
+            window._guiaPedidoSeleccionadoId = docId;
+            const cards = document.querySelectorAll('.cand-card-pedido');
+            cards.forEach(c => {
+                const isMatch = (c.id === `cand-card-${docId}`);
+                c.style.background = isMatch ? '#eef3f0' : '#ffffff';
+                c.style.borderColor = isMatch ? '#385723' : '#cbd5e1';
+                const radio = c.querySelector('input[type="radio"]');
+                if (radio) radio.checked = isMatch;
+            });
+
+            const btnCopiar = document.getElementById('btn-copiar-msg-modal-guia');
+            if (btnCopiar) btnCopiar.style.display = docId ? 'inline-flex' : 'none';
+        };
+
+        /**
+         * Cierra el modal de aclaración de guía
+         */
+        window.cerrarModalAclaracionGuia = function() {
+            const modal = document.getElementById('modal-aclaracion-guia');
+            if (modal) modal.style.display = 'none';
+        };
+
+        /**
+         * Confirma y guarda la guía y agencia en Firestore
+         */
+        window.confirmarAsignacionGuia = async function() {
+            const docId = window._guiaPedidoSeleccionadoId || document.getElementById('modal-guia-selector-manual-pedido')?.value;
+            if (!docId) {
+                alert("Por favor selecciona el pedido al cual deseas asignar la guía.");
+                return;
+            }
+
+            const numeroGuia = (document.getElementById('modal-guia-numero-val')?.value || '').trim();
+            if (!numeroGuia) {
+                alert("Por favor ingresa o confirma el número de guía.");
+                document.getElementById('modal-guia-numero-val')?.focus();
+                return;
+            }
+
+            const agencia = document.getElementById('modal-guia-agencia-val')?.value || 'Tealca';
+            const pedOriginal = (window.pedidosDBLocal && window.pedidosDBLocal[docId]) || {};
+
+            const btn = document.getElementById('btn-guardar-asignacion-guia');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+            }
+
+            const updateData = {
+                ultimaGuiaAsignada: numeroGuia,
+                agenciaEnvio: agencia,
+                fechaGuia: new Date().toLocaleDateString('es-VE'),
+                fechaActualizacionGuia: new Date().toISOString()
+            };
+
+            if (agencia === 'Motorizado') {
+                updateData.trackingMotorizado = numeroGuia;
+                if (!pedOriginal.envio || !pedOriginal.envio.includes('Motorizado')) {
+                    updateData.envio = 'Motorizado Caracas';
+                }
+            } else {
+                updateData.tracking = numeroGuia;
+                if (!pedOriginal.envio || pedOriginal.envio.includes('Retiro')) {
+                    updateData.envio = `Encomienda ${agencia}`;
+                }
+            }
+
+            // Si estaba Pendiente o Procesando, actualizar a Despachado
+            if (!pedOriginal.estado || pedOriginal.estado === 'Pendiente' || pedOriginal.estado === 'Procesando') {
+                updateData.estado = 'Despachado';
+            }
+
+            try {
+                await updateDoc(doc(db, "pedidos", docId), updateData);
+
+                // Actualizar en memoria local
+                if (window.pedidosDBLocal && window.pedidosDBLocal[docId]) {
+                    Object.assign(window.pedidosDBLocal[docId], updateData);
+                }
+                if (window._pedidosTodosCache) {
+                    const idx = window._pedidosTodosCache.findIndex(p => p.id === docId);
+                    if (idx !== -1) Object.assign(window._pedidosTodosCache[idx], updateData);
+                }
+
+                window.cerrarModalAclaracionGuia();
+                window.limpiarZonaGuiaIA();
+
+                // Recargar tabla de pedidos
+                await window.cargarPedidos();
+
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Guía Asignada Exitosamente!',
+                        html: `Se vinculó la guía <b>${numeroGuia}</b> (${agencia}) al pedido de <b>${pedOriginal.cliente || 'Cliente'}</b>.<br><br>¿Deseas copiar el mensaje de notificación para el cliente?`,
+                        showCancelButton: true,
+                        confirmButtonText: '<i class="fab fa-whatsapp"></i> Copiar Mensaje WhatsApp',
+                        cancelButtonText: 'Listo, cerrar',
+                        confirmButtonColor: '#25D366',
+                        cancelButtonColor: '#385723'
+                    }).then(result => {
+                        if (result.isConfirmed) {
+                            window.copiarMensajeGuiaPedido(docId);
+                        }
+                    });
+                } else {
+                    alert(`¡Guía ${numeroGuia} asignada con éxito al pedido de ${pedOriginal.cliente}!`);
+                }
+            } catch (e) {
+                console.error("Error al guardar guía:", e);
+                alert("Ocurrió un error al guardar la guía en Firebase: " + (e.message || String(e)));
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-check"></i> Confirmar y Guardar Guía';
+                }
+            }
+        };
+
+        /**
+         * Abre el asignador de guía enfocado en un pedido específico desde su fila
+         */
+        window.abrirAsignadorGuiaParaPedido = function(docId) {
+            const ped = window.pedidosDBLocal ? window.pedidosDBLocal[docId] : null;
+            if (!ped) return;
+
+            if (window._guiaImagenActualBase64) {
+                window.procesarGuiaEnvioConIA(docId);
+            } else {
+                const dropzone = document.getElementById('dropzone-guia-envio');
+                if (dropzone) {
+                    dropzone.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    dropzone.style.borderColor = '#385723';
+                    dropzone.style.background = '#eef3f0';
+                    setTimeout(() => {
+                        dropzone.style.borderColor = '#a3c2b2';
+                        dropzone.style.background = '#ffffff';
+                    }, 1400);
+                }
+
+                // Abrir modal con datos iniciales para edición/ingreso manual
+                const datosGuiaManual = {
+                    numero_guia: ped.tracking || ped.trackingMotorizado || '',
+                    agencia_detectada: ped.envio?.includes('Zoom') ? 'Zoom' : (ped.envio?.includes('MRW') ? 'MRW' : (ped.envio?.includes('Motorizado') ? 'Motorizado' : 'Tealca')),
+                    cliente_o_destinatario: ped.cliente || '',
+                    destino_ciudad: ped.rutasMotorizado || '',
+                    confianza: "alta",
+                    dudas: []
+                };
+                const candidatos = [{
+                    pedido: ped,
+                    score: 1000,
+                    razon: "Pedido seleccionado directamente"
+                }];
+                window.abrirModalAclaracionGuia(datosGuiaManual, candidatos, docId);
+            }
+        };
+
+        /**
+         * Genera el texto formal del mensaje de despacho
+         */
+        window.generarTextoMensajeGuia = function(ped) {
+            if (!ped) return '';
+            const cliente = ped.cliente || 'Estimado cliente';
+            const agencia = ped.agenciaEnvio || (ped.envio?.includes('Motorizado') ? 'Motorizado (Caracas)' : 'Encomienda Nacional');
+            const guia = ped.tracking || ped.trackingMotorizado || 'Pendiente';
+            const fecha = ped.fechaGuia || ped.fecha || new Date().toLocaleDateString('es-VE');
+            const destino = ped.rutasMotorizado || 'Dirección acordada';
+
+            return `Estimado/a *${cliente}*, un saludo cordial de parte del equipo de *Inversiones FB Parts*. 🚗⚙️\n\n` +
+                   `Le notificamos que su pedido ha sido *despachado con éxito*:\n\n` +
+                   `📦 *Empresa / Transporte:* ${agencia}\n` +
+                   `🔢 *Número de Guía:* ${guia}\n` +
+                   `📅 *Fecha de Despacho:* ${fecha}\n` +
+                   (destino && destino !== 'Dirección acordada' ? `📍 *Destino:* ${destino}\n\n` : `\n`) +
+                   `Puede realizar el seguimiento en línea en la página oficial de la encomienda utilizando su número de guía.\n\n` +
+                   `¡Muchas gracias por su confianza y preferencia! 🤝`;
+        };
+
+        /**
+         * Copia el mensaje formal con guía al portapapeles
+         */
+        window.copiarMensajeGuiaPedido = async function(docId) {
+            const ped = window.pedidosDBLocal ? window.pedidosDBLocal[docId] : null;
+            if (!ped) {
+                alert("Pedido no encontrado.");
+                return;
+            }
+            const texto = window.generarTextoMensajeGuia(ped);
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(texto);
+                } else {
+                    const ta = document.createElement('textarea');
+                    ta.value = texto;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                }
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Mensaje Copiado!',
+                        html: `El mensaje con los datos de la guía para <b>${ped.cliente}</b> ha sido copiado al portapapeles.<br><br><pre style="text-align:left; background:#f1f5f9; padding:10px; border-radius:6px; font-size:11px; white-space:pre-wrap; max-height:160px; overflow-y:auto;">${texto}</pre>`,
+                        confirmButtonColor: '#385723'
+                    });
+                } else {
+                    alert("¡Mensaje copiado al portapapeles!");
+                }
+            } catch (e) {
+                console.error("Error al copiar mensaje:", e);
+                prompt("Copia el siguiente mensaje para el cliente:", texto);
+            }
+        };
+
+        /**
+         * Copia el mensaje desde dentro del modal antes de cerrar
+         */
+        window.copiarMensajePreAsignadoModal = function() {
+            const docId = window._guiaPedidoSeleccionadoId;
+            if (docId) {
+                window.copiarMensajeGuiaPedido(docId);
+            } else {
+                alert("Selecciona primero un pedido.");
+            }
+        };
+
+        /**
+         * Abre un visor ampliado de la imagen de la guía
+         */
+        window.abrirVisorImagenGuia = function(src) {
+            if (!src) return;
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    imageUrl: src,
+                    imageAlt: 'Guía de Envío',
+                    showConfirmButton: false,
+                    showCloseButton: true,
+                    background: '#ffffff',
+                    width: '85vw'
+                });
+            } else {
+                window.open(src, '_blank');
+            }
         };
 
 
