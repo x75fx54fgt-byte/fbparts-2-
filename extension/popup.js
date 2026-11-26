@@ -33,16 +33,19 @@ const switchAutoCheck = document.getElementById('switch-auto-check');
 const feedListItems = document.getElementById('feed-list-items');
 const txtUltimaHoraRevision = document.getElementById('txt-ultima-hora-revision');
 const txtTotalPendientes = document.getElementById('txt-total-pendientes');
+const txtTotalInternacional = document.getElementById('txt-total-internacional');
 const btnForzarReset = document.getElementById('btn-forzar-reset');
 
-// Contadores de agencias
+// Contadores de agencias (Nacionales e Internacionales)
 const countsEl = {
     handling: document.getElementById('count-handling'),
     intercargo: document.getElementById('count-intercargo'),
     rlu: document.getElementById('count-rlu'),
     zoom: document.getElementById('count-zoom'),
     tealca: document.getElementById('count-tealca'),
-    mrw: document.getElementById('count-mrw')
+    mrw: document.getElementById('count-mrw'),
+    ups: document.getElementById('count-ups'),
+    dhl: document.getElementById('count-dhl')
 };
 
 // =========================================================================
@@ -58,13 +61,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function cargarEstadoBackground() {
     try {
-        const respuesta = await chrome.runtime.sendMessage({ tipo: 'OBTENER_ESTADO' });
+        const respuesta = await Promise.race([
+            chrome.runtime.sendMessage({ tipo: 'OBTENER_ESTADO' }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout SW')), 700))
+        ]);
         if (respuesta) {
             _estadoActual = respuesta;
             actualizarUIConEstado();
         }
     } catch (e) {
-        console.warn("No se pudo obtener estado de background:", e);
+        console.warn("No se pudo obtener estado de background, reseteando estado local:", e);
+        _estadoActual.enProgreso = false;
+        await chrome.storage.local.set({ enProgreso: false });
+        actualizarUIConEstado();
     }
 }
 
@@ -74,6 +83,7 @@ function actualizarUIConEstado() {
         btnToggleRastreo.classList.add('btn-action-cancel');
         btnIcon.textContent = '⏹';
         btnLabel.textContent = 'Detener Rastreo';
+        btnToggleRastreo.disabled = false;
         dotLiveStatus.style.background = '#eab308';
         if (!labelLiveStatus.textContent || labelLiveStatus.textContent === 'Listo para rastrear') {
             labelLiveStatus.textContent = 'Rastreo en progreso...';
@@ -82,6 +92,7 @@ function actualizarUIConEstado() {
         btnToggleRastreo.classList.remove('btn-action-cancel');
         btnIcon.textContent = '🚀';
         btnLabel.textContent = 'Revisar Guías Ahora';
+        btnToggleRastreo.disabled = false;
         dotLiveStatus.style.background = '#94a3b8';
         labelLiveStatus.textContent = 'Listo para rastrear';
         barProgresoFill.style.width = '0%';
@@ -121,9 +132,12 @@ async function cargarContadoresAgencias() {
             rlu: 0,
             zoom: 0,
             tealca: 0,
-            mrw: 0
+            mrw: 0,
+            ups: 0,
+            dhl: 0
         };
-        let granTotal = 0;
+        let totalNacionales = 0;
+        let totalInternacional = 0;
 
         docs.forEach(doc => {
             const fields = doc.fields || {};
@@ -140,7 +154,11 @@ async function cargarContadoresAgencias() {
                         const carrier = detectarCarrier(gFields.agencia?.stringValue || fields.agenciaEnvio?.stringValue || fields.envio?.stringValue);
                         if (carrier && totales[carrier.id] !== undefined) {
                             totales[carrier.id]++;
-                            granTotal++;
+                            if (['ups', 'dhl'].includes(carrier.id) || gFields.tipoTramo?.stringValue === 'IMPORTACION') {
+                                totalInternacional++;
+                            } else {
+                                totalNacionales++;
+                            }
                         }
                     }
                 });
@@ -152,18 +170,27 @@ async function cargarContadoresAgencias() {
                     const carrier = detectarCarrier(fields.agenciaEnvio?.stringValue || fields.envio?.stringValue);
                     if (carrier && totales[carrier.id] !== undefined) {
                         totales[carrier.id]++;
-                        granTotal++;
+                        if (['ups', 'dhl'].includes(carrier.id)) {
+                            totalInternacional++;
+                        } else {
+                            totalNacionales++;
+                        }
                     }
                 }
             }
         });
 
-        // Actualizar UI de conteos
+        // Actualizar UI de conteos individuales
         for (const [key, el] of Object.entries(countsEl)) {
             if (el) el.textContent = totales[key] || 0;
         }
+
+        // Totales globales
         if (txtTotalPendientes) {
-            txtTotalPendientes.textContent = `Total: ${granTotal}`;
+            txtTotalPendientes.textContent = `Total: ${totalNacionales + totalInternacional}`;
+        }
+        if (txtTotalInternacional) {
+            txtTotalInternacional.textContent = `Int: ${totalInternacional}`;
         }
     } catch (e) {
         console.error("Error al cargar contadores de agencias:", e);
@@ -175,14 +202,20 @@ async function cargarContadoresAgencias() {
 // =========================================================================
 
 function configurarBotones() {
-    // Iniciar / Detener Rastreo
+    // Iniciar / Detener Rastreo (con protección anti-bloqueo)
     btnToggleRastreo.addEventListener('click', async () => {
         if (_estadoActual.enProgreso) {
             btnLabel.textContent = 'Deteniendo...';
             btnToggleRastreo.disabled = true;
+
             try {
-                await chrome.runtime.sendMessage({ tipo: 'DETENER_RASTREO' });
+                await Promise.race([
+                    chrome.runtime.sendMessage({ tipo: 'DETENER_RASTREO' }),
+                    new Promise(r => setTimeout(r, 600))
+                ]);
             } catch (e) {}
+
+            await chrome.storage.local.set({ enProgreso: false });
             _estadoActual.enProgreso = false;
             btnToggleRastreo.disabled = false;
             actualizarUIConEstado();
@@ -206,8 +239,12 @@ function configurarBotones() {
         btnForzarReset.addEventListener('click', async () => {
             btnForzarReset.textContent = 'Restableciendo...';
             try {
-                await chrome.runtime.sendMessage({ tipo: 'FORZAR_REINICIO_ESTADO' });
+                await Promise.race([
+                    chrome.runtime.sendMessage({ tipo: 'FORZAR_REINICIO_ESTADO' }),
+                    new Promise(r => setTimeout(r, 600))
+                ]);
             } catch (e) {}
+            await chrome.storage.local.set({ enProgreso: false });
             _estadoActual.enProgreso = false;
             btnForzarReset.textContent = 'Restablecer';
             actualizarUIConEstado();
@@ -271,6 +308,11 @@ function renderizarFeedHistorial() {
         const estadoPillClass = `pill-${item.estadoRastreo || 'VERIFICAR_MANUAL'}`;
         const estadoLabel = item.estadoRastreo ? item.estadoRastreo.replace('_', ' ') : 'VERIFICAR';
         
+        const esImportacion = item.tipoTramo === 'IMPORTACION' || ['UPS', 'DHL'].some(ag => (item.agencia || '').toUpperCase().includes(ag));
+        const badgeTramo = esImportacion
+            ? `<span style="background: #fef3c7; color: #92400e; font-size: 8.5px; font-weight: 800; padding: 1.5px 5px; border-radius: 4px; border: 1px solid #fde68a;">✈️ IMPORTACIÓN</span>`
+            : `<span style="background: #e2e8f0; color: #475569; font-size: 8.5px; font-weight: 700; padding: 1.5px 5px; border-radius: 4px;">🚚 ENTREGA CLIENTE</span>`;
+
         let botonResolverCaptcha = '';
         if (item.requiereCaptcha || item.estadoRastreo === 'VERIFICAR_MANUAL') {
             botonResolverCaptcha = `
@@ -284,7 +326,10 @@ function renderizarFeedHistorial() {
             <div class="feed-item">
                 <div class="feed-item-top">
                     <span class="feed-guia">${item.agencia || 'Encomienda'}: ${item.numero || 'S/N'}</span>
-                    <span class="status-pill ${estadoPillClass}">${estadoLabel}</span>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        ${badgeTramo}
+                        <span class="status-pill ${estadoPillClass}">${estadoLabel}</span>
+                    </div>
                 </div>
                 <div class="feed-cliente"><b>Cliente:</b> ${item.cliente || 'Desconocido'} • <span style="color:#94a3b8;">${item.fecha || ''}</span></div>
                 <div class="feed-resumen">${item.resumen || 'Sin observaciones'}</div>

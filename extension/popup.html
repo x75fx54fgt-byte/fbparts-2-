@@ -490,10 +490,10 @@
             </label>
         </div>
 
-        <!-- Agencias Públicas Monitoreadas -->
+        <!-- Agencias Públicas Monitoreadas (Nacionales e Internacionales) -->
         <div>
             <div class="section-title">
-                <span>Agencias Pendientes</span>
+                <span>Agencias Nacionales</span>
                 <span id="txt-total-pendientes">Total: 0</span>
             </div>
             <div class="carriers-grid">
@@ -520,6 +520,22 @@
                 <div class="carrier-item">
                     <div class="carrier-name">MRW</div>
                     <div class="carrier-count" id="count-mrw">0</div>
+                </div>
+            </div>
+
+            <!-- Bloque Internacional / Amazon -->
+            <div class="section-title" style="margin-top: 10px; margin-bottom: 5px;">
+                <span style="color: #b45309;">✈️ Internacional / Amazon</span>
+                <span id="txt-total-internacional" style="color: #b45309; font-weight: 700;">Int: 0</span>
+            </div>
+            <div class="carriers-grid" style="grid-template-columns: repeat(2, 1fr);">
+                <div class="carrier-item" style="border: 1.5px solid #fde68a; background: #fffdf5;">
+                    <div class="carrier-name" style="color: #351c15;">UPS (Amazon)</div>
+                    <div class="carrier-count" id="count-ups" style="color: #351c15;">0</div>
+                </div>
+                <div class="carrier-item" style="border: 1.5px solid #fecaca; background: #fff9f9;">
+                    <div class="carrier-name" style="color: #d40511;">DHL Express</div>
+                    <div class="carrier-count" id="count-dhl" style="color: #d40511;">0</div>
                 </div>
             </div>
         </div>
@@ -550,7 +566,7 @@
         <span>Inversiones FB Parts C.A.</span>
         <div>
             <span id="btn-forzar-reset" style="cursor: pointer; color: #475569; text-decoration: underline; margin-right: 8px;">Restablecer</span>
-            <span id="lbl-version">v1.0.1 MV3</span>
+            <span id="lbl-version">v1.1.0 MV3</span>
         </div>
     </footer>
 

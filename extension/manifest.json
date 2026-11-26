@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "FB Parts - Rastreador Automático de Guías",
-  "version": "1.0.0",
-  "description": "Rastreador automático diario y bajo demanda de guías (Handling, Intercargo, RLU, Zoom, Tealca, MRW) sincronizado con Firebase para Inversiones FB Parts.",
+  "version": "1.1.0",
+  "description": "Rastreador automático diario y bajo demanda de guías (Handling, Intercargo, RLU, Zoom, Tealca, MRW, UPS y DHL) sincronizado con Firebase para Inversiones FB Parts.",
   "icons": {
     "16": "icons/icon-16.png",
     "48": "icons/icon-48.png",
@@ -27,6 +27,8 @@
     "https://*.tealca.com/*",
     "https://*.mrwve.com/*",
     "https://*.mrw.com.ve/*",
+    "https://*.ups.com/*",
+    "https://*.dhl.com/*",
     "https://*/*",
     "http://*/*"
   ],

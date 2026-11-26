@@ -378,6 +378,9 @@ export async function ejecutarRastreoSecuencial() {
             const tarea = listaTareas[i];
             const numGuia = tarea.guia.numero;
             const carrier = detectarCarrier(tarea.guia.agencia || tarea.pedido.agenciaEnvio || tarea.pedido.envio);
+            if (!tarea.guia.tipoTramo) {
+                tarea.guia.tipoTramo = carrier.categoria === 'INTERNACIONAL' ? 'IMPORTACION' : 'ENTREGA_CLIENTE';
+            }
 
             enviarMensajePopup({
                 tipo: 'PROGRESO_RASTREO',
@@ -422,6 +425,7 @@ export async function ejecutarRastreoSecuencial() {
             historialResultados.push({
                 numero: numGuia,
                 agencia: carrier.nombre,
+                tipoTramo: tarea.guia.tipoTramo || (carrier.categoria === 'INTERNACIONAL' ? 'IMPORTACION' : 'ENTREGA_CLIENTE'),
                 cliente: tarea.pedido.cliente || 'Cliente',
                 pedidoId: tarea.pedido.id,
                 estadoRastreo: normalizado.estado,
@@ -431,30 +435,64 @@ export async function ejecutarRastreoSecuencial() {
                 fecha: new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })
             });
 
-            // 3. Regla Multi-Guía
+            // 3. Regla de Cierre Diferenciada (Importación / Amazon vs Entrega al Cliente)
             const todasGuias = tarea.pedido.guiasEnvio || [tarea.guia];
-            const todasEntregadas = todasGuias.every(g => (g.estadoRastreo || '').toUpperCase() === ESTADOS_ESTANDAR.ENTREGADO);
-
             const camposActualizar = {
                 guiasEnvio: todasGuias,
                 ultimaRevisionRastreo: new Date().toISOString()
             };
             const fieldPaths = ['guiasEnvio', 'ultimaRevisionRastreo'];
 
-            if (todasEntregadas && (tarea.pedido.estado || '').toLowerCase() !== 'entregado') {
-                camposActualizar.estado = 'Entregado';
-                camposActualizar.fechaEntrega = new Date().toLocaleDateString('es-VE');
-                fieldPaths.push('estado', 'fechaEntrega');
+            const estadoActualPedido = (tarea.pedido.estado || '').toLowerCase();
 
-                try {
-                    chrome.notifications.create({
-                        type: 'basic',
-                        iconUrl: 'icons/icon-128.png',
-                        title: '🎉 ¡Pedido Entregado! - Inversiones FB Parts',
-                        message: `El pedido de ${tarea.pedido.cliente || 'Cliente'} (${todasGuias.length} bulto/s) ha sido confirmado como ENTREGADO en destino.`,
-                        priority: 2
-                    });
-                } catch (eNotif) {}
+            // Si la guía es de importación y fue entregada
+            if (tarea.guia.tipoTramo === 'IMPORTACION' && normalizado.estado === ESTADOS_ESTANDAR.ENTREGADO) {
+                tarea.guia.recibidaImportacion = true;
+            }
+
+            // Separar guías por tramo
+            const guiasImportacion = todasGuias.filter(g => g.tipoTramo === 'IMPORTACION');
+            const guiasEntregaCliente = todasGuias.filter(g => g.tipoTramo !== 'IMPORTACION');
+
+            // Regla A: Si tiene guías de Importación y todas las de importación fueron entregadas:
+            // Pasa a "En Casillero / Listo para Despacho" (NUNCA a "Entregado" al cliente)
+            if (guiasImportacion.length > 0) {
+                const todasImportacionesEntregadas = guiasImportacion.every(g => (g.estadoRastreo || '').toUpperCase() === ESTADOS_ESTANDAR.ENTREGADO);
+                if (todasImportacionesEntregadas && !['en casillero / listo para despacho', 'despachado', 'entregado'].includes(estadoActualPedido)) {
+                    camposActualizar.estado = 'En Casillero / Listo para Despacho';
+                    fieldPaths.push('estado');
+
+                    try {
+                        chrome.notifications.create({
+                            type: 'basic',
+                            iconUrl: 'icons/icon-128.png',
+                            title: '📦 ¡Llegó repuesto de Amazon! (UPS/DHL)',
+                            message: `El pedido #${tarea.pedido.id} (${tarea.pedido.cliente || 'Cliente'}) ya fue recibido en casillero y está listo para despacho.`,
+                            priority: 2
+                        });
+                    } catch (eNotif) {}
+                }
+            }
+
+            // Regla B: Solo marcar como 'Entregado' si el 100% de las guías de ENTREGA AL CLIENTE están entregadas
+            // (Si solo tiene guías de importación y ninguna de entrega cliente, NUNCA se marca 'Entregado')
+            if (guiasEntregaCliente.length > 0) {
+                const todasClienteEntregadas = guiasEntregaCliente.every(g => (g.estadoRastreo || '').toUpperCase() === ESTADOS_ESTANDAR.ENTREGADO);
+                if (todasClienteEntregadas && estadoActualPedido !== 'entregado') {
+                    camposActualizar.estado = 'Entregado';
+                    camposActualizar.fechaEntrega = new Date().toLocaleDateString('es-VE');
+                    fieldPaths.push('estado', 'fechaEntrega');
+
+                    try {
+                        chrome.notifications.create({
+                            type: 'basic',
+                            iconUrl: 'icons/icon-128.png',
+                            title: '🎉 ¡Pedido Entregado! - Inversiones FB Parts',
+                            message: `El pedido #${tarea.pedido.id} de ${tarea.pedido.cliente || 'Cliente'} (${todasGuias.length} bulto/s) ha sido confirmado como ENTREGADO en destino.`,
+                            priority: 2
+                        });
+                    } catch (eNotif) {}
+                }
             }
 
             // 4. Guardar en Firestore

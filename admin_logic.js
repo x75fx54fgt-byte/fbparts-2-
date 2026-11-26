@@ -1979,6 +1979,22 @@ REGLAS CRÍTICAS:
                 const dest = (document.getElementById('modal-guia-destinatario-val')?.value || '').trim();
                 const ciud = (document.getElementById('modal-guia-ciudad-val')?.value || '').trim();
 
+                // Auto-detección inteligente de agencia internacional por formato de guía:
+                // 1) Si empieza por "1Z" (formato estándar de UPS de 18 caracteres): auto-seleccionar UPS e IMPORTACIÓN
+                if (num.toUpperCase().startsWith('1Z')) {
+                    const agActual = document.getElementById('modal-guia-agencia-val')?.value;
+                    if (agActual !== 'UPS') {
+                        window.seleccionarAgenciaModalGuia('UPS');
+                    }
+                } else if (/^\d{10}$/.test(num)) {
+                    // 2) Si son exactamente 10 dígitos y estamos en tramo de Importación o agencia DHL
+                    const agActual = document.getElementById('modal-guia-agencia-val')?.value;
+                    const tramoActual = document.getElementById('modal-guia-tramo-val')?.value;
+                    if (tramoActual === 'IMPORTACION' || agActual === 'DHL') {
+                        if (agActual !== 'DHL') window.seleccionarAgenciaModalGuia('DHL');
+                    }
+                }
+
                 if (window._guiaDatosExtraidos) {
                     window._guiaDatosExtraidos.numero_guia = num;
                     window._guiaDatosExtraidos.cliente_o_destinatario = dest;
@@ -2084,12 +2100,19 @@ REGLAS CRÍTICAS:
                                     <span style="font-size: 10px; font-weight: 800; color: #166534; background: #dcfce7; border: 1px solid #bbf7d0; padding: 1px 6px; border-radius: 4px;">
                                         📦 ${guiasArray.length} Bulto${guiasArray.length !== 1 ? 's' : ''}:
                                     </span>
-                                    ${guiasArray.map((g, idx) => `
-                                        <span style="font-size: 10.5px; font-weight: 700; color: #1e293b; background: #ffffff; border: 1px solid #86efac; padding: 1px 7px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
-                                            <i class="fas fa-box" style="font-size: 9px; color: #385723;"></i>
-                                            #${idx + 1}: <b>${SecuritySanitizer.escapeHtml(g.numero)}</b> (${SecuritySanitizer.escapeHtml(g.agencia || 'Envío')})
-                                        </span>
-                                    `).join('')}
+                                    ${guiasArray.map((g, idx) => {
+                                        const esImport = (g.tipoTramo === 'IMPORTACION' || ['UPS', 'DHL'].includes((g.agencia || '').toUpperCase()));
+                                        const borderColor = esImport ? '#fcd34d' : '#86efac';
+                                        const iconClass = esImport ? 'fa-plane-arrival' : 'fa-box';
+                                        const iconColor = esImport ? '#b45309' : '#385723';
+                                        const badgeTramo = esImport ? '<span style="color:#b45309; font-weight:800; font-size:9.5px;">[Import]</span> ' : '';
+                                        return `
+                                            <span style="font-size: 10.5px; font-weight: 700; color: #1e293b; background: #ffffff; border: 1px solid ${borderColor}; padding: 1px 7px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+                                                <i class="fas ${iconClass}" style="font-size: 9px; color: ${iconColor};"></i>
+                                                ${badgeTramo}#${idx + 1}: <b>${SecuritySanitizer.escapeHtml(g.numero)}</b> (${SecuritySanitizer.escapeHtml(g.agencia || 'Envío')})
+                                            </span>
+                                        `;
+                                    }).join('')}
                                 </div>
                             `;
                         }
@@ -2297,6 +2320,41 @@ REGLAS CRÍTICAS:
         };
 
         /**
+         * Selecciona el tipo de tramo (IMPORTACION vs ENTREGA_CLIENTE)
+         */
+        window.seleccionarTramoModalGuia = function(tramo) {
+            const inputTramo = document.getElementById('modal-guia-tramo-val');
+            if (inputTramo) inputTramo.value = tramo;
+
+            const btnImp = document.getElementById('btn-tramo-importacion');
+            const btnEnt = document.getElementById('btn-tramo-entrega');
+
+            if (tramo === 'IMPORTACION') {
+                if (btnImp) {
+                    btnImp.style.background = '#b45309';
+                    btnImp.style.borderColor = '#92400e';
+                    btnImp.style.color = '#ffffff';
+                }
+                if (btnEnt) {
+                    btnEnt.style.background = '#ffffff';
+                    btnEnt.style.borderColor = '#cbd5e1';
+                    btnEnt.style.color = '#475569';
+                }
+            } else {
+                if (btnImp) {
+                    btnImp.style.background = '#ffffff';
+                    btnImp.style.borderColor = '#cbd5e1';
+                    btnImp.style.color = '#475569';
+                }
+                if (btnEnt) {
+                    btnEnt.style.background = '#385723';
+                    btnEnt.style.borderColor = '#2c441b';
+                    btnEnt.style.color = '#ffffff';
+                }
+            }
+        };
+
+        /**
          * Selecciona agencia en el modal de guía
          */
         window.seleccionarAgenciaModalGuia = function(agencia) {
@@ -2311,6 +2369,17 @@ REGLAS CRÍTICAS:
                     btn.classList.remove('active');
                 }
             });
+
+            // Si se selecciona UPS o DHL, preseleccionar automáticamente tipoTramo: 'IMPORTACION'
+            if (['ups', 'dhl'].includes((agencia || '').toLowerCase())) {
+                window.seleccionarTramoModalGuia('IMPORTACION');
+            } else if (['tealca', 'zoom', 'mrw', 'handling', 'intercargo', 'rlu', 'motorizado'].includes((agencia || '').toLowerCase())) {
+                // Para agencias nacionales, auto-seleccionar Entrega a Cliente a menos que el usuario lo cambie manualmente
+                const tramoActual = document.getElementById('modal-guia-tramo-val')?.value;
+                if (!tramoActual || tramoActual === 'IMPORTACION') {
+                    window.seleccionarTramoModalGuia('ENTREGA_CLIENTE');
+                }
+            }
         };
 
         /**
@@ -2413,11 +2482,14 @@ REGLAS CRÍTICAS:
                 });
             }
 
+            const tramo = document.getElementById('modal-guia-tramo-val')?.value || (['UPS', 'DHL'].includes(agencia) ? 'IMPORTACION' : 'ENTREGA_CLIENTE');
+
             // Evitar duplicar el mismo número exacto si se re-edita
             const existeIndex = guiasExistentes.findIndex(g => (g.numero || '').toLowerCase() === numeroGuia.toLowerCase());
             const nuevaGuiaObj = {
                 numero: numeroGuia,
                 agencia: agencia,
+                tipoTramo: tramo, // 'IMPORTACION' | 'ENTREGA_CLIENTE'
                 destinatario: destGuia || pedOriginal.cliente || '',
                 ciudad: ciudadGuia || pedOriginal.rutasMotorizado || '',
                 fecha: new Date().toLocaleDateString('es-VE'),
@@ -2425,7 +2497,7 @@ REGLAS CRÍTICAS:
             };
 
             if (existeIndex >= 0) {
-                guiasExistentes[existeIndex] = nuevaGuiaObj;
+                guiasExistentes[existeIndex] = Object.assign(guiasExistentes[existeIndex], nuevaGuiaObj);
             } else {
                 guiasExistentes.push(nuevaGuiaObj);
             }
@@ -2453,9 +2525,17 @@ REGLAS CRÍTICAS:
                 }
             }
 
-            // Si estaba Pendiente o Procesando, actualizar a Despachado
-            if (!pedOriginal.estado || pedOriginal.estado === 'Pendiente' || pedOriginal.estado === 'Procesando') {
-                updateData.estado = 'Despachado';
+            // Actualización de estado según el tramo:
+            // Si es IMPORTACION, pasa a 'En Importación / Amazon' si estaba en Pendiente/Procesando (NUNCA Despachado al cliente)
+            if (tramo === 'IMPORTACION') {
+                if (!pedOriginal.estado || pedOriginal.estado === 'Pendiente' || pedOriginal.estado === 'Procesando') {
+                    updateData.estado = 'En Importación / Amazon';
+                }
+            } else {
+                // Si es ENTREGA_CLIENTE, si estaba en Pendiente, Procesando o En Casillero, pasa a Despachado
+                if (!pedOriginal.estado || pedOriginal.estado === 'Pendiente' || pedOriginal.estado === 'Procesando' || pedOriginal.estado === 'En Casillero / Listo para Despacho') {
+                    updateData.estado = 'Despachado';
+                }
             }
 
             try {
