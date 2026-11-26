@@ -180,38 +180,39 @@ export function construirUrlRastreo(carrier, numeroGuia) {
 
 /**
  * Patrones de expresiones regulares y palabras clave bilingües (Inglés + Español)
+ * Orden de evaluación estricto: ENTREGADO -> NOVEDAD -> LISTO_RETIRO -> EN_TRANSITO
  */
 const PATRONES_ESTATUS = {
-    CAPTCHA_O_BLOQUEO: [
-        /\b(captcha|recaptcha|hcaptcha|turnstile|cloudflare|akamai|verificaci[oó]n\s+humana|comprobar\s+que\s+eres\s+humano|security\s+check|bot\s+detection)\b/i,
-        /\b(acceso\s+denegado|bloqueo\s+temporal|demasiadas\s+solicitudes|429\s+too\s+many|403\s+forbidden|access\s+denied)\b/i
-    ],
     ENTREGADO: [
-        // Español
-        /\b(entregad[oa]s?|recibid[oa]s?\s+conforme|retirad[oa]s?\s+por|entregado\s+en\s+destino|finalizad[oa]s?|entregado\s+a\s+cliente|despacho\s+finalizado|entrega\s+efectuada|entregada\s+en\s+oficina|entregado\s+en\s+agencia)\b/i,
+        // Español: Prioridad máxima de entrega definitiva
+        /\b(entregad[oa]\s+al\s+cliente|retirad[oa]\s+por\s+destinatario|entregad[oa]s?|recibid[oa]s?\s+conforme|retirad[oa]s?\s+por|entregado\s+en\s+destino|finalizad[oa]s?|entregado\s+a\s+cliente|despacho\s+finalizado|entrega\s+efectuada|entregada\s+en\s+oficina|entregado\s+en\s+agencia)\b/i,
         /\b(recibido\s+por\s*:\s*[a-zA-Z\s]+|entregada\s+satisfactoriamente|firma\s+digital)\b/i,
         // Inglés (UPS / DHL / Amazon)
-        /\b(delivered|signed\s+by|left\s+at\s+dock|left\s+at\s+front\s+door|proof\s+of\s+delivery|delivered\s+to|left\s+with|received\s+by|delivery\s+completed)\b/i
+        /\b(delivered\s+to\s+customer|delivered|signed\s+by|left\s+at\s+dock|left\s+at\s+front\s+door|proof\s+of\s+delivery|delivered\s+to|left\s+with|received\s+by|delivery\s+completed)\b/i
+    ],
+    NOVEDAD: [
+        // Español
+        /\b(devuelt[oa]s?|devoluci[oó]n|retenid[oa]s?|direcci[oó]n\s+incorrecta|siniestro|extrav[ií]o|no\s+localizad[oa]|rechazad[oa]|demorado\s+por\s+fuerza\s+mayor|da[ñn]ad[oa]|aver[ií]a|problema\s+con\s+direcci[oó]n)\b/i,
+        // Inglés (UPS / DHL)
+        /\b(exception|delay|action\s+required|on\s+hold|clearance\s+delay|delivery\s+attempted|returned\s+to\s+sender|address\s+correction\s+needed|operational\s+delay|weather\s+delay)\b/i
     ],
     LISTO_RETIRO: [
-        // Español
-        /\b(disponible\s+para\s+retiro|en\s+oficina\s+destino|esperando\s+por\s+cliente|lista\s+para\s+entrega|disponible\s+en\s+taquilla|por\s+retirar|en\s+agencia\s+destino|en\s+almac[eé]n\s+destino)\b/i,
+        // Español (Solo si NO está entregado ni tiene novedad)
+        /\b(disponible\s+para\s+(el\s+)?retiro|en\s+taquilla|en\s+oficina\s+destino|en\s+ciudad\s+destino|esperando\s+por\s+cliente|lista\s+para\s+entrega|disponible\s+en\s+taquilla|por\s+retirar|en\s+agencia\s+destino|en\s+almac[eé]n\s+destino)\b/i,
         /\b(lleg[oó]\s+a\s+destino|arribo\s+a\s+agencia)\b/i,
         // Inglés
         /\b(ready\s+for\s+pick-?up|available\s+for\s+pick-?up|held\s+for\s+pick-?up|at\s+customer\s+service\s+point|ready\s+at\s+access\s+point)\b/i
     ],
     EN_TRANSITO: [
         // Español
-        /\b(en\s+tr[aá]nsito|en\s+ruta|despachad[oa]|centro\s+de\s+distribuci[oó]n|centro\s+de\s+acopio|en\s+viaje|recibid[oa]\s+en\s+origen|embarcad[oa]|traslado\s+entre\s+agencias|recepci[oó]n\s+en\s+oficina|procesando\s+en\s+origen|en\s+aduana|nacionalizaci[oó]n)\b/i,
-        /\b(salida\s+de\s+origen|en\s+camino|veh[ií]culo\s+en\s+ruta)\b/i,
+        /\b(en\s+camino|en\s+tr[aá]nsito|despachad[oa]|centro\s+de\s+distribuci[oó]n|centro\s+de\s+acopio|en\s+viaje|recibid[oa]\s+en\s+origen|embarcad[oa]|traslado\s+entre\s+agencias|recepci[oó]n\s+en\s+oficina|procesando\s+en\s+origen|en\s+aduana|nacionalizaci[oó]n|en\s+ruta|veh[ií]culo\s+en\s+ruta)\b/i,
+        /\b(salida\s+de\s+origen)\b/i,
         // Inglés (UPS / DHL)
         /\b(in\s+transit|on\s+the\s+way|arrived\s+at\s+facility|departed\s+facility|customs\s+clearance|cleared\s+customs|processing\s+at\s+facility|out\s+for\s+delivery|shipment\s+picked\s+up|order\s+processed)\b/i
     ],
-    NOVEDAD: [
-        // Español
-        /\b(retenid[oa]|direcci[oó]n\s+incorrecta|devuelt[oa]|devoluci[oó]n|siniestro|extrav[ií]o|no\s+localizad[oa]|rechazad[oa]|demorado\s+por\s+fuerza\s+mayor|da[ñn]ad[oa]|aver[ií]a|problema\s+con\s+direcci[oó]n)\b/i,
-        // Inglés (UPS / DHL)
-        /\b(exception|delay|action\s+required|on\s+hold|clearance\s+delay|delivery\s+attempted|returned\s+to\s+sender|address\s+correction\s+needed|operational\s+delay|weather\s+delay)\b/i
+    CAPTCHA_O_BLOQUEO: [
+        /\b(captcha|recaptcha|hcaptcha|turnstile|cloudflare|akamai|verificaci[oó]n\s+humana|comprobar\s+que\s+eres\s+humano|security\s+check|bot\s+detection)\b/i,
+        /\b(acceso\s+denegado|bloqueo\s+temporal|demasiadas\s+solicitudes|429\s+too\s+many|403\s+forbidden|access\s+denied)\b/i
     ],
     NO_REGISTRADO: [
         /\b(gu[ií]a\s+no\s+encontrada|no\s+existe\s+informaci[oó]n|sin\s+registro|n[uú]mero\s+de\s+gu[ií]a\s+inv[aá]lido|no\s+se\s+encontraron\s+datos|tracking\s+number\s+not\s+found|invalid\s+tracking\s+number)\b/i
@@ -220,6 +221,8 @@ const PATRONES_ESTATUS = {
 
 /**
  * Normaliza el texto extraído del portal de rastreo en uno de los 5 estados estándar
+ * Resuelve falsos positivos evaluando siempre en orden de precedencia:
+ * 1. ENTREGADO -> 2. NOVEDAD -> 3. LISTO_RETIRO -> 4. EN_TRANSITO
  */
 export function normalizarEstatus(textoExtraido) {
     if (!textoExtraido || typeof textoExtraido !== 'string') {
@@ -233,19 +236,9 @@ export function normalizarEstatus(textoExtraido) {
 
     const limpio = textoExtraido.replace(/\s+/g, ' ').trim();
 
-    // 1. Detección de Captcha / Bloqueo
-    for (const rx of PATRONES_ESTATUS.CAPTCHA_O_BLOQUEO) {
-        if (rx.test(limpio)) {
-            return {
-                estado: ESTADOS_ESTANDAR.VERIFICAR_MANUAL,
-                resumen: 'Se detectó verificación de seguridad o Captcha en el portal',
-                requiereCaptcha: true,
-                confianza: 'alta'
-            };
-        }
-    }
-
-    // 2. Detección de ENTREGADO
+    // 1. PRIORIDAD MÁXIMA: ENTREGADO
+    // Si la pantalla dice "ENTREGADO AL CLIENTE" o "ENTREGADO", aunque más abajo conserve
+    // "DISPONIBLE PARA EL RETIRO EN TAQUILLA" del historial previo, SIEMPRE debe ser ENTREGADO.
     for (const rx of PATRONES_ESTATUS.ENTREGADO) {
         if (rx.test(limpio)) {
             const match = limpio.match(rx);
@@ -258,20 +251,7 @@ export function normalizarEstatus(textoExtraido) {
         }
     }
 
-    // 3. Detección de LISTO_RETIRO
-    for (const rx of PATRONES_ESTATUS.LISTO_RETIRO) {
-        if (rx.test(limpio)) {
-            const match = limpio.match(rx);
-            return {
-                estado: ESTADOS_ESTANDAR.LISTO_RETIRO,
-                resumen: `Disponible para retiro (${match ? match[0] : 'En taquilla/oficina'})`,
-                requiereCaptcha: false,
-                confianza: 'alta'
-            };
-        }
-    }
-
-    // 4. Detección de NOVEDAD
+    // 2. SEGUNDA PRIORIDAD: NOVEDAD (Retenido, Devuelto, Dirección Incorrecta, Exception)
     for (const rx of PATRONES_ESTATUS.NOVEDAD) {
         if (rx.test(limpio)) {
             const match = limpio.match(rx);
@@ -284,7 +264,21 @@ export function normalizarEstatus(textoExtraido) {
         }
     }
 
-    // 5. Detección de EN_TRANSITO
+    // 3. TERCERA PRIORIDAD: LISTO_RETIRO (Disponible para retiro, en taquilla, oficina destino)
+    // Solo se selecciona si NO está entregado ni presenta novedad previa
+    for (const rx of PATRONES_ESTATUS.LISTO_RETIRO) {
+        if (rx.test(limpio)) {
+            const match = limpio.match(rx);
+            return {
+                estado: ESTADOS_ESTANDAR.LISTO_RETIRO,
+                resumen: `Disponible para retiro (${match ? match[0] : 'En taquilla/oficina'})`,
+                requiereCaptcha: false,
+                confianza: 'alta'
+            };
+        }
+    }
+
+    // 4. CUARTA PRIORIDAD: EN_TRANSITO (En camino, en tránsito, despachado, en ruta)
     for (const rx of PATRONES_ESTATUS.EN_TRANSITO) {
         if (rx.test(limpio)) {
             const match = limpio.match(rx);
@@ -293,6 +287,18 @@ export function normalizarEstatus(textoExtraido) {
                 resumen: `En tránsito (${match ? match[0] : 'En ruta activa'})`,
                 requiereCaptcha: false,
                 confianza: 'media'
+            };
+        }
+    }
+
+    // 5. Captcha o bloqueo (solo si NO se encontró ningún estado operativo anterior)
+    for (const rx of PATRONES_ESTATUS.CAPTCHA_O_BLOQUEO) {
+        if (rx.test(limpio)) {
+            return {
+                estado: ESTADOS_ESTANDAR.VERIFICAR_MANUAL,
+                resumen: 'Se detectó verificación de seguridad o Captcha en el portal',
+                requiereCaptcha: true,
+                confianza: 'alta'
             };
         }
     }

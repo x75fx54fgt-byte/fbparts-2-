@@ -85,7 +85,32 @@ function toFirestoreValue(val) {
 }
 
 /**
+ * Valida si un número de guía y su agencia corresponden a una encomienda pública válida.
+ * Excluye códigos internos de motorizado (ej. MOTJ-7109, MOT) y entregas directas/locales.
+ */
+function esGuiaValidaParaRastreo(numeroGuia, agenciaTexto) {
+    if (!numeroGuia || typeof numeroGuia !== 'string') return false;
+    const num = numeroGuia.trim().toUpperCase();
+    if (!num || num === 'S/N' || num === 'N/A' || num === '-' || num === '0') return false;
+
+    // 1. Ignorar completamente códigos internos de motorizado / traslado a agencia (MOTJ, MOT)
+    if (num.startsWith('MOTJ') || num.includes('MOT')) {
+        return false;
+    }
+
+    // 2. Ignorar si la agencia o método de envío es motorizado o retiro local
+    const ag = (agenciaTexto || '').toLowerCase().trim();
+    if (ag.includes('motorizado') || ag === 'motorizado caracas' || ag.includes('delivery local') || ag.includes('retiro en tienda') || ag.includes('retiro local')) {
+        return false;
+    }
+
+    return true;
+}
+
+/**
  * Consulta pedidos activos desde Firestore
+ * Filtro estricto: descarta pedidos cerrados (Entregado, Anulado, Cancelado, Devuelto)
+ * y descarta códigos de motorizados (MOTJ, MOT, motorizado caracas).
  */
 async function obtenerPedidosPendientesFirestore() {
     try {
@@ -99,23 +124,27 @@ async function obtenerPedidosPendientesFirestore() {
         const docs = data.documents || [];
         const pedidos = docs.map(parseFirestoreDoc).filter(Boolean);
 
-        // Filtrar pedidos que tengan guías pendientes por entregar
+        // Filtrar pedidos estrictamente pendientes de encomienda pública
         return pedidos.filter(ped => {
-            const estadoGlobal = (ped.estado || '').toLowerCase();
-            if (estadoGlobal === 'cancelado' || estadoGlobal === 'entregado') {
+            const estadoGlobal = (ped.estado || '').toLowerCase().trim();
+            if (['entregado', 'anulado', 'cancelado', 'devuelto'].includes(estadoGlobal)) {
                 return false;
             }
 
-            // Verificar si tiene guías en guiasEnvio
+            // Verificar si tiene guías de encomienda en guiasEnvio
             if (Array.isArray(ped.guiasEnvio) && ped.guiasEnvio.length > 0) {
-                return ped.guiasEnvio.some(g => (g.estadoRastreo || '').toUpperCase() !== ESTADOS_ESTANDAR.ENTREGADO);
+                return ped.guiasEnvio.some(g => {
+                    const estatusRastreo = (g.estadoRastreo || '').toUpperCase().trim();
+                    if (estatusRastreo === ESTADOS_ESTANDAR.ENTREGADO) return false;
+                    return esGuiaValidaParaRastreo(g.numero, g.agencia || ped.agenciaEnvio || ped.envio);
+                });
             }
 
-            // O si tiene tracking clásico
-            const tracking = ped.tracking || ped.trackingMotorizado || ped.ultimaGuiaAsignada;
-            const envioTexto = (ped.envio || '').toLowerCase();
-            const esEncomienda = !envioTexto.includes('retiro') && !envioTexto.includes('local');
-            return Boolean(tracking && esEncomienda);
+            // O si tiene tracking clásico de agencia pública (NUNCA trackingMotorizado)
+            const tracking = ped.tracking || ped.ultimaGuiaAsignada;
+            const envioTexto = (ped.envio || ped.agenciaEnvio || '').toLowerCase().trim();
+            const esEncomienda = !envioTexto.includes('motorizado') && !envioTexto.includes('retiro') && !envioTexto.includes('local');
+            return Boolean(tracking && esEncomienda && esGuiaValidaParaRastreo(tracking, envioTexto));
         });
     } catch (e) {
         console.error("Fallo obteniendo pedidos de Firestore:", e);
@@ -524,12 +553,12 @@ function parsearHtmlTrackingZoom(htmlRaw) {
         // ¡Éxito! Contiene la información del envío. Se ignora cualquier mención a CleanTalk
         const seccionTracking = limpio.substring(matchEncabezado);
 
-        // A) ENTREGADO
-        if (/\b(entregad[oa]s?|recibid[oa]s?\s+conforme|entregad[oa]\s+en\s+destino|entrega\s+efectuada)\b/i.test(seccionTracking)) {
+        // A) PRIORIDAD 1: ENTREGADO (Evaluar SIEMPRE antes que taquilla/oficina)
+        if (/\b(entregad[oa]\s+al\s+cliente|retirad[oa]\s+por\s+destinatario|entregad[oa]s?|recibid[oa]s?\s+conforme|entregad[oa]\s+en\s+destino|entrega\s+efectuada|retirad[oa]\s+por|delivered|signed\s+by)\b/i.test(seccionTracking)) {
             const matchRecibido = seccionTracking.match(/recibid[oa]\s+por\s*:?\s*([A-Za-z\s]+)/i);
             const detalle = matchRecibido 
                 ? `Entregado (Recibió: ${matchRecibido[1].trim().substring(0, 30)})` 
-                : 'Entregado en destino (Confirmado por Zoom)';
+                : 'Entregado al cliente (Confirmado por Zoom)';
             return {
                 estado: ESTADOS_ESTANDAR.ENTREGADO,
                 resumen: detalle,
@@ -537,17 +566,26 @@ function parsearHtmlTrackingZoom(htmlRaw) {
             };
         }
 
-        // B) LISTO_RETIRO (EN CIUDAD DESTINO / EN OFICINA / DISPONIBLE PARA RETIRO)
-        if (/\b(en\s+ciudad\s+destino|en\s+oficina|disponible\s+para\s+retiro|en\s+taquilla|en\s+agencia\s+destino)\b/i.test(seccionTracking)) {
+        // B) PRIORIDAD 2: NOVEDAD (Devuelto, Retenido, Dirección Incorrecta)
+        if (/\b(devuelt[oa]s?|devoluci[oó]n|retenid[oa]s?|direcci[oó]n\s+incorrecta|siniestro|extrav[ií]o|exception|aver[ií]a|da[ñn]ad[oa]|on\s+hold)\b/i.test(seccionTracking)) {
             return {
-                estado: ESTADOS_ESTANDAR.LISTO_RETIRO,
-                resumen: 'Disponible para retiro en oficina/agencia destino Zoom',
+                estado: ESTADOS_ESTANDAR.NOVEDAD,
+                resumen: 'Novedad o retención detectada en Zoom',
                 bloqueoTemporal: false
             };
         }
 
-        // C) EN_TRANSITO (EN CAMINO / EN TRÁNSITO / DESPACHADO)
-        if (/\b(en\s+camino|en\s+tr[aá]nsito|despachad[oa]|en\s+ruta|en\s+viaje|recibid[oa]\s+en\s+origen)\b/i.test(seccionTracking)) {
+        // C) PRIORIDAD 3: LISTO_RETIRO (Solo si NO está entregado ni tiene novedad)
+        if (/\b(disponible\s+para\s+(el\s+)?retiro|en\s+taquilla|en\s+oficina\s+destino|en\s+ciudad\s+destino|en\s+oficina|en\s+agencia\s+destino|ready\s+for\s+pick-?up)\b/i.test(seccionTracking)) {
+            return {
+                estado: ESTADOS_ESTANDAR.LISTO_RETIRO,
+                resumen: 'Disponible para retiro en oficina/taquilla destino Zoom',
+                bloqueoTemporal: false
+            };
+        }
+
+        // D) PRIORIDAD 4: EN_TRANSITO (En camino, en tránsito, despachado)
+        if (/\b(en\s+camino|en\s+tr[aá]nsito|despachad[oa]|in\s+transit|en\s+ruta|en\s+viaje|recibid[oa]\s+en\s+origen)\b/i.test(seccionTracking)) {
             return {
                 estado: ESTADOS_ESTANDAR.EN_TRANSITO,
                 resumen: 'En tránsito hacia destino (Zoom)',
@@ -685,40 +723,35 @@ export async function ejecutarRastreoSecuencial() {
 
         if (_cancelarRastreo) return;
 
-        // Desglosar la lista de guías a verificar
+        // Desglosar la lista de guías a verificar (Filtro Estricto: excluir cerrados, MOTJ/MOT y motorizados)
         const listaTareas = [];
         for (const ped of pedidos) {
+            const estadoGlobal = (ped.estado || '').toLowerCase().trim();
+            if (['entregado', 'anulado', 'cancelado', 'devuelto'].includes(estadoGlobal)) {
+                continue;
+            }
+
             let guias = Array.isArray(ped.guiasEnvio) && ped.guiasEnvio.length > 0 ? ped.guiasEnvio : [];
-            const rawTrack = ped.tracking || ped.trackingMotorizado || ped.ultimaGuiaAsignada;
-            if (rawTrack) {
+            // Leer ÚNICAMENTE tracking o ultimaGuiaAsignada de encomienda. NUNCA trackingMotorizado.
+            const rawTrack = ped.tracking || ped.ultimaGuiaAsignada;
+            if (rawTrack && guias.length === 0) {
                 const trackings = rawTrack.split(/[,;/]+/).map(s => s.trim()).filter(Boolean);
-                if (guias.length === 0) {
-                    guias = trackings.map(num => ({
-                        numero: num,
-                        agencia: ped.agenciaEnvio || ped.envio || 'Tealca',
-                        estadoRastreo: 'EN_TRANSITO',
-                        destinatario: ped.cliente || '',
-                        tipoTramo: 'ENTREGA_CLIENTE'
-                    }));
-                } else {
-                    trackings.forEach(num => {
-                        const yaExiste = guias.some(g => (g.numero || '').toLowerCase() === num.toLowerCase());
-                        if (!yaExiste) {
-                            guias.push({
-                                numero: num,
-                                agencia: ped.agenciaEnvio || ped.envio || 'Tealca',
-                                estadoRastreo: 'EN_TRANSITO',
-                                destinatario: ped.cliente || '',
-                                tipoTramo: 'ENTREGA_CLIENTE'
-                            });
-                        }
-                    });
-                }
+                guias = trackings.map(num => ({
+                    numero: num,
+                    agencia: ped.agenciaEnvio || ped.envio || 'Tealca',
+                    estadoRastreo: 'EN_TRANSITO',
+                    destinatario: ped.cliente || '',
+                    tipoTramo: 'ENTREGA_CLIENTE'
+                }));
             }
             ped.guiasEnvio = guias;
 
             ped.guiasEnvio.forEach((g, idx) => {
-                if ((g.estadoRastreo || '').toUpperCase() !== ESTADOS_ESTANDAR.ENTREGADO) {
+                const estatus = (g.estadoRastreo || '').toUpperCase().trim();
+                const agenciaTexto = g.agencia || ped.agenciaEnvio || ped.envio || '';
+
+                // Filtro estricto: descartar guías ya entregadas, códigos MOTJ/MOT y métodos de motorizado
+                if (estatus !== ESTADOS_ESTANDAR.ENTREGADO && esGuiaValidaParaRastreo(g.numero, agenciaTexto)) {
                     listaTareas.push({
                         pedido: ped,
                         guia: g,
@@ -1387,17 +1420,25 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     const pendientes = await obtenerPedidosPendientesFirestore();
                     for (const p of pendientes) {
                         const gList = Array.isArray(p.guiasEnvio) ? p.guiasEnvio : [];
-                        const pendG = gList.find(g => (g.numero || '').toLowerCase() !== (guia || '').toLowerCase() && (g.estadoRastreo || '').toUpperCase() !== ESTADOS_ESTANDAR.ENTREGADO);
+                        const pendG = gList.find(g => {
+                            const num = (g.numero || '').toLowerCase();
+                            const curr = (guia || '').toLowerCase();
+                            const estatus = (g.estadoRastreo || '').toUpperCase().trim();
+                            const agenciaTexto = g.agencia || p.agenciaEnvio || p.envio || '';
+                            return num !== curr && estatus !== ESTADOS_ESTANDAR.ENTREGADO && esGuiaValidaParaRastreo(g.numero, agenciaTexto);
+                        });
                         if (pendG) {
                             const carrPend = detectarCarrier(pendG.agencia || p.agenciaEnvio || p.envio);
-                            siguienteGuia = {
-                                numero: pendG.numero,
-                                agencia: carrPend.nombre,
-                                pedidoId: p.id,
-                                cliente: p.cliente || 'Cliente',
-                                urlRastreo: construirUrlRastreo(carrPend, pendG.numero)
-                            };
-                            break;
+                            if (carrPend) {
+                                siguienteGuia = {
+                                    numero: pendG.numero,
+                                    agencia: carrPend.nombre,
+                                    pedidoId: p.id,
+                                    cliente: p.cliente || 'Cliente',
+                                    urlRastreo: construirUrlRastreo(carrPend, pendG.numero)
+                                };
+                                break;
+                            }
                         }
                     }
                 } catch (eNext) {}

@@ -153,17 +153,21 @@ async function cargarContadoresAgencias() {
 
         docs.forEach(doc => {
             const fields = doc.fields || {};
-            const estadoGlobal = (fields.estado?.stringValue || '').toLowerCase();
-            if (estadoGlobal === 'entregado' || estadoGlobal === 'cancelado') return;
+            const estadoGlobal = (fields.estado?.stringValue || '').toLowerCase().trim();
+            if (['entregado', 'anulado', 'cancelado', 'devuelto'].includes(estadoGlobal)) return;
 
             // Revisar si tiene array de guiasEnvio
             if (fields.guiasEnvio?.arrayValue?.values && fields.guiasEnvio.arrayValue.values.length > 0) {
                 const guias = fields.guiasEnvio.arrayValue.values;
                 guias.forEach(gObj => {
                     const gFields = gObj.mapValue?.fields || {};
-                    const estatusRastreo = (gFields.estadoRastreo?.stringValue || '').toUpperCase();
-                    if (estatusRastreo !== 'ENTREGADO') {
-                        const carrier = detectarCarrier(gFields.agencia?.stringValue || fields.agenciaEnvio?.stringValue || fields.envio?.stringValue);
+                    const estatusRastreo = (gFields.estadoRastreo?.stringValue || '').toUpperCase().trim();
+                    const numGuia = (gFields.numero?.stringValue || '').trim().toUpperCase();
+                    const agenciaTexto = gFields.agencia?.stringValue || fields.agenciaEnvio?.stringValue || fields.envio?.stringValue || '';
+
+                    // Excluir entregadas y códigos internos de motorizado (MOTJ/MOT)
+                    if (estatusRastreo !== 'ENTREGADO' && numGuia && !numGuia.startsWith('MOTJ') && !numGuia.includes('MOT') && !agenciaTexto.toLowerCase().includes('motorizado')) {
+                        const carrier = detectarCarrier(agenciaTexto);
                         if (carrier && totales[carrier.id] !== undefined) {
                             totales[carrier.id]++;
                             if (['ups', 'dhl'].includes(carrier.id) || gFields.tipoTramo?.stringValue === 'IMPORTACION') {
@@ -175,10 +179,12 @@ async function cargarContadoresAgencias() {
                     }
                 });
             } else {
-                // Tracking simple
-                const tracking = fields.tracking?.stringValue || fields.trackingMotorizado?.stringValue || fields.ultimaGuiaAsignada?.stringValue;
-                const envioTxt = (fields.envio?.stringValue || '').toLowerCase();
-                if (tracking && !envioTxt.includes('retiro') && !envioTxt.includes('local')) {
+                // Tracking simple de encomienda (NUNCA leer trackingMotorizado)
+                const tracking = fields.tracking?.stringValue || fields.ultimaGuiaAsignada?.stringValue;
+                const numGuia = (tracking || '').trim().toUpperCase();
+                const envioTxt = (fields.envio?.stringValue || fields.agenciaEnvio?.stringValue || '').toLowerCase().trim();
+
+                if (numGuia && !numGuia.startsWith('MOTJ') && !numGuia.includes('MOT') && !envioTxt.includes('motorizado') && !envioTxt.includes('retiro') && !envioTxt.includes('local')) {
                     const carrier = detectarCarrier(fields.agenciaEnvio?.stringValue || fields.envio?.stringValue);
                     if (carrier && totales[carrier.id] !== undefined) {
                         totales[carrier.id]++;
