@@ -14866,6 +14866,688 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
             }).catch(() => alert("No se pudo copiar el texto."));
         };
 
+        // =========================================================================
+        // ✨ ASISTENTE INTELIGENTE: ANALIZAR PRECIO POR FOTO (IA) - F&B PARTS
+        // =========================================================================
+        window._precioFotoBlob = null;
+        window._precioFotoBase64 = null;
+        window._precioFotoTargetModulo = 'reventa'; // 'reventa' | 'pedido'
+        window._precioFotoDataExtraida = null;
+        window._precioFotoRespuestas = {
+            calidad: 'OEM / Original',
+            presentacion: 'Unidad',
+            flete: 'Envío Incluido / Local ($0)',
+            margen: '30% (Margen Estándar)'
+        };
+
+        window.abrirModalAnalizarPrecioFoto = function(targetModulo = 'reventa') {
+            const modal = document.getElementById('modal-analizar-precio-foto');
+            if (!modal) return;
+
+            window._precioFotoTargetModulo = targetModulo || 'reventa';
+
+            const btnTexto = document.getElementById('btn-aplicar-precio-texto');
+            if (btnTexto) {
+                btnTexto.textContent = targetModulo === 'pedido' ? 'Aplicar a Pedido Manual' : 'Aplicar a Nueva Reventa';
+            }
+
+            // Si aún no se han renderizado las preguntas, renderizar las default
+            if (!document.getElementById('precio-foto-preguntas-container')?.children.length) {
+                window.renderizarPreguntasDefaultPrecioFoto();
+            }
+
+            // Recalcular KPI en tiempo real
+            window.recalcularPrecioSugeridoLive();
+
+            modal.style.display = 'flex';
+        };
+
+        window.cerrarModalAnalizarPrecioFoto = function() {
+            const modal = document.getElementById('modal-analizar-precio-foto');
+            if (modal) modal.style.display = 'none';
+        };
+
+        window.manejarSeleccionArchivoPrecioFoto = function(event) {
+            const file = event.target?.files?.[0];
+            if (file) {
+                window.procesarFotoPrecioBlob(file);
+            }
+        };
+
+        window.procesarFotoPrecioBlob = function(fileOrBlob) {
+            if (!fileOrBlob) return;
+            if (fileOrBlob.type && !fileOrBlob.type.startsWith('image/')) {
+                alert("Por favor selecciona un archivo de imagen válido (JPG, PNG, WEBP).");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                window._precioFotoBlob = fileOrBlob;
+                window._precioFotoBase64 = e.target.result;
+
+                const imgPreview = document.getElementById('precio-foto-img-preview');
+                const previewBox = document.getElementById('precio-foto-preview-box');
+                const fileInfo = document.getElementById('precio-foto-file-info');
+                const btnAnalizar = document.getElementById('btn-analizar-precio-foto');
+
+                if (imgPreview) imgPreview.src = e.target.result;
+                if (previewBox) previewBox.style.display = 'block';
+                if (fileInfo) {
+                    const sizeKb = (fileOrBlob.size / 1024).toFixed(1);
+                    fileInfo.textContent = `${fileOrBlob.name || 'Captura pegada'} (${sizeKb} KB)`;
+                }
+                if (btnAnalizar) {
+                    btnAnalizar.disabled = false;
+                    btnAnalizar.innerHTML = '<i class="fas fa-magic"></i> ✨ Analizar Precio con IA';
+                }
+
+                // Ocultar alerta de estado previa
+                const alertEl = document.getElementById('precio-foto-status-alert');
+                if (alertEl) alertEl.style.display = 'none';
+            };
+            reader.readAsDataURL(fileOrBlob);
+        };
+
+        window.limpiarFotoPrecioIA = function() {
+            window._precioFotoBlob = null;
+            window._precioFotoBase64 = null;
+            window._precioFotoDataExtraida = null;
+
+            const input = document.getElementById('precio-foto-file-input');
+            if (input) input.value = '';
+
+            const previewBox = document.getElementById('precio-foto-preview-box');
+            if (previewBox) previewBox.style.display = 'none';
+
+            const imgPreview = document.getElementById('precio-foto-img-preview');
+            if (imgPreview) imgPreview.src = '';
+
+            const btnAnalizar = document.getElementById('btn-analizar-precio-foto');
+            if (btnAnalizar) {
+                btnAnalizar.disabled = true;
+                btnAnalizar.innerHTML = '<i class="fas fa-magic"></i> ✨ Analizar Precio con IA';
+            }
+
+            const alertEl = document.getElementById('precio-foto-status-alert');
+            if (alertEl) alertEl.style.display = 'none';
+        };
+
+        window.parsearJSONRespuestaPrecioFoto = function(rawResp) {
+            if (!rawResp) return null;
+            let rawStr = '';
+            if (typeof rawResp === 'string') rawStr = rawResp;
+            else if (rawResp?.message?.content) {
+                const c = rawResp.message.content;
+                rawStr = Array.isArray(c) ? c.map(b => b.text || b).join('') : String(c);
+            } else if (rawResp?.text) {
+                rawStr = String(rawResp.text);
+            }
+
+            const jsonMatch = rawStr.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) return null;
+            try {
+                return JSON.parse(jsonMatch[0]);
+            } catch (e) {
+                console.warn("[Precio Foto IA] Error parseando JSON:", e);
+                return null;
+            }
+        };
+
+        window.renderizarPreguntasDefaultPrecioFoto = function() {
+            const defaults = [
+                {
+                    id: "calidad",
+                    pregunta: "¿Cuál es la calidad u origen del repuesto?",
+                    opciones: ["OEM / Original", "Reemplazo Calidad A", "Genérico Estándar"],
+                    seleccionada: window._precioFotoRespuestas.calidad || "OEM / Original"
+                },
+                {
+                    id: "presentacion",
+                    pregunta: "¿El precio mostrado es por unidad o por par/kit?",
+                    opciones: ["Unidad", "Par (x2)", "Juego / Kit"],
+                    seleccionada: window._precioFotoRespuestas.presentacion || "Unidad"
+                },
+                {
+                    id: "flete",
+                    pregunta: "¿El costo incluye flete del proveedor o requiere gastos adicionales?",
+                    opciones: ["Envío Incluido / Local ($0)", "Flete Nacional (+ $5.00)", "Flete Carga Pesada (+ $12.00)"],
+                    seleccionada: window._precioFotoRespuestas.flete || "Envío Incluido / Local ($0)"
+                },
+                {
+                    id: "margen",
+                    pregunta: "¿Qué margen comercial deseas aplicar?",
+                    opciones: ["20% (Rotación Rápida)", "30% (Margen Estándar)", "40% (Exclusivo / Difícil)", "50% (Alta Ganancia)"],
+                    seleccionada: window._precioFotoRespuestas.margen || "30% (Margen Estándar)"
+                }
+            ];
+            window.renderizarPreguntasPrecioFoto(defaults);
+        };
+
+        window.renderizarPreguntasPrecioFoto = function(preguntas) {
+            const container = document.getElementById('precio-foto-preguntas-container');
+            if (!container) return;
+
+            container.innerHTML = '';
+            if (!Array.isArray(preguntas) || preguntas.length === 0) {
+                window.renderizarPreguntasDefaultPrecioFoto();
+                return;
+            }
+
+            preguntas.forEach(p => {
+                if (p.seleccionada && !window._precioFotoRespuestas[p.id]) {
+                    window._precioFotoRespuestas[p.id] = p.seleccionada;
+                }
+                const valorActual = window._precioFotoRespuestas[p.id] || p.seleccionada || (p.opciones && p.opciones[0]);
+
+                const block = document.createElement('div');
+                block.style.display = 'flex';
+                block.style.flexDirection = 'column';
+                block.style.gap = '5px';
+
+                const label = document.createElement('label');
+                label.style.fontSize = '11.5px';
+                label.style.fontWeight = '700';
+                label.style.color = '#374151';
+                label.textContent = p.pregunta;
+                block.appendChild(label);
+
+                const pillsRow = document.createElement('div');
+                pillsRow.style.display = 'flex';
+                pillsRow.style.flexWrap = 'wrap';
+                pillsRow.style.gap = '6px';
+
+                (p.opciones || []).forEach(opc => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.textContent = opc;
+                    const esActivo = (valorActual === opc);
+
+                    btn.style.padding = '4px 10px';
+                    btn.style.borderRadius = '16px';
+                    btn.style.fontSize = '11px';
+                    btn.style.cursor = 'pointer';
+                    btn.style.transition = 'all 0.15s ease';
+                    btn.style.border = esActivo ? '1.5px solid #385723' : '1px solid #cbd5e1';
+                    btn.style.background = esActivo ? '#385723' : '#ffffff';
+                    btn.style.color = esActivo ? '#ffffff' : '#374151';
+                    btn.style.fontWeight = esActivo ? '700' : '500';
+                    btn.style.boxShadow = esActivo ? '0 2px 5px rgba(56, 87, 35, 0.25)' : 'none';
+
+                    btn.onclick = function() {
+                        window.seleccionarOpcionPreguntaPrecio(p.id, opc);
+                    };
+
+                    pillsRow.appendChild(btn);
+                });
+
+                block.appendChild(pillsRow);
+                container.appendChild(block);
+            });
+        };
+
+        window.seleccionarOpcionPreguntaPrecio = function(preguntaId, opcion) {
+            window._precioFotoRespuestas[preguntaId] = opcion;
+
+            // Acciones secundarias automáticas según la opción
+            if (preguntaId === 'margen') {
+                const matchPct = opcion.match(/(\d+)\s*%/);
+                if (matchPct) {
+                    const inputMargen = document.getElementById('precio-foto-input-margen');
+                    if (inputMargen) inputMargen.value = matchPct[1];
+                }
+            } else if (preguntaId === 'flete') {
+                const inputGastos = document.getElementById('precio-foto-input-gastos');
+                if (inputGastos) {
+                    if (opcion.includes('$5.00') || opcion.includes('$5')) {
+                        inputGastos.value = "5.00";
+                    } else if (opcion.includes('$12.00') || opcion.includes('$12')) {
+                        inputGastos.value = "12.00";
+                    } else if (opcion.includes('$0') || opcion.toLowerCase().includes('incluido')) {
+                        inputGastos.value = "0.00";
+                    }
+                }
+            }
+
+            // Re-renderizar para actualizar el estado visual de los botones
+            if (window._precioFotoDataExtraida?.preguntas_aclaracion) {
+                window.renderizarPreguntasPrecioFoto(window._precioFotoDataExtraida.preguntas_aclaracion);
+            } else {
+                window.renderizarPreguntasDefaultPrecioFoto();
+            }
+
+            // Recalcular en vivo
+            window.recalcularPrecioSugeridoLive();
+        };
+
+        window.analizarFotoPrecioConIA = async function() {
+            if (!window._precioFotoBase64) {
+                alert("Por favor selecciona o pega una foto primero.");
+                return;
+            }
+
+            const btnAnalizar = document.getElementById('btn-analizar-precio-foto');
+            const alertEl = document.getElementById('precio-foto-status-alert');
+
+            if (btnAnalizar) {
+                btnAnalizar.disabled = true;
+                btnAnalizar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analizando con IA...';
+            }
+
+            if (alertEl) {
+                alertEl.style.display = 'block';
+                alertEl.style.background = '#eff6ff';
+                alertEl.style.border = '1px solid #bfdbfe';
+                alertEl.style.color = '#1d4ed8';
+                alertEl.innerHTML = '<i class="fas fa-robot"></i> <b>Analizando captura:</b> Detectando pieza, precio de referencia, gastos estimados y formulando preguntas clave...';
+            }
+
+            const promptIA = `Eres un especialista en repuestos automotrices y fijación de precios (pricing) para "Inversiones FB Parts, C.A." en Caracas, Venezuela.
+Analiza minuciosamente esta captura de pantalla o foto de una cotización, lista de precios, publicación de MercadoLibre o WhatsApp de mayorista.
+
+Extrae los datos y responde ÚNICAMENTE con un objeto JSON estricto (sin explicaciones ni formato markdown):
+{
+  "repuesto_detectado": "NOMBRE_COMPLETO_DEL_REPUESTO_MARCA_MODELO_O_VACIO",
+  "precio_referencia": NUMERO_FLOAT_O_NULL,
+  "moneda_referencia": "USD" | "VES" | "EUR",
+  "calidad_sugerida": "OEM / Original" | "Reemplazo Calidad A" | "Genérico Estándar",
+  "presentacion_sugerida": "Unidad" | "Par (x2)" | "Juego / Kit",
+  "gastos_estimados_usd": NUMERO_FLOAT,
+  "margen_sugerido_pct": 30,
+  "justificacion": "DESCRIPCION_BREVE_DE_LA_ESTIMACION_EN_UNA_O_DOS_LINEAS",
+  "preguntas_aclaracion": [
+    {
+      "id": "calidad",
+      "pregunta": "¿Cuál es la calidad u origen del repuesto?",
+      "opciones": ["OEM / Original", "Reemplazo Calidad A", "Genérico Estándar"],
+      "seleccionada": "OEM / Original"
+    },
+    {
+      "id": "presentacion",
+      "pregunta": "¿El precio mostrado es por unidad o por par/kit?",
+      "opciones": ["Unidad", "Par (x2)", "Juego / Kit"],
+      "seleccionada": "Unidad"
+    },
+    {
+      "id": "flete",
+      "pregunta": "¿El costo incluye flete del proveedor o requiere gastos adicionales?",
+      "opciones": ["Envío Incluido / Local ($0)", "Flete Nacional (+ $5.00)", "Flete Carga Pesada (+ $12.00)"],
+      "seleccionada": "Envío Incluido / Local ($0)"
+    },
+    {
+      "id": "margen",
+      "pregunta": "¿Qué margen comercial deseas aplicar?",
+      "opciones": ["20% (Rotación Rápida)", "30% (Margen Estándar)", "40% (Exclusivo / Difícil)", "50% (Alta Ganancia)"],
+      "seleccionada": "30% (Margen Estándar)"
+    }
+  ]
+}
+
+REGLAS CRÍTICAS:
+1. "precio_referencia": Extrae el valor numérico (ej: "$85.00" -> 85; "Bs. 3500" -> 3500; "45$" -> 45). Si no hay precio explícito o no se distingue, pon null.
+2. "moneda_referencia": "USD" si usa $, USD o divisa; "VES" si dice Bs, Bs. o bolívares; "EUR" si dice € o euros.
+3. Si el repuesto es original de fábrica, selecciona "OEM / Original". Si es una marca de reemplazo reconocida (ej. CTR, Denso, Valeo, Monroe), "Reemplazo Calidad A".`;
+
+            let dataExtraida = null;
+            let errorMsg = null;
+
+            try {
+                if (typeof puter !== 'undefined' && puter.ai) {
+                    try {
+                        const resp = await puter.ai.chat(promptIA, window._precioFotoBase64, { model: 'gemini-2.0-flash' });
+                        dataExtraida = window.parsearJSONRespuestaPrecioFoto(resp);
+                    } catch (ePuterModel) {
+                        try {
+                            const resp = await puter.ai.chat(promptIA, window._precioFotoBase64);
+                            dataExtraida = window.parsearJSONRespuestaPrecioFoto(resp);
+                        } catch (ePuterDef) {
+                            console.warn("[Precio Foto IA] Puter no respondió, intentando Gemini directo...", ePuterDef);
+                        }
+                    }
+                }
+
+                if (!dataExtraida) {
+                    const geminiKey = window.obtenerApiKeyGemini ? window.obtenerApiKeyGemini(false) : '';
+                    if (geminiKey) {
+                        const base64Data = window._precioFotoBase64.split(',')[1];
+                        const mimeType = window._precioFotoBase64.substring(
+                            window._precioFotoBase64.indexOf(':') + 1, 
+                            window._precioFotoBase64.indexOf(';')
+                        ) || 'image/jpeg';
+
+                        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`;
+                        const gResp = await fetch(url, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                contents: [{
+                                    parts: [
+                                        { text: promptIA },
+                                        { inline_data: { mime_type: mimeType, data: base64Data } }
+                                    ]
+                                }],
+                                generationConfig: { temperature: 0.1, maxOutputTokens: 1024 }
+                            })
+                        });
+
+                        if (gResp.ok) {
+                            const gData = await gResp.json();
+                            const rawText = gData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                            dataExtraida = window.parsearJSONRespuestaPrecioFoto(rawText);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("[Precio Foto IA] Error durante el análisis:", err);
+                errorMsg = err.message || String(err);
+            }
+
+            if (btnAnalizar) {
+                btnAnalizar.disabled = false;
+                btnAnalizar.innerHTML = '<i class="fas fa-magic"></i> ✨ Analizar Precio con IA';
+            }
+
+            if (dataExtraida) {
+                window._precioFotoDataExtraida = dataExtraida;
+
+                // Cargar valores en los inputs
+                const elRepuesto = document.getElementById('precio-foto-input-repuesto');
+                const elCosto = document.getElementById('precio-foto-input-costo');
+                const elMoneda = document.getElementById('precio-foto-select-moneda');
+                const elGastos = document.getElementById('precio-foto-input-gastos');
+                const elMargen = document.getElementById('precio-foto-input-margen');
+
+                if (elRepuesto && dataExtraida.repuesto_detectado) elRepuesto.value = dataExtraida.repuesto_detectado;
+                if (elCosto && dataExtraida.precio_referencia !== null && dataExtraida.precio_referencia !== undefined) {
+                    elCosto.value = Number(dataExtraida.precio_referencia).toFixed(2);
+                }
+                if (elMoneda && dataExtraida.moneda_referencia) {
+                    elMoneda.value = ['USD', 'VES', 'EUR'].includes(dataExtraida.moneda_referencia) ? dataExtraida.moneda_referencia : 'USD';
+                }
+                if (elGastos && dataExtraida.gastos_estimados_usd !== undefined) {
+                    elGastos.value = Number(dataExtraida.gastos_estimados_usd || 0).toFixed(2);
+                }
+                if (elMargen && dataExtraida.margen_sugerido_pct) {
+                    elMargen.value = dataExtraida.margen_sugerido_pct;
+                }
+
+                // Mostrar justificación si existe
+                const boxJust = document.getElementById('precio-foto-justificacion-box');
+                const txtJust = document.getElementById('precio-foto-justificacion-texto');
+                if (boxJust && txtJust && dataExtraida.justificacion) {
+                    txtJust.textContent = dataExtraida.justificacion;
+                    boxJust.style.display = 'block';
+                }
+
+                // Renderizar preguntas y opciones dinámicas
+                if (Array.isArray(dataExtraida.preguntas_aclaracion) && dataExtraida.preguntas_aclaracion.length > 0) {
+                    window.renderizarPreguntasPrecioFoto(dataExtraida.preguntas_aclaracion);
+                } else {
+                    window.renderizarPreguntasDefaultPrecioFoto();
+                }
+
+                // Recalcular en tiempo real
+                window.recalcularPrecioSugeridoLive();
+
+                if (alertEl) {
+                    alertEl.style.display = 'block';
+                    alertEl.style.background = '#f0fdf4';
+                    alertEl.style.border = '1px solid #bbf7d0';
+                    alertEl.style.color = '#166534';
+                    alertEl.innerHTML = `<i class="fas fa-check-circle"></i> <b>¡Análisis Exitoso!</b> Repuesto identificado: <b>${dataExtraida.repuesto_detectado || 'Detectado'}</b>. Revisa las variantes clave y confirma el precio sugerido.`;
+                }
+            } else {
+                // Fallback sin trabar la interfaz
+                window.renderizarPreguntasDefaultPrecioFoto();
+                window.recalcularPrecioSugeridoLive();
+
+                if (alertEl) {
+                    alertEl.style.display = 'block';
+                    alertEl.style.background = '#fffbeb';
+                    alertEl.style.border = '1px solid #fde68a';
+                    alertEl.style.color = '#b45309';
+                    alertEl.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <b>No se detectó un precio automático</b> ${errorMsg ? `(${errorMsg})` : ''}. Por favor ingresa el costo base y la descripción manualmente en el panel de la derecha.`;
+                }
+            }
+        };
+
+        window.recalcularPrecioSugeridoLive = function() {
+            const inputCosto = document.getElementById('precio-foto-input-costo');
+            const selectMoneda = document.getElementById('precio-foto-select-moneda');
+            const inputGastos = document.getElementById('precio-foto-input-gastos');
+            const inputMargen = document.getElementById('precio-foto-input-margen');
+
+            const costoBase = parseFloat(inputCosto?.value) || 0;
+            const moneda = selectMoneda?.value || 'USD';
+            const gastos = parseFloat(inputGastos?.value) || 0;
+            const margenPct = Math.min(Math.max(parseFloat(inputMargen?.value) || 0, 0), 95);
+
+            // Obtener tasas oficiales
+            const tasaVES = window.obtenerTasaBCVActual() || window.tasaReventaBCV || 42.00;
+            const tasaEUR = window.tasaReventaEUR || 1.08;
+
+            // Normalizar a USD
+            let costoBaseUSD = costoBase;
+            if (moneda === 'VES') {
+                costoBaseUSD = tasaVES > 0 ? (costoBase / tasaVES) : costoBase;
+            } else if (moneda === 'EUR') {
+                costoBaseUSD = tasaEUR < 10 ? (costoBase * tasaEUR) : (costoBase * 1.08);
+            }
+
+            // Multiplicador de presentación si aplica
+            let multiplicador = 1;
+            const pres = window._precioFotoRespuestas['presentacion'] || '';
+            // Si el costo es por unidad pero se busca par/kit
+            if (pres.toLowerCase().includes('par (x2)') && window._precioFotoDataExtraida?.presentacion_detectada === 'Unidad') {
+                multiplicador = 2;
+            }
+
+            const costoTotalUSD = (costoBaseUSD * multiplicador) + gastos;
+
+            // Precio Sugerido de Venta en USD según fórmula de margen comercial
+            let precioVentaUSD = 0;
+            if (margenPct >= 100) {
+                precioVentaUSD = costoTotalUSD * (1 + (margenPct / 100));
+            } else if (margenPct > 0) {
+                precioVentaUSD = costoTotalUSD / (1 - (margenPct / 100));
+            } else {
+                precioVentaUSD = costoTotalUSD;
+            }
+
+            const precioVentaVES = precioVentaUSD * tasaVES;
+            const gananciaUSD = precioVentaUSD - costoTotalUSD;
+
+            // Actualizar tarjetas KPI
+            const kpiUsd = document.getElementById('precio-foto-kpi-usd');
+            const kpiBs = document.getElementById('precio-foto-kpi-bs');
+            const kpiCostoTotal = document.getElementById('precio-foto-kpi-costo-total');
+            const kpiGanancia = document.getElementById('precio-foto-kpi-ganancia');
+
+            if (kpiUsd) kpiUsd.textContent = `$${precioVentaUSD.toFixed(2)} USD`;
+            if (kpiBs) {
+                kpiBs.textContent = `Bs. ${precioVentaVES.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (Tasa: ${tasaVES.toFixed(2)})`;
+            }
+            if (kpiCostoTotal) kpiCostoTotal.textContent = `$${costoTotalUSD.toFixed(2)} USD`;
+            if (kpiGanancia) {
+                kpiGanancia.textContent = `$${gananciaUSD.toFixed(2)} USD (${margenPct.toFixed(0)}%)`;
+            }
+
+            return {
+                costoBaseUSD,
+                multiplicador,
+                gastos,
+                costoTotalUSD,
+                margenPct,
+                precioVentaUSD,
+                precioVentaVES,
+                gananciaUSD,
+                tasaVES
+            };
+        };
+
+        window.aplicarPrecioSugeridoIA = function() {
+            const calc = window.recalcularPrecioSugeridoLive();
+            const repuesto = (document.getElementById('precio-foto-input-repuesto')?.value || '').trim();
+
+            if (calc.precioVentaUSD <= 0) {
+                alert("Por favor ingresa un costo base o analiza una foto con precio antes de aplicar el precio sugerido.");
+                return;
+            }
+
+            const targetModulo = window._precioFotoTargetModulo || 'reventa';
+
+            if (targetModulo === 'reventa') {
+                // Activar pestaña de reventas si no está activa
+                const tabReventas = document.getElementById('tab-reventas');
+                if (tabReventas) {
+                    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+                    tabReventas.classList.add('active');
+                    document.querySelectorAll('.tab-btn').forEach(tb => tb.classList.remove('active'));
+                    const btnTab = document.querySelector('button[onclick*="reventas"]') || document.querySelector('[data-tab="tab-reventas"]');
+                    if (btnTab) btnTab.classList.add('active');
+                }
+
+                // Llenar campos de Reventa
+                const elDesc = document.getElementById('rev-desc');
+                const elCosto = document.getElementById('rev-costo');
+                const elGastos = document.getElementById('rev-gastos');
+                const elVenta = document.getElementById('rev-venta');
+
+                if (elDesc && repuesto) elDesc.value = repuesto;
+
+                // Asegurar moneda USD en reventas
+                if (window.setMonedaReventa) {
+                    window.setMonedaReventa('rev-costo', 'USD');
+                    window.setMonedaReventa('rev-gastos', 'USD');
+                    window.setMonedaReventa('rev-venta', 'USD');
+                }
+
+                if (elCosto) {
+                    elCosto.value = (calc.costoBaseUSD * calc.multiplicador).toFixed(2);
+                    if (window.manejarInputReventa) window.manejarInputReventa('rev-costo');
+                }
+                if (elGastos) {
+                    elGastos.value = calc.gastos.toFixed(2);
+                    if (window.manejarInputReventa) window.manejarInputReventa('rev-gastos');
+                }
+                if (elVenta) {
+                    elVenta.value = calc.precioVentaUSD.toFixed(2);
+                    if (window.manejarInputReventa) window.manejarInputReventa('rev-venta');
+                }
+
+                // Recalcular reventas
+                if (window.calcularReventa) window.calcularReventa();
+
+                window.cerrarModalAnalizarPrecioFoto();
+
+                // Scroll al formulario y foco
+                if (elDesc) {
+                    elDesc.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    elDesc.focus();
+                }
+
+                alert(`✨ ¡Precio sugerido aplicado con éxito a Reventas!\n\nRepuesto: ${repuesto || 'Repuesto'}\nCosto Total: $${calc.costoTotalUSD.toFixed(2)} USD\nPrecio Venta Sugerido: $${calc.precioVentaUSD.toFixed(2)} USD (Margen ${calc.margenPct}%)`);
+
+            } else if (targetModulo === 'pedido') {
+                // Activar pestaña de pedidos si no está activa
+                const tabPedidos = document.getElementById('tab-pedidos');
+                if (tabPedidos) {
+                    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+                    tabPedidos.classList.add('active');
+                    document.querySelectorAll('.tab-btn').forEach(tb => tb.classList.remove('active'));
+                    const btnTab = document.querySelector('button[onclick*="pedidos"]') || document.querySelector('[data-tab="tab-pedidos"]');
+                    if (btnTab) btnTab.classList.add('active');
+                }
+
+                const container = document.getElementById('pedidos-items-container');
+                let targetRow = null;
+
+                if (container) {
+                    const rows = container.querySelectorAll('.pedido-item-row');
+                    for (const r of rows) {
+                        const desc = r.querySelector('.ped-item-desc');
+                        const prec = r.querySelector('.ped-item-precio');
+                        if (desc && !desc.value.trim() && (!prec || parseFloat(prec.value) === 0)) {
+                            targetRow = r;
+                            break;
+                        }
+                    }
+                }
+
+                if (!targetRow && window.agregarFilaPedidoVacia) {
+                    window.agregarFilaPedidoVacia();
+                    const rows = container ? container.querySelectorAll('.pedido-item-row') : [];
+                    targetRow = rows[rows.length - 1];
+                }
+
+                if (targetRow) {
+                    const descInput = targetRow.querySelector('.ped-item-desc');
+                    const precInput = targetRow.querySelector('.ped-item-precio');
+
+                    if (descInput) descInput.value = repuesto || 'Repuesto analizado';
+                    if (precInput) precInput.value = calc.precioVentaUSD.toFixed(2);
+
+                    if (window.calcularTotalPedido) window.calcularTotalPedido();
+                }
+
+                window.cerrarModalAnalizarPrecioFoto();
+
+                alert(`✨ ¡Repuesto agregado al pedido manual!\n\nDescripción: ${repuesto || 'Repuesto'}\nPrecio sugerido: $${calc.precioVentaUSD.toFixed(2)} USD`);
+            }
+        };
+
+        // Soporte global de Ctrl+V / Paste para la ventana modal de Analizar Precio por Foto
+        window.addEventListener('paste', function(e) {
+            const modal = document.getElementById('modal-analizar-precio-foto');
+            if (!modal || modal.style.display === 'none') return;
+
+            const items = (e.clipboardData || e.originalEvent?.clipboardData)?.items;
+            if (!items) return;
+
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type && items[i].type.indexOf('image') !== -1) {
+                    const blob = items[i].getAsFile();
+                    if (blob) {
+                        e.preventDefault();
+                        window.procesarFotoPrecioBlob(blob);
+                        break;
+                    }
+                }
+            }
+        });
+
+        // Configuración de Drag & Drop para la Dropzone de Precio por Foto
+        document.addEventListener('DOMContentLoaded', () => {
+            const dropzone = document.getElementById('precio-foto-dropzone');
+            if (!dropzone) return;
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropzone.style.borderColor = '#385723';
+                    dropzone.style.background = '#dcfce7';
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropzone.style.borderColor = '#5e8877';
+                    dropzone.style.background = '#eef3f0';
+                }, false);
+            });
+
+            dropzone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt?.files;
+                if (files && files[0]) {
+                    window.procesarFotoPrecioBlob(files[0]);
+                }
+            }, false);
+        });
+
         // Inicialización reactiva
         setTimeout(() => {
             if (window.recomputarCRMTransaccional) window.recomputarCRMTransaccional();
