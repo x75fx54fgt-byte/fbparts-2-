@@ -71,11 +71,11 @@ export const CARRIERS_CONFIG = {
         nombre: 'Grupo Zoom',
         categoria: 'NACIONAL',
         color: '#ea580c',
-        alias: ['zoom', 'grupo zoom', 'zoom envios'],
+        alias: ['zoom', 'grupo zoom', 'zoom envios', 'zoomtrack'],
         urlTemplate: 'https://zoom.red/tracking-de-envios-personas/',
         modo: 'tab',
         waitMs: 3000,
-        inputSelector: "#form-field-nro_guia, input[name*='nro_guia']",
+        inputSelector: "#form-field-nro_guia, input[name*='nro_guia'], input[name*='guia']",
         submitSelector: "#tracking-page-btn-rastrear, #home-btn-rastrear, button[type='submit']",
         resultSelector: ".elementor-widget-container, .tracking-result, .elementor-form, body"
     },
@@ -177,7 +177,7 @@ const PATRONES_ESTATUS = {
     ],
     ENTREGADO: [
         // Español
-        /\b(entregad[oa]|recibid[oa]\s+conforme|retirad[oa]\s+por|entregado\s+en\s+destino|finalizad[oa]|entregado\s+a\s+cliente|despacho\s+finalizado)\b/i,
+        /\b(entregad[oa]s?|recibid[oa]s?\s+conforme|retirad[oa]s?\s+por|entregado\s+en\s+destino|finalizad[oa]s?|entregado\s+a\s+cliente|despacho\s+finalizado|entrega\s+efectuada|entregada\s+en\s+oficina|entregado\s+en\s+agencia)\b/i,
         /\b(recibido\s+por\s*:\s*[a-zA-Z\s]+|entregada\s+satisfactoriamente|firma\s+digital)\b/i,
         // Inglés (UPS / DHL / Amazon)
         /\b(delivered|signed\s+by|left\s+at\s+dock|left\s+at\s+front\s+door|proof\s+of\s+delivery|delivered\s+to|left\s+with|received\s+by|delivery\s+completed)\b/i

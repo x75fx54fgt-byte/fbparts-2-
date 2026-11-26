@@ -377,6 +377,16 @@ chrome.runtime.onMessage.addListener((msg) => {
         }
     }
 
+    if (msg.tipo === 'ACTUALIZACION_HISTORIAL') {
+        if (msg.historial) {
+            _estadoActual.historialReciente = msg.historial;
+        } else if (msg.item) {
+            _estadoActual.historialReciente = [...(_estadoActual.historialReciente || []), msg.item].slice(-50);
+        }
+        renderizarFeedHistorial();
+        cargarContadoresAgencias();
+    }
+
     if (msg.tipo === 'FIN_RASTREO') {
         _estadoActual.enProgreso = false;
         btnToggleRastreo.disabled = false;

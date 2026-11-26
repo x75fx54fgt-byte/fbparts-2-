@@ -199,7 +199,221 @@ async function consultarGuiaViaTab(carrier, numeroGuia) {
 
         if (_cancelarRastreo) return { exito: false, texto: '', error: 'Cancelado' };
 
-        // Si la agencia requiere rellenar formulario en la página (ej. Zoom o Tealca)
+        // 1. CASO ESPECIAL ZOOM: ZOOMTrack con interacción estricta y espera activa de resultado
+        if (carrier.id === 'zoom') {
+            const injection = await chrome.scripting.executeScript({
+                target: { tabId: tab.id },
+                func: async (numGuia) => {
+                    // --- Script de Automatización ZOOMTrack en el DOM ---
+                    // 1. Buscar input y asignar con setter nativo
+                    const inputSelectors = [
+                        "#form-field-nro_guia",
+                        "input[name*='nro_guia' i]",
+                        "input[name*='guia' i]",
+                        "input[name*='codigo' i]",
+                        "input[name*='tracking' i]",
+                        "input[placeholder*='guia' i]",
+                        "input[placeholder*='nro' i]",
+                        "input[type='text']",
+                        "input[type='search']"
+                    ];
+
+                    let input = null;
+                    for (const sel of inputSelectors) {
+                        const el = document.querySelector(sel);
+                        if (el && el.offsetParent !== null) {
+                            input = el;
+                            break;
+                        }
+                    }
+                    if (!input) {
+                        input = document.querySelector("input[type='text'], input:not([type='hidden']):not([type='radio']):not([type='checkbox'])");
+                    }
+
+                    if (!input) {
+                        return { exito: false, texto: '', error: 'Input de guía no encontrado en ZOOMTrack' };
+                    }
+
+                    input.focus();
+                    try {
+                        const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+                        if (nativeSetter) {
+                            nativeSetter.call(input, numGuia);
+                        } else {
+                            input.value = numGuia;
+                        }
+                    } catch (e) {
+                        input.value = numGuia;
+                    }
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+
+                    // 2. SELECCIÓN OBLIGATORIA DEL RADIO BUTTON 'ENVÍOS'
+                    let radioEnvios = null;
+
+                    // Buscar label con texto 'ENVÍOS', 'ENVIOS', 'ENVÍO', 'ENVIO'
+                    const allLabels = Array.from(document.querySelectorAll('label, span, div, p'));
+                    for (const lbl of allLabels) {
+                        const txt = (lbl.innerText || lbl.textContent || '').trim().toUpperCase();
+                        if (txt === 'ENVÍOS' || txt === 'ENVIOS' || txt === 'ENVÍO' || txt === 'ENVIO' || txt.includes('ENVÍO') || txt.includes('ENVIO')) {
+                            const forId = lbl.getAttribute('for');
+                            if (forId) {
+                                const el = document.getElementById(forId);
+                                if (el && el.type === 'radio') {
+                                    radioEnvios = el;
+                                    break;
+                                }
+                            }
+                            const nested = lbl.querySelector("input[type='radio']");
+                            if (nested) {
+                                radioEnvios = nested;
+                                break;
+                            }
+                            const prev = lbl.previousElementSibling;
+                            if (prev && prev.type === 'radio') {
+                                radioEnvios = prev;
+                                break;
+                            }
+                            const next = lbl.nextElementSibling;
+                            if (next && next.type === 'radio') {
+                                radioEnvios = next;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Fallback a radio por value, id, name o primer radio
+                    if (!radioEnvios) {
+                        const radios = Array.from(document.querySelectorAll("input[type='radio']"));
+                        for (const r of radios) {
+                            const val = (r.value || '').toUpperCase();
+                            const id = (r.id || '').toUpperCase();
+                            const name = (r.name || '').toUpperCase();
+                            if (val.includes('ENVIO') || id.includes('ENVIO') || val.includes('CARGA') || name.includes('TIPO')) {
+                                radioEnvios = r;
+                                break;
+                            }
+                        }
+                        if (!radioEnvios && radios.length > 0) {
+                            radioEnvios = radios[0];
+                        }
+                    }
+
+                    if (radioEnvios) {
+                        radioEnvios.checked = true;
+                        try { radioEnvios.click(); } catch (e) {}
+                        radioEnvios.dispatchEvent(new Event('change', { bubbles: true }));
+                        radioEnvios.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+
+                    // Espera obligatoria de 300 ms antes de hacer clic en RASTREAR
+                    await new Promise(r => setTimeout(r, 300));
+
+                    // 3. Localizar y hacer clic en RASTREAR
+                    let btnRastrear = null;
+                    const candidates = Array.from(document.querySelectorAll("button, input[type='submit'], a.btn, .elementor-button, [role='button']"));
+                    for (const b of candidates) {
+                        const txt = (b.innerText || b.textContent || b.value || '').trim().toUpperCase();
+                        if (txt.includes('RASTREAR') || txt.includes('CONSULTAR')) {
+                            btnRastrear = b;
+                            break;
+                        }
+                    }
+                    if (!btnRastrear) {
+                        btnRastrear = document.querySelector("#tracking-page-btn-rastrear, #home-btn-rastrear, button[type='submit'], input[type='submit']");
+                    }
+
+                    if (btnRastrear) {
+                        btnRastrear.click();
+                    } else {
+                        const form = input.closest('form');
+                        if (form && typeof form.requestSubmit === 'function') {
+                            form.requestSubmit();
+                        } else if (form) {
+                            form.submit();
+                        }
+                    }
+
+                    // 4. Espera Activa del Resultado (timeoutMs = 10000, verificación cada 500ms)
+                    const keywords = [
+                        'entregado', 'entregada', 'recibido', 'recibida', 'tránsito', 'transito',
+                        'oficina', 'agencia', 'fecha', 'estatus', 'estado', 'destinatario',
+                        'no existe', 'no encontrado', 'sin información', 'sin informacion',
+                        'guía no encontrada', 'guia no encontrada', 'novedad', 'retenido',
+                        'en ruta', 'disponible', 'taquilla', 'almacén', 'almacen', 'firma', 'receptor'
+                    ];
+
+                    const startTime = Date.now();
+                    const timeoutMs = 10000;
+
+                    while (Date.now() - startTime < timeoutMs) {
+                        await new Promise(r => setTimeout(r, 500));
+
+                        const containerSelectors = [
+                            ".elementor-widget-container",
+                            ".tracking-result",
+                            "#resultado-rastreo",
+                            ".tabla-rastreo",
+                            "#tracking-status",
+                            ".tracking-status",
+                            ".resultado",
+                            ".timeline",
+                            "table",
+                            "main",
+                            "body"
+                        ];
+
+                        for (const sel of containerSelectors) {
+                            const el = document.querySelector(sel);
+                            if (el) {
+                                const txt = (el.innerText || '').trim();
+                                const txtLow = txt.toLowerCase();
+                                const coincide = keywords.some(k => txtLow.includes(k));
+                                if (coincide && txt.length > 40) {
+                                    return {
+                                        exito: true,
+                                        texto: txt,
+                                        url: window.location.href
+                                    };
+                                }
+                            }
+                        }
+                    }
+
+                    // Último intento en todo el documento
+                    const bodyTxt = document.body ? (document.body.innerText || '').trim() : '';
+                    const bodyLow = bodyTxt.toLowerCase();
+                    if (keywords.some(k => bodyLow.includes(k)) && bodyTxt.length > 50) {
+                        return {
+                            exito: true,
+                            texto: bodyTxt,
+                            url: window.location.href
+                        };
+                    }
+
+                    // Si vence el tiempo y el contenedor sigue vacío:
+                    return {
+                        exito: false,
+                        texto: '',
+                        error: 'Sin respuesta en ZOOMTrack'
+                    };
+                },
+                args: [numeroGuia]
+            });
+
+            const resZoom = injection && injection[0] && injection[0].result;
+            if (resZoom) {
+                return {
+                    exito: Boolean(resZoom.exito),
+                    texto: resZoom.texto || '',
+                    error: resZoom.error || '',
+                    url: resZoom.url || url
+                };
+            }
+            return { exito: false, texto: '', error: 'Sin respuesta en ZOOMTrack', url };
+        }
+
+        // 2. CASO GENÉRICO PARA OTRAS AGENCIAS
         if (carrier.inputSelector && carrier.submitSelector) {
             try {
                 await chrome.scripting.executeScript({
@@ -207,7 +421,16 @@ async function consultarGuiaViaTab(carrier, numeroGuia) {
                     func: (inSel, subSel, num) => {
                         const input = document.querySelector(inSel);
                         if (input) {
-                            input.value = num;
+                            try {
+                                const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+                                if (nativeSetter) {
+                                    nativeSetter.call(input, num);
+                                } else {
+                                    input.value = num;
+                                }
+                            } catch (e) {
+                                input.value = num;
+                            }
                             input.dispatchEvent(new Event('input', { bubbles: true }));
                             input.dispatchEvent(new Event('change', { bubbles: true }));
                         }
@@ -316,29 +539,42 @@ export async function ejecutarRastreoSecuencial() {
         // Desglosar la lista de guías a verificar
         const listaTareas = [];
         for (const ped of pedidos) {
-            let guias = [];
-            if (Array.isArray(ped.guiasEnvio) && ped.guiasEnvio.length > 0) {
-                guias = ped.guiasEnvio;
-            } else {
-                const rawTrack = ped.tracking || ped.trackingMotorizado || ped.ultimaGuiaAsignada;
-                if (rawTrack) {
-                    const trackings = rawTrack.split(',').map(s => s.trim()).filter(Boolean);
+            let guias = Array.isArray(ped.guiasEnvio) && ped.guiasEnvio.length > 0 ? ped.guiasEnvio : [];
+            const rawTrack = ped.tracking || ped.trackingMotorizado || ped.ultimaGuiaAsignada;
+            if (rawTrack) {
+                const trackings = rawTrack.split(/[,;/]+/).map(s => s.trim()).filter(Boolean);
+                if (guias.length === 0) {
                     guias = trackings.map(num => ({
                         numero: num,
                         agencia: ped.agenciaEnvio || ped.envio || 'Tealca',
                         estadoRastreo: 'EN_TRANSITO',
-                        destinatario: ped.cliente || ''
+                        destinatario: ped.cliente || '',
+                        tipoTramo: 'ENTREGA_CLIENTE'
                     }));
+                } else {
+                    trackings.forEach(num => {
+                        const yaExiste = guias.some(g => (g.numero || '').toLowerCase() === num.toLowerCase());
+                        if (!yaExiste) {
+                            guias.push({
+                                numero: num,
+                                agencia: ped.agenciaEnvio || ped.envio || 'Tealca',
+                                estadoRastreo: 'EN_TRANSITO',
+                                destinatario: ped.cliente || '',
+                                tipoTramo: 'ENTREGA_CLIENTE'
+                            });
+                        }
+                    });
                 }
             }
+            ped.guiasEnvio = guias;
 
-            guias.forEach((g, idx) => {
+            ped.guiasEnvio.forEach((g, idx) => {
                 if ((g.estadoRastreo || '').toUpperCase() !== ESTADOS_ESTANDAR.ENTREGADO) {
                     listaTareas.push({
                         pedido: ped,
                         guia: g,
                         guiaIndex: idx,
-                        totalGuiasPedido: guias.length
+                        totalGuiasPedido: ped.guiasEnvio.length
                     });
                 }
             });
@@ -404,8 +640,8 @@ export async function ejecutarRastreoSecuencial() {
             } else {
                 normalizado = {
                     estado: ESTADOS_ESTANDAR.VERIFICAR_MANUAL,
-                    resumen: `Verificar en portal (${resultadoPortal.error || 'Sin respuesta'})`,
-                    requiereCaptcha: false,
+                    resumen: resultadoPortal.error || 'Verificar en portal (Sin respuesta)',
+                    requiereCaptcha: Boolean(resultadoPortal.requiereCaptcha),
                     confianza: 'baja'
                 };
             }
@@ -422,7 +658,7 @@ export async function ejecutarRastreoSecuencial() {
             if (normalizado.estado === ESTADOS_ESTANDAR.NOVEDAD) novedadesDetectadas++;
             if (normalizado.requiereCaptcha) captchasRequeridos++;
 
-            historialResultados.push({
+            const itemHistorial = {
                 numero: numGuia,
                 agencia: carrier.nombre,
                 tipoTramo: tarea.guia.tipoTramo || (carrier.categoria === 'INTERNACIONAL' ? 'IMPORTACION' : 'ENTREGA_CLIENTE'),
@@ -433,7 +669,27 @@ export async function ejecutarRastreoSecuencial() {
                 requiereCaptcha: normalizado.requiereCaptcha,
                 urlRastreo: tarea.guia.urlRastreo,
                 fecha: new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })
-            });
+            };
+            historialResultados.push(itemHistorial);
+
+            // Registrar cada revisión inmediatamente en chrome.storage.local y notificar al popup
+            try {
+                const storageSnap = await chrome.storage.local.get(['historialReciente']);
+                const histExistente = storageSnap.historialReciente || [];
+                const histActualizado = [...histExistente, itemHistorial].slice(-50);
+                await chrome.storage.local.set({
+                    historialReciente: histActualizado,
+                    ultimoRastreoTimestamp: new Date().toISOString()
+                });
+
+                enviarMensajePopup({
+                    tipo: 'ACTUALIZACION_HISTORIAL',
+                    item: itemHistorial,
+                    historial: histActualizado
+                });
+            } catch (eStorage) {
+                console.warn("Aviso guardando historial parcial en storage:", eStorage);
+            }
 
             // 3. Regla de Cierre Diferenciada (Importación / Amazon vs Entrega al Cliente)
             const todasGuias = tarea.pedido.guiasEnvio || [tarea.guia];
