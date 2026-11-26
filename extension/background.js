@@ -25,9 +25,118 @@ let _rastreoEnProgreso = false;
 let _cancelarRastreo = false;
 let _tabActivaId = null;
 let _esperaTimeoutId = null;
+let _activeAbortController = null;
+let _ultimoInicioRastreoTimestamp = 0;
 
 // Storage para sesiones en memoria (tabId persistente durante recargas de página)
 const sessionStore = chrome.storage.session || chrome.storage.local;
+
+/**
+ * =========================================================================
+ * 🎯 CLASIFICADOR UNIFICADO DE ESTATUS (EVALUACIÓN ESTRICTA)
+ * 1. ENTREGADO (Prioridad Máxima Absoluta)
+ * 2. NOVEDAD
+ * 3. LISTO_RETIRO
+ * 4. EN_TRANSITO
+ * 5. VERIFICAR_MANUAL
+ * =========================================================================
+ */
+export function clasificarEstatus(textoCrudo) {
+    if (!textoCrudo || typeof textoCrudo !== 'string') {
+        return {
+            estado: ESTADOS_ESTANDAR.VERIFICAR_MANUAL,
+            detalle: 'Sin respuesta del portal',
+            resumen: 'Sin respuesta del portal'
+        };
+    }
+
+    const txt = textoCrudo.toUpperCase();
+    console.log("Texto leído contiene ENTREGADO:", txt.includes("ENTREGADO"));
+
+    // 1. PRIORIDAD MÁXIMA: ENTREGADO
+    // Si la pantalla o historial contiene "ENTREGADO AL CLIENTE", "ENTREGADO", etc.,
+    // SIEMPRE prevalece sobre estados anteriores como taquilla u oficina.
+    if (/ENTREGADO AL CLIENTE|\bENTREGAD[OA]S?\b|DELIVERED|RETIRAD[OA] POR DESTINATARIO|RECIBID[OA] CONFORME|ENTREGA EFECTUADA|SIGNED BY/.test(txt)) {
+        return {
+            estado: ESTADOS_ESTANDAR.ENTREGADO,
+            detalle: 'Entregado al cliente',
+            resumen: 'Entregado al cliente'
+        };
+    }
+
+    // 2. SEGUNDA PRIORIDAD: NOVEDAD (Devuelto, Retenido, Dirección Incorrecta, Exception)
+    if (/DEVUELT[OA]S?|DEVOLUCI[OÓ]N|RETENID[OA]S?|DIRECCI[OÓ]N INCORRECTA|EXCEPTION|SINIESTRO|EXTRAV[IÍ]O|ON HOLD|AVER[IÍ]A|DA[ÑN]AD[OA]/.test(txt)) {
+        return {
+            estado: ESTADOS_ESTANDAR.NOVEDAD,
+            detalle: 'Novedad o retención detectada',
+            resumen: 'Novedad o retención detectada'
+        };
+    }
+
+    // 3. TERCERA PRIORIDAD: LISTO_RETIRO (Disponible para retiro, en taquilla, oficina destino)
+    if (/DISPONIBLE PARA (EL )?RETIRO|EN TAQUILLA|EN OFICINA DESTINO|EN CIUDAD DESTINO|READY FOR PICK-?UP|POR RETIRAR/.test(txt)) {
+        return {
+            estado: ESTADOS_ESTANDAR.LISTO_RETIRO,
+            detalle: 'Disponible para retiro en oficina/taquilla',
+            resumen: 'Disponible para retiro en oficina/taquilla'
+        };
+    }
+
+    // 4. CUARTA PRIORIDAD: EN_TRANSITO (En camino, en tránsito, despachado, en ruta)
+    if (/EN CAMINO|EN TR[AÁ]NSITO|DESPACHAD[OA]|IN TRANSIT|EN RUTA|EN VIAJE|RECEPCI[OÓ]N EN OFICINA/.test(txt)) {
+        return {
+            estado: ESTADOS_ESTANDAR.EN_TRANSITO,
+            detalle: 'En tránsito hacia destino',
+            resumen: 'En tránsito hacia destino'
+        };
+    }
+
+    // 5. QUINTA PRIORIDAD: VERIFICAR_MANUAL
+    return {
+        estado: ESTADOS_ESTANDAR.VERIFICAR_MANUAL,
+        detalle: 'Estatus no concluyente (Verificar en portal)',
+        resumen: 'Estatus no concluyente (Verificar en portal)'
+    };
+}
+
+/**
+ * =========================================================================
+ * 🗃️ GUARDADO Y DEDUPLICACIÓN ESTRICTA EN HISTORIAL RECIENTE
+ * Cada número de guía solo aparece una sola vez en el popup con su estado más reciente.
+ * =========================================================================
+ */
+export async function guardarEnHistorial(registro) {
+    try {
+        const numReg = String(registro.numero || registro.guia || '').trim().toUpperCase();
+        const storageSnap = await chrome.storage.local.get(['historialReciente']);
+        let historial = storageSnap.historialReciente || [];
+
+        // Deduplicar: eliminar cualquier entrada previa con el mismo número de guía
+        historial = historial.filter(item => {
+            const numItem = String(item.numero || item.guia || '').trim().toUpperCase();
+            return numItem && numReg ? numItem !== numReg : true;
+        });
+
+        historial.unshift(registro);
+        historial = historial.slice(0, 50);
+
+        await chrome.storage.local.set({
+            historialReciente: historial,
+            ultimoRastreoTimestamp: new Date().toISOString()
+        });
+
+        enviarMensajePopup({
+            tipo: 'ACTUALIZACION_HISTORIAL',
+            item: registro,
+            historial
+        });
+
+        return historial;
+    } catch (e) {
+        console.error("Error en guardarEnHistorial:", e);
+        return [];
+    }
+}
 
 // =========================================================================
 // 1. HELPERS DE FIRESTORE REST API (LIVIANOS Y NATIVOS PARA SERVICE WORKER)
@@ -639,6 +748,7 @@ async function consultarGuiaViaFetch(carrier, numeroGuia) {
     if (!url) return { exito: false, texto: '', error: 'URL inválida' };
 
     const controller = new AbortController();
+    _activeAbortController = controller;
     const timeoutId = setTimeout(() => controller.abort(), 9000);
 
     try {
@@ -685,6 +795,10 @@ async function consultarGuiaViaFetch(carrier, numeroGuia) {
         clearTimeout(timeoutId);
         const errorMsg = e.name === 'AbortError' ? 'Tiempo de espera agotado (Timeout 9s)' : e.message;
         return { exito: false, texto: '', error: errorMsg, url };
+    } finally {
+        if (_activeAbortController === controller) {
+            _activeAbortController = null;
+        }
     }
 }
 
@@ -702,12 +816,29 @@ async function consultarGuiaPublica(carrier, numeroGuia) {
 // 3. SECUENCIADOR Y REGLA MULTI-GUÍA CON PROTECCIÓN TOTAL DE ESTADO
 // =========================================================================
 
-export async function ejecutarRastreoSecuencial() {
-    if (_rastreoEnProgreso) {
-        console.warn("Ya hay un ciclo de rastreo en progreso.");
+export async function ejecutarRastreoSecuencial(forzar = false) {
+    const ahora = Date.now();
+    // Si ya hay un rastreo pero lleva más de 45 segundos o el usuario lo fuerza, recuperarse
+    if (_rastreoEnProgreso && !forzar && (ahora - _ultimoInicioRastreoTimestamp < 45000)) {
+        console.warn("Ya hay un ciclo de rastreo en progreso activo.");
         return;
     }
 
+    // Si se fuerza o venció el tiempo de un proceso anterior colgado, limpiar estado previo
+    if (_rastreoEnProgreso) {
+        _cancelarRastreo = true;
+        if (_activeAbortController) {
+            try { _activeAbortController.abort(); } catch (e) {}
+            _activeAbortController = null;
+        }
+        if (_tabActivaId) {
+            chrome.tabs.remove(_tabActivaId).catch(() => {});
+            _tabActivaId = null;
+        }
+        await new Promise(r => setTimeout(r, 200));
+    }
+
+    _ultimoInicioRastreoTimestamp = Date.now();
     _rastreoEnProgreso = true;
     _cancelarRastreo = false;
 
@@ -923,24 +1054,8 @@ export async function ejecutarRastreoSecuencial() {
             };
             historialResultados.push(itemHistorial);
 
-            // Registrar cada revisión inmediatamente en chrome.storage.local y notificar al popup
-            try {
-                const storageSnap = await chrome.storage.local.get(['historialReciente']);
-                const histExistente = storageSnap.historialReciente || [];
-                const histActualizado = [...histExistente, itemHistorial].slice(-50);
-                await chrome.storage.local.set({
-                    historialReciente: histActualizado,
-                    ultimoRastreoTimestamp: new Date().toISOString()
-                });
-
-                enviarMensajePopup({
-                    tipo: 'ACTUALIZACION_HISTORIAL',
-                    item: itemHistorial,
-                    historial: histActualizado
-                });
-            } catch (eStorage) {
-                console.warn("Aviso guardando historial parcial en storage:", eStorage);
-            }
+            // Registrar cada revisión inmediatamente con deduplicación estricta y notificar al popup
+            await guardarEnHistorial(itemHistorial);
 
             // 3. Regla de Cierre Diferenciada (Importación / Amazon vs Entrega al Cliente)
             const todasGuias = tarea.pedido.guiasEnvio || [tarea.guia];
@@ -1014,10 +1129,9 @@ export async function ejecutarRastreoSecuencial() {
             }
         }
 
-        // Guardar estadísticas e historial reciente
-        const storageData = await chrome.storage.local.get(['estadisticasHistoricas', 'historialReciente']);
+        // Guardar estadísticas históricas
+        const storageData = await chrome.storage.local.get(['estadisticasHistoricas']);
         const statsPrev = storageData.estadisticasHistoricas || { entregadas: 0, novedades: 0, verificadas: 0 };
-        const histPrev = storageData.historialReciente || [];
 
         const nuevasStats = {
             entregadas: statsPrev.entregadas + entregadasNuevas,
@@ -1025,12 +1139,9 @@ export async function ejecutarRastreoSecuencial() {
             verificadas: statsPrev.verificadas + procesadas
         };
 
-        const histConsolidado = [...histPrev, ...historialResultados].slice(-50);
-
         await chrome.storage.local.set({
             ultimoRastreoTimestamp: new Date().toISOString(),
-            estadisticasHistoricas: nuevasStats,
-            historialReciente: histConsolidado
+            estadisticasHistoricas: nuevasStats
         });
 
         enviarMensajePopup({
@@ -1129,7 +1240,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.tipo === 'INICIAR_RASTREO') {
-        ejecutarRastreoSecuencial();
+        ejecutarRastreoSecuencial(Boolean(request.forzar));
         sendResponse({ ok: true, status: 'iniciado' });
         return true;
     }
@@ -1137,6 +1248,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.tipo === 'DETENER_RASTREO') {
         _cancelarRastreo = true;
         _rastreoEnProgreso = false;
+
+        if (_activeAbortController) {
+            try { _activeAbortController.abort(); } catch (e) {}
+            _activeAbortController = null;
+        }
 
         // Cerrar inmediatamente cualquier pestaña de background abierta
         if (_tabActivaId) {
@@ -1151,6 +1267,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         chrome.storage.local.set({ enProgreso: false }).then(() => {
             enviarMensajePopup({ tipo: 'FIN_RASTREO', motivo: 'detenido_por_usuario' });
             sendResponse({ ok: true, detenido: true });
+        }).catch(() => {
+            sendResponse({ ok: true, detenido: true });
         });
         return true;
     }
@@ -1158,6 +1276,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.tipo === 'FORZAR_REINICIO_ESTADO') {
         _cancelarRastreo = true;
         _rastreoEnProgreso = false;
+        if (_activeAbortController) {
+            try { _activeAbortController.abort(); } catch (e) {}
+            _activeAbortController = null;
+        }
         if (_tabActivaId) {
             chrome.tabs.remove(_tabActivaId).catch(() => {});
             _tabActivaId = null;
@@ -1266,18 +1388,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 const tabId = sender?.tab?.id || request.tabId;
                 const carrier = detectarCarrier(agencia);
 
-                // Si es Zoom, usar el parser específico que prioriza INFORMACIÓN DEL ENVÍO
-                let normalizado;
-                if (carrier?.id === 'zoom') {
-                    const parsedZoom = parsearHtmlTrackingZoom(textoExtraido);
-                    if (parsedZoom && parsedZoom.estado !== ESTADOS_ESTANDAR.VERIFICAR_MANUAL) {
-                        normalizado = parsedZoom;
-                    } else {
-                        normalizado = normalizarEstatus(textoExtraido);
-                    }
-                } else {
-                    normalizado = normalizarEstatus(textoExtraido);
-                }
+                // Clasificar estatus de forma unificada y estricta
+                const normalizado = clasificarEstatus(textoExtraido);
 
                 // 1. Obtener pedido desde Firestore
                 let ped = null;
@@ -1326,8 +1438,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     // Actualizar datos de la guía
                     guiaEncontrada.estadoRastreo = normalizado.estado;
                     guiaEncontrada.ultimaRevision = new Date().toISOString();
-                    guiaEncontrada.ultimoDetalleRastreo = `[Modo Asistido] ${normalizado.resumen}`;
+                    guiaEncontrada.ultimoDetalleRastreo = `[Modo Asistido] ${normalizado.detalle || normalizado.resumen}`;
                     guiaEncontrada.urlRastreo = construirUrlRastreo(carrier, guia);
+
+                    if (normalizado.estado === ESTADOS_ESTANDAR.ENTREGADO) {
+                        guiaEncontrada.entregado = true;
+                    }
 
                     if (guiaEncontrada.tipoTramo === 'IMPORTACION' && normalizado.estado === ESTADOS_ESTANDAR.ENTREGADO) {
                         guiaEncontrada.recibidaImportacion = true;
@@ -1346,7 +1462,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
                     // Regla A: Importación
                     if (guiasImportacion.length > 0) {
-                        const todasImpEntregadas = guiasImportacion.every(g => (g.estadoRastreo || '').toUpperCase() === ESTADOS_ESTANDAR.ENTREGADO);
+                        const todasImpEntregadas = guiasImportacion.every(g => g.recibidaImportacion === true || (g.estadoRastreo || '').toUpperCase() === ESTADOS_ESTANDAR.ENTREGADO);
                         if (todasImpEntregadas && !['en casillero / listo para despacho', 'despachado', 'entregado'].includes(estadoActualPedido)) {
                             camposActualizar.estado = 'En Casillero / Listo para Despacho';
                             fieldPaths.push('estado');
@@ -1364,8 +1480,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     }
 
                     // Regla B: Entrega al Cliente
+                    // Solo marcar como 'Entregado' si el 100% de las guías de ENTREGA AL CLIENTE están entregadas
                     if (guiasEntregaCliente.length > 0) {
-                        const todasCliEntregadas = guiasEntregaCliente.every(g => (g.estadoRastreo || '').toUpperCase() === ESTADOS_ESTANDAR.ENTREGADO);
+                        const todasCliEntregadas = guiasEntregaCliente.every(g => g.entregado === true || (g.estadoRastreo || '').toUpperCase() === ESTADOS_ESTANDAR.ENTREGADO);
                         if (todasCliEntregadas && estadoActualPedido !== 'entregado') {
                             camposActualizar.estado = 'Entregado';
                             camposActualizar.fechaEntrega = new Date().toLocaleDateString('es-VE');
@@ -1386,7 +1503,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     await actualizarPedidoFirestore(ped.id, camposActualizar, fieldPaths);
                 }
 
-                // 2. Guardar en historial local de chrome.storage.local
+                // 2. Guardar en historial local con deduplicación estricta
                 const itemHistorial = {
                     numero: guia,
                     agencia: carrier.nombre,
@@ -1394,25 +1511,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     cliente: ped?.cliente || 'Cliente',
                     pedidoId: pedidoId,
                     estadoRastreo: normalizado.estado,
-                    resumen: `[Modo Asistido] ${normalizado.resumen}`,
+                    resumen: `[Modo Asistido] ${normalizado.detalle || normalizado.resumen}`,
                     requiereCaptcha: false,
                     urlRastreo: construirUrlRastreo(carrier, guia),
                     fecha: new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })
                 };
 
-                const storageSnap = await chrome.storage.local.get(['historialReciente']);
-                const histExistente = storageSnap.historialReciente || [];
-                const histActualizado = [...histExistente, itemHistorial].slice(-50);
-                await chrome.storage.local.set({
-                    historialReciente: histActualizado,
-                    ultimoRastreoTimestamp: new Date().toISOString()
-                });
-
-                enviarMensajePopup({
-                    tipo: 'ACTUALIZACION_HISTORIAL',
-                    item: itemHistorial,
-                    historial: histActualizado
-                });
+                await guardarEnHistorial(itemHistorial);
 
                 // 3. Buscar si hay una siguiente guía pendiente para asistir
                 let siguienteGuia = null;

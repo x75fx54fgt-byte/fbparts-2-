@@ -235,50 +235,21 @@
 
     document.body.appendChild(overlay);
 
-    // 3. EXTRACCIÓN LIMPIA DEL RESULTADO (IGNORANDO MENÚS, HEADERS Y BANNERS)
+    // 3. EXTRACCIÓN LIMPIA DEL RESULTADO (TEXTO COMPLETO DEL DOM SIN TRUNCAR)
     function extraerTextoLimpioResultado() {
-        const clone = document.body.cloneNode(true);
+        try {
+            const overlayEl = document.getElementById('fbparts-assisted-overlay');
+            if (overlayEl) overlayEl.style.display = 'none';
 
-        // Remover elementos ruidosos de navegación, banners y encabezados
-        const selectoresIgnorar = [
-            '#fbparts-assisted-overlay',
-            'header',
-            'nav',
-            'footer',
-            '.elementor-location-header',
-            '.elementor-location-footer',
-            '.site-header',
-            '.site-footer',
-            '#header',
-            '#footer',
-            '.menu',
-            '.navbar',
-            '.nav',
-            '.banner',
-            '.anuncio',
-            '.announcement',
-            '.top-bar',
-            '.header-top',
-            'script',
-            'style',
-            'noscript',
-            'iframe'
-        ];
+            // Obtener texto completo y real del documento
+            const textoCompleto = (document.body ? (document.body.innerText || document.body.textContent) : '') || '';
 
-        selectoresIgnorar.forEach(sel => {
-            clone.querySelectorAll(sel).forEach(el => el.remove());
-        });
-
-        // Buscar primero contenedores dedicados de tracking en Zoom / Tealca / MRW
-        const contenedorPrioritario = clone.querySelector(
-            '.elementor-widget-container, .tracking-result, #resultado-rastreo, .tabla-rastreo, #tracking-status, .tracking-status, .resultado, .timeline, main, article'
-        );
-
-        if (contenedorPrioritario && contenedorPrioritario.innerText.trim().length > 30) {
-            return contenedorPrioritario.innerText.trim();
+            if (overlayEl) overlayEl.style.display = 'block';
+            return textoCompleto.trim();
+        } catch (e) {
+            console.warn("[FB Parts Asistido] Error extrayendo texto del DOM:", e);
+            return (document.body ? (document.body.innerText || document.body.textContent) : '') || '';
         }
-
-        return (clone.innerText || '').trim();
     }
 
     // 4. EVENTOS DE INTERACCIÓN

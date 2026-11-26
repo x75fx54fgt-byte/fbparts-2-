@@ -220,25 +220,21 @@ async function cargarContadoresAgencias() {
 // =========================================================================
 
 function configurarBotones() {
-    // Iniciar / Detener Rastreo (con protección anti-bloqueo)
+    // Iniciar / Detener Rastreo (con protección anti-bloqueo y respuesta inmediata)
     btnToggleRastreo.addEventListener('click', async () => {
         if (_estadoActual.enProgreso) {
-            btnLabel.textContent = 'Deteniendo...';
-            btnToggleRastreo.disabled = true;
+            // Detención inmediata en la UI: evitar que quede colgado en "Deteniendo..."
+            _estadoActual.enProgreso = false;
+            btnToggleRastreo.disabled = false;
+            actualizarUIConEstado();
 
             try {
-                await Promise.race([
-                    chrome.runtime.sendMessage({ tipo: 'DETENER_RASTREO' }),
-                    new Promise(r => setTimeout(r, 800))
-                ]);
+                await chrome.storage.local.set({ enProgreso: false });
+                chrome.runtime.sendMessage({ tipo: 'DETENER_RASTREO' }).catch(() => {});
             } catch (e) {
                 console.warn("Aviso al detener rastreo:", e);
             }
 
-            _estadoActual.enProgreso = false;
-            await chrome.storage.local.set({ enProgreso: false });
-            btnToggleRastreo.disabled = false;
-            actualizarUIConEstado();
             await cargarContadoresAgencias();
         } else {
             _estadoActual.enProgreso = true;
@@ -246,7 +242,7 @@ function configurarBotones() {
             dotLiveStatus.style.background = '#eab308';
             actualizarUIConEstado();
             try {
-                await chrome.runtime.sendMessage({ tipo: 'INICIAR_RASTREO' });
+                await chrome.runtime.sendMessage({ tipo: 'INICIAR_RASTREO', forzar: true });
             } catch (e) {
                 _estadoActual.enProgreso = false;
                 actualizarUIConEstado();
@@ -438,7 +434,13 @@ chrome.runtime.onMessage.addListener((msg) => {
         if (msg.historial) {
             _estadoActual.historialReciente = msg.historial;
         } else if (msg.item) {
-            _estadoActual.historialReciente = [...(_estadoActual.historialReciente || []), msg.item].slice(-50);
+            const numReg = String(msg.item.numero || msg.item.guia || '').trim().toUpperCase();
+            let hist = (_estadoActual.historialReciente || []).filter(it => {
+                const numIt = String(it.numero || it.guia || '').trim().toUpperCase();
+                return numIt && numReg ? numIt !== numReg : true;
+            });
+            hist.unshift(msg.item);
+            _estadoActual.historialReciente = hist.slice(0, 50);
         }
         renderizarFeedHistorial();
         cargarContadoresAgencias();
