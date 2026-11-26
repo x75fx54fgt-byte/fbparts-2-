@@ -33,6 +33,7 @@ const switchAutoCheck = document.getElementById('switch-auto-check');
 const feedListItems = document.getElementById('feed-list-items');
 const txtUltimaHoraRevision = document.getElementById('txt-ultima-hora-revision');
 const txtTotalPendientes = document.getElementById('txt-total-pendientes');
+const btnForzarReset = document.getElementById('btn-forzar-reset');
 
 // Contadores de agencias
 const countsEl = {
@@ -74,7 +75,9 @@ function actualizarUIConEstado() {
         btnIcon.textContent = '⏹';
         btnLabel.textContent = 'Detener Rastreo';
         dotLiveStatus.style.background = '#eab308';
-        labelLiveStatus.textContent = 'Rastreo en progreso...';
+        if (!labelLiveStatus.textContent || labelLiveStatus.textContent === 'Listo para rastrear') {
+            labelLiveStatus.textContent = 'Rastreo en progreso...';
+        }
     } else {
         btnToggleRastreo.classList.remove('btn-action-cancel');
         btnIcon.textContent = '🚀';
@@ -128,7 +131,7 @@ async function cargarContadoresAgencias() {
             if (estadoGlobal === 'entregado' || estadoGlobal === 'cancelado') return;
 
             // Revisar si tiene array de guiasEnvio
-            if (fields.guiasEnvio?.arrayValue?.values) {
+            if (fields.guiasEnvio?.arrayValue?.values && fields.guiasEnvio.arrayValue.values.length > 0) {
                 const guias = fields.guiasEnvio.arrayValue.values;
                 guias.forEach(gObj => {
                     const gFields = gObj.mapValue?.fields || {};
@@ -176,13 +179,41 @@ function configurarBotones() {
     btnToggleRastreo.addEventListener('click', async () => {
         if (_estadoActual.enProgreso) {
             btnLabel.textContent = 'Deteniendo...';
-            await chrome.runtime.sendMessage({ tipo: 'DETENER_RASTREO' });
+            btnToggleRastreo.disabled = true;
+            try {
+                await chrome.runtime.sendMessage({ tipo: 'DETENER_RASTREO' });
+            } catch (e) {}
+            _estadoActual.enProgreso = false;
+            btnToggleRastreo.disabled = false;
+            actualizarUIConEstado();
+            cargarContadoresAgencias();
         } else {
             _estadoActual.enProgreso = true;
+            labelLiveStatus.textContent = 'Conectando con Firebase...';
+            dotLiveStatus.style.background = '#eab308';
             actualizarUIConEstado();
-            await chrome.runtime.sendMessage({ tipo: 'INICIAR_RASTREO' });
+            try {
+                await chrome.runtime.sendMessage({ tipo: 'INICIAR_RASTREO' });
+            } catch (e) {
+                _estadoActual.enProgreso = false;
+                actualizarUIConEstado();
+            }
         }
     });
+
+    // Botón de Restablecer Estado de Emergencia
+    if (btnForzarReset) {
+        btnForzarReset.addEventListener('click', async () => {
+            btnForzarReset.textContent = 'Restableciendo...';
+            try {
+                await chrome.runtime.sendMessage({ tipo: 'FORZAR_REINICIO_ESTADO' });
+            } catch (e) {}
+            _estadoActual.enProgreso = false;
+            btnForzarReset.textContent = 'Restablecer';
+            actualizarUIConEstado();
+            await cargarContadoresAgencias();
+        });
+    }
 
     // Switch Automático
     if (switchAutoCheck) {
@@ -234,7 +265,6 @@ function renderizarFeedHistorial() {
         return;
     }
 
-    // Mostrar del más reciente al más antiguo
     const invertida = [...lista].reverse();
 
     feedListItems.innerHTML = invertida.map(item => {
@@ -263,7 +293,6 @@ function renderizarFeedHistorial() {
         `;
     }).join('');
 
-    // Asignar listeners a botones de abrir portal
     feedListItems.querySelectorAll('.btn-abrir-portal').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const url = e.currentTarget.getAttribute('data-url');
@@ -281,6 +310,8 @@ function renderizarFeedHistorial() {
 chrome.runtime.onMessage.addListener((msg) => {
     if (msg.tipo === 'INICIO_RASTREO') {
         _estadoActual.enProgreso = true;
+        labelLiveStatus.textContent = msg.mensaje || 'Iniciando rastreo...';
+        dotLiveStatus.style.background = '#eab308';
         actualizarUIConEstado();
     }
 
@@ -289,6 +320,7 @@ chrome.runtime.onMessage.addListener((msg) => {
         btnToggleRastreo.classList.add('btn-action-cancel');
         btnIcon.textContent = '⏹';
         btnLabel.textContent = 'Detener Rastreo';
+        btnToggleRastreo.disabled = false;
         dotLiveStatus.style.background = '#eab308';
         labelLiveStatus.textContent = msg.mensaje || 'Rastreando...';
 
@@ -302,6 +334,8 @@ chrome.runtime.onMessage.addListener((msg) => {
 
     if (msg.tipo === 'FIN_RASTREO') {
         _estadoActual.enProgreso = false;
+        btnToggleRastreo.disabled = false;
+        actualizarUIConEstado();
         cargarEstadoBackground();
         cargarContadoresAgencias();
     }

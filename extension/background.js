@@ -20,9 +20,11 @@ const FIREBASE_CONFIG = {
 };
 const FIRESTORE_BASE_URL = `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents`;
 
-// Estado de ejecución en memoria
+// Control de ejecución global
 let _rastreoEnProgreso = false;
 let _cancelarRastreo = false;
+let _tabActivaId = null;
+let _esperaTimeoutId = null;
 
 // =========================================================================
 // 1. HELPERS DE FIRESTORE REST API (LIVIANOS Y NATIVOS PARA SERVICE WORKER)
@@ -106,7 +108,7 @@ async function obtenerPedidosPendientesFirestore() {
                 return ped.guiasEnvio.some(g => (g.estadoRastreo || '').toUpperCase() !== ESTADOS_ESTANDAR.ENTREGADO);
             }
 
-            // O si tiene tracking/trackingMotorizado clásico y estado Despachado/Procesando
+            // O si tiene tracking clásico
             const tracking = ped.tracking || ped.trackingMotorizado || ped.ultimaGuiaAsignada;
             const envioTexto = (ped.envio || '').toLowerCase();
             const esEncomienda = !envioTexto.includes('retiro') && !envioTexto.includes('local');
@@ -152,30 +154,38 @@ async function actualizarPedidoFirestore(docId, camposActualizados, fieldPaths) 
 }
 
 // =========================================================================
-// 2. MOTOR HÍBRIDO DE RASTREO (TAB EN SEGUNDO PLANO O FETCH DIRECTO)
+// 2. MOTOR HÍBRIDO DE RASTREO CON TIMEOUT PROTEGIDO Y CIERRE SEGURO
 // =========================================================================
 
-function esperar(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+function esperarConCancelacion(ms) {
+    return new Promise(resolve => {
+        _esperaTimeoutId = setTimeout(() => {
+            _esperaTimeoutId = null;
+            resolve();
+        }, ms);
+    });
 }
 
 /**
  * Consulta un portal de encomienda abriendo una pestaña en background
  */
 async function consultarGuiaViaTab(carrier, numeroGuia) {
+    if (_cancelarRastreo) return { exito: false, texto: '', error: 'Cancelado por usuario' };
+
     const url = construirUrlRastreo(carrier, numeroGuia);
     if (!url) return { exito: false, texto: '', error: 'URL inválida' };
 
     let tab = null;
     try {
         tab = await chrome.tabs.create({ url, active: false });
+        _tabActivaId = tab.id;
 
-        // Esperar a que la pestaña termine de cargar inicialmente
+        // Esperar a que la pestaña termine de cargar inicialmente con timeout máximo de 7 segundos
         await new Promise((resolve) => {
             const timeout = setTimeout(() => {
                 chrome.tabs.onUpdated.removeListener(listener);
                 resolve();
-            }, 12000); // 12s timeout máx
+            }, 7000);
 
             function listener(tabId, info) {
                 if (tabId === tab.id && info.status === 'complete') {
@@ -187,15 +197,45 @@ async function consultarGuiaViaTab(carrier, numeroGuia) {
             chrome.tabs.onUpdated.addListener(listener);
         });
 
-        // Esperar unos ms adicionales para renderizado dinámico de la página SPA
-        await esperar(carrier.waitMs || 2500);
+        if (_cancelarRastreo) return { exito: false, texto: '', error: 'Cancelado' };
+
+        // Si la agencia requiere rellenar formulario en la página (ej. Zoom o Tealca)
+        if (carrier.inputSelector && carrier.submitSelector) {
+            try {
+                await chrome.scripting.executeScript({
+                    target: { tabId: tab.id },
+                    func: (inSel, subSel, num) => {
+                        const input = document.querySelector(inSel);
+                        if (input) {
+                            input.value = num;
+                            input.dispatchEvent(new Event('input', { bubbles: true }));
+                            input.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                        const btn = document.querySelector(subSel);
+                        if (btn) btn.click();
+                    },
+                    args: [carrier.inputSelector, carrier.submitSelector, numeroGuia]
+                });
+            } catch (errForm) {
+                // Si la inyección falló, continuar
+            }
+        }
+
+        // Breve espera para renderizado
+        await esperarConCancelacion(carrier.waitMs || 2200);
+
+        if (_cancelarRastreo) return { exito: false, texto: '', error: 'Cancelado' };
 
         // Inyectar script para extraer el texto renderizado
         const injection = await chrome.scripting.executeScript({
             target: { tabId: tab.id },
             func: (selector) => {
-                const el = selector ? document.querySelector(selector) : document.body;
-                return el ? el.innerText : document.body.innerText;
+                try {
+                    const el = selector ? document.querySelector(selector) : document.body;
+                    return el ? el.innerText : (document.body ? document.body.innerText : '');
+                } catch (e) {
+                    return document.body ? document.body.innerText : '';
+                }
             },
             args: [carrier.resultSelector || 'body']
         });
@@ -203,15 +243,16 @@ async function consultarGuiaViaTab(carrier, numeroGuia) {
         const texto = (injection && injection[0] && injection[0].result) ? injection[0].result : '';
         return { exito: true, texto, url };
     } catch (e) {
-        console.error(`Error consultando pestaña para guía ${numeroGuia}:`, e);
+        console.warn(`Aviso consultando pestaña para guía ${numeroGuia}:`, e.message);
         return { exito: false, texto: '', error: e.message, url };
     } finally {
         if (tab && tab.id) {
             try {
                 await chrome.tabs.remove(tab.id);
-            } catch (err) {
-                // Pestaña ya cerrada
-            }
+            } catch (err) {}
+        }
+        if (_tabActivaId === tab?.id) {
+            _tabActivaId = null;
         }
     }
 }
@@ -220,6 +261,7 @@ async function consultarGuiaViaTab(carrier, numeroGuia) {
  * Consulta vía fetch directo si la agencia devuelve HTML estático
  */
 async function consultarGuiaViaFetch(carrier, numeroGuia) {
+    if (_cancelarRastreo) return { exito: false, texto: '', error: 'Cancelado' };
     const url = construirUrlRastreo(carrier, numeroGuia);
     if (!url) return { exito: false, texto: '', error: 'URL inválida' };
 
@@ -229,7 +271,6 @@ async function consultarGuiaViaFetch(carrier, numeroGuia) {
             return { exito: false, texto: '', error: `HTTP ${resp.status}`, url };
         }
         const html = await resp.text();
-        // Quitar etiquetas HTML básicas para obtener texto
         const texto = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
         return { exito: true, texto, url };
     } catch (e) {
@@ -244,12 +285,11 @@ async function consultarGuiaPublica(carrier, numeroGuia) {
     if (carrier.modo === 'fetch') {
         return await consultarGuiaViaFetch(carrier, numeroGuia);
     }
-    // Por defecto modo 'tab' (más robusto contra SPAs y JS dinámico)
     return await consultarGuiaViaTab(carrier, numeroGuia);
 }
 
 // =========================================================================
-// 3. SECUENCIADOR Y REGLA MULTI-GUÍA CON PAUSA DE 2 SEGUNDOS
+// 3. SECUENCIADOR Y REGLA MULTI-GUÍA CON PROTECCIÓN TOTAL DE ESTADO
 // =========================================================================
 
 export async function ejecutarRastreoSecuencial() {
@@ -262,210 +302,237 @@ export async function ejecutarRastreoSecuencial() {
     _cancelarRastreo = false;
 
     await chrome.storage.local.set({ enProgreso: true });
-    enviarMensajePopup({ tipo: 'INICIO_RASTREO' });
-
-    const pedidos = await obtenerPedidosPendientesFirestore();
-    console.log(`📦 Encontrados ${pedidos.length} pedidos pendientes de revisión en Firebase.`);
-
-    // Desglosar la lista de guías a verificar
-    const listaTareas = [];
-    for (const ped of pedidos) {
-        let guias = [];
-        if (Array.isArray(ped.guiasEnvio) && ped.guiasEnvio.length > 0) {
-            guias = ped.guiasEnvio;
-        } else {
-            // Retrocompatibilidad si tiene tracking pero no guiasEnvio
-            const rawTrack = ped.tracking || ped.trackingMotorizado || ped.ultimaGuiaAsignada;
-            if (rawTrack) {
-                const trackings = rawTrack.split(',').map(s => s.trim()).filter(Boolean);
-                guias = trackings.map(num => ({
-                    numero: num,
-                    agencia: ped.agenciaEnvio || ped.envio || 'Tealca',
-                    estadoRastreo: 'EN_TRANSITO',
-                    destinatario: ped.cliente || ''
-                }));
-            }
-        }
-
-        guias.forEach((g, idx) => {
-            if ((g.estadoRastreo || '').toUpperCase() !== ESTADOS_ESTANDAR.ENTREGADO) {
-                listaTareas.push({
-                    pedido: ped,
-                    guia: g,
-                    guiaIndex: idx,
-                    totalGuiasPedido: guias.length
-                });
-            }
-        });
-    }
-
-    const totalTareas = listaTareas.length;
-    let procesadas = 0;
-    let entregadasNuevas = 0;
-    let novedadesDetectadas = 0;
-    let captchasRequeridos = 0;
-
-    const historialResultados = [];
-
     enviarMensajePopup({
-        tipo: 'PROGRESO_RASTREO',
-        procesadas: 0,
-        total: totalTareas,
-        mensaje: `Iniciando revisión de ${totalTareas} guías...`
+        tipo: 'INICIO_RASTREO',
+        mensaje: 'Conectando con Firebase...'
     });
 
-    for (let i = 0; i < listaTareas.length; i++) {
-        if (_cancelarRastreo) {
-            console.log("Rastreo cancelado por el usuario.");
-            break;
-        }
+    try {
+        const pedidos = await obtenerPedidosPendientesFirestore();
+        console.log(`📦 Encontrados ${pedidos.length} pedidos pendientes en Firebase.`);
 
-        const tarea = listaTareas[i];
-        const numGuia = tarea.guia.numero;
-        const carrier = detectarCarrier(tarea.guia.agencia || tarea.pedido.agenciaEnvio || tarea.pedido.envio);
+        if (_cancelarRastreo) return;
 
-        enviarMensajePopup({
-            tipo: 'PROGRESO_RASTREO',
-            procesadas: i + 1,
-            total: totalTareas,
-            guiaActual: numGuia,
-            agenciaActual: carrier.nombre,
-            clienteActual: tarea.pedido.cliente,
-            mensaje: `Consultando guía ${numGuia} (${carrier.nombre})...`
-        });
+        // Desglosar la lista de guías a verificar
+        const listaTareas = [];
+        for (const ped of pedidos) {
+            let guias = [];
+            if (Array.isArray(ped.guiasEnvio) && ped.guiasEnvio.length > 0) {
+                guias = ped.guiasEnvio;
+            } else {
+                const rawTrack = ped.tracking || ped.trackingMotorizado || ped.ultimaGuiaAsignada;
+                if (rawTrack) {
+                    const trackings = rawTrack.split(',').map(s => s.trim()).filter(Boolean);
+                    guias = trackings.map(num => ({
+                        numero: num,
+                        agencia: ped.agenciaEnvio || ped.envio || 'Tealca',
+                        estadoRastreo: 'EN_TRANSITO',
+                        destinatario: ped.cliente || ''
+                    }));
+                }
+            }
 
-        // 1. Ejecutar consulta al portal público
-        const resultadoPortal = await consultarGuiaPublica(carrier, numGuia);
-
-        // 2. Normalizar el estatus
-        let normalizado;
-        if (resultadoPortal.exito) {
-            normalizado = normalizarEstatus(resultadoPortal.texto);
-        } else {
-            normalizado = {
-                estado: ESTADOS_ESTANDAR.VERIFICAR_MANUAL,
-                resumen: `Error de conexión: ${resultadoPortal.error}`,
-                requiereCaptcha: false,
-                confianza: 'baja'
-            };
-        }
-
-        // Actualizar objeto de guía en memoria
-        tarea.guia.estadoRastreo = normalizado.estado;
-        tarea.guia.ultimaRevision = new Date().toISOString();
-        tarea.guia.ultimoDetalleRastreo = normalizado.resumen;
-        tarea.guia.requiereCaptcha = normalizado.requiereCaptcha;
-        tarea.guia.urlRastreo = resultadoPortal.url || construirUrlRastreo(carrier, numGuia);
-
-        // Contadores
-        if (normalizado.estado === ESTADOS_ESTANDAR.ENTREGADO) entregadasNuevas++;
-        if (normalizado.estado === ESTADOS_ESTANDAR.NOVEDAD) novedadesDetectadas++;
-        if (normalizado.requiereCaptcha) captchasRequeridos++;
-
-        historialResultados.push({
-            numero: numGuia,
-            agencia: carrier.nombre,
-            cliente: tarea.pedido.cliente || 'Cliente',
-            pedidoId: tarea.pedido.id,
-            estadoRastreo: normalizado.estado,
-            resumen: normalizado.resumen,
-            requiereCaptcha: normalizado.requiereCaptcha,
-            urlRastreo: tarea.guia.urlRastreo,
-            fecha: new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })
-        });
-
-        // 3. Regla Multi-Guía: Evaluar si el pedido ahora tiene TODAS sus guías entregadas
-        const todasGuias = tarea.pedido.guiasEnvio || [tarea.guia];
-        const todasEntregadas = todasGuias.every(g => (g.estadoRastreo || '').toUpperCase() === ESTADOS_ESTANDAR.ENTREGADO);
-
-        const camposActualizar = {
-            guiasEnvio: todasGuias,
-            ultimaRevisionRastreo: new Date().toISOString()
-        };
-        const fieldPaths = ['guiasEnvio', 'ultimaRevisionRastreo'];
-
-        if (todasEntregadas && (tarea.pedido.estado || '').toLowerCase() !== 'entregado') {
-            camposActualizar.estado = 'Entregado';
-            camposActualizar.fechaEntrega = new Date().toLocaleDateString('es-VE');
-            fieldPaths.push('estado', 'fechaEntrega');
-
-            // Disparar Notificación de Chrome
-            chrome.notifications.create({
-                type: 'basic',
-                iconUrl: 'icons/icon-128.png',
-                title: '🎉 ¡Pedido Entregado! - Inversiones FB Parts',
-                message: `El pedido de ${tarea.pedido.cliente || 'Cliente'} (${todasGuias.length} bulto/s) ha sido confirmado como ENTREGADO en destino.`,
-                priority: 2
+            guias.forEach((g, idx) => {
+                if ((g.estadoRastreo || '').toUpperCase() !== ESTADOS_ESTANDAR.ENTREGADO) {
+                    listaTareas.push({
+                        pedido: ped,
+                        guia: g,
+                        guiaIndex: idx,
+                        totalGuiasPedido: guias.length
+                    });
+                }
             });
         }
 
-        // 4. Guardar en Firestore
-        await actualizarPedidoFirestore(tarea.pedido.id, camposActualizar, fieldPaths);
-
-        procesadas++;
-
-        // 5. PAUSA OBLIGATORIA DE 2 SEGUNDOS ENTRE GUÍAS PARA NO SATURAR PORTALES
-        if (i < listaTareas.length - 1 && !_cancelarRastreo) {
-            await esperar(2000);
+        const totalTareas = listaTareas.length;
+        if (totalTareas === 0) {
+            enviarMensajePopup({
+                tipo: 'FIN_RASTREO',
+                procesadas: 0,
+                total: 0,
+                mensaje: 'No hay guías pendientes por revisar en este momento.'
+            });
+            return;
         }
-    }
 
-    _rastreoEnProgreso = false;
-    _cancelarRastreo = false;
+        let procesadas = 0;
+        let entregadasNuevas = 0;
+        let novedadesDetectadas = 0;
+        let captchasRequeridos = 0;
 
-    // Guardar estadísticas e historial reciente en chrome.storage.local
-    const storageData = await chrome.storage.local.get(['estadisticasHistoricas', 'historialReciente']);
-    const statsPrev = storageData.estadisticasHistoricas || { entregadas: 0, novedades: 0, verificadas: 0 };
+        const historialResultados = [];
 
-    const nuevasStats = {
-        entregadas: statsPrev.entregadas + entregadasNuevas,
-        novedades: statsPrev.novedades + novedadesDetectadas,
-        verificadas: statsPrev.verificadas + procesadas
-    };
-
-    await chrome.storage.local.set({
-        enProgreso: false,
-        ultimoRastreoTimestamp: new Date().toISOString(),
-        estadisticasHistoricas: nuevasStats,
-        historialReciente: historialResultados.slice(-50)
-    });
-
-    enviarMensajePopup({
-        tipo: 'FIN_RASTREO',
-        procesadas,
-        total: totalTareas,
-        entregadasNuevas,
-        novedadesDetectadas,
-        captchasRequeridos
-    });
-
-    // Notificación de resumen si se procesaron guías
-    if (procesadas > 0) {
-        chrome.notifications.create({
-            type: 'basic',
-            iconUrl: 'icons/icon-128.png',
-            title: '✅ Rastreo Finalizado - FB Parts',
-            message: `Se revisaron ${procesadas} guías: ${entregadasNuevas} entregadas, ${novedadesDetectadas} novedades, ${captchasRequeridos} requieren verificación.`,
-            priority: 1
+        enviarMensajePopup({
+            tipo: 'PROGRESO_RASTREO',
+            procesadas: 0,
+            total: totalTareas,
+            mensaje: `Iniciando revisión de ${totalTareas} guías...`
         });
+
+        for (let i = 0; i < listaTareas.length; i++) {
+            if (_cancelarRastreo) {
+                console.log("Rastreo interrumpido por el usuario.");
+                break;
+            }
+
+            const tarea = listaTareas[i];
+            const numGuia = tarea.guia.numero;
+            const carrier = detectarCarrier(tarea.guia.agencia || tarea.pedido.agenciaEnvio || tarea.pedido.envio);
+
+            enviarMensajePopup({
+                tipo: 'PROGRESO_RASTREO',
+                procesadas: i + 1,
+                total: totalTareas,
+                guiaActual: numGuia,
+                agenciaActual: carrier.nombre,
+                clienteActual: tarea.pedido.cliente,
+                mensaje: `Consultando guía ${numGuia} (${carrier.nombre})...`
+            });
+
+            // 1. Ejecutar consulta al portal público
+            const resultadoPortal = await consultarGuiaPublica(carrier, numGuia);
+
+            if (_cancelarRastreo) break;
+
+            // 2. Normalizar el estatus
+            let normalizado;
+            if (resultadoPortal.exito) {
+                normalizado = normalizarEstatus(resultadoPortal.texto);
+            } else {
+                normalizado = {
+                    estado: ESTADOS_ESTANDAR.VERIFICAR_MANUAL,
+                    resumen: `Verificar en portal (${resultadoPortal.error || 'Sin respuesta'})`,
+                    requiereCaptcha: false,
+                    confianza: 'baja'
+                };
+            }
+
+            // Actualizar objeto de guía en memoria
+            tarea.guia.estadoRastreo = normalizado.estado;
+            tarea.guia.ultimaRevision = new Date().toISOString();
+            tarea.guia.ultimoDetalleRastreo = normalizado.resumen;
+            tarea.guia.requiereCaptcha = normalizado.requiereCaptcha;
+            tarea.guia.urlRastreo = resultadoPortal.url || construirUrlRastreo(carrier, numGuia);
+
+            // Contadores
+            if (normalizado.estado === ESTADOS_ESTANDAR.ENTREGADO) entregadasNuevas++;
+            if (normalizado.estado === ESTADOS_ESTANDAR.NOVEDAD) novedadesDetectadas++;
+            if (normalizado.requiereCaptcha) captchasRequeridos++;
+
+            historialResultados.push({
+                numero: numGuia,
+                agencia: carrier.nombre,
+                cliente: tarea.pedido.cliente || 'Cliente',
+                pedidoId: tarea.pedido.id,
+                estadoRastreo: normalizado.estado,
+                resumen: normalizado.resumen,
+                requiereCaptcha: normalizado.requiereCaptcha,
+                urlRastreo: tarea.guia.urlRastreo,
+                fecha: new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })
+            });
+
+            // 3. Regla Multi-Guía
+            const todasGuias = tarea.pedido.guiasEnvio || [tarea.guia];
+            const todasEntregadas = todasGuias.every(g => (g.estadoRastreo || '').toUpperCase() === ESTADOS_ESTANDAR.ENTREGADO);
+
+            const camposActualizar = {
+                guiasEnvio: todasGuias,
+                ultimaRevisionRastreo: new Date().toISOString()
+            };
+            const fieldPaths = ['guiasEnvio', 'ultimaRevisionRastreo'];
+
+            if (todasEntregadas && (tarea.pedido.estado || '').toLowerCase() !== 'entregado') {
+                camposActualizar.estado = 'Entregado';
+                camposActualizar.fechaEntrega = new Date().toLocaleDateString('es-VE');
+                fieldPaths.push('estado', 'fechaEntrega');
+
+                try {
+                    chrome.notifications.create({
+                        type: 'basic',
+                        iconUrl: 'icons/icon-128.png',
+                        title: '🎉 ¡Pedido Entregado! - Inversiones FB Parts',
+                        message: `El pedido de ${tarea.pedido.cliente || 'Cliente'} (${todasGuias.length} bulto/s) ha sido confirmado como ENTREGADO en destino.`,
+                        priority: 2
+                    });
+                } catch (eNotif) {}
+            }
+
+            // 4. Guardar en Firestore
+            await actualizarPedidoFirestore(tarea.pedido.id, camposActualizar, fieldPaths);
+
+            procesadas++;
+
+            // 5. PAUSA OBLIGATORIA DE 2 SEGUNDOS ENTRE GUÍAS
+            if (i < listaTareas.length - 1 && !_cancelarRastreo) {
+                await esperarConCancelacion(2000);
+            }
+        }
+
+        // Guardar estadísticas e historial reciente
+        const storageData = await chrome.storage.local.get(['estadisticasHistoricas', 'historialReciente']);
+        const statsPrev = storageData.estadisticasHistoricas || { entregadas: 0, novedades: 0, verificadas: 0 };
+        const histPrev = storageData.historialReciente || [];
+
+        const nuevasStats = {
+            entregadas: statsPrev.entregadas + entregadasNuevas,
+            novedades: statsPrev.novedades + novedadesDetectadas,
+            verificadas: statsPrev.verificadas + procesadas
+        };
+
+        const histConsolidado = [...histPrev, ...historialResultados].slice(-50);
+
+        await chrome.storage.local.set({
+            ultimoRastreoTimestamp: new Date().toISOString(),
+            estadisticasHistoricas: nuevasStats,
+            historialReciente: histConsolidado
+        });
+
+        enviarMensajePopup({
+            tipo: 'FIN_RASTREO',
+            procesadas,
+            total: totalTareas,
+            entregadasNuevas,
+            novedadesDetectadas,
+            captchasRequeridos
+        });
+
+        if (procesadas > 0 && !_cancelarRastreo) {
+            try {
+                chrome.notifications.create({
+                    type: 'basic',
+                    iconUrl: 'icons/icon-128.png',
+                    title: '✅ Rastreo Finalizado - FB Parts',
+                    message: `Se revisaron ${procesadas} guías: ${entregadasNuevas} entregadas, ${novedadesDetectadas} novedades, ${captchasRequeridos} requieren verificación.`,
+                    priority: 1
+                });
+            } catch (eN) {}
+        }
+
+    } catch (errorGeneral) {
+        console.error("Error general en ejecutarRastreoSecuencial:", errorGeneral);
+        enviarMensajePopup({
+            tipo: 'FIN_RASTREO',
+            error: errorGeneral.message || 'Error general en el proceso'
+        });
+    } finally {
+        // Garantizar que SIEMPRE se libere el estado de ejecución
+        _rastreoEnProgreso = false;
+        _cancelarRastreo = false;
+        _tabActivaId = null;
+        await chrome.storage.local.set({ enProgreso: false });
     }
 }
 
 function enviarMensajePopup(mensaje) {
     try {
         chrome.runtime.sendMessage(mensaje).catch(() => {});
-    } catch (e) {
-        // El popup puede estar cerrado, ignorar
-    }
+    } catch (e) {}
 }
 
 // =========================================================================
 // 4. PROGRAMACIÓN DE CHEQUEOS AUTOMÁTICOS CON CHROME.ALARMS
 // =========================================================================
 
-/**
- * Programa dos chequeos automáticos diarios: 9:00 AM y 3:00 PM
- */
 async function configurarAlarmasProgramadas(activo = true) {
     await chrome.alarms.clear('alarma_rastreo_9am');
     await chrome.alarms.clear('alarma_rastreo_3pm');
@@ -478,7 +545,6 @@ async function configurarAlarmasProgramadas(activo = true) {
 
     await chrome.storage.local.set({ autoCheckActivo: true });
 
-    // Calcular próximo 9:00 AM y 3:00 PM
     const ahora = new Date();
 
     function calcularProximoDisparo(horaObjetivo) {
@@ -495,30 +561,24 @@ async function configurarAlarmasProgramadas(activo = true) {
 
     chrome.alarms.create('alarma_rastreo_9am', {
         when: trigger9am,
-        periodInMinutes: 24 * 60 // diario
+        periodInMinutes: 24 * 60
     });
 
     chrome.alarms.create('alarma_rastreo_3pm', {
         when: trigger3pm,
-        periodInMinutes: 24 * 60 // diario
-    });
-
-    console.log("⏰ Alarmas programadas:", {
-        proximo9am: new Date(trigger9am).toLocaleString('es-VE'),
-        proximo3pm: new Date(trigger3pm).toLocaleString('es-VE')
+        periodInMinutes: 24 * 60
     });
 }
 
-// Escuchar disparos de alarmas
 chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name.startsWith('alarma_rastreo')) {
-        console.log(`⏰ Alarma disparada: ${alarm.name}. Iniciando ciclo de rastreo automático...`);
+        console.log(`⏰ Alarma ${alarm.name} disparada. Ejecutando rastreo automático...`);
         ejecutarRastreoSecuencial();
     }
 });
 
 // =========================================================================
-// 5. RECEPCIÓN DE MENSAJES DESDE EL POPUP
+// 5. RECEPCIÓN DE MENSAJES DESDE EL POPUP (CON RESET INMEDIATO)
 // =========================================================================
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -530,7 +590,35 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     if (request.tipo === 'DETENER_RASTREO') {
         _cancelarRastreo = true;
-        sendResponse({ ok: true, status: 'cancelando' });
+        _rastreoEnProgreso = false;
+
+        // Cerrar inmediatamente cualquier pestaña de background abierta
+        if (_tabActivaId) {
+            chrome.tabs.remove(_tabActivaId).catch(() => {});
+            _tabActivaId = null;
+        }
+        if (_esperaTimeoutId) {
+            clearTimeout(_esperaTimeoutId);
+            _esperaTimeoutId = null;
+        }
+
+        chrome.storage.local.set({ enProgreso: false }).then(() => {
+            enviarMensajePopup({ tipo: 'FIN_RASTREO', motivo: 'detenido_por_usuario' });
+            sendResponse({ ok: true, detenido: true });
+        });
+        return true;
+    }
+
+    if (request.tipo === 'FORZAR_REINICIO_ESTADO') {
+        _cancelarRastreo = false;
+        _rastreoEnProgreso = false;
+        if (_tabActivaId) {
+            chrome.tabs.remove(_tabActivaId).catch(() => {});
+            _tabActivaId = null;
+        }
+        chrome.storage.local.set({ enProgreso: false }).then(() => {
+            sendResponse({ ok: true, reiniciado: true });
+        });
         return true;
     }
 
@@ -542,8 +630,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             'estadisticasHistoricas',
             'historialReciente'
         ]).then(data => {
+            // Si la memoria del SW dice que no está en progreso, forzar storage
+            const realProgreso = _rastreoEnProgreso;
+            if (!realProgreso && data.enProgreso) {
+                chrome.storage.local.set({ enProgreso: false });
+            }
+
             sendResponse({
-                enProgreso: _rastreoEnProgreso || Boolean(data.enProgreso),
+                enProgreso: realProgreso,
                 autoCheckActivo: data.autoCheckActivo !== false,
                 ultimoRastreoTimestamp: data.ultimoRastreoTimestamp || null,
                 estadisticasHistoricas: data.estadisticasHistoricas || { entregadas: 0, novedades: 0, verificadas: 0 },
@@ -559,22 +653,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         });
         return true;
     }
-
-    if (request.tipo === 'PROBAR_GUIA_INDIVIDUAL') {
-        const carrier = detectarCarrier(request.agencia);
-        consultarGuiaPublica(carrier, request.numeroGuia).then(res => {
-            const norm = res.exito ? normalizarEstatus(res.texto) : { estado: 'ERROR', resumen: res.error };
-            sendResponse({ ok: res.exito, normalizado: norm, url: res.url });
-        });
-        return true;
-    }
 });
 
-// Inicialización de la extensión
 chrome.runtime.onInstalled.addListener(async () => {
-    console.log("🚀 FB Parts Tracker Extension instalada con éxito.");
+    console.log("🚀 FB Parts Tracker Extension inicializada.");
     const data = await chrome.storage.local.get('autoCheckActivo');
-    // Activo por defecto
-    const activo = (data.autoCheckActivo !== false);
-    configurarAlarmasProgramadas(activo);
+    configurarAlarmasProgramadas(data.autoCheckActivo !== false);
 });

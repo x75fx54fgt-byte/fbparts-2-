@@ -40,7 +40,7 @@
 
         body {
             width: 410px;
-            max-height: 580px;
+            max-height: 590px;
             overflow-y: auto;
             font-family: 'Roboto', sans-serif;
             background: var(--bg-light);
@@ -145,6 +145,10 @@
             display: flex;
             align-items: center;
             gap: 6px;
+            max-width: 270px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .contador-guias-txt {
@@ -459,7 +463,7 @@
         <div class="card-control">
             <div class="status-tracker-header">
                 <span class="status-live-txt" id="txt-status-en-vivo">
-                    <span id="dot-live-status" style="width:7px; height:7px; background:#94a3b8; border-radius:50%; display:inline-block;"></span>
+                    <span id="dot-live-status" style="width:7px; height:7px; background:#94a3b8; border-radius:50%; display:inline-block; flex-shrink:0;"></span>
                     <span id="label-live-status">Listo para rastrear</span>
                 </span>
                 <span class="contador-guias-txt" id="txt-contador-progreso">0 / 0</span>
@@ -544,7 +548,10 @@
 
     <footer>
         <span>Inversiones FB Parts C.A.</span>
-        <span id="lbl-version">v1.0.0 MV3</span>
+        <div>
+            <span id="btn-forzar-reset" style="cursor: pointer; color: #475569; text-decoration: underline; margin-right: 8px;">Restablecer</span>
+            <span id="lbl-version">v1.0.1 MV3</span>
+        </div>
     </footer>
 
     <script type="module" src="popup.js"></script>

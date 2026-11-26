@@ -7,8 +7,8 @@
  * Agencias soportadas:
  *  1. Handling (Principal)
  *  2. Intercargo
- *  3. RLU
- *  4. Zoom
+ *  3. RLU Cargo
+ *  4. Grupo Zoom
  *  5. Tealca
  *  6. MRW
  */
@@ -27,11 +27,11 @@ export const CARRIERS_CONFIG = {
         nombre: 'Handling (Principal)',
         color: '#385723',
         alias: ['handling', 'grupo handling', 'handling logistic', 'handling express'],
-        urlTemplate: 'https://grupohandling.com/rastreo?guia={GUIA}',
-        modo: 'tab', // 'tab' abre pestaña background para ejecutar renderizado JS
+        urlTemplate: 'https://grupohandling.com/',
+        modo: 'tab',
         waitMs: 2500,
-        inputSelector: "input[name='guia'], input#guia, input[placeholder*='guia' i]",
-        submitSelector: "button[type='submit'], .btn-rastreo, #btn_buscar",
+        inputSelector: "input[name*='guia' i], input#guia, input[placeholder*='guia' i]",
+        submitSelector: "button[type='submit'], .btn-rastreo, #btn_buscar, input[type='submit']",
         resultSelector: ".tracking-result, #resultado-rastreo, .timeline, body"
     },
     intercargo: {
@@ -63,24 +63,24 @@ export const CARRIERS_CONFIG = {
         nombre: 'Grupo Zoom',
         color: '#ea580c',
         alias: ['zoom', 'grupo zoom', 'zoom envios'],
-        urlTemplate: 'https://www.grupozoom.com/servicios/rastreo?codigo={GUIA}',
+        urlTemplate: 'https://zoom.red/tracking-de-envios-personas/',
         modo: 'tab',
-        waitMs: 2800,
-        inputSelector: "input#codigo, input[name='codigo']",
-        submitSelector: "button#consultar, button[type='submit']",
-        resultSelector: ".tracking-status, #statusGuia, body"
+        waitMs: 3000,
+        inputSelector: "#form-field-nro_guia, input[name*='nro_guia']",
+        submitSelector: "#tracking-page-btn-rastrear, #home-btn-rastrear, button[type='submit']",
+        resultSelector: ".elementor-widget-container, .tracking-result, .elementor-form, body"
     },
     tealca: {
         id: 'tealca',
         nombre: 'Tealca',
         color: '#059669',
         alias: ['tealca', 'tealca envios', 'encomienda tealca'],
-        urlTemplate: 'https://www.tealca.com/rastreo?guia={GUIA}',
+        urlTemplate: 'https://www.tealca.com/rastrear-envio/',
         modo: 'tab',
         waitMs: 2500,
-        inputSelector: "input[name='guia'], input#guia, input#numero_guia",
-        submitSelector: "button[type='submit'], #btnRastrear",
-        resultSelector: ".rastreo-resultado, .tabla-rastreo, body"
+        inputSelector: "#busqueda, input[name='numberTracking'], input#numero_guia",
+        submitSelector: "input[type='submit'], button[type='submit'], #btnRastrear",
+        resultSelector: ".resultado_busqueda, .tabla-rastreo, form, body"
     },
     mrw: {
         id: 'mrw',
@@ -91,7 +91,7 @@ export const CARRIERS_CONFIG = {
         modo: 'tab',
         waitMs: 2500,
         inputSelector: "input[name='numero'], input#guia, input#numero",
-        submitSelector: "button[type='submit'], #btnBuscar",
+        submitSelector: "button[type='submit'], #btnBuscar, input[type='submit']",
         resultSelector: ".resultado-envio, #detalle-guia, body"
     }
 };
@@ -122,7 +122,10 @@ export function detectarCarrier(textoAgencia) {
 export function construirUrlRastreo(carrier, numeroGuia) {
     if (!carrier || !carrier.urlTemplate) return '';
     const cleanGuia = encodeURIComponent((numeroGuia || '').toString().trim());
-    return carrier.urlTemplate.replace('{GUIA}', cleanGuia);
+    if (carrier.urlTemplate.includes('{GUIA}')) {
+        return carrier.urlTemplate.replace('{GUIA}', cleanGuia);
+    }
+    return carrier.urlTemplate;
 }
 
 /**
@@ -131,11 +134,11 @@ export function construirUrlRastreo(carrier, numeroGuia) {
 const PATRONES_ESTATUS = {
     CAPTCHA_O_BLOQUEO: [
         /\b(captcha|recaptcha|hcaptcha|turnstile|cloudflare|verificaci[oó]n\s+humana|comprobar\s+que\s+eres\s+humano|security\s+check)\b/i,
-        /\b(acceso\s+denegado|bloqueo\s+temporal|demasiadas\s+solicitudes|429\s+too\s+many)\b/i
+        /\b(acceso\s+denegado|bloqueo\s+temporal|demasiadas\s+solicitudes|429\s+too\s+many|403\s+forbidden)\b/i
     ],
     ENTREGADO: [
         /\b(entregad[oa]|recibid[oa]\s+conforme|retirad[oa]\s+por|entregado\s+en\s+destino|finalizad[oa]|entregado\s+a\s+cliente|despacho\s+finalizado)\b/i,
-        /\b(recibido\s+por\s*:\s*[a-zA-Z\s]+|entregada\s+satisfactoriamente)\b/i
+        /\b(recibido\s+por\s*:\s*[a-zA-Z\s]+|entregada\s+satisfactoriamente|firma\s+digital)\b/i
     ],
     LISTO_RETIRO: [
         /\b(disponible\s+para\s+retiro|en\s+oficina\s+destino|esperando\s+por\s+cliente|lista\s+para\s+entrega|disponible\s+en\s+taquilla|por\s+retirar|en\s+agencia\s+destino|en\s+almac[eé]n\s+destino)\b/i,
