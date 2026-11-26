@@ -481,6 +481,112 @@ async function consultarGuiaViaTab(carrier, numeroGuia) {
 }
 
 /**
+ * Parsea el HTML de ZOOMTrack directamente en el Service Worker (sin DOMParser)
+ * filtrando scripts, headers, navs y localizando el bloque "INFORMACIÓN DEL ENVÍO".
+ */
+function parsearHtmlTrackingZoom(htmlRaw) {
+    if (!htmlRaw || typeof htmlRaw !== 'string') {
+        return {
+            estado: ESTADOS_ESTANDAR.VERIFICAR_MANUAL,
+            resumen: 'Sin respuesta HTML de ZOOMTrack',
+            bloqueoTemporal: false
+        };
+    }
+
+    // 1. Detección de CleanTalk / 403 Forbidden / Anti-spam
+    if (/cleantalk|forbidden|access\s+denied|demasiadas\s+solicitudes/i.test(htmlRaw)) {
+        return {
+            estado: ESTADOS_ESTANDAR.VERIFICAR_MANUAL,
+            resumen: 'Bloqueo temporal anti-spam detectado en Zoom (CleanTalk)',
+            bloqueoTemporal: true,
+            requiereCaptcha: true
+        };
+    }
+
+    // 2. Limpieza de elementos HTML irrelevantes con regex
+    let limpio = htmlRaw
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ' ')
+        .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, ' ')
+        .replace(/<header\b[^<]*(?:(?!<\/header>)<[^<]*)*<\/header>/gi, ' ')
+        .replace(/<nav\b[^<]*(?:(?!<\/nav>)<[^<]*)*<\/nav>/gi, ' ')
+        .replace(/<footer\b[^<]*(?:(?!<\/footer>)<[^<]*)*<\/footer>/gi, ' ');
+
+    // 3. Normalizar etiquetas y espacios
+    limpio = limpio
+        .replace(/<br\s*[\/]?>/gi, '\n')
+        .replace(/<\/p>|<\/div>|<\/tr>|<\/li>/gi, '\n')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&[a-z]+;/gi, ' ')
+        .replace(/[ \t]+/g, ' ')
+        .trim();
+
+    // 4. Buscar específicamente a partir de "INFORMACIÓN DEL ENVÍO"
+    const regexEncabezado = /informaci[oó]n\s+del\s+env[ií]o/i;
+    const matchEncabezado = limpio.search(regexEncabezado);
+
+    if (matchEncabezado === -1) {
+        if (/no\s+encontrad[oa]|no\s+existe|sin\s+informaci[oó]n|gu[ií]a\s+inv[aá]lida/i.test(limpio)) {
+            return {
+                estado: ESTADOS_ESTANDAR.VERIFICAR_MANUAL,
+                resumen: 'Guía no registrada o no encontrada en Zoom',
+                bloqueoTemporal: false
+            };
+        }
+        return {
+            estado: ESTADOS_ESTANDAR.VERIFICAR_MANUAL,
+            resumen: 'No se encontró el bloque "INFORMACIÓN DEL ENVÍO" en la respuesta',
+            bloqueoTemporal: false
+        };
+    }
+
+    // Extraer únicamente desde el bloque de información del envío en adelante
+    const seccionTracking = limpio.substring(matchEncabezado);
+
+    // 5. Análisis del estatus en el historial de movimientos de Zoom
+    // A) ENTREGADO
+    if (/\b(entregad[oa]s?|recibid[oa]s?\s+conforme|entregad[oa]\s+en\s+destino|entrega\s+efectuada)\b/i.test(seccionTracking)) {
+        const matchRecibido = seccionTracking.match(/recibid[oa]\s+por\s*:?\s*([A-Za-z\s]+)/i);
+        const detalle = matchRecibido 
+            ? `Entregado (Recibió: ${matchRecibido[1].trim().substring(0, 30)})` 
+            : 'Entregado en destino (Confirmado por Zoom)';
+        return {
+            estado: ESTADOS_ESTANDAR.ENTREGADO,
+            resumen: detalle,
+            bloqueoTemporal: false
+        };
+    }
+
+    // B) LISTO_RETIRO (EN CIUDAD DESTINO / EN OFICINA / DISPONIBLE PARA RETIRO)
+    if (/\b(en\s+ciudad\s+destino|en\s+oficina|disponible\s+para\s+retiro|en\s+taquilla|en\s+agencia\s+destino)\b/i.test(seccionTracking)) {
+        return {
+            estado: ESTADOS_ESTANDAR.LISTO_RETIRO,
+            resumen: 'Disponible para retiro en oficina/agencia destino Zoom',
+            bloqueoTemporal: false
+        };
+    }
+
+    // C) EN_TRANSITO (EN CAMINO / EN TRÁNSITO / DESPACHADO)
+    if (/\b(en\s+camino|en\s+tr[aá]nsito|despachad[oa]|en\s+ruta|en\s+viaje|recibid[oa]\s+en\s+origen)\b/i.test(seccionTracking)) {
+        return {
+            estado: ESTADOS_ESTANDAR.EN_TRANSITO,
+            resumen: 'En tránsito hacia destino (Zoom)',
+            bloqueoTemporal: false
+        };
+    }
+
+    // D. Fallback si hay texto en la sección
+    const lineas = seccionTracking.split('\n').map(l => l.trim()).filter(l => l.length > 5);
+    const resumenFallback = lineas.slice(0, 3).join(' • ');
+
+    return {
+        estado: ESTADOS_ESTANDAR.VERIFICAR_MANUAL,
+        resumen: resumenFallback.substring(0, 100) || 'Estatus no concluyente en Zoom',
+        bloqueoTemporal: false
+    };
+}
+
+/**
  * Consulta vía fetch directo si la agencia devuelve HTML estático
  */
 async function consultarGuiaViaFetch(carrier, numeroGuia) {
@@ -489,11 +595,41 @@ async function consultarGuiaViaFetch(carrier, numeroGuia) {
     if (!url) return { exito: false, texto: '', error: 'URL inválida' };
 
     try {
-        const resp = await fetch(url, { headers: { 'Accept': 'text/html,application/xhtml+xml' } });
+        const resp = await fetch(url, {
+            method: 'GET',
+            credentials: 'omit',
+            headers: {
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+            }
+        });
+
         if (!resp.ok) {
-            return { exito: false, texto: '', error: `HTTP ${resp.status}`, url };
+            const isBlocked = (resp.status === 403 || resp.status === 429);
+            return {
+                exito: false,
+                texto: '',
+                error: isBlocked ? `Bloqueo HTTP ${resp.status} (CleanTalk/Forbidden)` : `HTTP ${resp.status}`,
+                bloqueoTemporal: isBlocked,
+                requiereCaptcha: isBlocked,
+                url
+            };
         }
+
         const html = await resp.text();
+
+        // Si es Zoom, usar parser especializado para Service Worker (sin DOMParser)
+        if (carrier.id === 'zoom') {
+            const parsed = parsearHtmlTrackingZoom(html);
+            return {
+                exito: true,
+                parsed,
+                texto: html,
+                bloqueoTemporal: Boolean(parsed.bloqueoTemporal),
+                requiereCaptcha: Boolean(parsed.requiereCaptcha),
+                url
+            };
+        }
+
         const texto = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
         return { exito: true, texto, url };
     } catch (e) {
@@ -595,6 +731,7 @@ export async function ejecutarRastreoSecuencial() {
         let entregadasNuevas = 0;
         let novedadesDetectadas = 0;
         let captchasRequeridos = 0;
+        let _zoomBloqueadoTemporal = false;
 
         const historialResultados = [];
 
@@ -628,22 +765,42 @@ export async function ejecutarRastreoSecuencial() {
                 mensaje: `Consultando guía ${numGuia} (${carrier.nombre})...`
             });
 
-            // 1. Ejecutar consulta al portal público
-            const resultadoPortal = await consultarGuiaPublica(carrier, numGuia);
-
-            if (_cancelarRastreo) break;
-
-            // 2. Normalizar el estatus
+            // 1. Ejecutar consulta al portal público (respetando bloqueo temporal anti-spam)
             let normalizado;
-            if (resultadoPortal.exito) {
-                normalizado = normalizarEstatus(resultadoPortal.texto);
-            } else {
+            let resultadoPortal = null;
+
+            if (carrier.id === 'zoom' && _zoomBloqueadoTemporal) {
                 normalizado = {
                     estado: ESTADOS_ESTANDAR.VERIFICAR_MANUAL,
-                    resumen: resultadoPortal.error || 'Verificar en portal (Sin respuesta)',
-                    requiereCaptcha: Boolean(resultadoPortal.requiereCaptcha),
-                    confianza: 'baja'
+                    resumen: 'Pausado: Bloqueo anti-spam activo en Zoom (CleanTalk)',
+                    requiereCaptcha: true,
+                    confianza: 'alta'
                 };
+                resultadoPortal = { exito: false, url: construirUrlRastreo(carrier, numGuia) };
+            } else {
+                resultadoPortal = await consultarGuiaPublica(carrier, numGuia);
+
+                if (_cancelarRastreo) break;
+
+                // 2. Normalizar el estatus
+                if (resultadoPortal && resultadoPortal.parsed) {
+                    normalizado = resultadoPortal.parsed;
+                    if (resultadoPortal.bloqueoTemporal) {
+                        _zoomBloqueadoTemporal = true;
+                    }
+                } else if (resultadoPortal && resultadoPortal.exito) {
+                    normalizado = normalizarEstatus(resultadoPortal.texto);
+                } else {
+                    normalizado = {
+                        estado: ESTADOS_ESTANDAR.VERIFICAR_MANUAL,
+                        resumen: resultadoPortal?.error || 'Verificar en portal (Sin respuesta)',
+                        requiereCaptcha: Boolean(resultadoPortal?.requiereCaptcha || resultadoPortal?.bloqueoTemporal),
+                        confianza: 'baja'
+                    };
+                    if (resultadoPortal?.bloqueoTemporal && carrier.id === 'zoom') {
+                        _zoomBloqueadoTemporal = true;
+                    }
+                }
             }
 
             // Actualizar objeto de guía en memoria
@@ -756,9 +913,10 @@ export async function ejecutarRastreoSecuencial() {
 
             procesadas++;
 
-            // 5. PAUSA OBLIGATORIA DE 2 SEGUNDOS ENTRE GUÍAS
+            // 5. PAUSA RESPETUOSA (2.5 segundos para Zoom y agencias fetch, 2.0s para otras)
             if (i < listaTareas.length - 1 && !_cancelarRastreo) {
-                await esperarConCancelacion(2000);
+                const pausaMs = (carrier.id === 'zoom' || carrier.modo === 'fetch') ? 2500 : 2000;
+                await esperarConCancelacion(pausaMs);
             }
         }
 

@@ -72,12 +72,10 @@ export const CARRIERS_CONFIG = {
         categoria: 'NACIONAL',
         color: '#ea580c',
         alias: ['zoom', 'grupo zoom', 'zoom envios', 'zoomtrack'],
-        urlTemplate: 'https://zoom.red/tracking-de-envios-personas/',
-        modo: 'tab',
-        waitMs: 3000,
-        inputSelector: "#form-field-nro_guia, input[name*='nro_guia'], input[name*='guia']",
-        submitSelector: "#tracking-page-btn-rastrear, #home-btn-rastrear, button[type='submit']",
-        resultSelector: ".elementor-widget-container, .tracking-result, .elementor-form, body"
+        urlTemplate: 'https://zoom.red/tracking-de-envios-personas/?nro-guia={GUIA}&tipo-consulta=1',
+        modo: 'fetch',
+        waitMs: 2500,
+        resultSelector: ".elementor-widget-container, .tracking-result, body"
     },
     tealca: {
         id: 'tealca',
