@@ -493,25 +493,17 @@ function parsearHtmlTrackingZoom(htmlRaw) {
         };
     }
 
-    // 1. Detección de CleanTalk / 403 Forbidden / Anti-spam
-    if (/cleantalk|forbidden|access\s+denied|demasiadas\s+solicitudes/i.test(htmlRaw)) {
-        return {
-            estado: ESTADOS_ESTANDAR.VERIFICAR_MANUAL,
-            resumen: 'Bloqueo temporal anti-spam detectado en Zoom (CleanTalk)',
-            bloqueoTemporal: true,
-            requiereCaptcha: true
-        };
-    }
-
-    // 2. Limpieza de elementos HTML irrelevantes con regex
+    // 1. Limpieza RIGUROSA inicial: eliminar scripts, estilos, noscript, headers y navs
+    // Esto previene falsos positivos porque Zoom incluye ct-bot-detector en sus scripts
     let limpio = htmlRaw
         .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ' ')
         .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, ' ')
+        .replace(/<noscript\b[^<]*(?:(?!<\/noscript>)<[^<]*)*<\/noscript>/gi, ' ')
         .replace(/<header\b[^<]*(?:(?!<\/header>)<[^<]*)*<\/header>/gi, ' ')
         .replace(/<nav\b[^<]*(?:(?!<\/nav>)<[^<]*)*<\/nav>/gi, ' ')
         .replace(/<footer\b[^<]*(?:(?!<\/footer>)<[^<]*)*<\/footer>/gi, ' ');
 
-    // 3. Normalizar etiquetas y espacios
+    // 2. Normalizar etiquetas y espacios
     limpio = limpio
         .replace(/<br\s*[\/]?>/gi, '\n')
         .replace(/<\/p>|<\/div>|<\/tr>|<\/li>/gi, '\n')
@@ -521,67 +513,78 @@ function parsearHtmlTrackingZoom(htmlRaw) {
         .replace(/[ \t]+/g, ' ')
         .trim();
 
-    // 4. Buscar específicamente a partir de "INFORMACIÓN DEL ENVÍO"
+    // 3. VERIFICAR PRIMERO SI CONTIENE "INFORMACIÓN DEL ENVÍO"
     const regexEncabezado = /informaci[oó]n\s+del\s+env[ií]o/i;
     const matchEncabezado = limpio.search(regexEncabezado);
 
-    if (matchEncabezado === -1) {
-        if (/no\s+encontrad[oa]|no\s+existe|sin\s+informaci[oó]n|gu[ií]a\s+inv[aá]lida/i.test(limpio)) {
+    if (matchEncabezado !== -1) {
+        // ¡Éxito! Contiene la información del envío. Se ignora cualquier mención a CleanTalk
+        const seccionTracking = limpio.substring(matchEncabezado);
+
+        // A) ENTREGADO
+        if (/\b(entregad[oa]s?|recibid[oa]s?\s+conforme|entregad[oa]\s+en\s+destino|entrega\s+efectuada)\b/i.test(seccionTracking)) {
+            const matchRecibido = seccionTracking.match(/recibid[oa]\s+por\s*:?\s*([A-Za-z\s]+)/i);
+            const detalle = matchRecibido 
+                ? `Entregado (Recibió: ${matchRecibido[1].trim().substring(0, 30)})` 
+                : 'Entregado en destino (Confirmado por Zoom)';
             return {
-                estado: ESTADOS_ESTANDAR.VERIFICAR_MANUAL,
-                resumen: 'Guía no registrada o no encontrada en Zoom',
+                estado: ESTADOS_ESTANDAR.ENTREGADO,
+                resumen: detalle,
                 bloqueoTemporal: false
             };
         }
+
+        // B) LISTO_RETIRO (EN CIUDAD DESTINO / EN OFICINA / DISPONIBLE PARA RETIRO)
+        if (/\b(en\s+ciudad\s+destino|en\s+oficina|disponible\s+para\s+retiro|en\s+taquilla|en\s+agencia\s+destino)\b/i.test(seccionTracking)) {
+            return {
+                estado: ESTADOS_ESTANDAR.LISTO_RETIRO,
+                resumen: 'Disponible para retiro en oficina/agencia destino Zoom',
+                bloqueoTemporal: false
+            };
+        }
+
+        // C) EN_TRANSITO (EN CAMINO / EN TRÁNSITO / DESPACHADO)
+        if (/\b(en\s+camino|en\s+tr[aá]nsito|despachad[oa]|en\s+ruta|en\s+viaje|recibid[oa]\s+en\s+origen)\b/i.test(seccionTracking)) {
+            return {
+                estado: ESTADOS_ESTANDAR.EN_TRANSITO,
+                resumen: 'En tránsito hacia destino (Zoom)',
+                bloqueoTemporal: false
+            };
+        }
+
+        // D) Fallback si hay texto en la sección
+        const lineas = seccionTracking.split('\n').map(l => l.trim()).filter(l => l.length > 5);
+        const resumenFallback = lineas.slice(0, 2).join(' • ');
+
         return {
             estado: ESTADOS_ESTANDAR.VERIFICAR_MANUAL,
-            resumen: 'No se encontró el bloque "INFORMACIÓN DEL ENVÍO" en la respuesta',
+            resumen: resumenFallback.substring(0, 90) || 'Estatus recibido en Zoom',
             bloqueoTemporal: false
         };
     }
 
-    // Extraer únicamente desde el bloque de información del envío en adelante
-    const seccionTracking = limpio.substring(matchEncabezado);
-
-    // 5. Análisis del estatus en el historial de movimientos de Zoom
-    // A) ENTREGADO
-    if (/\b(entregad[oa]s?|recibid[oa]s?\s+conforme|entregad[oa]\s+en\s+destino|entrega\s+efectuada)\b/i.test(seccionTracking)) {
-        const matchRecibido = seccionTracking.match(/recibid[oa]\s+por\s*:?\s*([A-Za-z\s]+)/i);
-        const detalle = matchRecibido 
-            ? `Entregado (Recibió: ${matchRecibido[1].trim().substring(0, 30)})` 
-            : 'Entregado en destino (Confirmado por Zoom)';
+    // 4. ÚNICAMENTE SI NO APARECE "INFORMACIÓN DEL ENVÍO", verificar si es bloqueo real de CleanTalk
+    if (/sent\s+forms\s+too\s+often|forbidden|access\s+denied|bloqueo\s+temporal/i.test(limpio)) {
         return {
-            estado: ESTADOS_ESTANDAR.ENTREGADO,
-            resumen: detalle,
-            bloqueoTemporal: false
+            estado: ESTADOS_ESTANDAR.VERIFICAR_MANUAL,
+            resumen: 'Bloqueo temporal anti-spam detectado en Zoom (CleanTalk: Sent forms too often)',
+            bloqueoTemporal: true,
+            requiereCaptcha: true
         };
     }
 
-    // B) LISTO_RETIRO (EN CIUDAD DESTINO / EN OFICINA / DISPONIBLE PARA RETIRO)
-    if (/\b(en\s+ciudad\s+destino|en\s+oficina|disponible\s+para\s+retiro|en\s+taquilla|en\s+agencia\s+destino)\b/i.test(seccionTracking)) {
+    // 5. Verificar si dice explícitamente no encontrada o sin información
+    if (/no\s+encontrad[oa]|no\s+existe|sin\s+informaci[oó]n|gu[ií]a\s+inv[aá]lida/i.test(limpio)) {
         return {
-            estado: ESTADOS_ESTANDAR.LISTO_RETIRO,
-            resumen: 'Disponible para retiro en oficina/agencia destino Zoom',
+            estado: ESTADOS_ESTANDAR.VERIFICAR_MANUAL,
+            resumen: 'Guía no registrada o no encontrada en Zoom',
             bloqueoTemporal: false
         };
     }
-
-    // C) EN_TRANSITO (EN CAMINO / EN TRÁNSITO / DESPACHADO)
-    if (/\b(en\s+camino|en\s+tr[aá]nsito|despachad[oa]|en\s+ruta|en\s+viaje|recibid[oa]\s+en\s+origen)\b/i.test(seccionTracking)) {
-        return {
-            estado: ESTADOS_ESTANDAR.EN_TRANSITO,
-            resumen: 'En tránsito hacia destino (Zoom)',
-            bloqueoTemporal: false
-        };
-    }
-
-    // D. Fallback si hay texto en la sección
-    const lineas = seccionTracking.split('\n').map(l => l.trim()).filter(l => l.length > 5);
-    const resumenFallback = lineas.slice(0, 3).join(' • ');
 
     return {
         estado: ESTADOS_ESTANDAR.VERIFICAR_MANUAL,
-        resumen: resumenFallback.substring(0, 100) || 'Estatus no concluyente en Zoom',
+        resumen: 'No se encontró el bloque "INFORMACIÓN DEL ENVÍO" en la respuesta',
         bloqueoTemporal: false
     };
 }
@@ -594,14 +597,19 @@ async function consultarGuiaViaFetch(carrier, numeroGuia) {
     const url = construirUrlRastreo(carrier, numeroGuia);
     if (!url) return { exito: false, texto: '', error: 'URL inválida' };
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 9000);
+
     try {
         const resp = await fetch(url, {
             method: 'GET',
             credentials: 'omit',
             headers: {
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-            }
+            },
+            signal: controller.signal
         });
+        clearTimeout(timeoutId);
 
         if (!resp.ok) {
             const isBlocked = (resp.status === 403 || resp.status === 429);
@@ -633,7 +641,9 @@ async function consultarGuiaViaFetch(carrier, numeroGuia) {
         const texto = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
         return { exito: true, texto, url };
     } catch (e) {
-        return { exito: false, texto: '', error: e.message, url };
+        clearTimeout(timeoutId);
+        const errorMsg = e.name === 'AbortError' ? 'Tiempo de espera agotado (Timeout 9s)' : e.message;
+        return { exito: false, texto: '', error: errorMsg, url };
     }
 }
 
@@ -750,7 +760,55 @@ export async function ejecutarRastreoSecuencial() {
 
             const tarea = listaTareas[i];
             const numGuia = tarea.guia.numero;
-            const carrier = detectarCarrier(tarea.guia.agencia || tarea.pedido.agenciaEnvio || tarea.pedido.envio);
+            const rawAgencia = (tarea.guia.agencia || tarea.pedido.agenciaEnvio || tarea.pedido.envio || '').trim();
+            const carrier = detectarCarrier(rawAgencia);
+
+            // Si es entrega local / motorizado / delivery directo sin portal público
+            if (!carrier) {
+                const nombreAgencia = rawAgencia || 'Motorizado / Entrega Local';
+                if (!tarea.guia.tipoTramo) {
+                    tarea.guia.tipoTramo = 'ENTREGA_CLIENTE';
+                }
+
+                // Si no tiene estatus asignado, mantenerlo como EN_TRANSITO
+                const estatusLocal = tarea.guia.estadoRastreo || ESTADOS_ESTANDAR.EN_TRANSITO;
+                const resumenLocal = `Envío local / motorizado (${nombreAgencia}). Requiere confirmación manual.`;
+
+                tarea.guia.estadoRastreo = estatusLocal;
+                tarea.guia.ultimaRevision = new Date().toISOString();
+                tarea.guia.ultimoDetalleRastreo = resumenLocal;
+                tarea.guia.requiereCaptcha = false;
+                tarea.guia.urlRastreo = '';
+
+                const itemHistorial = {
+                    numero: numGuia || 'S/N',
+                    agencia: nombreAgencia,
+                    tipoTramo: 'ENTREGA_CLIENTE',
+                    cliente: tarea.pedido.cliente || 'Cliente',
+                    pedidoId: tarea.pedido.id,
+                    estadoRastreo: estatusLocal,
+                    resumen: resumenLocal,
+                    requiereCaptcha: false,
+                    urlRastreo: '',
+                    fecha: new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })
+                };
+                historialResultados.push(itemHistorial);
+                procesadas++;
+
+                enviarMensajePopup({
+                    tipo: 'PROGRESO_RASTREO',
+                    procesadas,
+                    total: totalTareas,
+                    guiaActual: numGuia || 'S/N',
+                    agenciaActual: nombreAgencia,
+                    clienteActual: tarea.pedido.cliente,
+                    mensaje: `Guía local ${numGuia || 'S/N'} (${nombreAgencia}) registrada.`
+                });
+
+                continue;
+            }
+
+            const nombreCarrier = carrier.nombre || rawAgencia || 'Encomienda';
             if (!tarea.guia.tipoTramo) {
                 tarea.guia.tipoTramo = carrier.categoria === 'INTERNACIONAL' ? 'IMPORTACION' : 'ENTREGA_CLIENTE';
             }
@@ -760,9 +818,9 @@ export async function ejecutarRastreoSecuencial() {
                 procesadas: i + 1,
                 total: totalTareas,
                 guiaActual: numGuia,
-                agenciaActual: carrier.nombre,
+                agenciaActual: nombreCarrier,
                 clienteActual: tarea.pedido.cliente,
-                mensaje: `Consultando guía ${numGuia} (${carrier.nombre})...`
+                mensaje: `Consultando guía ${numGuia} (${nombreCarrier})...`
             });
 
             // 1. Ejecutar consulta al portal público (respetando bloqueo temporal anti-spam)
@@ -808,7 +866,7 @@ export async function ejecutarRastreoSecuencial() {
             tarea.guia.ultimaRevision = new Date().toISOString();
             tarea.guia.ultimoDetalleRastreo = normalizado.resumen;
             tarea.guia.requiereCaptcha = normalizado.requiereCaptcha;
-            tarea.guia.urlRastreo = resultadoPortal.url || construirUrlRastreo(carrier, numGuia);
+            tarea.guia.urlRastreo = resultadoPortal?.url || (carrier ? construirUrlRastreo(carrier, numGuia) : '');
 
             // Contadores
             if (normalizado.estado === ESTADOS_ESTANDAR.ENTREGADO) entregadasNuevas++;
@@ -817,8 +875,8 @@ export async function ejecutarRastreoSecuencial() {
 
             const itemHistorial = {
                 numero: numGuia,
-                agencia: carrier.nombre,
-                tipoTramo: tarea.guia.tipoTramo || (carrier.categoria === 'INTERNACIONAL' ? 'IMPORTACION' : 'ENTREGA_CLIENTE'),
+                agencia: nombreCarrier,
+                tipoTramo: tarea.guia.tipoTramo || (carrier?.categoria === 'INTERNACIONAL' ? 'IMPORTACION' : 'ENTREGA_CLIENTE'),
                 cliente: tarea.pedido.cliente || 'Cliente',
                 pedidoId: tarea.pedido.id,
                 estadoRastreo: normalizado.estado,
@@ -915,7 +973,7 @@ export async function ejecutarRastreoSecuencial() {
 
             // 5. PAUSA RESPETUOSA (2.5 segundos para Zoom y agencias fetch, 2.0s para otras)
             if (i < listaTareas.length - 1 && !_cancelarRastreo) {
-                const pausaMs = (carrier.id === 'zoom' || carrier.modo === 'fetch') ? 2500 : 2000;
+                const pausaMs = (carrier?.id === 'zoom' || carrier?.modo === 'fetch') ? 2500 : 2000;
                 await esperarConCancelacion(pausaMs);
             }
         }
@@ -1062,14 +1120,29 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     if (request.tipo === 'FORZAR_REINICIO_ESTADO') {
-        _cancelarRastreo = false;
+        _cancelarRastreo = true;
         _rastreoEnProgreso = false;
         if (_tabActivaId) {
             chrome.tabs.remove(_tabActivaId).catch(() => {});
             _tabActivaId = null;
         }
-        chrome.storage.local.set({ enProgreso: false }).then(() => {
+        if (_esperaTimeoutId) {
+            clearTimeout(_esperaTimeoutId);
+            _esperaTimeoutId = null;
+        }
+
+        chrome.storage.local.remove([
+            'bloqueoTemporalZoom',
+            'ultimoRastreoTimestamp',
+            'historialReciente'
+        ]).then(() => {
+            return chrome.storage.local.set({ enProgreso: false });
+        }).then(() => {
+            enviarMensajePopup({ tipo: 'FIN_RASTREO', motivo: 'reinicio_forzado' });
             sendResponse({ ok: true, reiniciado: true });
+        }).catch(err => {
+            chrome.storage.local.set({ enProgreso: false });
+            sendResponse({ ok: true, reiniciado: true, error: err.message });
         });
         return true;
     }

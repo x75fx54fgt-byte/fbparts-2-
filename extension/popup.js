@@ -105,9 +105,21 @@ function actualizarUIConEstado() {
     }
 
     // 3. Última hora de revisión
-    if (_estadoActual.ultimoRastreoTimestamp && txtUltimaHoraRevision) {
-        const d = new Date(_estadoActual.ultimoRastreoTimestamp);
-        txtUltimaHoraRevision.textContent = `Última: ${d.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}`;
+    if (txtUltimaHoraRevision) {
+        if (_estadoActual.ultimoRastreoTimestamp) {
+            try {
+                const d = new Date(_estadoActual.ultimoRastreoTimestamp);
+                if (!isNaN(d.getTime())) {
+                    txtUltimaHoraRevision.textContent = `Última: ${d.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}`;
+                } else {
+                    txtUltimaHoraRevision.textContent = '-';
+                }
+            } catch (e) {
+                txtUltimaHoraRevision.textContent = '-';
+            }
+        } else {
+            txtUltimaHoraRevision.textContent = '-';
+        }
     }
 
     // 4. Feed de historial
@@ -211,15 +223,17 @@ function configurarBotones() {
             try {
                 await Promise.race([
                     chrome.runtime.sendMessage({ tipo: 'DETENER_RASTREO' }),
-                    new Promise(r => setTimeout(r, 600))
+                    new Promise(r => setTimeout(r, 800))
                 ]);
-            } catch (e) {}
+            } catch (e) {
+                console.warn("Aviso al detener rastreo:", e);
+            }
 
-            await chrome.storage.local.set({ enProgreso: false });
             _estadoActual.enProgreso = false;
+            await chrome.storage.local.set({ enProgreso: false });
             btnToggleRastreo.disabled = false;
             actualizarUIConEstado();
-            cargarContadoresAgencias();
+            await cargarContadoresAgencias();
         } else {
             _estadoActual.enProgreso = true;
             labelLiveStatus.textContent = 'Conectando con Firebase...';
@@ -241,11 +255,30 @@ function configurarBotones() {
             try {
                 await Promise.race([
                     chrome.runtime.sendMessage({ tipo: 'FORZAR_REINICIO_ESTADO' }),
-                    new Promise(r => setTimeout(r, 600))
+                    new Promise(r => setTimeout(r, 800))
                 ]);
-            } catch (e) {}
-            await chrome.storage.local.set({ enProgreso: false });
-            _estadoActual.enProgreso = false;
+            } catch (e) {
+                console.warn("Aviso al forzar reinicio:", e);
+            }
+
+            // Limpieza inmediata total de storage y memoria
+            try {
+                await chrome.storage.local.remove([
+                    'enProgreso',
+                    'bloqueoTemporalZoom',
+                    'ultimoRastreoTimestamp',
+                    'historialReciente'
+                ]);
+                await chrome.storage.local.set({ enProgreso: false });
+            } catch (eStorage) {}
+
+            _estadoActual = {
+                enProgreso: false,
+                autoCheckActivo: true,
+                ultimoRastreoTimestamp: null,
+                historialReciente: []
+            };
+
             btnForzarReset.textContent = 'Restablecer';
             actualizarUIConEstado();
             await cargarContadoresAgencias();

@@ -140,16 +140,29 @@ export function detectarCarrier(textoAgencia) {
     if (!textoAgencia) return CARRIERS_CONFIG.handling;
     const str = textoAgencia.toString().toLowerCase().trim();
 
+    // 1. Mapeos normalizados directos y comunes
+    if (str.includes('zoom') || str === 'grupo zoom') return CARRIERS_CONFIG.zoom;
+    if (str.includes('rlu') || str === 'rlu cargo' || str === 'rlucargo') return CARRIERS_CONFIG.rlu;
+    if (str.includes('intercargo') || str.includes('inter cargo')) return CARRIERS_CONFIG.intercargo;
+    if (str.includes('tealca')) return CARRIERS_CONFIG.tealca;
+    if (str.includes('mrw')) return CARRIERS_CONFIG.mrw;
+    if (str.includes('handling')) return CARRIERS_CONFIG.handling;
+    if (str.includes('ups') || str === 'united parcel service') return CARRIERS_CONFIG.ups;
+    if (str.includes('dhl') || str === 'dhl express') return CARRIERS_CONFIG.dhl;
+
+    // 2. Búsqueda en alias configurados
     for (const carrier of Object.values(CARRIERS_CONFIG)) {
-        if (carrier.alias.some(alias => str.includes(alias))) {
+        if (carrier.alias.some(alias => str.includes(alias) || alias.includes(str))) {
             return carrier;
         }
     }
-    // Si contiene motorizado, no es encomienda pública
-    if (str.includes('motorizado') || str.includes('delivery')) {
+
+    // 3. Si contiene motorizado o delivery local, no es encomienda pública
+    if (str.includes('motorizado') || str.includes('delivery') || str.includes('retiro') || str.includes('local')) {
         return null;
     }
-    // Por defecto Handling (agencia principal)
+
+    // Por defecto Handling (agencia principal de envíos)
     return CARRIERS_CONFIG.handling;
 }
 
