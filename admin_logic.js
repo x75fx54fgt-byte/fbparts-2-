@@ -14913,7 +14913,7 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
         // =========================================================================
         window._precioFotoBlob = null;
         window._precioFotoBase64 = null;
-        window._precioFotoTargetModulo = 'reventa'; // 'reventa' | 'pedido'
+        window._precioFotoTargetModulo = 'cotizacion'; // 'cotizacion' | 'pedido' | 'reventa'
         window._precioFotoDataExtraida = null;
         window._precioFotoRespuestas = {
             calidad: 'OEM / Original',
@@ -14922,15 +14922,34 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
             margen: '30% (Margen Estándar)'
         };
 
-        window.abrirModalAnalizarPrecioFoto = function(targetModulo = 'reventa') {
+        window._onPastePrecioFoto = function(e) {
+            const modal = document.getElementById('modal-analizar-precio-foto');
+            if (!modal || modal.style.display === 'none') return;
+
+            const items = (e.clipboardData || e.originalEvent?.clipboardData)?.items;
+            if (!items) return;
+
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type && items[i].type.indexOf('image') !== -1) {
+                    const blob = items[i].getAsFile();
+                    if (blob) {
+                        e.preventDefault();
+                        window.procesarFotoPrecioBlob(blob);
+                        break;
+                    }
+                }
+            }
+        };
+
+        window.abrirModalAnalizarPrecioFoto = function(targetModulo = 'cotizacion') {
             const modal = document.getElementById('modal-analizar-precio-foto');
             if (!modal) return;
 
-            window._precioFotoTargetModulo = targetModulo || 'reventa';
+            window._precioFotoTargetModulo = targetModulo || 'cotizacion';
 
             const btnTexto = document.getElementById('btn-aplicar-precio-texto');
             if (btnTexto) {
-                btnTexto.textContent = targetModulo === 'pedido' ? 'Aplicar a Pedido Manual' : 'Aplicar a Nueva Reventa';
+                btnTexto.textContent = '➕ Cargar a la Cotización';
             }
 
             // Si aún no se han renderizado las preguntas, renderizar las default
@@ -14938,8 +14957,12 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
                 window.renderizarPreguntasDefaultPrecioFoto();
             }
 
-            // Recalcular KPI en tiempo real
+            // Recalcular KPI en tiempo real sin tocar los inputs
             window.recalcularPrecioSugeridoLive();
+
+            // Activar listener de paste únicamente mientras el modal esté abierto
+            window.removeEventListener('paste', window._onPastePrecioFoto);
+            window.addEventListener('paste', window._onPastePrecioFoto);
 
             modal.style.display = 'flex';
         };
@@ -14947,6 +14970,9 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
         window.cerrarModalAnalizarPrecioFoto = function() {
             const modal = document.getElementById('modal-analizar-precio-foto');
             if (modal) modal.style.display = 'none';
+
+            // Desactivar listener de paste para no sobrecargar el navegador cuando el modal esté cerrado
+            window.removeEventListener('paste', window._onPastePrecioFoto);
         };
 
         window.manejarSeleccionArchivoPrecioFoto = function(event) {
@@ -15103,6 +15129,8 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
                     const btn = document.createElement('button');
                     btn.type = 'button';
                     btn.textContent = opc;
+                    btn.setAttribute('data-pregunta-id', p.id);
+                    btn.setAttribute('data-opcion', opc);
                     const esActivo = (valorActual === opc);
 
                     btn.style.padding = '4px 10px';
@@ -15151,11 +15179,18 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
                 }
             }
 
-            // Re-renderizar para actualizar el estado visual de los botones
-            if (window._precioFotoDataExtraida?.preguntas_aclaracion) {
-                window.renderizarPreguntasPrecioFoto(window._precioFotoDataExtraida.preguntas_aclaracion);
-            } else {
-                window.renderizarPreguntasDefaultPrecioFoto();
+            // Actualizar el estado visual de los botones directamente sin destruir el DOM
+            const container = document.getElementById('precio-foto-preguntas-container');
+            if (container) {
+                const buttons = container.querySelectorAll(`button[data-pregunta-id="${preguntaId}"]`);
+                buttons.forEach(btn => {
+                    const esActivo = (btn.getAttribute('data-opcion') === opcion);
+                    btn.style.border = esActivo ? '1.5px solid #385723' : '1px solid #cbd5e1';
+                    btn.style.background = esActivo ? '#385723' : '#ffffff';
+                    btn.style.color = esActivo ? '#ffffff' : '#374151';
+                    btn.style.fontWeight = esActivo ? '700' : '500';
+                    btn.style.boxShadow = esActivo ? '0 2px 5px rgba(56, 87, 35, 0.25)' : 'none';
+                });
             }
 
             // Recalcular en vivo
@@ -15432,13 +15467,118 @@ REGLAS CRÍTICAS:
             const repuesto = (document.getElementById('precio-foto-input-repuesto')?.value || '').trim();
 
             if (calc.precioVentaUSD <= 0) {
-                alert("Por favor ingresa un costo base o analiza una foto con precio antes de aplicar el precio sugerido.");
+                alert("Por favor ingresa un costo base o analiza una foto con precio antes de cargar el precio sugerido.");
                 return;
             }
 
-            const targetModulo = window._precioFotoTargetModulo || 'reventa';
+            // Construir descripción limpia con variantes seleccionadas
+            let descFinal = repuesto || 'Repuesto cotizado';
+            const variantesArr = [];
 
-            if (targetModulo === 'reventa') {
+            const calidad = window._precioFotoRespuestas['calidad'];
+            if (calidad && calidad !== 'Estándar') {
+                variantesArr.push(calidad);
+            }
+
+            const presentacion = window._precioFotoRespuestas['presentacion'];
+            if (presentacion && presentacion !== 'Unidad') {
+                variantesArr.push(presentacion);
+            }
+
+            // Variantes adicionales si vinieron de la IA
+            if (window._precioFotoDataExtraida?.preguntas_aclaracion) {
+                window._precioFotoDataExtraida.preguntas_aclaracion.forEach(p => {
+                    if (p.id !== 'calidad' && p.id !== 'presentacion' && p.id !== 'flete' && p.id !== 'margen') {
+                        const resp = window._precioFotoRespuestas[p.id];
+                        if (resp) variantesArr.push(resp);
+                    }
+                });
+            }
+
+            if (variantesArr.length > 0) {
+                descFinal += ` (${variantesArr.join(' - ')})`;
+            }
+
+            const targetModulo = window._precioFotoTargetModulo || 'cotizacion';
+
+            if (targetModulo === 'cotizacion') {
+                // 1. Activar pestaña de cotizaciones si no está activa
+                const tabCotizaciones = document.getElementById('tab-cotizaciones');
+                if (tabCotizaciones) {
+                    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+                    tabCotizaciones.classList.add('active');
+                    document.querySelectorAll('.tab-btn').forEach(tb => tb.classList.remove('active'));
+                    const btnTab = document.querySelector('button[onclick*="cotizaciones"]') || document.querySelector('[data-tab="tab-cotizaciones"]');
+                    if (btnTab) btnTab.classList.add('active');
+                }
+
+                // 2. Inyectar ítem en cotizacion-items-container
+                const container = document.getElementById('cotizacion-items-container');
+                if (container) {
+                    let targetRow = null;
+                    const rows = container.querySelectorAll('.cotizacion-item-row');
+                    for (const r of rows) {
+                        const descInput = r.querySelector('.item-desc');
+                        const precioInput = r.querySelector('.item-precio');
+                        if (descInput && !descInput.value.trim() && (!precioInput || parseFloat(precioInput.value) === 0)) {
+                            targetRow = r;
+                            break;
+                        }
+                    }
+
+                    const cantidad = 1;
+                    const precioFinal = calc.precioVentaUSD;
+                    const subtotal = (precioFinal * cantidad).toFixed(2);
+
+                    if (targetRow) {
+                        const cantInput = targetRow.querySelector('.item-cant');
+                        const descInput = targetRow.querySelector('.item-desc');
+                        const precInput = targetRow.querySelector('.item-precio');
+                        const totalLine = targetRow.querySelector('.item-total-line');
+
+                        if (cantInput) cantInput.value = cantidad;
+                        if (descInput) descInput.value = descFinal;
+                        if (precInput) precInput.value = precioFinal.toFixed(2);
+                        if (totalLine) totalLine.value = `$${subtotal}`;
+                    } else {
+                        const row = document.createElement('div');
+                        row.className = 'cotizacion-item-row';
+                        const safeDesc = (window.SecuritySanitizer && window.SecuritySanitizer.escapeHtml) ? window.SecuritySanitizer.escapeHtml(descFinal) : descFinal.replace(/"/g, '&quot;');
+                        row.innerHTML = `
+                            <input type="number" class="item-cant" value="${cantidad}" min="1" placeholder="Cant" oninput="calcularTotalCotizacion()">
+                            <input type="text" class="item-desc" value="${safeDesc}" placeholder="Descripción" oninput="actualizarPreview()">
+                            <input type="number" step="0.01" class="item-precio" value="${precioFinal.toFixed(2)}" placeholder="Precio" oninput="calcularTotalCotizacion()">
+                            <input type="number" step="0.01" class="item-descval" value="0.00" placeholder="Desc." oninput="calcularTotalCotizacion()">
+                            <input type="text" class="item-total-line" value="$${subtotal}" readonly style="background: #f1f1f1; text-align: right; font-weight: bold;">
+                            <button type="button" onclick="this.parentElement.remove(); calcularTotalCotizacion();" style="background:#d9534f; color:white; border:none; border-radius:4px; cursor:pointer;"><i class="fas fa-times"></i></button>
+                        `;
+                        container.appendChild(row);
+                    }
+
+                    // Recalcular totales y actualizar preview de PDF
+                    if (typeof window.calcularTotalCotizacion === 'function') window.calcularTotalCotizacion();
+                    if (typeof window.actualizarPreview === 'function') window.actualizarPreview();
+                }
+
+                // 3. Cerrar modal
+                window.cerrarModalAnalizarPrecioFoto();
+
+                // 4. Feedback visual rápido (Toast o SweetAlert)
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Cargado a la Cotización!',
+                        html: `<b>${(window.SecuritySanitizer && window.SecuritySanitizer.escapeHtml) ? window.SecuritySanitizer.escapeHtml(descFinal) : descFinal}</b><br><span style="color:#385723; font-weight:bold; font-size:16px;">$${calc.precioVentaUSD.toFixed(2)} USD</span>`,
+                        timer: 2200,
+                        showConfirmButton: false,
+                        toast: true,
+                        position: 'top-end'
+                    });
+                } else {
+                    alert(`✨ ¡Repuesto cargado a la cotización con éxito!\n\nDescripción: ${descFinal}\nPrecio: $${calc.precioVentaUSD.toFixed(2)} USD`);
+                }
+
+            } else if (targetModulo === 'reventa') {
                 // Activar pestaña de reventas si no está activa
                 const tabReventas = document.getElementById('tab-reventas');
                 if (tabReventas) {
@@ -15537,26 +15677,6 @@ REGLAS CRÍTICAS:
                 alert(`✨ ¡Repuesto agregado al pedido manual!\n\nDescripción: ${repuesto || 'Repuesto'}\nPrecio sugerido: $${calc.precioVentaUSD.toFixed(2)} USD`);
             }
         };
-
-        // Soporte global de Ctrl+V / Paste para la ventana modal de Analizar Precio por Foto
-        window.addEventListener('paste', function(e) {
-            const modal = document.getElementById('modal-analizar-precio-foto');
-            if (!modal || modal.style.display === 'none') return;
-
-            const items = (e.clipboardData || e.originalEvent?.clipboardData)?.items;
-            if (!items) return;
-
-            for (let i = 0; i < items.length; i++) {
-                if (items[i].type && items[i].type.indexOf('image') !== -1) {
-                    const blob = items[i].getAsFile();
-                    if (blob) {
-                        e.preventDefault();
-                        window.procesarFotoPrecioBlob(blob);
-                        break;
-                    }
-                }
-            }
-        });
 
         // Configuración de Drag & Drop para la Dropzone de Precio por Foto
         document.addEventListener('DOMContentLoaded', () => {
