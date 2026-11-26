@@ -28,69 +28,77 @@
     const pedidoId = datos.pedidoId || '';
     const cliente = datos.cliente || 'Cliente';
 
-    // 1. INTENTO DE AUTO-RELLENO EN EL DOM DE LA PÁGINA
+    // 1. DETECTAR SI LA PÁGINA YA CONTIENE EL RESULTADO DEL RASTREO (POST-RECARGA / ZOOM / TURNSTILE)
+    const bodyText = (document.body ? (document.body.innerText || document.body.textContent) : '') || '';
+    const regexEncabezado = /informaci[oó]n\s+del\s+env[ií]o/i;
+    const yaTieneResultado = regexEncabezado.test(bodyText) || 
+        (/\b(entregad[oa]s?|recibid[oa]s?\s+conforme|en\s+ciudad\s+destino|en\s+oficina|disponible\s+para\s+retiro|en\s+camino|en\s+tr[aá]nsito)\b/i.test(bodyText) && bodyText.length > 250);
+
+    // 2. INTENTO DE AUTO-RELLENO EN EL DOM (SOLO SI AÚN NO SE HA DETECTADO EL RESULTADO)
     let autoFilled = false;
-    try {
-        const inputSelectors = [
-            "#form-field-nro_guia",
-            "input[name*='nro_guia' i]",
-            "input[name*='guia' i]",
-            "input[name*='codigo' i]",
-            "input[name*='tracking' i]",
-            "input[name='busqueda']",
-            "input[placeholder*='guia' i]",
-            "input[placeholder*='nro' i]",
-            "input[placeholder*='código' i]",
-            "input#busqueda",
-            "input#codigo",
-            "input#tracking",
-            "input[type='text']",
-            "input[type='search']"
-        ];
+    if (!yaTieneResultado) {
+        try {
+            const inputSelectors = [
+                "#form-field-nro_guia",
+                "input[name*='nro_guia' i]",
+                "input[name*='guia' i]",
+                "input[name*='codigo' i]",
+                "input[name*='tracking' i]",
+                "input[name='busqueda']",
+                "input[placeholder*='guia' i]",
+                "input[placeholder*='nro' i]",
+                "input[placeholder*='código' i]",
+                "input#busqueda",
+                "input#codigo",
+                "input#tracking",
+                "input[type='text']",
+                "input[type='search']"
+            ];
 
-        let targetInput = null;
-        for (const sel of inputSelectors) {
-            const el = document.querySelector(sel);
-            if (el && el.offsetParent !== null) {
-                targetInput = el;
-                break;
-            }
-        }
-        if (!targetInput) {
-            targetInput = document.querySelector("input[type='text'], input:not([type='hidden']):not([type='radio']):not([type='checkbox'])");
-        }
-
-        if (targetInput && guia) {
-            targetInput.focus();
-            const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-            if (nativeSetter) {
-                nativeSetter.call(targetInput, guia);
-            } else {
-                targetInput.value = guia;
-            }
-            targetInput.dispatchEvent(new Event('input', { bubbles: true }));
-            targetInput.dispatchEvent(new Event('change', { bubbles: true }));
-            autoFilled = true;
-        }
-
-        // Si es Zoom, pre-marcar radio ENVÍOS para facilitar la acción
-        if (idAgencia.includes('zoom')) {
-            const allRadios = Array.from(document.querySelectorAll("input[type='radio']"));
-            for (const r of allRadios) {
-                const labelTxt = (r.closest('label')?.innerText || r.nextElementSibling?.innerText || r.value || '').toUpperCase();
-                if (labelTxt.includes('ENVIO') || labelTxt.includes('ENVÍO')) {
-                    r.checked = true;
-                    try { r.click(); } catch(e) {}
-                    r.dispatchEvent(new Event('change', { bubbles: true }));
+            let targetInput = null;
+            for (const sel of inputSelectors) {
+                const el = document.querySelector(sel);
+                if (el && el.offsetParent !== null) {
+                    targetInput = el;
                     break;
                 }
             }
+            if (!targetInput) {
+                targetInput = document.querySelector("input[type='text'], input:not([type='hidden']):not([type='radio']):not([type='checkbox'])");
+            }
+
+            if (targetInput && guia) {
+                targetInput.focus();
+                const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+                if (nativeSetter) {
+                    nativeSetter.call(targetInput, guia);
+                } else {
+                    targetInput.value = guia;
+                }
+                targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+                autoFilled = true;
+            }
+
+            // Si es Zoom, pre-marcar radio ENVÍOS para facilitar la acción
+            if (idAgencia.includes('zoom')) {
+                const allRadios = Array.from(document.querySelectorAll("input[type='radio']"));
+                for (const r of allRadios) {
+                    const labelTxt = (r.closest('label')?.innerText || r.nextElementSibling?.innerText || r.value || '').toUpperCase();
+                    if (labelTxt.includes('ENVIO') || labelTxt.includes('ENVÍO')) {
+                        r.checked = true;
+                        try { r.click(); } catch(e) {}
+                        r.dispatchEvent(new Event('change', { bubbles: true }));
+                        break;
+                    }
+                }
+            }
+        } catch (eAuto) {
+            console.warn("[FB Parts Asistido] Aviso en auto-relleno:", eAuto);
         }
-    } catch (eAuto) {
-        console.warn("[FB Parts Asistido] Aviso en auto-relleno:", eAuto);
     }
 
-    // 2. CREACIÓN DEL CONTENEDOR FLOTANTE CON ESTILOS CORPORATIVOS
+    // 3. CREACIÓN DEL CONTENEDOR FLOTANTE CON ESTILOS CORPORATIVOS
     const overlay = document.createElement('div');
     overlay.id = 'fbparts-assisted-overlay';
     overlay.setAttribute('style', `
@@ -101,7 +109,7 @@
         max-width: calc(100vw - 30px) !important;
         background: #ffffff !important;
         color: #1e293b !important;
-        border: 2px solid #5e8877 !important;
+        border: 2px solid ${yaTieneResultado ? '#10b981' : '#5e8877'} !important;
         border-radius: 12px !important;
         box-shadow: 0 10px 32px rgba(0, 0, 0, 0.35) !important;
         font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
@@ -113,15 +121,23 @@
         box-sizing: border-box !important;
     `);
 
-    // Instrucciones dinámicas según transportista
+    // Instrucciones dinámicas según transportista y estatus de pantalla
     let instruccionHtml = '';
-    if (idAgencia.includes('zoom')) {
+    if (yaTieneResultado) {
+        instruccionHtml = `
+            <div style="background: #ecfdf5; border: 1.5px solid #10b981; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; font-size: 12px; color: #065f46; font-weight: 600; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.15);">
+                <span style="font-size: 18px; flex-shrink: 0;">✅</span>
+                <span>¡Resultado detectado en pantalla! Presiona <b>Listo para guardar en Firebase</b>.</span>
+            </div>
+        `;
+    } else if (idAgencia.includes('zoom')) {
         instruccionHtml = `
             <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 6px; padding: 8px 10px; margin-bottom: 10px; font-size: 11.5px; color: #92400e;">
                 <b>📋 Pasos en ZOOMTrack:</b><br>
                 1. Asegúrate de marcar el radio <b>ENVÍOS</b>.<br>
-                2. Haz clic en el botón <b>RASTREAR &gt;</b>.<br>
-                3. Cuando aparezca el estatus de la guía, presiona <b>Listo, Leer y Actualizar</b> abajo.
+                2. Completa la verificación (Turnstile / Captcha) si aparece.<br>
+                3. Haz clic en el botón <b>RASTREAR &gt;</b>.<br>
+                4. Al recargar con el estatus, pulsa <b>Listo para guardar en Firebase</b>.
             </div>
         `;
     } else if (idAgencia.includes('tealca')) {
@@ -130,7 +146,7 @@
                 <b>📋 Pasos en Tealca:</b><br>
                 1. Resuelve el Captcha si la página lo solicita.<br>
                 2. Haz clic en <b>Rastrear / Buscar</b>.<br>
-                3. Al visualizarse el resultado, pulsa <b>Listo, Leer y Actualizar</b>.
+                3. Al visualizarse el resultado, pulsa <b>Listo para guardar en Firebase</b>.
             </div>
         `;
     } else if (idAgencia.includes('mrw')) {
@@ -138,19 +154,19 @@
             <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 8px 10px; margin-bottom: 10px; font-size: 11.5px; color: #991b1b;">
                 <b>📋 Pasos en MRW:</b><br>
                 1. Completa la verificación o código de seguridad.<br>
-                2. Al ver la información de entrega, pulsa <b>Listo, Leer y Actualizar</b>.
+                2. Al ver la información de entrega, pulsa <b>Listo para guardar en Firebase</b>.
             </div>
         `;
     } else {
         instruccionHtml = `
             <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 10px; margin-bottom: 10px; font-size: 11.5px; color: #334155;">
                 <b>📋 Modo Asistido:</b><br>
-                Completa la consulta en pantalla y haz clic en <b>Listo, Leer y Actualizar</b> cuando veas el estado.
+                Completa la consulta en pantalla y haz clic en <b>Listo para guardar en Firebase</b> cuando veas el estado.
             </div>
         `;
     }
 
-    const autoFilledNotice = autoFilled 
+    const autoFilledNotice = (!yaTieneResultado && autoFilled) 
         ? `<div style="font-size: 11px; color: #15803d; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;">
              <span>✨</span> <span>Número <b>${guia}</b> auto-rellenado en el buscador.</span>
            </div>`
@@ -189,7 +205,7 @@
             <!-- Botones de Acción -->
             <div id="fbparts-actions-row" style="display: flex; flex-direction: column; gap: 8px;">
                 <button type="button" id="fbparts-btn-leer-actualizar" style="
-                    background: #385723;
+                    background: ${yaTieneResultado ? '#15803d' : '#385723'};
                     color: #ffffff;
                     border: none;
                     border-radius: 6px;
@@ -201,10 +217,10 @@
                     align-items: center;
                     justify-content: center;
                     gap: 6px;
-                    box-shadow: 0 3px 8px rgba(56, 87, 35, 0.25);
-                    transition: background 0.15s;
+                    box-shadow: ${yaTieneResultado ? '0 4px 12px rgba(21, 128, 61, 0.35)' : '0 3px 8px rgba(56, 87, 35, 0.25)'};
+                    transition: all 0.15s ease;
                 ">
-                    <span>✅</span> <span>Listo, Leer y Actualizar</span>
+                    <span>✅</span> <span>${yaTieneResultado ? 'Listo para guardar en Firebase' : 'Listo, Leer y Actualizar'}</span>
                 </button>
                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
                     <span style="color: #64748b;">Cliente: <b>${cliente}</b></span>
@@ -276,6 +292,12 @@
         overlay.style.opacity = '0';
         overlay.style.transform = 'translateY(15px)';
         setTimeout(() => overlay.remove(), 250);
+        try {
+            chrome.runtime.sendMessage({
+                action: 'CANCELAR_MODO_ASISTIDO',
+                tipo: 'CANCELAR_MODO_ASISTIDO'
+            }).catch(() => {});
+        } catch (e) {}
     }
 
     btnCerrar?.addEventListener('click', cerrarOverlay);

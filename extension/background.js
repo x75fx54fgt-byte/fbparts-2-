@@ -26,6 +26,9 @@ let _cancelarRastreo = false;
 let _tabActivaId = null;
 let _esperaTimeoutId = null;
 
+// Storage para sesiones en memoria (tabId persistente durante recargas de página)
+const sessionStore = chrome.storage.session || chrome.storage.local;
+
 // =========================================================================
 // 1. HELPERS DE FIRESTORE REST API (LIVIANOS Y NATIVOS PARA SERVICE WORKER)
 // =========================================================================
@@ -1188,40 +1191,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const carrier = detectarCarrier(agencia);
         const targetUrl = url || construirUrlRastreo(carrier, guia);
 
-        chrome.tabs.create({ url: targetUrl, active: true }).then(tab => {
-            let injectada = false;
-            const ejecutarInyeccion = async () => {
-                if (injectada) return;
-                injectada = true;
-                chrome.tabs.onUpdated.removeListener(listener);
-
-                try {
-                    await chrome.scripting.executeScript({
-                        target: { tabId: tab.id },
-                        func: (datos) => {
-                            window.__FB_PARTS_ASISTIDO__ = datos;
-                        },
-                        args: [{ guia, agencia: carrier.nombre, idAgencia: carrier.id, pedidoId, cliente }]
-                    });
-
-                    await chrome.scripting.executeScript({
-                        target: { tabId: tab.id },
-                        files: ['assistedOverlay.js']
-                    });
-                } catch (eInj) {
-                    console.error("Error inyectando assistedOverlay.js:", eInj);
-                }
+        chrome.tabs.create({ url: targetUrl, active: true }).then(async (tab) => {
+            const datosAsistido = {
+                guia,
+                agencia: carrier?.nombre || agencia || 'Encomienda',
+                idAgencia: carrier?.id || (agencia || '').toLowerCase(),
+                pedidoId,
+                cliente,
+                url: targetUrl
             };
 
-            const listener = (tabId, info) => {
-                if (tabId === tab.id && info.status === 'complete') {
-                    ejecutarInyeccion();
-                }
-            };
-            chrome.tabs.onUpdated.addListener(listener);
+            // 1. Persistir sesión en storage.session asociada al tabId
+            const claveSesion = `asistido_${tab.id}`;
+            await sessionStore.set({ [claveSesion]: datosAsistido });
 
-            // Timeout de seguridad de 6s si status complete no dispara
-            setTimeout(ejecutarInyeccion, 6000);
+            // Inyección inicial con breve margen por si la página carga muy rápido
+            setTimeout(() => {
+                inyectarOverlayAsistido(tab.id, datosAsistido);
+            }, 2500);
 
             sendResponse({ ok: true, tabId: tab.id });
         }).catch(err => {
@@ -1230,12 +1217,34 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 
+    if (request.action === 'CANCELAR_MODO_ASISTIDO' || request.tipo === 'CANCELAR_MODO_ASISTIDO') {
+        const tabId = sender?.tab?.id || request.tabId;
+        if (tabId) {
+            sessionStore.remove(`asistido_${tabId}`).catch(() => {});
+        }
+        sendResponse({ ok: true });
+        return true;
+    }
+
     if (request.action === 'PROCESAR_RESULTADO_ASISTIDO' || request.tipo === 'PROCESAR_RESULTADO_ASISTIDO') {
         (async () => {
             try {
                 const { textoExtraido, guia, pedidoId, agencia } = request;
+                const tabId = sender?.tab?.id || request.tabId;
                 const carrier = detectarCarrier(agencia);
-                const normalizado = normalizarEstatus(textoExtraido);
+
+                // Si es Zoom, usar el parser específico que prioriza INFORMACIÓN DEL ENVÍO
+                let normalizado;
+                if (carrier?.id === 'zoom') {
+                    const parsedZoom = parsearHtmlTrackingZoom(textoExtraido);
+                    if (parsedZoom && parsedZoom.estado !== ESTADOS_ESTANDAR.VERIFICAR_MANUAL) {
+                        normalizado = parsedZoom;
+                    } else {
+                        normalizado = normalizarEstatus(textoExtraido);
+                    }
+                } else {
+                    normalizado = normalizarEstatus(textoExtraido);
+                }
 
                 // 1. Obtener pedido desde Firestore
                 let ped = null;
@@ -1393,6 +1402,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     }
                 } catch (eNext) {}
 
+                // Limpieza de sesión en storage.session tras éxito al actualizar Firebase
+                if (tabId) {
+                    await sessionStore.remove(`asistido_${tabId}`);
+                }
+
                 sendResponse({
                     ok: true,
                     estado: normalizado.estado,
@@ -1410,12 +1424,63 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     if (request.action === 'CERRAR_TAB_ACTUAL' || request.tipo === 'CERRAR_TAB_ACTUAL') {
-        if (sender?.tab?.id) {
-            chrome.tabs.remove(sender.tab.id).catch(() => {});
+        const tabId = sender?.tab?.id || request.tabId;
+        if (tabId) {
+            sessionStore.remove(`asistido_${tabId}`).catch(() => {});
+            chrome.tabs.remove(tabId).catch(() => {});
         }
         sendResponse({ ok: true });
         return true;
     }
+});
+
+// =========================================================================
+// 7. GESTOR DE SESIONES PERSISTENTES Y AUTO-INYECCIÓN EN RECARGAS (MODO ASISTIDO)
+// =========================================================================
+
+async function inyectarOverlayAsistido(tabId, sesion) {
+    try {
+        const tab = await chrome.tabs.get(tabId);
+        if (!tab || !tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
+            return;
+        }
+
+        await chrome.scripting.executeScript({
+            target: { tabId },
+            func: (datos) => {
+                window.__FB_PARTS_ASISTIDO__ = datos;
+            },
+            args: [sesion]
+        });
+
+        await chrome.scripting.executeScript({
+            target: { tabId },
+            files: ['assistedOverlay.js']
+        });
+    } catch (err) {
+        console.warn(`[Modo Asistido] Inyección no aplicada en tab ${tabId}:`, err.message);
+    }
+}
+
+// Listener persistente: re-inyecta el overlay asistido cada vez que la pestaña termine de recargar (Turnstile / búsqueda)
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+    if (changeInfo.status === 'complete') {
+        try {
+            const claveSesion = `asistido_${tabId}`;
+            const res = await sessionStore.get(claveSesion);
+            const sesion = res[claveSesion];
+            if (sesion) {
+                await inyectarOverlayAsistido(tabId, sesion);
+            }
+        } catch (e) {
+            console.warn(`[Modo Asistido] Error en onUpdated tab ${tabId}:`, e);
+        }
+    }
+});
+
+// Limpieza automática cuando el usuario cierra la pestaña
+chrome.tabs.onRemoved.addListener((tabId) => {
+    sessionStore.remove(`asistido_${tabId}`).catch(() => {});
 });
 
 chrome.runtime.onInstalled.addListener(async () => {
