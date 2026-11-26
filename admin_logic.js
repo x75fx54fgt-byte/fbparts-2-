@@ -1772,6 +1772,38 @@ REGLAS CRÍTICAS:
         };
 
         /**
+         * Manejador ultra ligero con debounce (~120ms) para los campos de texto del modal de guía.
+         * Mantiene la escritura 100% fluida a 60fps sin reflows ni re-renderizados costosos del DOM.
+         */
+        let _debounceGuiaTimer = null;
+        window._actualizarEstadoGuiaInputsLigero = function() {
+            clearTimeout(_debounceGuiaTimer);
+            _debounceGuiaTimer = setTimeout(() => {
+                const num = (document.getElementById('modal-guia-numero-val')?.value || '').trim();
+                const dest = (document.getElementById('modal-guia-destinatario-val')?.value || '').trim();
+                const ciud = (document.getElementById('modal-guia-ciudad-val')?.value || '').trim();
+
+                if (window._guiaDatosExtraidos) {
+                    window._guiaDatosExtraidos.numero_guia = num;
+                    window._guiaDatosExtraidos.cliente_o_destinatario = dest;
+                    window._guiaDatosExtraidos.destino_ciudad = ciud;
+                }
+
+                // Ajustar estado visual del botón de confirmación sin tocar el listado de pedidos
+                const btnGuardar = document.getElementById('btn-guardar-asignacion-guia');
+                if (btnGuardar) {
+                    if (!num) {
+                        btnGuardar.style.opacity = '0.65';
+                        btnGuardar.title = 'Por favor ingresa un número de guía antes de confirmar';
+                    } else {
+                        btnGuardar.style.opacity = '1';
+                        btnGuardar.title = 'Confirmar y Guardar Guía';
+                    }
+                }
+            }, 120);
+        };
+
+        /**
          * Abre y renderiza el modal de aclaración de dudas y vinculación de guía
          */
         window.abrirModalAclaracionGuia = function(datosGuia, candidatos, preselectedDocId = null) {
@@ -1789,17 +1821,20 @@ REGLAS CRÍTICAS:
             if (badgeConfianza) {
                 const conf = (datosGuia.confianza || 'media').toLowerCase();
                 if (conf === 'alta') {
-                    badgeConfianza.textContent = 'Confianza: Alta';
+                    badgeConfianza.innerHTML = '<i class="fas fa-shield-alt"></i> Confianza: Alta';
                     badgeConfianza.style.background = '#dcfce7';
                     badgeConfianza.style.color = '#15803d';
+                    badgeConfianza.style.border = '1px solid #bbf7d0';
                 } else if (conf === 'media') {
-                    badgeConfianza.textContent = 'Confianza: Media';
+                    badgeConfianza.innerHTML = '<i class="fas fa-exclamation-circle"></i> Confianza: Media';
                     badgeConfianza.style.background = '#fef9c3';
                     badgeConfianza.style.color = '#854d0e';
+                    badgeConfianza.style.border = '1px solid #fef08a';
                 } else {
-                    badgeConfianza.textContent = 'Confianza: Baja / Manual';
+                    badgeConfianza.innerHTML = '<i class="fas fa-question-circle"></i> Confianza: Baja';
                     badgeConfianza.style.background = '#fee2e2';
                     badgeConfianza.style.color = '#b91c1c';
+                    badgeConfianza.style.border = '1px solid #fecaca';
                 }
             }
 
@@ -1876,30 +1911,34 @@ REGLAS CRÍTICAS:
                             cursor: pointer;
                             transition: all 0.15s ease;
                             position: relative;
+                            min-width: 0;
+                            max-width: 100%;
+                            box-sizing: border-box;
+                            overflow: hidden;
                         `;
                         card.onclick = () => window.seleccionarPedidoCandidatoGuia(ped.id);
 
                         card.innerHTML = `
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <input type="radio" name="radio-guia-pedido" value="${ped.id}" ${isSelected ? 'checked' : ''} style="accent-color: #385723; cursor: pointer;">
-                                    <span style="font-weight: 800; font-size: 13px; color: #1e293b;">
-                                        ${ped.cliente || 'Sin nombre'}
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; min-width: 0; max-width: 100%;">
+                                <div style="display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1;">
+                                    <input type="radio" name="radio-guia-pedido" value="${ped.id}" ${isSelected ? 'checked' : ''} style="accent-color: #385723; cursor: pointer; flex-shrink: 0;">
+                                    <span style="font-weight: 800; font-size: 13px; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                        ${SecuritySanitizer.escapeHtml(ped.cliente || 'Sin nombre')}
                                     </span>
                                 </div>
-                                <span style="font-family: 'Oswald', sans-serif; font-weight: 700; color: #385723; font-size: 13.5px;">
+                                <span style="font-family: 'Oswald', sans-serif; font-weight: 700; color: #385723; font-size: 13.5px; flex-shrink: 0;">
                                     $${Number(ped.total || 0).toFixed(2)}
                                 </span>
                             </div>
-                            <div style="font-size: 11px; color: #64748b; margin: 3px 0 2px 22px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            <div style="font-size: 11.5px; color: #475569; margin: 4px 0 4px 22px; line-height: 1.35; word-break: break-word; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
                                 ${SecuritySanitizer.escapeHtml(prodsAbrev)}
                             </div>
                             <div style="display: flex; gap: 6px; align-items: center; margin-top: 4px; margin-left: 22px; flex-wrap: wrap;">
-                                <span style="font-size: 10px; background: #e2f0d9; color: #276738; padding: 1px 6px; border-radius: 4px; font-weight: 600;">
+                                <span style="font-size: 10px; background: #e2f0d9; color: #276738; padding: 1px 6px; border-radius: 4px; font-weight: 600; flex-shrink: 0;">
                                     ${ped.fecha || 'N/A'} • ${ped.envio || 'Envío'}
                                 </span>
-                                <span style="font-size: 10px; color: #b45309; font-weight: 700;">
-                                    ${cand.razon}
+                                <span style="font-size: 10px; color: #b45309; font-weight: 700; word-break: break-word;">
+                                    ${SecuritySanitizer.escapeHtml(cand.razon)}
                                 </span>
                             </div>
                         `;
@@ -1929,6 +1968,9 @@ REGLAS CRÍTICAS:
             if (btnCopiar) {
                 btnCopiar.style.display = defaultDocId ? 'inline-flex' : 'none';
             }
+
+            // Actualizar estado del botón de confirmación de forma ligera
+            window._actualizarEstadoGuiaInputsLigero();
 
             modal.style.display = 'flex';
         };
