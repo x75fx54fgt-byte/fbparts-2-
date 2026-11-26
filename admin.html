@@ -1443,7 +1443,7 @@
                         <div id="dropzone-guia-envio" onclick="document.getElementById('input-guia-file').click()" 
                              style="background: #ffffff; border: 1.5px dashed #a3c2b2; border-radius: 8px; padding: 14px; text-align: center; cursor: pointer; transition: all 0.2s ease; position: relative; min-height: 65px; display: flex; align-items: center; justify-content: center;">
                             
-                            <input type="file" id="input-guia-file" accept="image/*" style="display: none;" onchange="window.manejarArchivoGuia(event)">
+                            <input type="file" id="input-guia-file" accept="image/*" multiple style="display: none;" onchange="window.manejarArchivoGuia(event)">
                             
                             <!-- Estado Inicial (Sin archivo) -->
                             <div id="dropzone-guia-prompt" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center;">
@@ -1451,7 +1451,7 @@
                                     <i class="fas fa-file-invoice"></i>
                                 </div>
                                 <div style="text-align: left;">
-                                    <div style="font-size: 13px; font-weight: 700; color: #385723;">Haz clic para seleccionar, arrastra una foto o pega con Ctrl+V</div>
+                                    <div style="font-size: 13px; font-weight: 700; color: #385723;">Haz clic para seleccionar (soporta múltiples), arrastra fotos o pega con Ctrl+V</div>
                                     <div style="font-size: 11px; color: #64748b;">La IA detectará el número de guía, la agencia y buscará el pedido para vincularlo</div>
                                 </div>
                             </div>
@@ -4467,6 +4467,24 @@
                             </span>
                         </div>
 
+                        <!-- Barra de Navegación de Cola Multi-Foto (Si hay varias imágenes cargadas) -->
+                        <div id="modal-guia-cola-bar" style="display: none; align-items: center; justify-content: space-between; background: #eef3f0; border: 1.5px solid #cbd5e1; border-radius: 7px; padding: 7px 12px; margin-bottom: 12px;">
+                            <div style="font-size: 12px; font-weight: 700; color: #385723; display: flex; align-items: center; gap: 6px;">
+                                <i class="fas fa-images"></i> Cola de Guías: <span id="modal-guia-cola-indicador" style="background:#ffffff; border:1px solid #86efac; color:#15803d; padding:2px 8px; border-radius:10px; font-weight:800;">1 / 1</span>
+                            </div>
+                            <div style="display: flex; gap: 6px; align-items: center;">
+                                <button type="button" onclick="window.cambiarImagenColaGuia(-1)" style="background:#ffffff; border:1px solid #cbd5e1; color:#475569; padding:4px 9px; border-radius:4px; font-size:11px; font-weight:700; cursor:pointer;" title="Guía anterior">
+                                    <i class="fas fa-chevron-left"></i> Anterior
+                                </button>
+                                <button type="button" onclick="window.cambiarImagenColaGuia(1)" style="background:#ffffff; border:1px solid #cbd5e1; color:#475569; padding:4px 9px; border-radius:4px; font-size:11px; font-weight:700; cursor:pointer;" title="Siguiente guía">
+                                    Siguiente <i class="fas fa-chevron-right"></i>
+                                </button>
+                                <button type="button" onclick="window.quitarImagenActualColaGuia()" style="background:#fee2e2; border:1px solid #fca5a5; color:#b91c1c; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;" title="Descartar esta foto de la cola">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- Miniatura Imagen con enlace para ampliar -->
                         <div style="text-align: center; margin-bottom: 14px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px; position: relative;">
                             <img id="modal-guia-img-preview" src="" style="max-height: 140px; max-width: 100%; object-fit: contain; border-radius: 4px; display: block; margin: 0 auto; cursor: zoom-in;" onclick="window.abrirVisorImagenGuia(this.src)" alt="Guía">
@@ -4505,6 +4523,8 @@
                             </label>
                             <input type="text" id="modal-guia-numero-val" placeholder="Ej: 20145678" oninput="window._actualizarEstadoGuiaInputsLigero()"
                                    style="width: 100%; max-width: 100%; box-sizing: border-box; padding: 9px 12px; font-family: monospace; font-size: 14.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 6px; background: white; color: #1e293b; outline: none; transition: border-color 0.15s;">
+                            <!-- Alerta en vivo si el número ya existe en este pedido -->
+                            <div id="modal-guia-alerta-duplicado" style="display: none; background: #fffbeb; border: 1px solid #fde68a; color: #b45309; padding: 6px 10px; border-radius: 6px; font-size: 11.5px; margin-top: 6px;"></div>
                         </div>
 
                         <!-- Destinatario y Ciudad con holgura completa -->
@@ -4580,7 +4600,11 @@
                             style="display: none; background: #1d6fa5; color: white; border: none; padding: 9px 18px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: background 0.15s;" onmouseover="this.style.background='#165985'" onmouseout="this.style.background='#1d6fa5'">
                         <i class="fab fa-whatsapp"></i> Copiar Mensaje
                     </button>
-                    <button type="button" id="btn-guardar-asignacion-guia" onclick="window.confirmarAsignacionGuia()"
+                    <button type="button" id="btn-guardar-otra-guia-mismo-pedido" onclick="window.confirmarAsignacionGuia(true)"
+                            style="background: #ffffff; color: #385723; border: 1.5px solid #385723; padding: 9px 16px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s;" onmouseover="this.style.background='#eef3f0'" onmouseout="this.style.background='#ffffff'" title="Guardar este bulto y seguir asignando otra guía al mismo pedido">
+                        <i class="fas fa-plus"></i> + Guardar y Pegar Otra Guía
+                    </button>
+                    <button type="button" id="btn-guardar-asignacion-guia" onclick="window.confirmarAsignacionGuia(false)"
                             style="background: #385723; color: white; border: none; padding: 9px 24px; border-radius: 6px; font-size: 13.5px; font-weight: 700; font-family: 'Oswald', sans-serif; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(56, 87, 35, 0.25); transition: background 0.15s;" onmouseover="this.style.background='#2c441b'" onmouseout="this.style.background='#385723'">
                         <i class="fas fa-check"></i> Confirmar y Guardar Guía
                     </button>

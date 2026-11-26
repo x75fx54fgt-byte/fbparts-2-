@@ -1310,6 +1310,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
         // =========================================================================
         // 📦 ASISTENTE INTELIGENTE DE GUÍAS DE ENVÍO (IA VISION & RESOLUCIÓN DE DUDAS)
         // =========================================================================
+        window._guiaCola = [];
+        window._guiaColaIndex = 0;
         window._guiaImagenActualBlob = null;
         window._guiaImagenActualBase64 = null;
         window._guiaDatosExtraidos = null;
@@ -1338,59 +1340,192 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
         };
 
         /**
-         * Manejador al seleccionar archivo de guía desde el input file
+         * Convierte cualquier File/Blob a DataURL (Base64) de forma asíncrona
          */
-        window.manejarArchivoGuia = function(event) {
-            const file = event.target?.files?.[0];
-            if (file) window.procesarArchivoGuiaBlob(file, file.name);
+        window.leerArchivoComoDataUrl = function(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(e);
+                reader.readAsDataURL(file);
+            });
         };
 
         /**
-         * Carga y previsualiza cualquier Blob / File de imagen (Paste, Drag&Drop o File input)
+         * Manejador al seleccionar archivos de guía desde el input file (permite múltiples)
          */
-        window.procesarArchivoGuiaBlob = function(blob, filename = 'guia_captura.png') {
-            if (!blob || !blob.type || !blob.type.startsWith('image/')) {
-                alert("Por favor selecciona o pega una imagen válida (PNG, JPG, WEBP).");
+        window.manejarArchivoGuia = function(event) {
+            const files = event.target?.files;
+            if (files && files.length > 0) {
+                window.agregarImagenesAColaGuia(files);
+            }
+        };
+
+        /**
+         * Agrega uno o varios archivos/blobs de imágenes a la cola de procesamiento
+         */
+        window.agregarImagenesAColaGuia = async function(fileList) {
+            if (!fileList || fileList.length === 0) return;
+
+            const nuevas = [];
+            for (let i = 0; i < fileList.length; i++) {
+                const f = fileList[i];
+                if (f && f.type && f.type.startsWith('image/')) {
+                    nuevas.push(f);
+                }
+            }
+
+            if (nuevas.length === 0) {
+                alert("Por favor selecciona o pega imágenes válidas (JPG, PNG, WEBP).");
                 return;
             }
-            window._guiaImagenActualBlob = blob;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                window._guiaImagenActualBase64 = e.target.result;
 
-                const dropPrompt = document.getElementById('dropzone-guia-prompt');
-                const dropPreview = document.getElementById('dropzone-guia-preview');
-                const imgEl = document.getElementById('img-preview-guia');
-                const txtName = document.getElementById('txt-nombre-guia-archivo');
-                const txtDim = document.getElementById('txt-dimensiones-guia');
+            const eraVacia = (!window._guiaCola || window._guiaCola.length === 0);
 
-                if (dropPrompt) dropPrompt.style.display = 'none';
-                if (dropPreview) dropPreview.style.display = 'flex';
-                if (imgEl) imgEl.src = window._guiaImagenActualBase64;
-                if (txtName) txtName.textContent = filename;
-                if (txtDim) txtDim.textContent = `Tamaño: ${(blob.size / 1024).toFixed(1)} KB (Listo para analizar)`;
+            for (let i = 0; i < nuevas.length; i++) {
+                const file = nuevas[i];
+                try {
+                    const base64 = await window.leerArchivoComoDataUrl(file);
+                    window._guiaCola.push({
+                        blob: file,
+                        base64: base64,
+                        filename: file.name || `guia_${Date.now()}_${i + 1}.png`,
+                        dataExtraida: null
+                    });
+                } catch (e) {
+                    console.error("Error leyendo archivo de imagen de guía:", e);
+                }
+            }
 
+            if (eraVacia) {
+                window._guiaColaIndex = 0;
+            }
+
+            window.cargarElementoActualColaGuia();
+        };
+
+        /**
+         * Carga el elemento actual de la cola y actualiza las vistas previas
+         */
+        window.cargarElementoActualColaGuia = function() {
+            if (!window._guiaCola || window._guiaCola.length === 0) {
+                window.limpiarZonaGuiaIA();
+                return;
+            }
+
+            if (window._guiaColaIndex < 0) window._guiaColaIndex = 0;
+            if (window._guiaColaIndex >= window._guiaCola.length) {
+                window._guiaColaIndex = window._guiaCola.length - 1;
+            }
+
+            const item = window._guiaCola[window._guiaColaIndex];
+            if (!item) return;
+
+            window._guiaImagenActualBlob = item.blob;
+            window._guiaImagenActualBase64 = item.base64;
+
+            // Actualizar dropzone en pedidos
+            const dropPrompt = document.getElementById('dropzone-guia-prompt');
+            const dropPreview = document.getElementById('dropzone-guia-preview');
+            const imgEl = document.getElementById('img-preview-guia');
+            const txtName = document.getElementById('txt-nombre-guia-archivo');
+            const txtDim = document.getElementById('txt-dimensiones-guia');
+
+            if (dropPrompt) dropPrompt.style.display = 'none';
+            if (dropPreview) dropPreview.style.display = 'flex';
+            if (imgEl) imgEl.src = item.base64;
+
+            const total = window._guiaCola.length;
+            if (txtName) {
+                txtName.textContent = total > 1 
+                    ? `[${window._guiaColaIndex + 1} de ${total}] ${item.filename}` 
+                    : item.filename;
+            }
+            if (txtDim) {
+                txtDim.textContent = total > 1 
+                    ? `Cola: ${total} guías cargadas • Analizando actual...` 
+                    : `Tamaño: ${(item.blob.size / 1024).toFixed(1)} KB (Listo para analizar)`;
+            }
+
+            // Actualizar miniatura y barra de cola en el modal
+            const modalImg = document.getElementById('modal-guia-img-preview');
+            if (modalImg) modalImg.src = item.base64;
+
+            const colaBar = document.getElementById('modal-guia-cola-bar');
+            const colaIndicador = document.getElementById('modal-guia-cola-indicador');
+            if (colaBar) {
+                colaBar.style.display = total > 1 ? 'flex' : 'none';
+            }
+            if (colaIndicador) {
+                colaIndicador.textContent = `${window._guiaColaIndex + 1} / ${total}`;
+            }
+
+            // Si el item ya fue analizado previamente, reusar sus datos sin costo de IA
+            if (item.dataExtraida) {
+                window._guiaDatosExtraidos = item.dataExtraida;
+                const candidatos = window.buscarPedidosCandidatosGuia(
+                    item.dataExtraida,
+                    window._guiaPedidoSeleccionadoId || window._guiaPreselectedDocId,
+                    window._guiaIncluirAsignados
+                );
+                window.abrirModalAclaracionGuia(item.dataExtraida, candidatos, window._guiaPedidoSeleccionadoId || window._guiaPreselectedDocId);
+            } else {
                 const statusEl = document.getElementById('status-guia-ia');
                 if (statusEl) {
                     statusEl.style.display = 'block';
                     statusEl.style.background = '#eef3f0';
                     statusEl.style.border = '1px solid #c3e6cb';
                     statusEl.style.color = '#155724';
-                    statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Imagen cargada. Analizando datos con IA...';
+                    statusEl.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Analizando guía ${window._guiaColaIndex + 1} de ${total} con IA...`;
                 }
-
-                // Iniciar análisis automático con IA tras breve retardo UX
                 setTimeout(() => {
-                    window.procesarGuiaEnvioConIA();
-                }, 250);
-            };
-            reader.readAsDataURL(blob);
+                    window.procesarGuiaEnvioConIA(window._guiaPedidoSeleccionadoId || window._guiaPreselectedDocId);
+                }, 220);
+            }
         };
 
         /**
-         * Limpia la zona de subida de guías
+         * Navega entre las imágenes de la cola (-1: anterior, +1: siguiente)
+         */
+        window.cambiarImagenColaGuia = function(delta) {
+            if (!window._guiaCola || window._guiaCola.length <= 1) return;
+            const nuevo = window._guiaColaIndex + delta;
+            if (nuevo >= 0 && nuevo < window._guiaCola.length) {
+                window._guiaColaIndex = nuevo;
+                window.cargarElementoActualColaGuia();
+            }
+        };
+
+        /**
+         * Descarta la imagen actual de la cola
+         */
+        window.quitarImagenActualColaGuia = function() {
+            if (!window._guiaCola || window._guiaCola.length === 0) return;
+            window._guiaCola.splice(window._guiaColaIndex, 1);
+            if (window._guiaCola.length === 0) {
+                window.limpiarZonaGuiaIA();
+                window.cerrarModalAclaracionGuia();
+            } else {
+                if (window._guiaColaIndex >= window._guiaCola.length) {
+                    window._guiaColaIndex = window._guiaCola.length - 1;
+                }
+                window.cargarElementoActualColaGuia();
+            }
+        };
+
+        /**
+         * Compatibilidad: procesa 1 blob individual agregándolo a la cola
+         */
+        window.procesarArchivoGuiaBlob = function(blob, filename = 'guia_captura.png') {
+            if (blob) window.agregarImagenesAColaGuia([blob]);
+        };
+
+        /**
+         * Limpia la zona de subida de guías y vacía la cola
          */
         window.limpiarZonaGuiaIA = function() {
+            window._guiaCola = [];
+            window._guiaColaIndex = 0;
             window._guiaImagenActualBlob = null;
             window._guiaImagenActualBase64 = null;
             window._guiaDatosExtraidos = null;
@@ -1402,9 +1537,11 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
             const dropPrompt = document.getElementById('dropzone-guia-prompt');
             const dropPreview = document.getElementById('dropzone-guia-preview');
             const statusEl = document.getElementById('status-guia-ia');
+            const colaBar = document.getElementById('modal-guia-cola-bar');
 
             if (dropPrompt) dropPrompt.style.display = 'flex';
             if (dropPreview) dropPreview.style.display = 'none';
+            if (colaBar) colaBar.style.display = 'none';
             if (statusEl) {
                 statusEl.style.display = 'none';
                 statusEl.innerHTML = '';
@@ -1412,7 +1549,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
         };
 
         /**
-         * Inicializa eventos Drag & Drop y Paste global para guías
+         * Inicializa eventos Drag & Drop y Paste global para guías (soporta multi-foto)
          */
         window.inicializarEventosGuiaDropzone = function() {
             if (window._dropzoneGuiaEventosIniciados) return;
@@ -1442,12 +1579,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                     const dt = e.dataTransfer;
                     const files = dt?.files;
                     if (files && files.length > 0) {
-                        window.procesarArchivoGuiaBlob(files[0], files[0].name);
+                        window.agregarImagenesAColaGuia(files);
                     }
                 }, false);
             }
 
-            // Escuchador global de pegar imágenes (Ctrl+V / Cmd+V)
+            // Escuchador global de pegar imágenes (Ctrl+V / Cmd+V, soporta múltiples)
             window.addEventListener('paste', (e) => {
                 const tabPedidos = document.getElementById('tab-pedidos');
                 const modalGuia = document.getElementById('modal-aclaracion-guia');
@@ -1459,15 +1596,17 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
                 const items = (e.clipboardData || e.originalEvent?.clipboardData)?.items;
                 if (!items) return;
 
-                for (const item of items) {
-                    if (item.type && item.type.indexOf('image') !== -1) {
-                        const blob = item.getAsFile();
-                        if (blob) {
-                            e.preventDefault();
-                            window.procesarArchivoGuiaBlob(blob, 'guia_pegada_' + Date.now() + '.png');
-                            break;
-                        }
+                const imageFiles = [];
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type && items[i].type.indexOf('image') !== -1) {
+                        const blob = items[i].getAsFile();
+                        if (blob) imageFiles.push(blob);
                     }
+                }
+
+                if (imageFiles.length > 0) {
+                    e.preventDefault();
+                    window.agregarImagenesAColaGuia(imageFiles);
                 }
             });
         };
@@ -1617,6 +1756,9 @@ REGLAS CRÍTICAS:
             }
 
             window._guiaDatosExtraidos = dataExtraida;
+            if (window._guiaCola && window._guiaCola[window._guiaColaIndex]) {
+                window._guiaCola[window._guiaColaIndex].dataExtraida = dataExtraida;
+            }
 
             // Buscar pedidos candidatos en la base de datos local (solo pendientes)
             const candidatos = window.buscarPedidosCandidatosGuia(dataExtraida, preselectedDocId, false);
@@ -1843,16 +1985,39 @@ REGLAS CRÍTICAS:
                     window._guiaDatosExtraidos.destino_ciudad = ciud;
                 }
 
-                // Ajustar estado visual del botón de confirmación sin tocar el listado de pedidos
-                const btnGuardar = document.getElementById('btn-guardar-asignacion-guia');
-                if (btnGuardar) {
-                    if (!num) {
-                        btnGuardar.style.opacity = '0.65';
-                        btnGuardar.title = 'Por favor ingresa un número de guía antes de confirmar';
+                // Si hay cola, actualizar también en el item actual de la cola
+                if (window._guiaCola && window._guiaCola[window._guiaColaIndex]?.dataExtraida) {
+                    window._guiaCola[window._guiaColaIndex].dataExtraida.numero_guia = num;
+                    window._guiaCola[window._guiaColaIndex].dataExtraida.cliente_o_destinatario = dest;
+                    window._guiaCola[window._guiaColaIndex].dataExtraida.destino_ciudad = ciud;
+                }
+
+                // Alerta de posible duplicado si este número ya existe en las guías del pedido seleccionado
+                const alertaDup = document.getElementById('modal-guia-alerta-duplicado');
+                if (alertaDup) {
+                    const selId = window._guiaPedidoSeleccionadoId || document.getElementById('modal-guia-selector-manual-pedido')?.value;
+                    const pedSel = selId ? window.pedidosDBLocal?.[selId] : null;
+                    const guiasReg = Array.isArray(pedSel?.guiasEnvio) ? pedSel.guiasEnvio : [];
+                    const yaExiste = num && guiasReg.some(g => (g.numero || '').toLowerCase() === num.toLowerCase());
+                    if (yaExiste) {
+                        alertaDup.style.display = 'block';
+                        alertaDup.innerHTML = `<i class="fas fa-exclamation-triangle"></i> <b>Guía ya registrada:</b> Este pedido ya tiene registrado el número <code>${SecuritySanitizer.escapeHtml(num)}</code> en uno de sus bultos.`;
                     } else {
-                        btnGuardar.style.opacity = '1';
-                        btnGuardar.title = 'Confirmar y Guardar Guía';
+                        alertaDup.style.display = 'none';
                     }
+                }
+
+                // Ajustar estado visual de los botones de guardado sin reflows pesados
+                const btnGuardar = document.getElementById('btn-guardar-asignacion-guia');
+                const btnGuardarOtro = document.getElementById('btn-guardar-otra-guia-mismo-pedido');
+                const opacidad = !num ? '0.65' : '1';
+                if (btnGuardar) {
+                    btnGuardar.style.opacity = opacidad;
+                    btnGuardar.title = !num ? 'Por favor ingresa un número de guía antes de confirmar' : 'Confirmar y Guardar Guía';
+                }
+                if (btnGuardarOtro) {
+                    btnGuardarOtro.style.opacity = opacidad;
+                    btnGuardarOtro.title = !num ? 'Por favor ingresa un número de guía antes de guardar' : 'Guardar este bulto y agregar otro al mismo pedido';
                 }
             }, 120);
         };
@@ -1905,6 +2070,30 @@ REGLAS CRÍTICAS:
                             ? ped.productos.map(p => `${p.cantidad}x ${p.nombre}`).join(', ') 
                             : (ped.producto || 'Productos varios');
 
+                        // Extraer bultos registrados para mostrarlos como chips informativos
+                        const guiasArray = Array.isArray(ped.guiasEnvio) && ped.guiasEnvio.length > 0 
+                            ? ped.guiasEnvio 
+                            : ((ped.tracking && ped.tracking !== 'Pendiente' && ped.tracking !== '-') 
+                                ? [{ numero: ped.tracking, agencia: ped.agenciaEnvio || 'Encomienda' }] 
+                                : []);
+
+                        let chipsBultosHtml = '';
+                        if (guiasArray.length > 0) {
+                            chipsBultosHtml = `
+                                <div style="margin-top: 6px; padding-left: 26px; display: flex; flex-wrap: wrap; gap: 5px; align-items: center;">
+                                    <span style="font-size: 10px; font-weight: 800; color: #166534; background: #dcfce7; border: 1px solid #bbf7d0; padding: 1px 6px; border-radius: 4px;">
+                                        📦 ${guiasArray.length} Bulto${guiasArray.length !== 1 ? 's' : ''}:
+                                    </span>
+                                    ${guiasArray.map((g, idx) => `
+                                        <span style="font-size: 10.5px; font-weight: 700; color: #1e293b; background: #ffffff; border: 1px solid #86efac; padding: 1px 7px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+                                            <i class="fas fa-box" style="font-size: 9px; color: #385723;"></i>
+                                            #${idx + 1}: <b>${SecuritySanitizer.escapeHtml(g.numero)}</b> (${SecuritySanitizer.escapeHtml(g.agencia || 'Envío')})
+                                        </span>
+                                    `).join('')}
+                                </div>
+                            `;
+                        }
+
                         const card = document.createElement('div');
                         card.id = `cand-card-${ped.id}`;
                         card.className = `cand-card-pedido ${isSelected ? 'active' : ''}`;
@@ -1951,6 +2140,7 @@ REGLAS CRÍTICAS:
                             <div style="font-size: 11.5px; color: #64748b; margin-top: 7px; padding-left: 26px; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${SecuritySanitizer.escapeHtml(prodsAbrev)}">
                                 <i class="fas fa-cube" style="font-size: 10px; color: #94a3b8; margin-right: 4px;"></i>${SecuritySanitizer.escapeHtml(prodsAbrev)}
                             </div>
+                            ${chipsBultosHtml}
                         `;
                         containerCandidatos.appendChild(card);
                     });
@@ -1986,9 +2176,11 @@ REGLAS CRÍTICAS:
             filtrados.forEach(p => {
                 const opt = document.createElement('option');
                 opt.value = p.id;
-                const tieneGuia = (p.tracking && p.tracking !== 'Pendiente') || (p.trackingMotorizado && p.trackingMotorizado !== 'Pendiente');
-                const tagGuia = tieneGuia ? ' [Ya tiene guía]' : '';
-                opt.textContent = `${p.fecha || ''} | ${p.cliente || 'Sin nombre'} - $${Number(p.total||0).toFixed(2)} (${p.envio || 'Envío'})${tagGuia}`;
+                const bultosCount = Array.isArray(p.guiasEnvio) && p.guiasEnvio.length > 0 
+                    ? p.guiasEnvio.length 
+                    : ((p.tracking && p.tracking !== 'Pendiente' && p.tracking !== '-') ? 1 : 0);
+                const tagBultos = bultosCount > 0 ? ` [${bultosCount} bulto${bultosCount !== 1 ? 's' : ''}]` : '';
+                opt.textContent = `${p.fecha || ''} | ${p.cliente || 'Sin nombre'} - $${Number(p.total||0).toFixed(2)} (${p.envio || 'Envío'})${tagBultos}`;
                 if (p.id === selectedDocId) opt.selected = true;
                 selManual.appendChild(opt);
             });
@@ -2031,6 +2223,17 @@ REGLAS CRÍTICAS:
             const imgEl = document.getElementById('modal-guia-img-preview');
             if (imgEl && window._guiaImagenActualBase64) {
                 imgEl.src = window._guiaImagenActualBase64;
+            }
+
+            // Barra de cola
+            const colaBar = document.getElementById('modal-guia-cola-bar');
+            const colaIndicador = document.getElementById('modal-guia-cola-indicador');
+            const totalCola = window._guiaCola ? window._guiaCola.length : 0;
+            if (colaBar) {
+                colaBar.style.display = totalCola > 1 ? 'flex' : 'none';
+            }
+            if (colaIndicador) {
+                colaIndicador.textContent = `${window._guiaColaIndex + 1} / ${totalCola}`;
             }
 
             // Badge de Confianza
@@ -2129,6 +2332,9 @@ REGLAS CRÍTICAS:
 
             const btnCopiar = document.getElementById('btn-copiar-msg-modal-guia');
             if (btnCopiar) btnCopiar.style.display = docId ? 'inline-flex' : 'none';
+
+            // Comprobar alertas de duplicado con el pedido recién elegido
+            window._actualizarEstadoGuiaInputsLigero();
         };
 
         /**
@@ -2147,6 +2353,9 @@ REGLAS CRÍTICAS:
 
             const btnCopiar = document.getElementById('btn-copiar-msg-modal-guia');
             if (btnCopiar) btnCopiar.style.display = docId ? 'inline-flex' : 'none';
+
+            // Comprobar alertas de duplicado con el pedido recién elegido
+            window._actualizarEstadoGuiaInputsLigero();
         };
 
         /**
@@ -2158,9 +2367,10 @@ REGLAS CRÍTICAS:
         };
 
         /**
-         * Confirma y guarda la guía y agencia en Firestore
+         * Confirma y guarda la guía y agencia en Firestore.
+         * Si seguirMismoPedido === true, guarda el bulto y mantiene el modal abierto en el mismo pedido para añadir más guías.
          */
-        window.confirmarAsignacionGuia = async function() {
+        window.confirmarAsignacionGuia = async function(seguirMismoPedido = false) {
             const docId = window._guiaPedidoSeleccionadoId || document.getElementById('modal-guia-selector-manual-pedido')?.value;
             if (!docId) {
                 alert("Por favor selecciona el pedido al cual deseas asignar la guía.");
@@ -2176,14 +2386,55 @@ REGLAS CRÍTICAS:
 
             const agencia = document.getElementById('modal-guia-agencia-val')?.value || 'Tealca';
             const pedOriginal = (window.pedidosDBLocal && window.pedidosDBLocal[docId]) || {};
+            const destGuia = (document.getElementById('modal-guia-destinatario-val')?.value || '').trim();
+            const ciudadGuia = (document.getElementById('modal-guia-ciudad-val')?.value || '').trim();
 
-            const btn = document.getElementById('btn-guardar-asignacion-guia');
+            const btn = document.getElementById(seguirMismoPedido ? 'btn-guardar-otra-guia-mismo-pedido' : 'btn-guardar-asignacion-guia');
+            const btnOtro = document.getElementById(seguirMismoPedido ? 'btn-guardar-asignacion-guia' : 'btn-guardar-otra-guia-mismo-pedido');
+            const oldBtnHtml = btn ? btn.innerHTML : '';
             if (btn) {
                 btn.disabled = true;
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
             }
+            if (btnOtro) btnOtro.disabled = true;
+
+            // Construir lista de guías multi-bulto respetando retrocompatibilidad
+            let guiasExistentes = [];
+            if (Array.isArray(pedOriginal.guiasEnvio) && pedOriginal.guiasEnvio.length > 0) {
+                guiasExistentes = [...pedOriginal.guiasEnvio];
+            } else if (pedOriginal.tracking || pedOriginal.trackingMotorizado || pedOriginal.ultimaGuiaAsignada) {
+                guiasExistentes.push({
+                    numero: pedOriginal.tracking || pedOriginal.trackingMotorizado || pedOriginal.ultimaGuiaAsignada,
+                    agencia: pedOriginal.agenciaEnvio || (pedOriginal.envio?.includes('Motorizado') ? 'Motorizado' : 'Tealca'),
+                    destinatario: pedOriginal.cliente || '',
+                    ciudad: pedOriginal.rutasMotorizado || '',
+                    fecha: pedOriginal.fechaGuia || pedOriginal.fecha || new Date().toLocaleDateString('es-VE'),
+                    timestamp: pedOriginal.fechaActualizacionGuia || new Date().toISOString()
+                });
+            }
+
+            // Evitar duplicar el mismo número exacto si se re-edita
+            const existeIndex = guiasExistentes.findIndex(g => (g.numero || '').toLowerCase() === numeroGuia.toLowerCase());
+            const nuevaGuiaObj = {
+                numero: numeroGuia,
+                agencia: agencia,
+                destinatario: destGuia || pedOriginal.cliente || '',
+                ciudad: ciudadGuia || pedOriginal.rutasMotorizado || '',
+                fecha: new Date().toLocaleDateString('es-VE'),
+                timestamp: new Date().toISOString()
+            };
+
+            if (existeIndex >= 0) {
+                guiasExistentes[existeIndex] = nuevaGuiaObj;
+            } else {
+                guiasExistentes.push(nuevaGuiaObj);
+            }
+
+            const trackingConsolidado = guiasExistentes.map(g => g.numero).join(', ');
 
             const updateData = {
+                guiasEnvio: guiasExistentes,
+                bultosCount: guiasExistentes.length,
                 ultimaGuiaAsignada: numeroGuia,
                 agenciaEnvio: agencia,
                 fechaGuia: new Date().toLocaleDateString('es-VE'),
@@ -2191,12 +2442,12 @@ REGLAS CRÍTICAS:
             };
 
             if (agencia === 'Motorizado') {
-                updateData.trackingMotorizado = numeroGuia;
+                updateData.trackingMotorizado = trackingConsolidado;
                 if (!pedOriginal.envio || !pedOriginal.envio.includes('Motorizado')) {
                     updateData.envio = 'Motorizado Caracas';
                 }
             } else {
-                updateData.tracking = numeroGuia;
+                updateData.tracking = trackingConsolidado;
                 if (!pedOriginal.envio || pedOriginal.envio.includes('Retiro')) {
                     updateData.envio = `Encomienda ${agencia}`;
                 }
@@ -2219,29 +2470,105 @@ REGLAS CRÍTICAS:
                     if (idx !== -1) Object.assign(window._pedidosTodosCache[idx], updateData);
                 }
 
-                window.cerrarModalAclaracionGuia();
-                window.limpiarZonaGuiaIA();
+                // Recargar tabla de pedidos en segundo plano para que la UI refleje el nuevo bulto/guía
+                if (window.cargarPedidos) {
+                    window.cargarPedidos();
+                }
 
-                // Recargar tabla de pedidos
-                await window.cargarPedidos();
+                // Manejar avance de cola si hay varias fotos cargadas
+                const totalEnCola = window._guiaCola ? window._guiaCola.length : 0;
+                let quedaEnCola = false;
+                if (totalEnCola > 0 && window._guiaColaIndex >= 0 && window._guiaColaIndex < totalEnCola) {
+                    window._guiaCola.splice(window._guiaColaIndex, 1);
+                    if (window._guiaColaIndex >= window._guiaCola.length) {
+                        window._guiaColaIndex = Math.max(0, window._guiaCola.length - 1);
+                    }
+                    quedaEnCola = (window._guiaCola.length > 0);
+                }
 
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Guía Asignada Exitosamente!',
-                        html: `Se vinculó la guía <b>${numeroGuia}</b> (${agencia}) al pedido de <b>${pedOriginal.cliente || 'Cliente'}</b>.<br><br>¿Deseas copiar el mensaje de notificación para el cliente?`,
-                        showCancelButton: true,
-                        confirmButtonText: '<i class="fab fa-whatsapp"></i> Copiar Mensaje WhatsApp',
-                        cancelButtonText: 'Listo, cerrar',
-                        confirmButtonColor: '#25D366',
-                        cancelButtonColor: '#385723'
-                    }).then(result => {
-                        if (result.isConfirmed) {
-                            window.copiarMensajeGuiaPedido(docId);
-                        }
-                    });
+                if (seguirMismoPedido) {
+                    // El usuario quiere cargar otro bulto/guía para el MISMO pedido
+                    window._guiaPedidoSeleccionadoId = docId;
+                    window._guiaPreselectedDocId = docId;
+
+                    // Limpiar campo de número de guía para la siguiente foto/bulto
+                    const numInput = document.getElementById('modal-guia-numero-val');
+                    if (numInput) {
+                        numInput.value = '';
+                        numInput.focus();
+                    }
+
+                    // Si quedan fotos en la cola, cargar la siguiente para este mismo pedido
+                    if (quedaEnCola) {
+                        window.cargarElementoActualColaGuia();
+                    } else {
+                        // Si no hay más fotos en cola, mantener el modal abierto con los chips actualizados
+                        const colaBar = document.getElementById('modal-guia-cola-bar');
+                        if (colaBar) colaBar.style.display = 'none';
+
+                        const pedActualizado = window.pedidosDBLocal[docId];
+                        const candidatosActualizados = [{
+                            pedido: pedActualizado,
+                            score: 1000,
+                            razon: `Pedido con ${guiasExistentes.length} bulto(s) registrado(s)`
+                        }];
+                        window.renderizarCandidatosYSelectorGuia(candidatosActualizados, docId, true);
+                        window.seleccionarPedidoCandidatoGuia(docId);
+                    }
+
+                    if (typeof Swal !== 'undefined') {
+                        const Toast = Swal.mixin({
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 2800,
+                            timerProgressBar: true
+                        });
+                        Toast.fire({
+                            icon: 'success',
+                            title: `Bulto #${guiasExistentes.length} guardado. Puedes ingresar el siguiente bulto.`
+                        });
+                    }
                 } else {
-                    alert(`¡Guía ${numeroGuia} asignada con éxito al pedido de ${pedOriginal.cliente}!`);
+                    // Flujo normal: Si quedan imágenes en cola, pasar a la siguiente imagen. Si no, cerrar modal y feedback.
+                    if (quedaEnCola) {
+                        window.cargarElementoActualColaGuia();
+                        if (typeof Swal !== 'undefined') {
+                            const Toast = Swal.mixin({
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 2000,
+                                timerProgressBar: true
+                            });
+                            Toast.fire({
+                                icon: 'success',
+                                title: `Guía guardada. Cargando siguiente imagen (${window._guiaColaIndex + 1}/${window._guiaCola.length})...`
+                            });
+                        }
+                    } else {
+                        window.cerrarModalAclaracionGuia();
+                        window.limpiarZonaGuiaIA();
+
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'success',
+                                title: '¡Guía Asignada Exitosamente!',
+                                html: `Se vinculó la guía <b>${numeroGuia}</b> (${agencia}) al pedido de <b>${pedOriginal.cliente || 'Cliente'}</b> (${guiasExistentes.length} bulto${guiasExistentes.length > 1 ? 's' : ''} en total).<br><br>¿Deseas copiar el mensaje de notificación para el cliente?`,
+                                showCancelButton: true,
+                                confirmButtonText: '<i class="fab fa-whatsapp"></i> Copiar Mensaje WhatsApp',
+                                cancelButtonText: 'Listo, cerrar',
+                                confirmButtonColor: '#25D366',
+                                cancelButtonColor: '#385723'
+                            }).then(result => {
+                                if (result.isConfirmed) {
+                                    window.copiarMensajeGuiaPedido(docId);
+                                }
+                            });
+                        } else {
+                            alert(`¡Guía ${numeroGuia} asignada con éxito al pedido de ${pedOriginal.cliente}!`);
+                        }
+                    }
                 }
             } catch (e) {
                 console.error("Error al guardar guía:", e);
@@ -2249,8 +2576,10 @@ REGLAS CRÍTICAS:
             } finally {
                 if (btn) {
                     btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-check"></i> Confirmar y Guardar Guía';
+                    btn.innerHTML = oldBtnHtml || (seguirMismoPedido ? '<i class="fas fa-plus"></i> + Guardar y Pegar Otra Guía' : '<i class="fas fa-check"></i> Confirmar y Guardar Guía');
                 }
+                if (btnOtro) btnOtro.disabled = false;
+                window._actualizarEstadoGuiaInputsLigero();
             }
         };
 
@@ -2294,20 +2623,43 @@ REGLAS CRÍTICAS:
         };
 
         /**
-         * Genera el texto formal del mensaje de despacho
+         * Genera el texto formal del mensaje de despacho (soporta 1 bulto o multi-bulto)
          */
         window.generarTextoMensajeGuia = function(ped) {
             if (!ped) return '';
             const cliente = ped.cliente || 'Estimado cliente';
-            const agencia = ped.agenciaEnvio || (ped.envio?.includes('Motorizado') ? 'Motorizado (Caracas)' : 'Encomienda Nacional');
-            const guia = ped.tracking || ped.trackingMotorizado || 'Pendiente';
             const fecha = ped.fechaGuia || ped.fecha || new Date().toLocaleDateString('es-VE');
             const destino = ped.rutasMotorizado || 'Dirección acordada';
 
+            // Obtener arreglo de guías (multi-bulto) o respaldo
+            let guias = [];
+            if (Array.isArray(ped.guiasEnvio) && ped.guiasEnvio.length > 0) {
+                guias = ped.guiasEnvio;
+            } else if (ped.tracking || ped.trackingMotorizado || ped.ultimaGuiaAsignada) {
+                const ag = ped.agenciaEnvio || (ped.envio?.includes('Motorizado') ? 'Motorizado' : 'Encomienda Nacional');
+                guias = [{
+                    numero: ped.tracking || ped.trackingMotorizado || ped.ultimaGuiaAsignada,
+                    agencia: ag
+                }];
+            }
+
+            let bloqueGuias = '';
+            if (guias.length > 1) {
+                bloqueGuias = `📦 *Despacho Multi-Bulto (${guias.length} bultos en total):*\n` +
+                    guias.map((g, idx) => `   • *Bulto #${idx + 1}:* ${g.agencia || 'Encomienda'} — Guía: \`${g.numero}\``).join('\n');
+            } else if (guias.length === 1) {
+                bloqueGuias = `📦 *Empresa / Transporte:* ${guias[0].agencia || 'Encomienda'}\n` +
+                              `🔢 *Número de Guía:* ${guias[0].numero}`;
+            } else {
+                const agencia = ped.agenciaEnvio || (ped.envio?.includes('Motorizado') ? 'Motorizado (Caracas)' : 'Encomienda Nacional');
+                const guia = ped.tracking || ped.trackingMotorizado || 'Pendiente';
+                bloqueGuias = `📦 *Empresa / Transporte:* ${agencia}\n` +
+                              `🔢 *Número de Guía:* ${guia}`;
+            }
+
             return `Estimado/a *${cliente}*, un saludo cordial de parte del equipo de *Inversiones FB Parts*. 🚗⚙️\n\n` +
                    `Le notificamos que su pedido ha sido *despachado con éxito*:\n\n` +
-                   `📦 *Empresa / Transporte:* ${agencia}\n` +
-                   `🔢 *Número de Guía:* ${guia}\n` +
+                   `${bloqueGuias}\n` +
                    `📅 *Fecha de Despacho:* ${fecha}\n` +
                    (destino && destino !== 'Dirección acordada' ? `📍 *Destino:* ${destino}\n\n` : `\n`) +
                    `Puede realizar el seguimiento en línea en la página oficial de la encomienda utilizando su número de guía.\n\n` +
@@ -2317,8 +2669,8 @@ REGLAS CRÍTICAS:
         /**
          * Copia el mensaje formal con guía al portapapeles
          */
-        window.copiarMensajeGuiaPedido = async function(docId) {
-            const ped = window.pedidosDBLocal ? window.pedidosDBLocal[docId] : null;
+        window.copiarMensajeGuiaPedido = async function(docId, overridePed = null) {
+            const ped = overridePed || (window.pedidosDBLocal ? window.pedidosDBLocal[docId] : null);
             if (!ped) {
                 alert("Pedido no encontrado.");
                 return;
@@ -2339,7 +2691,7 @@ REGLAS CRÍTICAS:
                     Swal.fire({
                         icon: 'success',
                         title: '¡Mensaje Copiado!',
-                        html: `El mensaje con los datos de la guía para <b>${ped.cliente}</b> ha sido copiado al portapapeles.<br><br><pre style="text-align:left; background:#f1f5f9; padding:10px; border-radius:6px; font-size:11px; white-space:pre-wrap; max-height:160px; overflow-y:auto;">${texto}</pre>`,
+                        html: `El mensaje con los datos de la guía para <b>${ped.cliente || 'Cliente'}</b> ha sido copiado al portapapeles.<br><br><pre style="text-align:left; background:#f1f5f9; padding:10px; border-radius:6px; font-size:11px; white-space:pre-wrap; max-height:160px; overflow-y:auto;">${texto}</pre>`,
                         confirmButtonColor: '#385723'
                     });
                 } else {
@@ -2352,15 +2704,34 @@ REGLAS CRÍTICAS:
         };
 
         /**
-         * Copia el mensaje desde dentro del modal antes de cerrar
+         * Copia el mensaje desde dentro del modal incorporando provisionalmente el número tipeado
          */
         window.copiarMensajePreAsignadoModal = function() {
-            const docId = window._guiaPedidoSeleccionadoId;
-            if (docId) {
-                window.copiarMensajeGuiaPedido(docId);
-            } else {
+            const docId = window._guiaPedidoSeleccionadoId || document.getElementById('modal-guia-selector-manual-pedido')?.value;
+            if (!docId) {
                 alert("Selecciona primero un pedido.");
+                return;
             }
+            const pedOriginal = (window.pedidosDBLocal && window.pedidosDBLocal[docId]) || {};
+            const pedClonado = JSON.parse(JSON.stringify(pedOriginal));
+            const numInput = (document.getElementById('modal-guia-numero-val')?.value || '').trim();
+            const agenciaInput = document.getElementById('modal-guia-agencia-val')?.value || 'Tealca';
+
+            if (numInput) {
+                let guiasExistentes = Array.isArray(pedClonado.guiasEnvio) ? [...pedClonado.guiasEnvio] : [];
+                if (!guiasExistentes.some(g => (g.numero || '').toLowerCase() === numInput.toLowerCase())) {
+                    guiasExistentes.push({
+                        numero: numInput,
+                        agencia: agenciaInput,
+                        fecha: new Date().toLocaleDateString('es-VE')
+                    });
+                }
+                pedClonado.guiasEnvio = guiasExistentes;
+                pedClonado.agenciaEnvio = agenciaInput;
+                pedClonado.tracking = guiasExistentes.map(g => g.numero).join(', ');
+            }
+
+            window.copiarMensajeGuiaPedido(docId, pedClonado);
         };
 
         /**
