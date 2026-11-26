@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "FB Parts - Rastreador Automático de Guías",
+  "version": "1.0.0",
+  "description": "Rastreador automático diario y bajo demanda de guías (Handling, Intercargo, RLU, Zoom, Tealca, MRW) sincronizado con Firebase para Inversiones FB Parts.",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "permissions": [
+    "storage",
+    "alarms",
+    "tabs",
+    "scripting",
+    "notifications"
+  ],
+  "host_permissions": [
+    "https://firestore.googleapis.com/*",
+    "https://*.grupohandling.com/*",
+    "https://*.handlinglogistic.com/*",
+    "https://*.intercargo.com.ve/*",
+    "https://*.rlucargo.com/*",
+    "http://*.rlu.com.ve/*",
+    "https://*.grupozoom.com/*",
+    "https://*.zoom.red/*",
+    "https://*.tealca.com/*",
+    "https://*.mrwve.com/*",
+    "https://*.mrw.com.ve/*",
+    "https://*/*",
+    "http://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "FB Parts - Rastreador de Guías",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  }
+}
