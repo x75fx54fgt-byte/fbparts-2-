@@ -316,7 +316,12 @@ function renderizarFeedHistorial() {
         let botonResolverCaptcha = '';
         if (item.requiereCaptcha || item.estadoRastreo === 'VERIFICAR_MANUAL') {
             botonResolverCaptcha = `
-                <button type="button" class="btn-abrir-portal" data-url="${encodeURI(item.urlRastreo || '')}">
+                <button type="button" class="btn-abrir-portal" 
+                    data-url="${encodeURI(item.urlRastreo || '')}"
+                    data-guia="${item.numero || ''}"
+                    data-agencia="${item.agencia || ''}"
+                    data-pedido-id="${item.pedidoId || ''}"
+                    data-cliente="${item.cliente || ''}">
                     🔍 Resolver / Ver en Portal
                 </button>
             `;
@@ -340,10 +345,23 @@ function renderizarFeedHistorial() {
 
     feedListItems.querySelectorAll('.btn-abrir-portal').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const url = e.currentTarget.getAttribute('data-url');
-            if (url) {
-                chrome.tabs.create({ url, active: true });
-            }
+            const el = e.currentTarget;
+            const url = el.getAttribute('data-url');
+            const guia = el.getAttribute('data-guia');
+            const agencia = el.getAttribute('data-agencia');
+            const pedidoId = el.getAttribute('data-pedido-id');
+            const cliente = el.getAttribute('data-cliente');
+
+            // Abrir Modo Asistido interactivo en background
+            chrome.runtime.sendMessage({
+                action: 'ABRIR_ASISTIDO',
+                tipo: 'ABRIR_ASISTIDO',
+                url,
+                guia,
+                agencia,
+                pedidoId,
+                cliente
+            });
         });
     });
 }

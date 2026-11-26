@@ -947,6 +947,244 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         });
         return true;
     }
+
+    // =========================================================================
+    // 6. MODO ASISTIDO INTERACTIVO (ABRIR PORTAL, PROCESAR Y CERRAR)
+    // =========================================================================
+
+    if (request.action === 'ABRIR_ASISTIDO' || request.tipo === 'ABRIR_ASISTIDO') {
+        const { guia, agencia, pedidoId, cliente, url } = request;
+        const carrier = detectarCarrier(agencia);
+        const targetUrl = url || construirUrlRastreo(carrier, guia);
+
+        chrome.tabs.create({ url: targetUrl, active: true }).then(tab => {
+            let injectada = false;
+            const ejecutarInyeccion = async () => {
+                if (injectada) return;
+                injectada = true;
+                chrome.tabs.onUpdated.removeListener(listener);
+
+                try {
+                    await chrome.scripting.executeScript({
+                        target: { tabId: tab.id },
+                        func: (datos) => {
+                            window.__FB_PARTS_ASISTIDO__ = datos;
+                        },
+                        args: [{ guia, agencia: carrier.nombre, idAgencia: carrier.id, pedidoId, cliente }]
+                    });
+
+                    await chrome.scripting.executeScript({
+                        target: { tabId: tab.id },
+                        files: ['assistedOverlay.js']
+                    });
+                } catch (eInj) {
+                    console.error("Error inyectando assistedOverlay.js:", eInj);
+                }
+            };
+
+            const listener = (tabId, info) => {
+                if (tabId === tab.id && info.status === 'complete') {
+                    ejecutarInyeccion();
+                }
+            };
+            chrome.tabs.onUpdated.addListener(listener);
+
+            // Timeout de seguridad de 6s si status complete no dispara
+            setTimeout(ejecutarInyeccion, 6000);
+
+            sendResponse({ ok: true, tabId: tab.id });
+        }).catch(err => {
+            sendResponse({ ok: false, error: err.message });
+        });
+        return true;
+    }
+
+    if (request.action === 'PROCESAR_RESULTADO_ASISTIDO' || request.tipo === 'PROCESAR_RESULTADO_ASISTIDO') {
+        (async () => {
+            try {
+                const { textoExtraido, guia, pedidoId, agencia } = request;
+                const carrier = detectarCarrier(agencia);
+                const normalizado = normalizarEstatus(textoExtraido);
+
+                // 1. Obtener pedido desde Firestore
+                let ped = null;
+                if (pedidoId) {
+                    try {
+                        const urlDoc = `${FIRESTORE_BASE_URL}/pedidos/${pedidoId}?key=${FIREBASE_CONFIG.apiKey}`;
+                        const respDoc = await fetch(urlDoc);
+                        if (respDoc.ok) {
+                            const rawDoc = await respDoc.json();
+                            ped = parseFirestoreDoc(rawDoc);
+                        }
+                    } catch (ePed) {
+                        console.error("Error obteniendo pedido en asistido:", ePed);
+                    }
+                }
+
+                let pedidoEntregado = false;
+                let pedidoEnCasillero = false;
+
+                if (ped) {
+                    let guias = Array.isArray(ped.guiasEnvio) && ped.guiasEnvio.length > 0 ? ped.guiasEnvio : [];
+                    const rawTrack = ped.tracking || ped.trackingMotorizado || ped.ultimaGuiaAsignada;
+                    if (rawTrack && guias.length === 0) {
+                        const trackings = rawTrack.split(/[,;/]+/).map(s => s.trim()).filter(Boolean);
+                        guias = trackings.map(num => ({
+                            numero: num,
+                            agencia: ped.agenciaEnvio || ped.envio || carrier.nombre,
+                            estadoRastreo: 'EN_TRANSITO',
+                            destinatario: ped.cliente || '',
+                            tipoTramo: carrier.categoria === 'INTERNACIONAL' ? 'IMPORTACION' : 'ENTREGA_CLIENTE'
+                        }));
+                    }
+
+                    let guiaEncontrada = guias.find(g => (g.numero || '').toLowerCase() === (guia || '').toLowerCase());
+                    if (!guiaEncontrada) {
+                        guiaEncontrada = {
+                            numero: guia,
+                            agencia: carrier.nombre,
+                            estadoRastreo: normalizado.estado,
+                            tipoTramo: carrier.categoria === 'INTERNACIONAL' ? 'IMPORTACION' : 'ENTREGA_CLIENTE',
+                            destinatario: ped.cliente || ''
+                        };
+                        guias.push(guiaEncontrada);
+                    }
+
+                    // Actualizar datos de la guía
+                    guiaEncontrada.estadoRastreo = normalizado.estado;
+                    guiaEncontrada.ultimaRevision = new Date().toISOString();
+                    guiaEncontrada.ultimoDetalleRastreo = `[Modo Asistido] ${normalizado.resumen}`;
+                    guiaEncontrada.urlRastreo = construirUrlRastreo(carrier, guia);
+
+                    if (guiaEncontrada.tipoTramo === 'IMPORTACION' && normalizado.estado === ESTADOS_ESTANDAR.ENTREGADO) {
+                        guiaEncontrada.recibidaImportacion = true;
+                    }
+
+                    // Regla Multi-Guía
+                    const camposActualizar = {
+                        guiasEnvio: guias,
+                        ultimaRevisionRastreo: new Date().toISOString()
+                    };
+                    const fieldPaths = ['guiasEnvio', 'ultimaRevisionRastreo'];
+
+                    const estadoActualPedido = (ped.estado || '').toLowerCase();
+                    const guiasImportacion = guias.filter(g => g.tipoTramo === 'IMPORTACION');
+                    const guiasEntregaCliente = guias.filter(g => g.tipoTramo !== 'IMPORTACION');
+
+                    // Regla A: Importación
+                    if (guiasImportacion.length > 0) {
+                        const todasImpEntregadas = guiasImportacion.every(g => (g.estadoRastreo || '').toUpperCase() === ESTADOS_ESTANDAR.ENTREGADO);
+                        if (todasImpEntregadas && !['en casillero / listo para despacho', 'despachado', 'entregado'].includes(estadoActualPedido)) {
+                            camposActualizar.estado = 'En Casillero / Listo para Despacho';
+                            fieldPaths.push('estado');
+                            pedidoEnCasillero = true;
+                            try {
+                                chrome.notifications.create({
+                                    type: 'basic',
+                                    iconUrl: 'icons/icon-128.png',
+                                    title: '📦 ¡Llegó repuesto de Amazon! (UPS/DHL)',
+                                    message: `El pedido #${ped.id} (${ped.cliente || 'Cliente'}) ya fue recibido en casillero y está listo para despacho.`,
+                                    priority: 2
+                                });
+                            } catch (eN) {}
+                        }
+                    }
+
+                    // Regla B: Entrega al Cliente
+                    if (guiasEntregaCliente.length > 0) {
+                        const todasCliEntregadas = guiasEntregaCliente.every(g => (g.estadoRastreo || '').toUpperCase() === ESTADOS_ESTANDAR.ENTREGADO);
+                        if (todasCliEntregadas && estadoActualPedido !== 'entregado') {
+                            camposActualizar.estado = 'Entregado';
+                            camposActualizar.fechaEntrega = new Date().toLocaleDateString('es-VE');
+                            fieldPaths.push('estado', 'fechaEntrega');
+                            pedidoEntregado = true;
+                            try {
+                                chrome.notifications.create({
+                                    type: 'basic',
+                                    iconUrl: 'icons/icon-128.png',
+                                    title: '🎉 ¡Pedido Entregado! - Inversiones FB Parts',
+                                    message: `El pedido #${ped.id} de ${ped.cliente || 'Cliente'} (${guias.length} bulto/s) ha sido confirmado como ENTREGADO en destino.`,
+                                    priority: 2
+                                });
+                            } catch (eN) {}
+                        }
+                    }
+
+                    await actualizarPedidoFirestore(ped.id, camposActualizar, fieldPaths);
+                }
+
+                // 2. Guardar en historial local de chrome.storage.local
+                const itemHistorial = {
+                    numero: guia,
+                    agencia: carrier.nombre,
+                    tipoTramo: carrier.categoria === 'INTERNACIONAL' ? 'IMPORTACION' : 'ENTREGA_CLIENTE',
+                    cliente: ped?.cliente || 'Cliente',
+                    pedidoId: pedidoId,
+                    estadoRastreo: normalizado.estado,
+                    resumen: `[Modo Asistido] ${normalizado.resumen}`,
+                    requiereCaptcha: false,
+                    urlRastreo: construirUrlRastreo(carrier, guia),
+                    fecha: new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })
+                };
+
+                const storageSnap = await chrome.storage.local.get(['historialReciente']);
+                const histExistente = storageSnap.historialReciente || [];
+                const histActualizado = [...histExistente, itemHistorial].slice(-50);
+                await chrome.storage.local.set({
+                    historialReciente: histActualizado,
+                    ultimoRastreoTimestamp: new Date().toISOString()
+                });
+
+                enviarMensajePopup({
+                    tipo: 'ACTUALIZACION_HISTORIAL',
+                    item: itemHistorial,
+                    historial: histActualizado
+                });
+
+                // 3. Buscar si hay una siguiente guía pendiente para asistir
+                let siguienteGuia = null;
+                try {
+                    const pendientes = await obtenerPedidosPendientesFirestore();
+                    for (const p of pendientes) {
+                        const gList = Array.isArray(p.guiasEnvio) ? p.guiasEnvio : [];
+                        const pendG = gList.find(g => (g.numero || '').toLowerCase() !== (guia || '').toLowerCase() && (g.estadoRastreo || '').toUpperCase() !== ESTADOS_ESTANDAR.ENTREGADO);
+                        if (pendG) {
+                            const carrPend = detectarCarrier(pendG.agencia || p.agenciaEnvio || p.envio);
+                            siguienteGuia = {
+                                numero: pendG.numero,
+                                agencia: carrPend.nombre,
+                                pedidoId: p.id,
+                                cliente: p.cliente || 'Cliente',
+                                urlRastreo: construirUrlRastreo(carrPend, pendG.numero)
+                            };
+                            break;
+                        }
+                    }
+                } catch (eNext) {}
+
+                sendResponse({
+                    ok: true,
+                    estado: normalizado.estado,
+                    resumen: normalizado.resumen,
+                    pedidoEntregado,
+                    pedidoEnCasillero,
+                    siguienteGuia
+                });
+            } catch (errAsist) {
+                console.error("Error en PROCESAR_RESULTADO_ASISTIDO:", errAsist);
+                sendResponse({ ok: false, error: errAsist.message });
+            }
+        })();
+        return true;
+    }
+
+    if (request.action === 'CERRAR_TAB_ACTUAL' || request.tipo === 'CERRAR_TAB_ACTUAL') {
+        if (sender?.tab?.id) {
+            chrome.tabs.remove(sender.tab.id).catch(() => {});
+        }
+        sendResponse({ ok: true });
+        return true;
+    }
 });
 
 chrome.runtime.onInstalled.addListener(async () => {
