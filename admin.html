@@ -6044,10 +6044,46 @@
         </div> <!-- Cierre Contenedor Interno Modal -->
     </div> <!-- Cierre Modal Brochure Corporativo -->
 
-    <!-- 📱 BACKDROP OSCURO PARA SIDEBAR MÓVIL (CIERRA MENÚ AL TOCAR AFUERA) -->
-    <div id="sidebar-backdrop" onclick="toggleSidebarMobile(false)"></div>
+    <!-- 📱 BACKDROP OSCURO Y BOTTOM SHEET DESLIZABLE "TODO EL PANEL" (iOS) -->
+    <div id="mobile-modules-drawer-backdrop" onclick="toggleDrawerModulosMobile(false)"></div>
+    <div id="mobile-modules-drawer">
+        <div class="mobile-drawer-handle"></div>
+        <div class="mobile-drawer-header">
+            <div>
+                <h3 class="mobile-drawer-title"><i class="fas fa-th-large text-[#385723]"></i> Todos los Módulos</h3>
+                <span class="mobile-drawer-subtitle">Acceso total al 100% de secciones del sistema</span>
+            </div>
+            <button type="button" class="mobile-drawer-close" onclick="toggleDrawerModulosMobile(false)" aria-label="Cerrar">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
 
-    <!-- 📱 BOTTOM NAVIGATION BAR FIJA (iOS & MÓVIL) -->
+        <!-- Buscador rápido en tiempo real -->
+        <div class="mobile-drawer-search-wrap">
+            <i class="fas fa-search text-gray-400"></i>
+            <input type="text" id="mobile-modules-search" placeholder="Buscar módulo o herramienta..." oninput="filtrarModulosMobile(this.value)">
+        </div>
+
+        <!-- Cuadrícula táctil de 2 columnas generada automáticamente de .admin-tabs-sidebar -->
+        <div id="mobile-modules-grid" class="mobile-modules-grid">
+            <!-- JS poblará automáticamente las 14 secciones del sidebar -->
+        </div>
+
+        <!-- Accesos directos inferiores: Perfil, Auditoría, Cerrar Sesión -->
+        <div class="mobile-drawer-footer">
+            <button type="button" onclick="abrirModalPerfil(); toggleDrawerModulosMobile(false);" class="mobile-footer-btn">
+                <i class="fas fa-user-shield text-[#385723]"></i> Perfil Admin
+            </button>
+            <button type="button" onclick="abrirModalAuditoria(); toggleDrawerModulosMobile(false);" class="mobile-footer-btn">
+                <i class="fas fa-shield-alt text-[#1d6fa5]"></i> Auditoría
+            </button>
+            <button type="button" onclick="cerrarSesion()" class="mobile-footer-btn text-red-600">
+                <i class="fas fa-sign-out-alt"></i> Salir
+            </button>
+        </div>
+    </div>
+
+    <!-- 📱 BOTTOM TAB BAR FIJA (iOS & MÓVIL: 4 Accesos + ☰ Menú) -->
     <nav id="mobile-bottom-nav">
         <button type="button" class="bottom-nav-item active" data-tab="pedidos" onclick="mostrarPestanaMobile('pedidos', this)">
             <i class="fas fa-box"></i>
@@ -6065,9 +6101,9 @@
             <i class="fas fa-tags"></i>
             <span>Stock</span>
         </button>
-        <button type="button" class="bottom-nav-item" onclick="toggleSidebarMobile()">
+        <button type="button" class="bottom-nav-item" id="btn-bottom-menu" onclick="toggleDrawerModulosMobile(true)">
             <i class="fas fa-bars"></i>
-            <span>Más</span>
+            <span>Menú</span>
         </button>
     </nav>
 
@@ -6085,35 +6121,107 @@
         // 2. Navegación fluida móvil sincronizada con el panel
         window.mostrarPestanaMobile = function(tabId, navBtn) {
             document.querySelectorAll('.bottom-nav-item').forEach(btn => btn.classList.remove('active'));
-            if (navBtn) navBtn.classList.add('active');
+            if (navBtn) {
+                navBtn.classList.add('active');
+            } else {
+                const targetBtn = document.querySelector(`.bottom-nav-item[data-tab="${tabId}"]`);
+                if (targetBtn) targetBtn.classList.add('active');
+            }
 
             const sidebarBtn = document.querySelector(`.admin-tabs-sidebar button[onclick*="'${tabId}'"]`);
             if (window.mostrarPestana) {
                 window.mostrarPestana(tabId, sidebarBtn || navBtn);
             }
 
-            window.toggleSidebarMobile(false);
+            if (window.toggleDrawerModulosMobile) window.toggleDrawerModulosMobile(false);
 
             const mainEl = document.querySelector('main');
             if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'smooth' });
+
+            setTimeout(() => { if (window.adaptarTablasMobile) window.adaptarTablasMobile(); }, 150);
         };
 
-        // 3. Alternar menú lateral móvil con backdrop
-        window.toggleSidebarMobile = function(forzarEstado) {
-            if (window.innerWidth > 768) {
-                if (window.toggleSidebar) window.toggleSidebar();
-                return;
-            }
-            const abierto = document.body.classList.contains('mobile-sidebar-open');
+        // 3. Control del Bottom Sheet / Drawer "Todo el Panel"
+        window.toggleDrawerModulosMobile = function(forzarEstado) {
+            const drawer = document.getElementById('mobile-modules-drawer');
+            const backdrop = document.getElementById('mobile-modules-drawer-backdrop');
+            if (!drawer || !backdrop) return;
+
+            const abierto = drawer.classList.contains('open');
             const nuevoEstado = (forzarEstado !== undefined) ? forzarEstado : !abierto;
+
             if (nuevoEstado) {
-                document.body.classList.add('mobile-sidebar-open');
+                window.construirCajonModulosMobile();
+                drawer.classList.add('open');
+                backdrop.classList.add('open');
+                document.body.style.overflow = 'hidden';
             } else {
-                document.body.classList.remove('mobile-sidebar-open');
+                drawer.classList.remove('open');
+                backdrop.classList.remove('open');
+                document.body.style.overflow = '';
+                const search = document.getElementById('mobile-modules-search');
+                if (search) {
+                    search.value = '';
+                    window.filtrarModulosMobile('');
+                }
             }
         };
 
-        // 4. Alternar colapso de la barra BCV en móvil
+        // 4. Construcción dinámica de la cuadrícula táctil a partir del sidebar
+        window.construirCajonModulosMobile = function() {
+            const grid = document.getElementById('mobile-modules-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            const sidebarBtns = document.querySelectorAll('.admin-tabs-sidebar .tab-btn');
+            sidebarBtns.forEach(btn => {
+                const onclickAttr = btn.getAttribute('onclick') || '';
+                const match = onclickAttr.match(/mostrarPestana\(['"]([^'"]+)['"]/);
+                if (!match) return;
+                const tabId = match[1];
+
+                const iconEl = btn.querySelector('i');
+                const iconClass = iconEl ? iconEl.className.replace(/w-5|text-gray-400/g, '').trim() : 'fas fa-circle';
+
+                const clon = btn.cloneNode(true);
+                const iconClone = clon.querySelector('i');
+                if (iconClone) iconClone.remove();
+                const texto = clon.textContent.trim();
+
+                const card = document.createElement('button');
+                card.type = 'button';
+                card.className = 'mobile-module-card';
+                card.setAttribute('data-module-id', tabId);
+                card.setAttribute('data-module-text', texto.toLowerCase());
+                card.onclick = () => {
+                    window.mostrarPestanaMobile(tabId);
+                };
+
+                card.innerHTML = `
+                    <div class="mobile-module-icon">
+                        <i class="${iconClass}"></i>
+                    </div>
+                    <span class="mobile-module-label">${texto}</span>
+                `;
+
+                grid.appendChild(card);
+            });
+        };
+
+        // 5. Filtro instantáneo de secciones en el Drawer
+        window.filtrarModulosMobile = function(query) {
+            const q = (query || '').toLowerCase().trim();
+            document.querySelectorAll('.mobile-module-card').forEach(card => {
+                const txt = card.getAttribute('data-module-text') || '';
+                if (!q || txt.includes(q)) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        };
+
+        // 6. Alternar colapso de la barra BCV en móvil
         window.toggleBcvMarqueeMobile = function() {
             const ticker = document.getElementById('ticker-tasas-container');
             if (ticker) {
@@ -6121,7 +6229,26 @@
             }
         };
 
-        // 5. Sincronizar Bottom Nav si se cambia pestaña desde el código o sidebar
+        // 7. Adaptación Universal Automática de Tablas a Tarjetas (data-label generator)
+        window.adaptarTablasMobile = function() {
+            document.querySelectorAll('table.data-table, .tab-content table').forEach(table => {
+                const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+                if (headers.length === 0) return;
+
+                table.querySelectorAll('tbody tr').forEach(tr => {
+                    const cells = tr.querySelectorAll('td');
+                    if (cells.length === 1 && cells[0].hasAttribute('colspan')) return;
+
+                    cells.forEach((td, idx) => {
+                        if (headers[idx] && !td.getAttribute('data-label')) {
+                            td.setAttribute('data-label', headers[idx]);
+                        }
+                    });
+                });
+            });
+        };
+
+        // 8. Sincronización global y Observer de mutaciones para tablas dinámicas
         window.addEventListener('DOMContentLoaded', () => {
             const _origMostrarPestana = window.mostrarPestana;
             if (_origMostrarPestana) {
@@ -6134,8 +6261,25 @@
                             btn.classList.remove('active');
                         }
                     });
-                    window.toggleSidebarMobile(false);
+                    if (window.toggleDrawerModulosMobile) window.toggleDrawerModulosMobile(false);
+                    setTimeout(() => { if (window.adaptarTablasMobile) window.adaptarTablasMobile(); }, 150);
                 };
+            }
+
+            // Ejecutar adaptación inicial de tablas
+            window.adaptarTablasMobile();
+
+            // Observer para tablas renderizadas asíncronamente por Firestore
+            const mainContent = document.querySelector('main');
+            if (mainContent && window.MutationObserver) {
+                let debounceTimer = null;
+                const observer = new MutationObserver(() => {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(() => {
+                        if (window.adaptarTablasMobile) window.adaptarTablasMobile();
+                    }, 200);
+                });
+                observer.observe(mainContent, { childList: true, subtree: true });
             }
         });
     </script>
