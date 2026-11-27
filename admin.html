@@ -13,6 +13,43 @@
         window.addEventListener("unhandledrejection", function(event) {
             console.warn("Aviso de promesa no capturada:", event.reason);
         });
+
+        // 🚀 Inicialización temprana ultra-segura para navegación y sidebar (disponible antes del renderizado del DOM)
+        window.toggleSidebar = function() {
+            const sidebar = document.getElementById('main-sidebar') || document.querySelector('.sidebar, #sidebar, aside');
+            const main = document.querySelector('.main-content, #main-content, main');
+            if (!sidebar) return;
+            if (sidebar.classList.contains('w-[280px]')) {
+                sidebar.classList.remove('w-[280px]');
+                sidebar.classList.add('w-0');
+                sidebar.classList.remove('border-r');
+            } else if (sidebar.classList.contains('w-0')) {
+                sidebar.classList.remove('w-0');
+                sidebar.classList.add('w-[280px]');
+                sidebar.classList.add('border-r');
+            } else {
+                sidebar.classList.toggle('w-0');
+                sidebar.classList.toggle('w-[280px]');
+            }
+            sidebar.classList.toggle('collapsed');
+            if (main) main.classList.toggle('expanded');
+        };
+
+        window.toggleSidebarMobile = function() {
+            if (window.innerWidth <= 768) {
+                // En móvil/PWA abre el menú móvil
+                if (typeof window.abrirMenuMovil === 'function') {
+                    window.abrirMenuMovil();
+                } else if (typeof window.toggleDrawerModulosMobile === 'function') {
+                    window.toggleDrawerModulosMobile(true);
+                }
+            } else {
+                // En escritorio colapsa/expande el sidebar lateral
+                window.toggleSidebar();
+            }
+        };
+        var toggleSidebarMobile = window.toggleSidebarMobile;
+        var toggleSidebar = window.toggleSidebar;
     </script>
     <meta charset="UTF-8" />
     <!-- 📱 PWA & iOS Safari Mobile-First Meta Tags (iPhone 15 Optimized) -->
@@ -6442,7 +6479,23 @@
                 window.toggleDrawerModulosMobile(true);
             }
         };
-        window.toggleSidebarMobile = () => abrirMenuMovil();
+        window.toggleSidebarMobile = function() {
+            if (window.innerWidth <= 768) {
+                // En móvil/PWA abre el menú móvil
+                if (typeof window.abrirMenuMovil === 'function') window.abrirMenuMovil();
+            } else {
+                // En escritorio colapsa/expande el sidebar lateral
+                if (typeof window.toggleSidebar === 'function') {
+                    window.toggleSidebar();
+                } else {
+                    const sidebar = document.querySelector('.sidebar, #sidebar, aside, #main-sidebar');
+                    const main = document.querySelector('.main-content, #main-content, main');
+                    if (sidebar) sidebar.classList.toggle('collapsed');
+                    if (main) main.classList.toggle('expanded');
+                }
+            }
+        };
+        var toggleSidebarMobile = window.toggleSidebarMobile;
 
         // 1. Registro del Service Worker PWA para iOS y Mobile
         if ('serviceWorker' in navigator) {

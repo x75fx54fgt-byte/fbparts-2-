@@ -10776,15 +10776,31 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
 
         // 🚀 LÓGICA PARA OCULTAR/MOSTRAR EL SIDEBAR
         window.toggleSidebar = function() {
-            const sidebar = document.getElementById('main-sidebar');
+            const sidebar = document.getElementById('main-sidebar') || document.querySelector('.sidebar, #sidebar, aside');
+            const main = document.querySelector('.main-content, #main-content, main');
+            if (!sidebar) return;
             if (sidebar.classList.contains('w-[280px]')) {
                 sidebar.classList.remove('w-[280px]');
                 sidebar.classList.add('w-0');
                 sidebar.classList.remove('border-r');
-            } else {
+            } else if (sidebar.classList.contains('w-0')) {
                 sidebar.classList.remove('w-0');
                 sidebar.classList.add('w-[280px]');
                 sidebar.classList.add('border-r');
+            } else {
+                sidebar.classList.toggle('w-0');
+                sidebar.classList.toggle('w-[280px]');
+            }
+            sidebar.classList.toggle('collapsed');
+            if (main) main.classList.toggle('expanded');
+        };
+
+        window.toggleSidebarMobile = function() {
+            if (window.innerWidth <= 768) {
+                if (typeof window.abrirMenuMovil === 'function') window.abrirMenuMovil();
+                else if (typeof window.toggleDrawerModulosMobile === 'function') window.toggleDrawerModulosMobile(true);
+            } else {
+                window.toggleSidebar();
             }
         };
 
