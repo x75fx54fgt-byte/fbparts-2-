@@ -579,7 +579,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById('tab-' + id).classList.add('active');
-            btnElement.classList.add('active');
+            if (btnElement && btnElement.classList) btnElement.classList.add('active');
+
+            // Sincronizar estado visual de la barra inferior móvil
+            if (typeof window.sincronizarBarraInferior === 'function') {
+                window.sincronizarBarraInferior(id);
+            }
 
             if(id === 'dashboard') { 
                 window.cargarDashboard(); 
