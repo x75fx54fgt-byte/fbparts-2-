@@ -50,6 +50,65 @@
         };
         var toggleSidebarMobile = window.toggleSidebarMobile;
         var toggleSidebar = window.toggleSidebar;
+
+        // =========================================================================
+        // 🔔 RESILIENCIA GLOBAL: CENTRO DE ALERTAS MULTI-MÓDULO & PUSH
+        // =========================================================================
+        window._filtroAlertaActivo = 'todas';
+        window._alertasCentroCache = window._alertasCentroCache || [];
+
+        window.filtrarAlertasCentro = function(categoria) {
+            window._filtroAlertaActivo = categoria || 'todas';
+            document.querySelectorAll('.alerta-tab-btn').forEach(btn => {
+                const f = btn.getAttribute('data-filter');
+                if (f === window._filtroAlertaActivo) {
+                    btn.className = 'alerta-tab-btn flex-1 py-1.5 px-2 rounded-lg font-bold text-center transition bg-white text-[#385723] shadow-sm border border-gray-200';
+                } else {
+                    btn.className = 'alerta-tab-btn flex-1 py-1.5 px-2 rounded-lg font-medium text-center text-gray-600 hover:text-gray-900 transition';
+                }
+            });
+            if (typeof window.renderizarListaAlertas === 'function') {
+                window.renderizarListaAlertas();
+            }
+        };
+        var filtrarAlertasCentro = window.filtrarAlertasCentro;
+
+        window.toggleNotificaciones = function(forzar) {
+            const dropdown = document.getElementById('dropdown-notificaciones');
+            const backdrop = document.getElementById('dropdown-notificaciones-backdrop');
+            if (!dropdown) return;
+            const abrir = typeof forzar === 'boolean' ? forzar : dropdown.classList.contains('hidden');
+            if (abrir) {
+                dropdown.classList.remove('hidden');
+                if (backdrop) backdrop.classList.remove('hidden');
+                if (typeof window.actualizarCentroAlertas === 'function') {
+                    window.actualizarCentroAlertas();
+                }
+                if (typeof window.actualizarIndicadorCampanaPush === 'function') {
+                    const pushActivo = ('Notification' in window && Notification.permission === 'granted');
+                    window.actualizarIndicadorCampanaPush(pushActivo);
+                }
+            } else {
+                dropdown.classList.add('hidden');
+                if (backdrop) backdrop.classList.add('hidden');
+            }
+        };
+        var toggleNotificaciones = window.toggleNotificaciones;
+
+        window.navegarDesdeAlerta = function(seccionId) {
+            window.toggleNotificaciones(false);
+            if (typeof window.mostrarPestana === 'function') {
+                window.mostrarPestana(seccionId);
+            }
+        };
+        var navegarDesdeAlerta = window.navegarDesdeAlerta;
+
+        window.toggleConfiguracionPush = function() {
+            const panel = document.getElementById('fcm-preferencias-panel');
+            if (!panel) return;
+            panel.classList.toggle('hidden');
+        };
+        var toggleConfiguracionPush = window.toggleConfiguracionPush;
     </script>
     <meta charset="UTF-8" />
     <!-- 📱 PWA & iOS Safari Mobile-First Meta Tags (iPhone 15 Optimized) -->
@@ -1413,12 +1472,12 @@
                     
                     <!-- 🔔 Centro de Alertas Multi-Módulo & Notificaciones -->
                     <div class="relative" id="bell-container">
-                        <button id="btn-campana" class="relative hover:opacity-80 transition-opacity p-2 text-white" onclick="toggleNotificaciones()" title="Centro de Alertas">
+                        <button id="btn-campana" class="relative hover:opacity-80 transition-opacity p-2 text-white" onclick="window.toggleNotificaciones()" title="Centro de Alertas">
                             <i class="fas fa-bell text-xl"></i>
                         </button>
 
                         <!-- Backdrop para cerrar al tocar afuera en móvil -->
-                        <div id="dropdown-notificaciones-backdrop" class="hidden" onclick="toggleNotificaciones(false)"></div>
+                        <div id="dropdown-notificaciones-backdrop" class="hidden" onclick="window.toggleNotificaciones(false)"></div>
 
                         <!-- Panel Flotante / Centro de Alertas -->
                         <div id="dropdown-notificaciones" class="absolute right-0 mt-2 w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 hidden text-gray-800 overflow-hidden">
@@ -1432,10 +1491,10 @@
                                     </span>
                                 </div>
                                 <div class="flex items-center gap-1.5">
-                                    <button type="button" onclick="toggleConfiguracionPush()" class="text-xs bg-white/20 hover:bg-white/30 text-white px-2.5 py-1 rounded-lg font-medium transition flex items-center gap-1 shadow-sm" title="Configurar preferencias de alerta">
+                                    <button type="button" onclick="window.toggleConfiguracionPush()" class="text-xs bg-white/20 hover:bg-white/30 text-white px-2.5 py-1 rounded-lg font-medium transition flex items-center gap-1 shadow-sm" title="Configurar preferencias de alerta">
                                         <i class="fas fa-cog"></i> Configurar
                                     </button>
-                                    <button type="button" onclick="toggleNotificaciones(false)" class="text-white/80 hover:text-white p-1 text-sm md:hidden" title="Cerrar">
+                                    <button type="button" onclick="window.toggleNotificaciones(false)" class="text-white/80 hover:text-white p-1 text-sm md:hidden" title="Cerrar">
                                         <i class="fas fa-times"></i>
                                     </button>
                                 </div>
@@ -1452,30 +1511,30 @@
                                 <div class="grid grid-cols-2 gap-2 mb-3">
                                     <label class="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50">
                                         <span class="text-gray-700 flex items-center gap-1"><i class="fas fa-shopping-bag text-blue-600"></i> Pedidos</span>
-                                        <input type="checkbox" id="pref-push-pedidos" class="push-pref-checkbox accent-[#385723]" checked onchange="guardarPreferenciaPush('pedidos', this.checked)">
+                                        <input type="checkbox" id="pref-push-pedidos" class="push-pref-checkbox accent-[#385723]" checked onchange="window.guardarPreferenciaPush('pedidos', this.checked)">
                                     </label>
                                     <label class="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50">
                                         <span class="text-gray-700 flex items-center gap-1"><i class="fas fa-truck text-purple-600"></i> Guías/Envíos</span>
-                                        <input type="checkbox" id="pref-push-guias" class="push-pref-checkbox accent-[#385723]" checked onchange="guardarPreferenciaPush('guias', this.checked)">
+                                        <input type="checkbox" id="pref-push-guias" class="push-pref-checkbox accent-[#385723]" checked onchange="window.guardarPreferenciaPush('guias', this.checked)">
                                     </label>
                                     <label class="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50">
                                         <span class="text-gray-700 flex items-center gap-1"><i class="fas fa-file-invoice-dollar text-orange-600"></i> Cobros/CxC</span>
-                                        <input type="checkbox" id="pref-push-cobros" class="push-pref-checkbox accent-[#385723]" checked onchange="guardarPreferenciaPush('cobros', this.checked)">
+                                        <input type="checkbox" id="pref-push-cobros" class="push-pref-checkbox accent-[#385723]" checked onchange="window.guardarPreferenciaPush('cobros', this.checked)">
                                     </label>
                                     <label class="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50">
                                         <span class="text-gray-700 flex items-center gap-1"><i class="fas fa-boxes text-red-600"></i> Stock Crítico</span>
-                                        <input type="checkbox" id="pref-push-stock" class="push-pref-checkbox accent-[#385723]" checked onchange="guardarPreferenciaPush('stock', this.checked)">
+                                        <input type="checkbox" id="pref-push-stock" class="push-pref-checkbox accent-[#385723]" checked onchange="window.guardarPreferenciaPush('stock', this.checked)">
                                     </label>
                                     <label class="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 col-span-2">
                                         <span class="text-gray-700 flex items-center gap-1"><i class="fas fa-chart-line text-green-600"></i> Alerta Cambio Tasa BCV</span>
-                                        <input type="checkbox" id="pref-push-tasaBCV" class="push-pref-checkbox accent-[#385723]" checked onchange="guardarPreferenciaPush('tasaBCV', this.checked)">
+                                        <input type="checkbox" id="pref-push-tasaBCV" class="push-pref-checkbox accent-[#385723]" checked onchange="window.guardarPreferenciaPush('tasaBCV', this.checked)">
                                     </label>
                                 </div>
                                 <div class="flex items-center gap-2 pt-1 border-t border-gray-200">
-                                    <button type="button" onclick="enviarNotificacionPruebaFCM()" class="flex-1 py-1.5 px-3 bg-[#385723] hover:bg-[#2d471b] text-white rounded-lg font-semibold text-xs flex items-center justify-center gap-1.5 shadow-sm transition">
+                                    <button type="button" onclick="window.enviarNotificacionPruebaFCM()" class="flex-1 py-1.5 px-3 bg-[#385723] hover:bg-[#2d471b] text-white rounded-lg font-semibold text-xs flex items-center justify-center gap-1.5 shadow-sm transition">
                                         <i class="fas fa-paper-plane"></i> Enviar notificación de prueba
                                     </button>
-                                    <button type="button" onclick="activarNotificacionesPushFCM(true)" class="py-1.5 px-3 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-lg font-semibold text-xs transition" title="Reconectar permisos Web Push">
+                                    <button type="button" onclick="window.activarNotificacionesPushFCM(true)" class="py-1.5 px-3 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-lg font-semibold text-xs transition" title="Reconectar permisos Web Push">
                                         <i class="fas fa-sync-alt"></i>
                                     </button>
                                 </div>
@@ -1483,16 +1542,16 @@
 
                             <!-- PESTAÑAS COMPACTAS -->
                             <div class="flex border-b border-gray-200 bg-gray-50 p-1.5 gap-1 text-xs">
-                                <button type="button" class="alerta-tab-btn flex-1 py-1.5 px-2 rounded-lg font-bold text-center transition bg-white text-[#385723] shadow-sm border border-gray-200" data-filter="todas" onclick="filtrarAlertasCentro('todas')">
+                                <button type="button" class="alerta-tab-btn flex-1 py-1.5 px-2 rounded-lg font-bold text-center transition bg-white text-[#385723] shadow-sm border border-gray-200" data-filter="todas" onclick="window.filtrarAlertasCentro('todas')">
                                     Todas (<span id="count-alertas-todas">0</span>)
                                 </button>
-                                <button type="button" class="alerta-tab-btn flex-1 py-1.5 px-2 rounded-lg font-medium text-center text-gray-600 hover:text-gray-900 transition" data-filter="cobros" onclick="filtrarAlertasCentro('cobros')">
+                                <button type="button" class="alerta-tab-btn flex-1 py-1.5 px-2 rounded-lg font-medium text-center text-gray-600 hover:text-gray-900 transition" data-filter="cobros" onclick="window.filtrarAlertasCentro('cobros')">
                                     Cobros (<span id="count-alertas-cobros">0</span>)
                                 </button>
-                                <button type="button" class="alerta-tab-btn flex-1 py-1.5 px-2 rounded-lg font-medium text-center text-gray-600 hover:text-gray-900 transition" data-filter="guias" onclick="filtrarAlertasCentro('guias')">
+                                <button type="button" class="alerta-tab-btn flex-1 py-1.5 px-2 rounded-lg font-medium text-center text-gray-600 hover:text-gray-900 transition" data-filter="guias" onclick="window.filtrarAlertasCentro('guias')">
                                     Envíos (<span id="count-alertas-guias">0</span>)
                                 </button>
-                                <button type="button" class="alerta-tab-btn flex-1 py-1.5 px-2 rounded-lg font-medium text-center text-gray-600 hover:text-gray-900 transition" data-filter="stock" onclick="filtrarAlertasCentro('stock')">
+                                <button type="button" class="alerta-tab-btn flex-1 py-1.5 px-2 rounded-lg font-medium text-center text-gray-600 hover:text-gray-900 transition" data-filter="stock" onclick="window.filtrarAlertasCentro('stock')">
                                     Stock (<span id="count-alertas-stock">0</span>)
                                 </button>
                             </div>
@@ -1505,7 +1564,7 @@
                             <!-- FOOTER ACCIONES -->
                             <div class="p-2 bg-gray-50 border-t border-gray-100 text-center flex items-center justify-between text-[11px] text-gray-500 px-3">
                                 <span>Toca una alerta para abrir su módulo</span>
-                                <button type="button" onclick="actualizarCentroAlertas(true)" class="text-[#385723] hover:underline font-semibold flex items-center gap-1">
+                                <button type="button" onclick="window.actualizarCentroAlertas(true)" class="text-[#385723] hover:underline font-semibold flex items-center gap-1">
                                     <i class="fas fa-sync-alt text-[10px]"></i> Actualizar
                                 </button>
                             </div>
@@ -5745,7 +5804,7 @@
             }
         }, 8000);
     </script>
-    <script type="module" src="admin_logic.js?v=20261119_ia_puter_lote_resiliente_v2"></script>
+    <script type="module" src="admin_logic.js?v=20261127_centro_alertas_fcm_v3"></script>
 
 
     <!-- MODAL AUDITORIA INTERNA -->

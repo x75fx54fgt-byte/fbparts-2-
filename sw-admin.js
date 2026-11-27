@@ -66,7 +66,7 @@ self.addEventListener('notificationclick', (event) => {
 // 📦 GESTIÓN DE CACHÉ PWA Y ESTRATEGIAS OFFLINE
 // =========================================================================
 
-const CACHE_NAME = 'fbparts-admin-pwa-v2';
+const CACHE_NAME = 'fbparts-admin-pwa-v3';
 
 // Recursos base del App Shell (solo estáticos)
 const APP_SHELL = [
