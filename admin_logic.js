@@ -196,25 +196,37 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
             );
         }
 
-        // Actualizar visualmente el botón de la campana (#btn-campana)
+        // Actualizar visualmente el botón de la campana (#btn-campana) y estado en cabecera
         function actualizarIndicadorCampanaPush(activo) {
             const btn = document.getElementById('btn-campana');
-            if (!btn) return;
-
-            let dot = document.getElementById('indicador-push-activo');
-            if (activo) {
-                btn.setAttribute('title', 'Alertas Activas (Web Push Conectado)');
-                if (!dot) {
-                    dot = document.createElement('span');
-                    dot.id = 'indicador-push-activo';
-                    dot.className = 'absolute bottom-1 right-1 w-2.5 h-2.5 bg-green-500 border-2 border-[#385723] rounded-full shadow-sm';
-                    btn.appendChild(dot);
+            if (btn) {
+                let dot = document.getElementById('indicador-push-activo');
+                if (activo) {
+                    btn.setAttribute('title', 'Alertas Activas (Web Push Conectado)');
+                    if (!dot) {
+                        dot = document.createElement('span');
+                        dot.id = 'indicador-push-activo';
+                        dot.className = 'absolute bottom-1 right-1 w-2.5 h-2.5 bg-green-500 border-2 border-[#385723] rounded-full shadow-sm';
+                        btn.appendChild(dot);
+                    } else {
+                        dot.style.display = 'block';
+                    }
                 } else {
-                    dot.style.display = 'block';
+                    btn.setAttribute('title', 'Centro de Alertas');
+                    if (dot) dot.style.display = 'none';
                 }
-            } else {
-                btn.setAttribute('title', 'Notificaciones');
-                if (dot) dot.style.display = 'none';
+            }
+
+            // Actualizar pill de estado en la cabecera del Centro de Alertas
+            const badgeStatus = document.getElementById('badge-fcm-status');
+            if (badgeStatus) {
+                if (activo) {
+                    badgeStatus.className = 'text-[11px] px-2 py-0.5 rounded-full font-semibold bg-green-600/30 text-white flex items-center gap-1 border border-green-400/40';
+                    badgeStatus.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span> 🟢 Activo';
+                } else {
+                    badgeStatus.className = 'text-[11px] px-2 py-0.5 rounded-full font-semibold bg-white/20 text-white flex items-center gap-1';
+                    badgeStatus.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span> ⚪ Inactivo';
+                }
             }
         }
 
@@ -299,13 +311,25 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 
                 if (token) {
                     console.log('🔑 [FCM] Token Push obtenido:', token.substring(0, 15) + '...');
-                    
+                    window.currentFCMToken = token;
+                    try { localStorage.setItem('fcm_token_guardado', token); } catch(e){}
+
+                    // Obtener preferencias guardadas localmente o por defecto activadas
+                    const prefsPush = {
+                        pedidos: localStorage.getItem('fb_fcm_pref_pedidos') !== 'false',
+                        guias: localStorage.getItem('fb_fcm_pref_guias') !== 'false',
+                        cobros: localStorage.getItem('fb_fcm_pref_cobros') !== 'false',
+                        stock: localStorage.getItem('fb_fcm_pref_stock') !== 'false',
+                        tasaBCV: localStorage.getItem('fb_fcm_pref_tasaBCV') !== 'false'
+                    };
+
                     // Guardar en Firestore: fcm_tokens/{token}
                     await setDoc(doc(db, "fcm_tokens", token), {
                         token: token,
                         uid: auth.currentUser?.uid || 'anonimo',
                         dispositivo: navigator.userAgent,
-                        actualizado: serverTimestamp()
+                        actualizado: serverTimestamp(),
+                        preferencias: prefsPush
                     }, { merge: true });
 
                     actualizarIndicadorCampanaPush(true);
@@ -7310,112 +7334,503 @@ REGLAS CRÍTICAS:
         };
 
         // ==========================================
-        // 🔔 NOTIFICACIONES DE COBRANZA
+        // 🔔 CENTRO DE ALERTAS MULTI-MÓDULO & WEB PUSH
         // ==========================================
-        window.toggleNotificaciones = function() {
-            const dropdown = document.getElementById('dropdown-notificaciones');
-            if (dropdown) dropdown.classList.toggle('hidden');
+        window._alertasCentroCache = [];
+        window._filtroAlertaActivo = 'todas';
+        window.currentFCMToken = null;
 
-            // Gesto directo de usuario (iOS friendly): si las alertas no están configuradas, solicitar activación
-            if ('Notification' in window && Notification.permission === 'default') {
-                if (typeof window.activarNotificacionesPushFCM === 'function') {
-                    window.activarNotificacionesPushFCM(true);
+        // 1. Abrir/Cerrar Centro de Alertas y Backdrop
+        window.toggleNotificaciones = function(forzar) {
+            const dropdown = document.getElementById('dropdown-notificaciones');
+            const backdrop = document.getElementById('dropdown-notificaciones-backdrop');
+            if (!dropdown) return;
+
+            let abrir;
+            if (typeof forzar === 'boolean') {
+                abrir = forzar;
+            } else {
+                abrir = dropdown.classList.contains('hidden');
+            }
+
+            if (abrir) {
+                dropdown.classList.remove('hidden');
+                if (backdrop) backdrop.classList.remove('hidden');
+                
+                // Actualizar alertas inmediatamente al abrir
+                if (typeof window.actualizarCentroAlertas === 'function') {
+                    window.actualizarCentroAlertas();
+                }
+                
+                // Refrescar estado push en cabecera
+                if (typeof window.actualizarIndicadorCampanaPush === 'function') {
+                    const pushActivo = ('Notification' in window && Notification.permission === 'granted');
+                    window.actualizarIndicadorCampanaPush(pushActivo);
+                }
+            } else {
+                dropdown.classList.add('hidden');
+                if (backdrop) backdrop.classList.add('hidden');
+            }
+        };
+
+        // Cerrar dropdown si hace clic afuera (en escritorio)
+        document.addEventListener('click', function(event) {
+            const container = document.getElementById('bell-container');
+            const dropdown = document.getElementById('dropdown-notificaciones');
+            const backdrop = document.getElementById('dropdown-notificaciones-backdrop');
+            if (container && dropdown && !dropdown.classList.contains('hidden')) {
+                if (!container.contains(event.target)) {
+                    dropdown.classList.add('hidden');
+                    if (backdrop) backdrop.classList.add('hidden');
+                }
+            }
+        });
+
+        // 2. Toggle del panel de configuración de preferencias Push
+        window.toggleConfiguracionPush = function() {
+            const panel = document.getElementById('fcm-preferencias-panel');
+            if (!panel) return;
+            const estaOculto = panel.classList.contains('hidden');
+            if (estaOculto) {
+                // Cargar valores actuales de checkboxes desde localStorage o defaults (true)
+                ['pedidos', 'guias', 'cobros', 'stock', 'tasaBCV'].forEach(cat => {
+                    const el = document.getElementById('pref-push-' + cat);
+                    if (el) {
+                        const val = localStorage.getItem('fb_fcm_pref_' + cat);
+                        el.checked = val === null ? true : (val === 'true');
+                    }
+                });
+                const tokenStatusEl = document.getElementById('fcm-token-status');
+                if (tokenStatusEl) {
+                    if (window.currentFCMToken) {
+                        tokenStatusEl.textContent = 'Token: ' + window.currentFCMToken.substring(0, 8) + '...';
+                        tokenStatusEl.className = 'text-[10px] text-green-600 font-semibold';
+                    } else if ('Notification' in window && Notification.permission === 'granted') {
+                        tokenStatusEl.textContent = 'Push: Autorizado';
+                        tokenStatusEl.className = 'text-[10px] text-green-600 font-semibold';
+                    } else {
+                        tokenStatusEl.textContent = 'Push: Sin permiso';
+                        tokenStatusEl.className = 'text-[10px] text-gray-400';
+                    }
+                }
+                panel.classList.remove('hidden');
+            } else {
+                panel.classList.add('hidden');
+            }
+        };
+
+        // 3. Guardar preferencia individual en localStorage y Firestore
+        window.guardarPreferenciaPush = async function(categoria, activo) {
+            try {
+                localStorage.setItem('fb_fcm_pref_' + categoria, activo ? 'true' : 'false');
+                const token = window.currentFCMToken || localStorage.getItem('fcm_token_guardado');
+                if (token && typeof setDoc === 'function' && typeof db !== 'undefined') {
+                    await setDoc(doc(db, "fcm_tokens", token), {
+                        preferencias: {
+                            [categoria]: activo
+                        },
+                        actualizado: serverTimestamp()
+                    }, { merge: true });
+                }
+            } catch(e) {
+                console.warn('⚠️ [FCM] Error persistiendo preferencia ' + categoria + ':', e);
+            }
+        };
+
+        // 4. Enviar notificación de prueba Web Push (iOS / Desktop)
+        window.enviarNotificacionPruebaFCM = async function() {
+            try {
+                if (!('Notification' in window)) {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'No compatible',
+                            text: 'Este navegador no soporta notificaciones Web Push.',
+                            confirmButtonColor: '#385723'
+                        });
+                    }
+                    return;
+                }
+
+                if (Notification.permission !== 'granted') {
+                    if (typeof window.activarNotificacionesPushFCM === 'function') {
+                        await window.activarNotificacionesPushFCM(true);
+                    }
+                    return;
+                }
+
+                // Mostrar notificación nativa vía Service Worker Registration
+                if ('serviceWorker' in navigator) {
+                    const reg = await navigator.serviceWorker.ready;
+                    if (reg && reg.showNotification) {
+                        await reg.showNotification('Inversiones F&B Parts', {
+                            body: '🔔 ¡Prueba exitosa! Las notificaciones Web Push y el Centro de Alertas están activos.',
+                            icon: '/logo-fb-parts.png',
+                            badge: '/logo-fb-parts.png',
+                            vibrate: [200, 100, 200],
+                            tag: 'test-push-' + Date.now(),
+                            renotify: true,
+                            data: { url: 'https://www.fybparts.com/admin.html' }
+                        });
+                    }
+                }
+
+                if (typeof Swal !== 'undefined') {
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3500,
+                        timerProgressBar: true
+                    });
+                    Toast.fire({
+                        icon: 'success',
+                        title: '¡Notificación de prueba enviada!'
+                    });
+                }
+            } catch(err) {
+                console.error('❌ Error enviando notificación de prueba:', err);
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de Envío',
+                        text: err.message || err,
+                        confirmButtonColor: '#385723'
+                    });
                 }
             }
         };
 
-        // Cerrar dropdown si hace clic afuera
-        document.addEventListener('click', function(event) {
-            const container = document.getElementById('bell-container');
-            const dropdown = document.getElementById('dropdown-notificaciones');
-            if (container && dropdown && !container.contains(event.target)) {
-                dropdown.classList.add('hidden');
+        // 5. Navegar desde una alerta hacia el módulo correspondiente
+        window.navegarDesdeAlerta = function(seccionId) {
+            window.toggleNotificaciones(false);
+            if (typeof window.mostrarPestana === 'function') {
+                window.mostrarPestana(seccionId);
             }
-        });
+        };
 
-        window.actualizarNotificacionesCobranza = function() {
-    const filas = document.querySelectorAll('#facturas-table-body tr');
-    const lista = document.getElementById('lista-notificaciones'); // Asegúrate de que este ID coincida con tu HTML
-    
-    let notificacionesHTML = '';
-    let contadorVencidas = 0;
-    const hoy = new Date();
+        // 6. Filtrar alertas por pestaña (todas, cobros, guias, stock)
+        window.filtrarAlertasCentro = function(categoria) {
+            window._filtroAlertaActivo = categoria || 'todas';
+            document.querySelectorAll('.alerta-tab-btn').forEach(btn => {
+                const f = btn.getAttribute('data-filter');
+                if (f === window._filtroAlertaActivo) {
+                    btn.className = 'alerta-tab-btn flex-1 py-1.5 px-2 rounded-lg font-bold text-center transition bg-white text-[#385723] shadow-sm border border-gray-200';
+                } else {
+                    btn.className = 'alerta-tab-btn flex-1 py-1.5 px-2 rounded-lg font-medium text-center text-gray-600 hover:text-gray-900 transition';
+                }
+            });
+            window.renderizarListaAlertas();
+        };
 
-    filas.forEach(fila => {
-        if (fila.cells.length < 5) return; // Omitir filas de carga o vacías
+        // 7. Renderizar la lista según el filtro activo
+        window.renderizarListaAlertas = function() {
+            const lista = document.getElementById('lista-notificaciones');
+            if (!lista) return;
 
-        // 1. Obtener número y cliente limpiando saltos de línea
-        const nroFila = fila.cells[0].textContent.trim().split('\n')[0];
-        const fechaStr = fila.cells[1].textContent.trim();
-        const clienteStr = fila.cells[2].textContent.trim().split('\n')[0];
+            const filtro = window._filtroAlertaActivo || 'todas';
+            const alertas = window._alertasCentroCache || [];
+            const filtradas = filtro === 'todas' ? alertas : alertas.filter(a => a.tipo === filtro);
 
-        // 2. Obtener el valor REAL seleccionado en el menú desplegable (NO el textContent de la celda)
-        const selectEstatus = fila.querySelector('td:nth-child(4) select');
-        if (!selectEstatus) return;
-        const estatusActivo = selectEstatus.options[selectEstatus.selectedIndex].text.toUpperCase();
+            if (filtradas.length === 0) {
+                let mensajeVacio = 'No hay alertas activas en esta categoría';
+                if (filtro === 'cobros') mensajeVacio = 'No hay cobros vencidos ni cuentas pendientes';
+                if (filtro === 'guias') mensajeVacio = 'No hay envíos en tránsito ni novedades';
+                if (filtro === 'stock') mensajeVacio = 'Inventario en niveles óptimos (sin stock crítico)';
 
-        // 3. Evaluar si es un crédito no pagado
-        if (estatusActivo.includes('CRÉDITO') && !estatusActivo.includes('PAGADO')) {
-            
-            // 4. Parsear fecha DD/MM/YYYY a un objeto Date válido
-            const partesFecha = fechaStr.split('/');
-            if (partesFecha.length === 3) {
-                // new Date(Año, Mes (0-11), Día)
-                const fechaFactura = new Date(partesFecha[2], partesFecha[1] - 1, partesFecha[0]);
-                
-                // Calcular diferencia en días exactos
-                const diferenciaTiempo = hoy.getTime() - fechaFactura.getTime();
-                const diasTranscurridos = Math.floor(diferenciaTiempo / (1000 * 3600 * 24));
-                
-                if (diasTranscurridos > 15) {
-                    contadorVencidas++;
-                    notificacionesHTML += `
-                        <li class="p-3 border-b border-gray-100 hover:bg-red-50 transition-colors cursor-default">
-                            <div class="text-sm">
-                                <strong class="text-red-600">${nroFila}</strong> - <span class="text-gray-800">${clienteStr}</span>
+                lista.innerHTML = `
+                    <li class="p-6 text-center text-gray-400 text-xs">
+                        <i class="fas fa-check-circle text-2xl text-green-500/60 mb-2 block"></i>
+                        <span>${mensajeVacio}</span>
+                    </li>`;
+                return;
+            }
+
+            lista.innerHTML = filtradas.map(a => `
+                <li onclick="window.navegarDesdeAlerta('${a.seccion}')" class="p-3 ${a.bgHover || 'hover:bg-gray-50'} transition-colors cursor-pointer flex items-center justify-between gap-3 group">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-8 h-8 rounded-full ${a.iconBg || 'bg-gray-100'} flex items-center justify-center flex-shrink-0">
+                            <i class="fas ${a.icon} ${a.iconColor} text-sm"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="text-xs font-bold text-gray-800 truncate group-hover:text-[#385723] transition-colors">
+                                ${SecuritySanitizer.escapeHtml(a.titulo)} <span class="font-normal text-gray-500">- ${SecuritySanitizer.escapeHtml(a.subtitulo)}</span>
                             </div>
-                            <div class="text-xs text-red-500 mt-1 font-semibold">
-                                <i class="fas fa-exclamation-triangle mr-1"></i> Vencida hace ${diasTranscurridos - 15} días (${diasTranscurridos} días desde emisión)
+                            <div class="text-[11px] ${a.detalleColor || 'text-gray-500'} truncate mt-0.5 font-medium">
+                                ${a.detalle}
                             </div>
-                        </li>`;
+                        </div>
+                    </div>
+                    <span class="text-[10px] px-2 py-0.5 rounded-full font-bold flex-shrink-0 ${a.badgeClass}">
+                        ${a.badge}
+                    </span>
+                </li>
+            `).join('');
+        };
+
+        // 8. Motor de escaneo y consolidación de alertas Multi-Módulo
+        window.actualizarCentroAlertas = function() {
+            const hoy = new Date();
+            const alertas = [];
+            let countCobros = 0;
+            let countGuias = 0;
+            let countStock = 0;
+
+            // A) COBROS / CUENTAS POR COBRAR (Facturas a crédito y vencidas)
+            try {
+                if (window.facturasDBLocal && Object.keys(window.facturasDBLocal).length > 0) {
+                    Object.keys(window.facturasDBLocal).forEach(docId => {
+                        const fac = window.facturasDBLocal[docId];
+                        const estatus = (fac.estatusComercial || '').toUpperCase();
+                        if (estatus.includes('CRÉDITO') && !estatus.includes('PAGADO') && estatus !== 'ANULADA') {
+                            const totalFac = parseFloat(fac.total) || 0;
+                            let abonado = 0;
+                            if (Array.isArray(fac.abonos)) fac.abonos.forEach(ab => abonado += (parseFloat(ab.monto) || 0));
+                            const saldo = Math.max(0, totalFac - abonado);
+                            const simbolo = fac.simbolo || '$';
+                            const clienteStr = fac.cliente || fac.nombreCliente || 'Cliente';
+                            const nroFila = fac.numero || fac.nroControl || docId;
+
+                            let diasTranscurridos = 0;
+                            if (fac.fecha) {
+                                const partes = fac.fecha.split('/');
+                                if (partes.length === 3) {
+                                    const fechaFac = new Date(partes[2], partes[1] - 1, partes[0]);
+                                    diasTranscurridos = Math.floor((hoy.getTime() - fechaFac.getTime()) / (1000 * 3600 * 24));
+                                }
+                            }
+
+                            countCobros++;
+                            if (diasTranscurridos > 15) {
+                                alertas.push({
+                                    tipo: 'cobros',
+                                    titulo: nroFila,
+                                    subtitulo: clienteStr,
+                                    detalle: `<i class="fas fa-exclamation-triangle mr-1"></i> Vencida hace ${diasTranscurridos - 15} días (${simbolo} ${saldo.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})} pend.)`,
+                                    detalleColor: 'text-red-500 font-semibold',
+                                    badge: 'Vencida',
+                                    badgeClass: 'bg-red-100 text-red-700',
+                                    icon: 'fa-file-invoice-dollar',
+                                    iconColor: 'text-red-600',
+                                    iconBg: 'bg-red-50',
+                                    bgHover: 'hover:bg-red-50/60',
+                                    seccion: 'finanzas'
+                                });
+                            } else {
+                                alertas.push({
+                                    tipo: 'cobros',
+                                    titulo: nroFila,
+                                    subtitulo: clienteStr,
+                                    detalle: `<i class="fas fa-clock mr-1"></i> Por cobrar (${simbolo} ${saldo.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})} pend.)`,
+                                    detalleColor: 'text-amber-600',
+                                    badge: 'Crédito',
+                                    badgeClass: 'bg-amber-100 text-amber-700',
+                                    icon: 'fa-file-invoice-dollar',
+                                    iconColor: 'text-amber-600',
+                                    iconBg: 'bg-amber-50',
+                                    bgHover: 'hover:bg-amber-50/60',
+                                    seccion: 'finanzas'
+                                });
+                            }
+                        }
+                    });
+                } else {
+                    // Fallback a escaneo de tabla HTML si facturasDBLocal no está cargada aún
+                    const filas = document.querySelectorAll('#facturas-table-body tr');
+                    filas.forEach(fila => {
+                        if (fila.cells.length < 5) return;
+                        const nroFila = fila.cells[0].textContent.trim().split('\n')[0];
+                        const fechaStr = fila.cells[1].textContent.trim();
+                        const clienteStr = fila.cells[2].textContent.trim().split('\n')[0];
+                        const selectEstatus = fila.querySelector('td:nth-child(4) select');
+                        if (!selectEstatus) return;
+                        const estatusActivo = selectEstatus.options[selectEstatus.selectedIndex].text.toUpperCase();
+
+                        if (estatusActivo.includes('CRÉDITO') && !estatusActivo.includes('PAGADO')) {
+                            const partesFecha = fechaStr.split('/');
+                            let diasTranscurridos = 0;
+                            if (partesFecha.length === 3) {
+                                const fechaFactura = new Date(partesFecha[2], partesFecha[1] - 1, partesFecha[0]);
+                                diasTranscurridos = Math.floor((hoy.getTime() - fechaFactura.getTime()) / (1000 * 3600 * 24));
+                            }
+                            countCobros++;
+                            alertas.push({
+                                tipo: 'cobros',
+                                titulo: nroFila,
+                                subtitulo: clienteStr,
+                                detalle: diasTranscurridos > 15 ? `<i class="fas fa-exclamation-triangle mr-1"></i> Vencida hace ${diasTranscurridos - 15} días` : `<i class="fas fa-clock mr-1"></i> Crédito pendiente`,
+                                detalleColor: diasTranscurridos > 15 ? 'text-red-500 font-semibold' : 'text-amber-600',
+                                badge: diasTranscurridos > 15 ? 'Vencida' : 'Crédito',
+                                badgeClass: diasTranscurridos > 15 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700',
+                                icon: 'fa-file-invoice-dollar',
+                                iconColor: diasTranscurridos > 15 ? 'text-red-600' : 'text-amber-600',
+                                iconBg: diasTranscurridos > 15 ? 'bg-red-50' : 'bg-amber-50',
+                                bgHover: 'hover:bg-red-50/60',
+                                seccion: 'finanzas'
+                            });
+                        }
+                    });
+                }
+            } catch(e) {
+                console.warn('⚠️ Error recopilando alertas de cobros:', e);
+            }
+
+            // B) ENVÍOS / GUÍAS (Pedidos despachados, novedades, listos para retiro o en ruta)
+            try {
+                const fuentePedidos = window.pedidosDBLocal ? Object.values(window.pedidosDBLocal) : (window._pedidosTodosCache || []);
+                fuentePedidos.forEach(ped => {
+                    const est = (ped.estado || '').toLowerCase().trim();
+                    if (est === 'entregado' || est === 'cancelado' || est === 'inactivo') return;
+
+                    const clienteStr = ped.cliente || ped.nombreCliente || 'Cliente';
+                    const nroPed = ped.nroPedido || ped.numero || ped.id || 'Pedido';
+                    const trackingStr = ped.tracking || ped.trackingMotorizado || (Array.isArray(ped.guiasEnvio) && ped.guiasEnvio[0]?.numero) || '';
+
+                    // Novedad reportada
+                    if (ped.novedad || (Array.isArray(ped.novedades) && ped.novedades.length > 0)) {
+                        countGuias++;
+                        alertas.push({
+                            tipo: 'guias',
+                            titulo: 'Pedido #' + nroPed,
+                            subtitulo: clienteStr,
+                            detalle: `<i class="fas fa-exclamation-triangle mr-1"></i> Novedad: ${ped.novedad || 'Reporte de envío pendiente'}`,
+                            detalleColor: 'text-red-500 font-semibold',
+                            badge: 'Novedad',
+                            badgeClass: 'bg-red-100 text-red-700',
+                            icon: 'fa-exclamation-triangle',
+                            iconColor: 'text-red-600',
+                            iconBg: 'bg-red-50',
+                            bgHover: 'hover:bg-red-50/60',
+                            seccion: 'pedidos'
+                        });
+                    } else if (est.includes('retiro') || est.includes('agencia')) {
+                        countGuias++;
+                        alertas.push({
+                            tipo: 'guias',
+                            titulo: 'Pedido #' + nroPed,
+                            subtitulo: clienteStr,
+                            detalle: `<i class="fas fa-store mr-1"></i> Listo para retiro en agencia ${trackingStr ? `(Guía: ${trackingStr})` : ''}`,
+                            detalleColor: 'text-blue-600',
+                            badge: 'Retiro',
+                            badgeClass: 'bg-blue-100 text-blue-700',
+                            icon: 'fa-store',
+                            iconColor: 'text-blue-600',
+                            iconBg: 'bg-blue-50',
+                            bgHover: 'hover:bg-blue-50/60',
+                            seccion: 'pedidos'
+                        });
+                    } else if (est.includes('despach') || est.includes('transito') || est.includes('tránsito') || est.includes('enviad') || (trackingStr && trackingStr !== 'Pendiente')) {
+                        countGuias++;
+                        alertas.push({
+                            tipo: 'guias',
+                            titulo: 'Pedido #' + nroPed,
+                            subtitulo: clienteStr,
+                            detalle: `<i class="fas fa-truck mr-1"></i> Despachado / En traslado ${trackingStr ? `(Guía: ${trackingStr})` : ''}`,
+                            detalleColor: 'text-purple-600',
+                            badge: 'En Ruta',
+                            badgeClass: 'bg-purple-100 text-purple-700',
+                            icon: 'fa-truck',
+                            iconColor: 'text-purple-600',
+                            iconBg: 'bg-purple-50',
+                            bgHover: 'hover:bg-purple-50/60',
+                            seccion: 'pedidos'
+                        });
+                    }
+                });
+            } catch(e) {
+                console.warn('⚠️ Error recopilando alertas de guías:', e);
+            }
+
+            // C) STOCK CRÍTICO (Inventario con stock <= 2 unidades)
+            try {
+                if (window.productosDBLocal) {
+                    Object.keys(window.productosDBLocal).forEach(docId => {
+                        const prod = window.productosDBLocal[docId];
+                        if (prod.estado === 'inactivo') return;
+
+                        const stockVal = prod.stock !== undefined ? Number(prod.stock) : (prod.cantidad !== undefined ? Number(prod.cantidad) : 99);
+                        if (!isNaN(stockVal) && stockVal <= 2) {
+                            countStock++;
+                            const esAgotado = stockVal <= 0;
+                            const codProd = prod.codigo || prod.sku || 'Item';
+                            const nomProd = prod.nombre || prod.titulo || 'Producto sin nombre';
+
+                            alertas.push({
+                                tipo: 'stock',
+                                titulo: codProd,
+                                subtitulo: nomProd,
+                                detalle: esAgotado ? `<i class="fas fa-ban mr-1"></i> Stock Agotado (0 unidades)` : `<i class="fas fa-boxes mr-1"></i> Stock crítico: solo ${stockVal} unidad${stockVal > 1 ? 'es' : ''}`,
+                                detalleColor: esAgotado ? 'text-red-600 font-semibold' : 'text-amber-600 font-semibold',
+                                badge: esAgotado ? 'Agotado' : 'Bajo Stock',
+                                badgeClass: esAgotado ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700',
+                                icon: esAgotado ? 'fa-ban' : 'fa-boxes',
+                                iconColor: esAgotado ? 'text-red-600' : 'text-amber-600',
+                                iconBg: esAgotado ? 'bg-red-50' : 'bg-amber-50',
+                                bgHover: esAgotado ? 'hover:bg-red-50/60' : 'hover:bg-amber-50/60',
+                                seccion: 'catalogo'
+                            });
+                        }
+                    });
+                }
+            } catch(e) {
+                console.warn('⚠️ Error recopilando alertas de stock:', e);
+            }
+
+            // Actualizar contadores
+            window._alertasCentroCache = alertas;
+            const elTodas = document.getElementById('count-alertas-todas');
+            const elCobros = document.getElementById('count-alertas-cobros');
+            const elGuias = document.getElementById('count-alertas-guias');
+            const elStock = document.getElementById('count-alertas-stock');
+
+            if (elTodas) elTodas.textContent = alertas.length;
+            if (elCobros) elCobros.textContent = countCobros;
+            if (elGuias) elGuias.textContent = countGuias;
+            if (elStock) elStock.textContent = countStock;
+
+            // Renderizar la lista
+            window.renderizarListaAlertas();
+
+            // Actualizar o crear badge rojo en la campana (#btn-campana)
+            const botonCampana = document.getElementById('btn-campana');
+            if (botonCampana) {
+                let badge = botonCampana.querySelector('.badge-campana');
+                if (!badge) {
+                    badge = document.createElement('span');
+                    badge.className = 'badge-campana absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold leading-none text-white transform translate-x-1/4 -translate-y-1/4 bg-red-600 rounded-full shadow-sm';
+                    botonCampana.appendChild(badge);
+                }
+
+                if (alertas.length > 0) {
+                    badge.textContent = alertas.length > 99 ? '99+' : alertas.length;
+                    badge.style.display = 'inline-flex';
+                } else {
+                    badge.style.display = 'none';
                 }
             }
-        }
-    });
+        };
 
-    // 5. Inyectar notificaciones en el menú desplegable
-    if (lista) {
-        lista.innerHTML = contadorVencidas > 0 ? notificacionesHTML : '<li class="p-4 text-gray-500 text-sm text-center">No hay cobros pendientes</li>';
-    }
+        // Mantener compatibilidad hacia atrás
+        window.actualizarNotificacionesCobranza = window.actualizarCentroAlertas;
 
-    // 6. Actualizar o crear el circulito rojo (badge) en la campana
-    const iconoCampana = document.querySelector('.fa-bell');
-    if (iconoCampana) {
-        const botonCampana = iconoCampana.parentElement;
-        let badge = botonCampana.querySelector('.badge-campana');
-        
-        if (!badge) {
-            // Crear el badge si no existe en el HTML
-            badge = document.createElement('span');
-            badge.className = 'badge-campana absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/4 -translate-y-1/4 bg-red-600 rounded-full';
-            botonCampana.appendChild(badge);
-        }
-        
-        if (contadorVencidas > 0) {
-            badge.textContent = contadorVencidas;
-            badge.style.display = 'inline-flex';
-        } else {
-            badge.style.display = 'none';
-        }
-    }
-};
+        // Asegurar que las alertas se actualicen automáticamente al cargar módulos
+        const originalCargarHistorial = window.cargarHistorialFacturas;
+        window.cargarHistorialFacturas = async function() {
+            if (typeof originalCargarHistorial === 'function') await originalCargarHistorial();
+            if (typeof window.actualizarCentroAlertas === 'function') window.actualizarCentroAlertas();
+        };
 
-// Asegurar que la función se ejecute al terminar de cargar la tabla
-const originalCargarHistorial = window.cargarHistorialFacturas;
-window.cargarHistorialFacturas = async function() {
-    await originalCargarHistorial();
-    window.actualizarNotificacionesCobranza();
-};
+        const originalCargarPedidos = window.cargarPedidos;
+        window.cargarPedidos = async function() {
+            if (typeof originalCargarPedidos === 'function') await originalCargarPedidos();
+            if (typeof window.actualizarCentroAlertas === 'function') window.actualizarCentroAlertas();
+        };
+
+        const originalCargarCatalogo = window.cargarCatalogoAdmin;
+        window.cargarCatalogoAdmin = async function() {
+            if (typeof originalCargarCatalogo === 'function') await originalCargarCatalogo();
+            if (typeof window.actualizarCentroAlertas === 'function') window.actualizarCentroAlertas();
+        };
 
         // ==========================================
         // 🚀 MOTOR DE ARRANQUE INICIAL

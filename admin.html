@@ -628,6 +628,11 @@
             white-space: pre-wrap !important;
         }
 
+        /* 🔔 BACKDROP DESKTOP DEFAULT HIDDEN */
+        #dropdown-notificaciones-backdrop {
+            display: none;
+        }
+
         /* =========================================================
            🚀 RESPONSIVE DESIGN TOTAL - iOS PWA & MOBILE (iPhone 15)
            ========================================================= */
@@ -1095,6 +1100,45 @@
                 flex-direction: column !important;
                 gap: 8px !important;
             }
+
+            /* 🔔 Centro de Alertas Multi-Módulo & Backdrop en Móvil (iPhone 15) */
+            #dropdown-notificaciones-backdrop {
+                position: fixed !important;
+                inset: 0 !important;
+                background: rgba(0, 0, 0, 0.45) !important;
+                z-index: 1099 !important;
+                backdrop-filter: blur(2px) !important;
+                -webkit-backdrop-filter: blur(2px) !important;
+            }
+
+            #dropdown-notificaciones-backdrop.hidden {
+                display: none !important;
+            }
+
+            #dropdown-notificaciones {
+                position: fixed !important;
+                top: calc(env(safe-area-inset-top, 0px) + 64px) !important;
+                left: 12px !important;
+                right: 12px !important;
+                width: auto !important;
+                max-width: calc(100vw - 24px) !important;
+                max-height: 75dvh !important;
+                border-radius: 16px !important;
+                box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22) !important;
+                z-index: 1100 !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                margin: 0 !important;
+            }
+
+            #dropdown-notificaciones.hidden {
+                display: none !important;
+            }
+
+            .alerta-tab-btn {
+                font-size: 11px !important;
+                padding: 6px 4px !important;
+            }
         }
 
         @media (min-width: 769px) and (max-width: 1024px) {
@@ -1367,22 +1411,104 @@
                         <i class="fas fa-shield-alt text-xl"></i>
                     </button>
                     
-                    <!-- 🔔 Notificaciones de Cobranza -->
+                    <!-- 🔔 Centro de Alertas Multi-Módulo & Notificaciones -->
                     <div class="relative" id="bell-container">
-                        <button id="btn-campana" class="relative hover:opacity-80 transition-opacity p-2 text-white" onclick="toggleNotificaciones()">
+                        <button id="btn-campana" class="relative hover:opacity-80 transition-opacity p-2 text-white" onclick="toggleNotificaciones()" title="Centro de Alertas">
                             <i class="fas fa-bell text-xl"></i>
-                            
                         </button>
-                        <div id="dropdown-notificaciones" class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl z-50 hidden text-gray-800 border border-gray-100">
-                            <div class="p-3 border-b border-gray-100 bg-gray-50 rounded-t-lg flex items-center justify-between">
-                                <h4 class="font-bold text-sm text-brandDark m-0"><i class="fas fa-exclamation-circle text-orange-500"></i> Cobranzas</h4>
-                                <button type="button" onclick="activarNotificacionesPushFCM(true)" class="text-xs text-brand hover:underline font-semibold flex items-center gap-1" title="Activar o verificar alertas Web Push">
-                                    <i class="fas fa-satellite-dish"></i> Web Push
+
+                        <!-- Backdrop para cerrar al tocar afuera en móvil -->
+                        <div id="dropdown-notificaciones-backdrop" class="hidden" onclick="toggleNotificaciones(false)"></div>
+
+                        <!-- Panel Flotante / Centro de Alertas -->
+                        <div id="dropdown-notificaciones" class="absolute right-0 mt-2 w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 hidden text-gray-800 overflow-hidden">
+                            <!-- CABECERA -->
+                            <div class="p-3 bg-gradient-to-r from-[#385723] to-[#49702e] text-white flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <i class="fas fa-bell text-yellow-300"></i>
+                                    <h4 class="font-bold text-sm m-0 font-['Oswald'] tracking-wide">Centro de Alertas</h4>
+                                    <span id="badge-fcm-status" class="text-[11px] px-2 py-0.5 rounded-full font-semibold bg-white/20 text-white flex items-center gap-1">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span> ⚪ Inactivo
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    <button type="button" onclick="toggleConfiguracionPush()" class="text-xs bg-white/20 hover:bg-white/30 text-white px-2.5 py-1 rounded-lg font-medium transition flex items-center gap-1 shadow-sm" title="Configurar preferencias de alerta">
+                                        <i class="fas fa-cog"></i> Configurar
+                                    </button>
+                                    <button type="button" onclick="toggleNotificaciones(false)" class="text-white/80 hover:text-white p-1 text-sm md:hidden" title="Cerrar">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- PANEL DESPLEGABLE DE PREFERENCIAS (FCM) -->
+                            <div id="fcm-preferencias-panel" class="hidden bg-gray-50 border-b border-gray-200 p-3 text-xs text-gray-700">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="font-bold text-gray-800 flex items-center gap-1">
+                                        <i class="fas fa-sliders-h text-[#385723]"></i> Preferencias Web Push
+                                    </span>
+                                    <span id="fcm-token-status" class="text-[10px] text-gray-500">FCM v10</span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2 mb-3">
+                                    <label class="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50">
+                                        <span class="text-gray-700 flex items-center gap-1"><i class="fas fa-shopping-bag text-blue-600"></i> Pedidos</span>
+                                        <input type="checkbox" id="pref-push-pedidos" class="push-pref-checkbox accent-[#385723]" checked onchange="guardarPreferenciaPush('pedidos', this.checked)">
+                                    </label>
+                                    <label class="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50">
+                                        <span class="text-gray-700 flex items-center gap-1"><i class="fas fa-truck text-purple-600"></i> Guías/Envíos</span>
+                                        <input type="checkbox" id="pref-push-guias" class="push-pref-checkbox accent-[#385723]" checked onchange="guardarPreferenciaPush('guias', this.checked)">
+                                    </label>
+                                    <label class="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50">
+                                        <span class="text-gray-700 flex items-center gap-1"><i class="fas fa-file-invoice-dollar text-orange-600"></i> Cobros/CxC</span>
+                                        <input type="checkbox" id="pref-push-cobros" class="push-pref-checkbox accent-[#385723]" checked onchange="guardarPreferenciaPush('cobros', this.checked)">
+                                    </label>
+                                    <label class="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50">
+                                        <span class="text-gray-700 flex items-center gap-1"><i class="fas fa-boxes text-red-600"></i> Stock Crítico</span>
+                                        <input type="checkbox" id="pref-push-stock" class="push-pref-checkbox accent-[#385723]" checked onchange="guardarPreferenciaPush('stock', this.checked)">
+                                    </label>
+                                    <label class="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 col-span-2">
+                                        <span class="text-gray-700 flex items-center gap-1"><i class="fas fa-chart-line text-green-600"></i> Alerta Cambio Tasa BCV</span>
+                                        <input type="checkbox" id="pref-push-tasaBCV" class="push-pref-checkbox accent-[#385723]" checked onchange="guardarPreferenciaPush('tasaBCV', this.checked)">
+                                    </label>
+                                </div>
+                                <div class="flex items-center gap-2 pt-1 border-t border-gray-200">
+                                    <button type="button" onclick="enviarNotificacionPruebaFCM()" class="flex-1 py-1.5 px-3 bg-[#385723] hover:bg-[#2d471b] text-white rounded-lg font-semibold text-xs flex items-center justify-center gap-1.5 shadow-sm transition">
+                                        <i class="fas fa-paper-plane"></i> Enviar notificación de prueba
+                                    </button>
+                                    <button type="button" onclick="activarNotificacionesPushFCM(true)" class="py-1.5 px-3 bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 rounded-lg font-semibold text-xs transition" title="Reconectar permisos Web Push">
+                                        <i class="fas fa-sync-alt"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- PESTAÑAS COMPACTAS -->
+                            <div class="flex border-b border-gray-200 bg-gray-50 p-1.5 gap-1 text-xs">
+                                <button type="button" class="alerta-tab-btn flex-1 py-1.5 px-2 rounded-lg font-bold text-center transition bg-white text-[#385723] shadow-sm border border-gray-200" data-filter="todas" onclick="filtrarAlertasCentro('todas')">
+                                    Todas (<span id="count-alertas-todas">0</span>)
+                                </button>
+                                <button type="button" class="alerta-tab-btn flex-1 py-1.5 px-2 rounded-lg font-medium text-center text-gray-600 hover:text-gray-900 transition" data-filter="cobros" onclick="filtrarAlertasCentro('cobros')">
+                                    Cobros (<span id="count-alertas-cobros">0</span>)
+                                </button>
+                                <button type="button" class="alerta-tab-btn flex-1 py-1.5 px-2 rounded-lg font-medium text-center text-gray-600 hover:text-gray-900 transition" data-filter="guias" onclick="filtrarAlertasCentro('guias')">
+                                    Envíos (<span id="count-alertas-guias">0</span>)
+                                </button>
+                                <button type="button" class="alerta-tab-btn flex-1 py-1.5 px-2 rounded-lg font-medium text-center text-gray-600 hover:text-gray-900 transition" data-filter="stock" onclick="filtrarAlertasCentro('stock')">
+                                    Stock (<span id="count-alertas-stock">0</span>)
                                 </button>
                             </div>
-                            <ul id="lista-notificaciones" class="max-h-64 overflow-y-auto p-0 m-0 list-none">
-                                <!-- JS inyectará facturas aquí -->
+
+                            <!-- LISTA DE ALERTAS MULTI-MÓDULO -->
+                            <ul id="lista-notificaciones" class="max-h-72 overflow-y-auto p-0 m-0 list-none divide-y divide-gray-100">
+                                <!-- JS inyectará las alertas aquí -->
                             </ul>
+
+                            <!-- FOOTER ACCIONES -->
+                            <div class="p-2 bg-gray-50 border-t border-gray-100 text-center flex items-center justify-between text-[11px] text-gray-500 px-3">
+                                <span>Toca una alerta para abrir su módulo</span>
+                                <button type="button" onclick="actualizarCentroAlertas(true)" class="text-[#385723] hover:underline font-semibold flex items-center gap-1">
+                                    <i class="fas fa-sync-alt text-[10px]"></i> Actualizar
+                                </button>
+                            </div>
                         </div>
                     </div>
 
