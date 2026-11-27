@@ -71,6 +71,11 @@
         touch-action: manipulation !important;
     }
 
+    html {
+        background: #385723 !important;
+        background-color: #385723 !important;
+    }
+
     body {
         -webkit-tap-highlight-color: transparent;
         overscroll-behavior-y: none;
@@ -86,26 +91,37 @@
         left: 0 !important;
         right: 0 !important;
         width: 100% !important;
-        height: calc(56px + var(--safe-top)) !important;
-        min-height: calc(56px + var(--safe-top)) !important;
-        max-height: calc(56px + var(--safe-top)) !important;
-        padding-top: var(--safe-top) !important;
-        padding-bottom: 0 !important;
+        height: calc(58px + var(--safe-top)) !important;
+        min-height: calc(58px + var(--safe-top)) !important;
+        max-height: calc(58px + var(--safe-top)) !important;
+        padding-top: calc(var(--safe-top) + 8px) !important;
+        padding-bottom: 10px !important;
         padding-left: max(var(--safe-left), 14px) !important;
         padding-right: max(var(--safe-right), 14px) !important;
         background: #385723 !important;
         background-color: #385723 !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
         display: flex !important;
         align-items: center !important;
         justify-content: space-between !important;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15) !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18) !important;
         z-index: 50 !important;
+        border: none !important;
+        box-sizing: border-box !important;
+    }
+
+    header::before,
+    header::after {
+        display: none !important;
+        content: none !important;
     }
 
     header.bg-brand h1 {
         font-size: 14.5px !important;
         letter-spacing: 0.5px !important;
         line-height: 1.2 !important;
+        margin: 0 !important;
     }
 
     header.bg-brand span.text-xs {
@@ -115,6 +131,26 @@
     header.bg-brand a[href="index.html"],
     header.bg-brand a[href="tienda.html"] {
         display: none !important;
+    }
+
+    header .flex.items-center.gap-6 {
+        gap: 8px !important;
+    }
+
+    header .flex.items-center.gap-4 {
+        gap: 8px !important;
+    }
+
+    header button[onclick*="cerrarSesion"] {
+        padding: 4px 8px !important;
+        font-size: 11px !important;
+        min-height: 30px !important;
+    }
+
+    header button[onclick*="abrirModalAuditoria"] {
+        margin-right: 0 !important;
+        padding: 6px !important;
+        min-height: 30px !important;
     }
 
     /* 🚫 Ocultar botón hamburguesa del header superior en móvil */
@@ -128,7 +164,7 @@
     #ticker-tasas-container {
         display: flex !important;
         position: fixed !important;
-        top: calc(56px + var(--safe-top)) !important;
+        top: calc(58px + var(--safe-top)) !important;
         left: 0 !important;
         right: 0 !important;
         width: 100% !important;

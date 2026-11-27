@@ -637,7 +637,16 @@
                 box-sizing: border-box !important;
             }
 
-            html, body {
+            /* 1. Reset Global y Prevención de Desbordamiento: fondo sólido #385723 en html para Dynamic Island */
+            html {
+                background: #385723 !important;
+                background-color: #385723 !important;
+                max-width: 100vw !important;
+                overflow-x: hidden !important;
+                box-sizing: border-box !important;
+            }
+
+            body {
                 max-width: 100vw !important;
                 overflow-x: hidden !important;
                 box-sizing: border-box !important;
@@ -684,7 +693,7 @@
                 line-height: 1.25 !important;
             }
 
-            /* 4. Header Superior sólido #385723 integrado con Dynamic Island */
+            /* 4. Header Superior sólido #385723 integrado con Dynamic Island (sin blur ni degradados blancos) */
             header,
             header.bg-brand,
             .h-\[80px\].bg-brand {
@@ -693,25 +702,37 @@
                 left: 0 !important;
                 right: 0 !important;
                 width: 100% !important;
-                height: calc(56px + env(safe-area-inset-top, 0px)) !important;
-                min-height: calc(56px + env(safe-area-inset-top, 0px)) !important;
-                max-height: calc(56px + env(safe-area-inset-top, 0px)) !important;
-                padding-top: env(safe-area-inset-top, 0px) !important;
-                padding-bottom: 0 !important;
+                height: calc(58px + env(safe-area-inset-top, 0px)) !important;
+                min-height: calc(58px + env(safe-area-inset-top, 0px)) !important;
+                max-height: calc(58px + env(safe-area-inset-top, 0px)) !important;
+                padding-top: calc(env(safe-area-inset-top, 0px) + 8px) !important;
+                padding-bottom: 10px !important;
                 padding-left: max(env(safe-area-inset-left, 0px), 14px) !important;
                 padding-right: max(env(safe-area-inset-right, 0px), 14px) !important;
                 background: #385723 !important;
                 background-color: #385723 !important;
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
                 display: flex !important;
                 align-items: center !important;
                 justify-content: space-between !important;
-                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15) !important;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18) !important;
                 z-index: 50 !important;
+                border: none !important;
+                box-sizing: border-box !important;
+            }
+
+            header::before,
+            header::after {
+                display: none !important;
+                content: none !important;
             }
 
             header h1 {
                 font-size: 14.5px !important;
                 letter-spacing: 0.5px !important;
+                line-height: 1.2 !important;
+                margin: 0 !important;
             }
 
             header span.text-xs {
@@ -723,6 +744,26 @@
                 display: none !important;
             }
 
+            header .flex.items-center.gap-6 {
+                gap: 8px !important;
+            }
+
+            header .flex.items-center.gap-4 {
+                gap: 8px !important;
+            }
+
+            header button[onclick*="cerrarSesion"] {
+                padding: 4px 8px !important;
+                font-size: 11px !important;
+                min-height: 30px !important;
+            }
+
+            header button[onclick*="abrirModalAuditoria"] {
+                margin-right: 0 !important;
+                padding: 6px !important;
+                min-height: 30px !important;
+            }
+
             /* 5. Ocultar botón hamburguesa del header superior (la navegación móvil vive abajo) */
             #btn-header-hamburger,
             header button[onclick*="toggleSidebarMobile"],
@@ -730,11 +771,11 @@
                 display: none !important;
             }
 
-            /* 6. Barra Ticker de Tasas BCV y Brechas (compacta, fija bajo el header) */
+            /* 6. Barra Ticker de Tasas BCV y Brechas (compacta, fija y pegada bajo el header sin líneas) */
             #ticker-tasas-container {
                 display: flex !important;
                 position: fixed !important;
-                top: calc(56px + env(safe-area-inset-top, 0px)) !important;
+                top: calc(58px + env(safe-area-inset-top, 0px)) !important;
                 left: 0 !important;
                 right: 0 !important;
                 width: 100% !important;
