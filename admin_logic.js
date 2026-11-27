@@ -15268,12 +15268,24 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
         };
 
         /**
+         * Valida si una cadena corresponde a un RIF formal y útil para agrupación
+         */
+        window.esRIFValido = function(rifBruto) {
+            if (!rifBruto || typeof rifBruto !== 'string') return false;
+            const limpio = rifBruto.replace(/[-\s.]/g, '').toUpperCase().trim();
+            if (!limpio || limpio.length < 5) return false;
+            if (['NA', 'ND', 'SN', 'SR', '0', '00000000', 'NOAPLICA', 'SINRIF'].includes(limpio)) return false;
+            return /^[JVEGPC0-9][0-9]{4,10}[0-9A-Z]?$/.test(limpio);
+        };
+
+        /**
          * Formatea visualmente el RIF agregando el guion estándar al final
          * (Ej: J070017368 -> J07001736-8)
          */
         window.formatearRIFVisual = function(rifNormalizado) {
             if (!rifNormalizado) return 'N/A';
             const limpio = String(rifNormalizado).replace(/[-\s.]/g, '').toUpperCase().trim();
+            if (!window.esRIFValido(limpio)) return 'N/A';
             if (limpio.length >= 3) {
                 return `${limpio.slice(0, -1)}-${limpio.slice(-1)}`;
             }
@@ -15281,10 +15293,69 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
         };
 
         /**
+         * Normaliza el nombre de un cliente para deduplicación:
+         * Pasa a mayúsculas, elimina acentos, signos de puntuación, espacios dobles
+         * y remueve sufijos societarios (S.A, C.A, S.R.L, COMPANIA ANONIMA, etc.)
+         */
+        window.normalizarNombreCliente = function(nombre) {
+            if (!nombre || typeof nombre !== 'string') return '';
+            let limpio = nombre.toUpperCase();
+
+            // 1. Eliminar acentos y diacríticos
+            limpio = limpio.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+            // 2. Eliminar sufijos y denominaciones societarias comunes
+            limpio = limpio.replace(/\b(COMPAÑIA\s+ANONIMA|COMPANIA\s+ANONIMA|SOCIEDAD\s+ANONIMA|SOCIEDAD\s+DE\s+RESPONSABILIDAD\s+LIMITADA)\b/gi, ' ');
+            limpio = limpio.replace(/\b(S\.?\s*A\.?\s*S\.?|S\.?\s*R\.?\s*L\.?|S\.?\s*A\.?|C\.?\s*A\.?|C\.?\s*P\.?\s*A\.?|E\.?\s*I\.?\s*R\.?\s*L\.?)\b/gi, ' ');
+
+            // 3. Eliminar signos de puntuación y símbolos
+            limpio = limpio.replace(/[.,\-_/\\()"'’`´#;:!¡?¿]/g, ' ');
+
+            // 4. Colapsar espacios múltiples y trim
+            return limpio.replace(/\s+/g, ' ').trim();
+        };
+
+        /**
+         * Busca la tasa BCV más cercana disponible en caché o Firestore cuando falta la tasa de la fecha exacta
+         */
+        window.obtenerTasaBCVMasCercana = function(fechaISO) {
+            if (!window.bcvHistoricoCache) return null;
+            const fechas = Object.keys(window.bcvHistoricoCache).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k));
+            if (fechas.length === 0) return null;
+
+            if (!fechaISO || !/^\d{4}-\d{2}-\d{2}$/.test(fechaISO)) {
+                fechas.sort();
+                const ult = fechas[fechas.length - 1];
+                const t = Number(window.bcvHistoricoCache[ult]?.tasa);
+                return (t && t > 1 && t !== 46.50) ? t : null;
+            }
+
+            const targetTime = new Date(fechaISO + 'T12:00:00Z').getTime();
+            let mejorTasa = null;
+            let menorDiff = Infinity;
+
+            for (const f of fechas) {
+                const item = window.bcvHistoricoCache[f];
+                const t = Number(item?.tasa);
+                if (!t || t <= 1 || t === 46.50) continue;
+                const timeF = new Date(f + 'T12:00:00Z').getTime();
+                const diff = Math.abs(targetTime - timeF);
+                if (diff < menorDiff) {
+                    menorDiff = diff;
+                    mejorTasa = t;
+                }
+            }
+
+            return mejorTasa;
+        };
+
+        /**
          * Recomputa las métricas de agregación global y el Leaderboard:
          * 1. Filtro estricto: Exclusivamente Facturas Pagadas y Despachadas (Cero duplicidad de Pedidos/Cotizaciones).
-         * 2. Normalización multimoneda (Bs a USD) con la API BCV.
-         * 3. Ticket Promedio Global (AOV): Total Facturado USD ÷ Total Facturas Emitidas.
+         * 2. Normalización multimoneda (Bs a USD) con regla anti-inflación:
+         *    - Jamás divide por 1 ni por 46.50.
+         *    - Utiliza tasa oficial histórica, tasa cercana o tasa ticker en vivo (marcando advertencia).
+         * 3. Deduplicación inteligente: Fusión cruzada de clientes por Nombre Normalizado + RIF.
          * 4. Ranking (Leaderboard): Agrupa por cliente, calcula LTV y ordena de Mayor a Menor.
          */
         window.recomputarInteligenciaVentasGlobal = async function() {
@@ -15309,6 +15380,27 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
             }
 
             try {
+                // 0. Precarga optimizada de colección tasas_bcv en caché para resoluciones ultra-rápidas
+                try {
+                    if (typeof db !== 'undefined') {
+                        const snapTasas = await getDocs(collection(db, "tasas_bcv"));
+                        snapTasas.forEach(dSnap => {
+                            const d = dSnap.data();
+                            const fKey = dSnap.id;
+                            const val = Number(d.usd);
+                            if (val && val > 1 && val !== 46.50) {
+                                window.bcvHistoricoCache[fKey] = {
+                                    tasa: val,
+                                    fuente: d.fuente || 'Firestore tasas_bcv',
+                                    esFallback: false
+                                };
+                            }
+                        });
+                    }
+                } catch (eTasas) {
+                    console.warn("[LTV] Precarga de tasas_bcv omitida:", eTasas?.message);
+                }
+
                 let transaccionesAnalizar = [];
 
                 // 1. Obtener Facturas Reales de Firestore
@@ -15339,6 +15431,7 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
                             moneda_pago: moneda,
                             monto_facturado: montoFact,
                             tasa_cambio_dia: tasaRegistrada,
+                            tasaBCV: fac.tasaBCV || null,
                             estatus: 'Pagado y Despachado',
                             items: itemsNombres,
                             timestamp: fac.timestamp || 0,
@@ -15379,23 +15472,60 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
                 console.info(`[Inteligencia Ventas Global] Total registros: ${transaccionesAnalizar.length} | Descartados (Pedidos / Cotizaciones): ${descartadosCount} | Facturas Auditadas: ${facturasValidas.length}`);
 
                 // =========================================================================
-                // ⚡ REGLA 2: NORMALIZACIÓN CAMBIARIA ASÍNCRONA CON TASA BCV
+                // ⚡ REGLA 2: NORMALIZACIÓN CAMBIARIA MULTIMONEDA ESTRICTA (ANTI-INFLACIÓN)
+                // Usa exactamente la misma función de conversión que el CRM individual
                 // =========================================================================
                 let totalVentasUSD = 0;
                 await Promise.all(facturasValidas.map(async (fac) => {
                     const moneda = String(fac.moneda_pago || fac.moneda || 'USD').toUpperCase().trim();
                     const montoBruto = parseFloat(fac.monto_facturado ?? fac.monto ?? fac.total) || 0;
+                    const esBolivares = (moneda === 'VES' || moneda === 'BS' || moneda === 'BS.' || moneda.includes('BOLIVAR'));
 
-                    if (moneda === 'VES' || moneda === 'BS') {
+                    if (esBolivares) {
                         fac.moneda_pago = 'VES';
-                        const tasa = await window.obtenerTasaHistoricaBCV(fac.fecha);
-                        fac.tasa_cambio_dia = tasa;
-                        const tasaNum = Number(tasa) || 1;
-                        fac.monto_usd = Math.round((tasaNum > 0 ? (montoBruto / tasaNum) : montoBruto) * 100) / 100;
+                        const fechaKey = window.formatearFechaParaAPI(fac.fecha);
+                        
+                        // 1. Tasa oficial histórica de la fecha (Factura, Caché, Firestore tasas_bcv, Días hábiles, API Crom Studio)
+                        let tasaOficial = await window.obtenerTasaHistoricaBCV(fac.fecha, fac);
+                        let esProvisional = false;
+
+                        // 2. Si no tiene tasa exacta, buscar la tasa BCV más cercana disponible
+                        if (!tasaOficial || !window.esTasaValida(tasaOficial, fechaKey)) {
+                            tasaOficial = window.obtenerTasaBCVMasCercana(fechaKey);
+                            if (tasaOficial && Number(tasaOficial) > 1) {
+                                esProvisional = true;
+                            }
+                        }
+
+                        // 3. Si aún no hay tasa, usar tasa en vivo del panel superior como referencia provisional
+                        if (!tasaOficial || Number(tasaOficial) <= 1) {
+                            const tasaViva = parseFloat(window.tasaVivaBCV ?? window._ultimoUsdBcv ?? window.tasaBCVOficial);
+                            if (tasaViva && tasaViva > 1) {
+                                tasaOficial = tasaViva;
+                                esProvisional = true;
+                            }
+                        }
+
+                        // 4. Regla anti-inflación: Jamás dividir por 1, ni por 46.50
+                        if (tasaOficial && Number(tasaOficial) > 1 && Number(tasaOficial) !== 46.50) {
+                            fac.tasa_cambio_dia = Number(tasaOficial);
+                            fac.monto_usd = Math.round((montoBruto / fac.tasa_cambio_dia) * 100) / 100;
+                            fac.esTasaProvisional = esProvisional;
+                            fac.sinTasaHistorica = false;
+                        } else {
+                            // Sin tasa en ninguna fuente: excluir temporalmente de la sumatoria USD
+                            fac.tasa_cambio_dia = null;
+                            fac.monto_usd = 0;
+                            fac.esTasaProvisional = false;
+                            fac.sinTasaHistorica = true;
+                        }
                     } else {
+                        // Transacciones en USD
                         fac.moneda_pago = 'USD';
                         fac.monto_usd = montoBruto;
                         fac.tasa_cambio_dia = 1.00;
+                        fac.esTasaProvisional = false;
+                        fac.sinTasaHistorica = false;
                     }
                     totalVentasUSD += (fac.monto_usd || 0);
                 }));
@@ -15409,38 +15539,119 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
                     : 0;
 
                 // =========================================================================
-                // 📊 AGRUPACIÓN POR CLIENTE Y RANKING (LEADERBOARD LTV DESCENDENTE)
-                // Sanitización y normalización estricta por RIF para evitar duplicidad
+                // 📊 REGLA 3: FUSIÓN INTELIGENTE DE CLIENTES (DEDUPLICACIÓN NOMBRE + RIF)
                 // =========================================================================
-                const agrupadoClientes = facturasValidas.reduce((acc, fac) => {
+                const mapaNombreARif = {};
+                const mapaRifADatos = {};
+
+                // 1. Recorrer directorio de clientes registrado en Firestore
+                try {
+                    const snapCli = await getDocs(collection(db, "clientes"));
+                    snapCli.forEach(docSnap => {
+                        const cli = docSnap.data();
+                        const nomNorm = window.normalizarNombreCliente(cli.nombre);
+                        const rifNorm = window.normalizarRIF(cli.rif);
+                        if (nomNorm && window.esRIFValido(rifNorm)) {
+                            mapaNombreARif[nomNorm] = rifNorm;
+                            if (!mapaRifADatos[rifNorm]) {
+                                mapaRifADatos[rifNorm] = {
+                                    clienteOficial: (cli.nombre || '').trim(),
+                                    rifVisual: window.formatearRIFVisual(rifNorm),
+                                    telefono: cli.telefono || ''
+                                };
+                            }
+                        }
+                    });
+                } catch (eCli) {
+                    console.warn("Aviso al leer clientes para mapa de deduplicación LTV:", eCli);
+                }
+
+                // 2. Enriquecer con facturas que sí tengan RIF válido
+                facturasValidas.forEach(fac => {
+                    const nomNorm = window.normalizarNombreCliente(fac.cliente);
                     const rifNorm = window.normalizarRIF(fac.rif);
+                    if (nomNorm && window.esRIFValido(rifNorm)) {
+                        if (!mapaNombreARif[nomNorm]) {
+                            mapaNombreARif[nomNorm] = rifNorm;
+                        }
+                        if (!mapaRifADatos[rifNorm]) {
+                            mapaRifADatos[rifNorm] = {
+                                clienteOficial: (fac.cliente || '').trim(),
+                                rifVisual: window.formatearRIFVisual(rifNorm),
+                                telefono: fac.telefono || ''
+                            };
+                        } else if (!mapaRifADatos[rifNorm].telefono && fac.telefono) {
+                            mapaRifADatos[rifNorm].telefono = fac.telefono;
+                        }
+                    }
+                });
+
+                // 3. Agrupación unificada y deduplicada
+                const agrupadoClientes = facturasValidas.reduce((acc, fac) => {
+                    let rifNorm = window.normalizarRIF(fac.rif);
+                    const nomNorm = window.normalizarNombreCliente(fac.cliente);
                     
-                    // Si tiene un RIF válido, la clave única de agrupación es el RIF sanitizado;
-                    // de lo contrario, se agrupa por nombre normalizado.
-                    const groupKey = (rifNorm && rifNorm !== 'NA' && rifNorm !== 'SN')
-                        ? rifNorm
-                        : (fac.cliente || 'Consumidor Final').trim().toLowerCase();
+                    // Si la factura no tiene RIF válido, buscar en el mapa si coincide por nombre normalizado
+                    if (!window.esRIFValido(rifNorm)) {
+                        if (nomNorm && mapaNombreARif[nomNorm]) {
+                            rifNorm = mapaNombreARif[nomNorm];
+                        } else {
+                            rifNorm = null;
+                        }
+                    }
+
+                    // Clave de agrupación única:
+                    // Si tiene RIF válido (directo o deducido por nombre), la clave es el RIF sanitizado (ej: "J003478520").
+                    // Si no tiene RIF en absoluto, la clave es el nombre normalizado.
+                    const groupKey = rifNorm ? rifNorm : `CLI_${nomNorm || 'CONSUMIDOR_FINAL'}`;
 
                     if (!acc[groupKey]) {
+                        let nombreVisible = (fac.cliente || 'Consumidor Final').trim();
+                        let rifVisible = rifNorm ? window.formatearRIFVisual(rifNorm) : 'N/A';
+                        let telefonoVisible = fac.telefono || 'N/A';
+
+                        if (rifNorm && mapaRifADatos[rifNorm]) {
+                            if (mapaRifADatos[rifNorm].clienteOficial) nombreVisible = mapaRifADatos[rifNorm].clienteOficial;
+                            if (mapaRifADatos[rifNorm].rifVisual) rifVisible = mapaRifADatos[rifNorm].rifVisual;
+                            if (mapaRifADatos[rifNorm].telefono) telefonoVisible = mapaRifADatos[rifNorm].telefono;
+                        }
+
                         acc[groupKey] = {
-                            cliente: (fac.cliente || 'Consumidor Final').trim(),
-                            rif: window.formatearRIFVisual(rifNorm || fac.rif),
+                            cliente: nombreVisible,
+                            rif: rifVisible,
                             rifNormalizado: rifNorm,
-                            telefono: fac.telefono || 'N/A',
+                            telefono: telefonoVisible,
                             facturasEmitidas: 0,
                             totalComprado: 0,
                             ticketPromedio: 0,
-                            ultimoTimestamp: fac.timestamp || 0
+                            ultimoTimestamp: fac.timestamp || 0,
+                            tieneTasaProvisional: false,
+                            sinTasaHistorica: false
                         };
                     } else {
-                        // Utiliza el último "Nombre de Cliente" registrado cronológicamente para ese RIF
+                        // Si encontramos un nombre más completo o un timestamp más reciente, actualizar datos de contacto
                         if ((fac.timestamp || 0) >= (acc[groupKey].ultimoTimestamp || 0)) {
-                            acc[groupKey].cliente = (fac.cliente || acc[groupKey].cliente).trim();
+                            if (fac.cliente && fac.cliente.length > acc[groupKey].cliente.length) {
+                                acc[groupKey].cliente = fac.cliente.trim();
+                            }
                             acc[groupKey].ultimoTimestamp = fac.timestamp || 0;
                             if (fac.telefono && fac.telefono !== 'N/A') {
                                 acc[groupKey].telefono = fac.telefono;
                             }
                         }
+                    }
+
+                    // Si el registro actual tenía RIF 'N/A' y ahora tenemos RIF válido, actualizarlo
+                    if (rifNorm && (acc[groupKey].rif === 'N/A' || !acc[groupKey].rif)) {
+                        acc[groupKey].rif = window.formatearRIFVisual(rifNorm);
+                        acc[groupKey].rifNormalizado = rifNorm;
+                    }
+
+                    if (fac.esTasaProvisional) {
+                        acc[groupKey].tieneTasaProvisional = true;
+                    }
+                    if (fac.sinTasaHistorica) {
+                        acc[groupKey].sinTasaHistorica = true;
                     }
 
                     acc[groupKey].facturasEmitidas += 1;
@@ -15564,6 +15775,12 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
 
                 const safeCliente = SecuritySanitizer.escapeHtml(cli.cliente);
                 const safeRif = SecuritySanitizer.escapeHtml(cli.rif || 'N/A');
+                let advertenciaBadge = '';
+                if (cli.tieneTasaProvisional) {
+                    advertenciaBadge = '<span title="Cálculo provisional: algunas facturas en Bs. usaron tasa BCV referencial" style="cursor: help; color: #d97706; font-size: 13px; margin-left: 4px;">⚠️</span>';
+                } else if (cli.sinTasaHistorica) {
+                    advertenciaBadge = '<span title="Facturas en Bs. excluidas temporalmente por falta de tasa histórica" style="cursor: help; color: #dc2626; font-size: 13px; margin-left: 4px;">⚠️</span>';
+                }
 
                 return `
                     <tr style="${rowBg} border-bottom: 1px solid #f1f5f9; transition: background 0.15s;" onmouseover="this.style.background='#eef3f0'" onmouseout="this.style.background='${posicion === 1 ? '#eef3f0' : (posicion === 2 ? '#fbfdf9' : (posicion === 3 ? '#fbfaf9' : 'white'))}'">
@@ -15574,6 +15791,7 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
                             <div style="font-weight: 700; color: #1e293b; font-size: 13.5px; display: flex; align-items: center; gap: 6px;">
                                 ${safeCliente}
                                 ${posicion === 1 ? '<span style="font-size: 10px; background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; padding: 1px 6px; border-radius: 4px; font-weight: 800;">LÍDER LTV</span>' : ''}
+                                ${advertenciaBadge}
                             </div>
                             <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
                                 RIF: ${safeRif}
