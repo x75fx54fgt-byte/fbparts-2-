@@ -15,9 +15,20 @@
         });
     </script>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 📱 PWA & iOS Safari Mobile-First Meta Tags (iPhone 15 Optimized) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="F&B Admin" />
+    <meta name="theme-color" content="#385723" />
+    <link rel="manifest" href="manifest-admin.json" />
+    <link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="img/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="img/icon-512.png" />
     <title>Panel de Administración | F&B Parts</title>
-    <link rel="icon" type="image/png" href="img/favicon.png">
+    <link rel="icon" type="image/png" href="img/icon-192.png">
+    <link rel="stylesheet" href="styles-mobile-admin.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -864,13 +875,18 @@
             <!-- HEADER SUPERIOR LIMPIO -->
             <header class="h-[80px] bg-brand text-white flex items-center justify-between px-8 shadow-md shrink-0 z-10 transition-all duration-300">
                 <div class="flex items-center gap-4">
-                    <button onclick="toggleSidebar()" class="text-white hover:bg-white/20 w-10 h-10 flex items-center justify-center rounded-lg transition" title="Ocultar/Mostrar Menú">
+                    <button onclick="toggleSidebarMobile()" class="text-white hover:bg-white/20 w-10 h-10 flex items-center justify-center rounded-lg transition" title="Ocultar/Mostrar Menú">
                         <i class="fas fa-bars text-xl"></i>
                     </button>
                     <div>
                         <h1 class="text-xl font-bold tracking-widest uppercase">Panel de Control Interno</h1>
                         <span class="text-xs text-green-100 opacity-90 uppercase tracking-widest font-semibold">Logística, Clientes y Cotizaciones</span>
                     </div>
+                    <!-- 💵 Pill Colapsable BCV en Móvil (Ahorro de espacio vertical) -->
+                    <button type="button" id="btn-toggle-bcv-mobile" onclick="toggleBcvMarqueeMobile()" title="Ver/Ocultar Tasas BCV">
+                        <i class="fas fa-chart-line text-green-300"></i>
+                        <span>Tasas BCV</span>
+                    </button>
                 </div>
                 
                 <div class="flex items-center gap-6">
@@ -6027,5 +6043,101 @@
         </div> <!-- Cierre Lienzo Brochure -->
         </div> <!-- Cierre Contenedor Interno Modal -->
     </div> <!-- Cierre Modal Brochure Corporativo -->
+
+    <!-- 📱 BACKDROP OSCURO PARA SIDEBAR MÓVIL (CIERRA MENÚ AL TOCAR AFUERA) -->
+    <div id="sidebar-backdrop" onclick="toggleSidebarMobile(false)"></div>
+
+    <!-- 📱 BOTTOM NAVIGATION BAR FIJA (iOS & MÓVIL) -->
+    <nav id="mobile-bottom-nav">
+        <button type="button" class="bottom-nav-item active" data-tab="pedidos" onclick="mostrarPestanaMobile('pedidos', this)">
+            <i class="fas fa-box"></i>
+            <span>Pedidos</span>
+        </button>
+        <button type="button" class="bottom-nav-item" data-tab="dashboard" onclick="mostrarPestanaMobile('dashboard', this)">
+            <i class="fas fa-chart-pie"></i>
+            <span>Métricas</span>
+        </button>
+        <button type="button" class="bottom-nav-item" data-tab="cotizaciones" onclick="mostrarPestanaMobile('cotizaciones', this)">
+            <i class="fas fa-file-invoice-dollar"></i>
+            <span>Cotizar</span>
+        </button>
+        <button type="button" class="bottom-nav-item" data-tab="catalogo" onclick="mostrarPestanaMobile('catalogo', this)">
+            <i class="fas fa-tags"></i>
+            <span>Stock</span>
+        </button>
+        <button type="button" class="bottom-nav-item" onclick="toggleSidebarMobile()">
+            <i class="fas fa-bars"></i>
+            <span>Más</span>
+        </button>
+    </nav>
+
+    <!-- ⚙️ LÓGICA DE CONTROL PWA Y ERGONOMÍA MÓVIL (iOS) -->
+    <script>
+        // 1. Registro del Service Worker PWA para iOS y Mobile
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw-admin.js')
+                    .then(reg => console.log('✅ [PWA Admin] Service Worker activo:', reg.scope))
+                    .catch(err => console.warn('⚠️ [PWA Admin] Aviso registro SW:', err));
+            });
+        }
+
+        // 2. Navegación fluida móvil sincronizada con el panel
+        window.mostrarPestanaMobile = function(tabId, navBtn) {
+            document.querySelectorAll('.bottom-nav-item').forEach(btn => btn.classList.remove('active'));
+            if (navBtn) navBtn.classList.add('active');
+
+            const sidebarBtn = document.querySelector(`.admin-tabs-sidebar button[onclick*="'${tabId}'"]`);
+            if (window.mostrarPestana) {
+                window.mostrarPestana(tabId, sidebarBtn || navBtn);
+            }
+
+            window.toggleSidebarMobile(false);
+
+            const mainEl = document.querySelector('main');
+            if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        // 3. Alternar menú lateral móvil con backdrop
+        window.toggleSidebarMobile = function(forzarEstado) {
+            if (window.innerWidth > 768) {
+                if (window.toggleSidebar) window.toggleSidebar();
+                return;
+            }
+            const abierto = document.body.classList.contains('mobile-sidebar-open');
+            const nuevoEstado = (forzarEstado !== undefined) ? forzarEstado : !abierto;
+            if (nuevoEstado) {
+                document.body.classList.add('mobile-sidebar-open');
+            } else {
+                document.body.classList.remove('mobile-sidebar-open');
+            }
+        };
+
+        // 4. Alternar colapso de la barra BCV en móvil
+        window.toggleBcvMarqueeMobile = function() {
+            const ticker = document.getElementById('ticker-tasas-container');
+            if (ticker) {
+                ticker.classList.toggle('bcv-collapsed');
+            }
+        };
+
+        // 5. Sincronizar Bottom Nav si se cambia pestaña desde el código o sidebar
+        window.addEventListener('DOMContentLoaded', () => {
+            const _origMostrarPestana = window.mostrarPestana;
+            if (_origMostrarPestana) {
+                window.mostrarPestana = function(id, btnElement) {
+                    _origMostrarPestana(id, btnElement);
+                    document.querySelectorAll('.bottom-nav-item').forEach(btn => {
+                        if (btn.getAttribute('data-tab') === id) {
+                            btn.classList.add('active');
+                        } else if (btn.getAttribute('data-tab')) {
+                            btn.classList.remove('active');
+                        }
+                    });
+                    window.toggleSidebarMobile(false);
+                };
+            }
+        });
+    </script>
 </body>
 </html>

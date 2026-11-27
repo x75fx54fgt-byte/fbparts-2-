@@ -1,0 +1,31 @@
+{
+  "name": "F&B Parts - Panel Administrativo",
+  "short_name": "F&B Admin",
+  "description": "Sistema administrativo, logística de envíos y cotizaciones de Inversiones FB Parts C.A.",
+  "start_url": "./admin.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#385723",
+  "background_color": "#eef3f0",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "img/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "img/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "img/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
