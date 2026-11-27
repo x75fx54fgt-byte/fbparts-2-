@@ -1035,8 +1035,11 @@ export async function ejecutarRastreoSecuencial(forzar = false) {
             tarea.guia.requiereCaptcha = normalizado.requiereCaptcha;
             tarea.guia.urlRastreo = resultadoPortal?.url || (carrier ? construirUrlRastreo(carrier, numGuia) : '');
 
-            // Contadores
-            if (normalizado.estado === ESTADOS_ESTANDAR.ENTREGADO) entregadasNuevas++;
+            // Contadores y marca de entregado
+            if (normalizado.estado === ESTADOS_ESTANDAR.ENTREGADO) {
+                tarea.guia.entregado = true;
+                entregadasNuevas++;
+            }
             if (normalizado.estado === ESTADOS_ESTANDAR.NOVEDAD) novedadesDetectadas++;
             if (normalizado.requiereCaptcha) captchasRequeridos++;
 
@@ -1099,7 +1102,7 @@ export async function ejecutarRastreoSecuencial(forzar = false) {
             // Regla B: Solo marcar como 'Entregado' si el 100% de las guías de ENTREGA AL CLIENTE están entregadas
             // (Si solo tiene guías de importación y ninguna de entrega cliente, NUNCA se marca 'Entregado')
             if (guiasEntregaCliente.length > 0) {
-                const todasClienteEntregadas = guiasEntregaCliente.every(g => (g.estadoRastreo || '').toUpperCase() === ESTADOS_ESTANDAR.ENTREGADO);
+                const todasClienteEntregadas = guiasEntregaCliente.every(g => g.entregado === true || (g.estadoRastreo || '').toUpperCase() === ESTADOS_ESTANDAR.ENTREGADO);
                 if (todasClienteEntregadas && estadoActualPedido !== 'entregado') {
                     camposActualizar.estado = 'Entregado';
                     camposActualizar.fechaEntrega = new Date().toLocaleDateString('es-VE');
