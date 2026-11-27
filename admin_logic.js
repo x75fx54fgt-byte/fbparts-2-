@@ -174,10 +174,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 
         /**
          * 🔑 VAPID KEY PÚBLICA DE FIREBASE CLOUD MESSAGING
-         * Reemplaza 'PEGA_AQUI_TU_VAPID_KEY' por tu clave pública generada en:
-         * Firebase Console > Configuración del Proyecto > Cloud Messaging > Certificados Web Push > Par de claves
+         * Clave pública oficial configurada para Web Push de F&B Parts
          */
-        const FCM_VAPID_KEY = 'PEGA_AQUI_TU_VAPID_KEY';
+        const FCM_VAPID_KEY = 'BPBIMf3Y78bO1oRVlqUMjJVeXPiRQotxJ3fKfGJprwGNd5JqitKMJ456NBh_dzyvd459qLCO_sgcwPw7Lt4fioU';
 
         let messagingInstance = null;
 
