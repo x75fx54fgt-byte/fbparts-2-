@@ -12,8 +12,8 @@ service cloud.firestore {
     //    - precio: number (required)
     //    - categoria, imagen, stock, etc.
     //
-    // 2. categorias / configuracion:
-    //    - Categorías de catálogo y configuración de tasas (BCV/EUR)
+    // 2. categorias / configuracion / tasas_bcv:
+    //    - Categorías de catálogo, configuración general e histórico de tasas oficiales BCV (USD/EUR)
     //
     // 3. web_destacados (Mini-CMS & Ofertas Black Friday):
     //    - nombre: string, precioRegular: number, precioOferta, mostrar_en_destacados: bool
@@ -72,6 +72,15 @@ service cloud.firestore {
     match /configuracion/{docId} {
       allow read: if true;
       allow write: if isAuthenticated();
+    }
+
+    // Histórico diario de tasas oficiales del Banco Central de Venezuela (BCV)
+    match /tasas_bcv/{fechaId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated() 
+        && request.resource.data.usd is number 
+        && request.resource.data.usd > 0;
+      allow delete: if isAuthenticated();
     }
 
     // Mini-CMS: Repuestos Destacados y Ofertas Black Friday (Web pública)

@@ -12417,6 +12417,33 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
                     throw new Error("Servicio de tasas temporalmente no disponible.");
                 }
 
+                // 💾 Auto-guardar tasa oficial del día en Firestore colección 'tasas_bcv' y en caché local
+                if (usdBcv && usdBcv > 0) {
+                    const hoyISO = new Date().toISOString().split('T')[0];
+                    if (window.bcvHistoricoCache) {
+                        window.bcvHistoricoCache[hoyISO] = {
+                            tasa: Number(usdBcv),
+                            fuente: "DolarApi Oficial (Auto Ticker)",
+                            esFallback: false
+                        };
+                        try {
+                            localStorage.setItem('bcv_historico_cache_v1', JSON.stringify(window.bcvHistoricoCache));
+                        } catch(e) {}
+                    }
+                    if (typeof db !== 'undefined') {
+                        setDoc(doc(db, "tasas_bcv", hoyISO), {
+                            usd: Number(usdBcv),
+                            eur: eurBcv ? Number(eurBcv) : null,
+                            usdt: usdtBinance ? Number(usdtBinance) : null,
+                            fecha: hoyISO,
+                            timestamp: Date.now(),
+                            fuente: "DolarApi Oficial (Auto Ticker)"
+                        }, { merge: true }).catch(err => {
+                            console.warn("[Ticker] Auto-guardado en tasas_bcv omitido o no autenticado:", err?.message);
+                        });
+                    }
+                }
+
                 // Formato en moneda venezolana
                 const formatoVES = (num) => Number(num).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -14029,12 +14056,44 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
         // 💾 CACHÉ PERSISTENTE EN LOCALSTORAGE PARA TASAS BCV HISTÓRICAS (0 ms / Cero 404 innecesarios)
         const CACHE_KEY_BCV = 'bcv_historico_cache_v1';
 
+        /**
+         * Valida que una tasa de cambio sea coherente:
+         * - Debe ser numérica y mayor a 0.
+         * - NUNCA 46.50 (tasa residual/falsa erradicada).
+         * - Si la fecha es del 2026 en adelante, debe ser mayor a 100 Bs/$.
+         */
+        window.esTasaValida = function(tasa, fechaISO) {
+            const num = Number(tasa);
+            if (!num || isNaN(num) || num <= 0) return false;
+            if (num === 46.50) return false;
+            if (fechaISO && typeof fechaISO === 'string' && fechaISO >= '2026-01-01' && num < 100) {
+                return false;
+            }
+            return true;
+        };
+
         function cargarCacheBCVLocalStorage() {
             try {
                 const raw = localStorage.getItem(CACHE_KEY_BCV);
                 if (raw) {
                     const parsed = JSON.parse(raw);
-                    if (parsed && typeof parsed === 'object') return parsed;
+                    if (parsed && typeof parsed === 'object') {
+                        // Purga activa inmediata: eliminar cualquier residuo de 46.50 o tasas inválidas para 2026+
+                        let limpio = {};
+                        let huboPurga = false;
+                        for (const [k, v] of Object.entries(parsed)) {
+                            const tasa = Number(v?.tasa);
+                            if (!window.esTasaValida(tasa, k)) {
+                                huboPurga = true;
+                                continue;
+                            }
+                            limpio[k] = v;
+                        }
+                        if (huboPurga) {
+                            try { localStorage.setItem(CACHE_KEY_BCV, JSON.stringify(limpio)); } catch(e) {}
+                        }
+                        return limpio;
+                    }
                 }
             } catch (e) {
                 console.warn('[CRM Divisas BCV] Aviso al leer caché de localStorage:', e);
@@ -14051,6 +14110,50 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
         }
 
         window.bcvHistoricoCache = cargarCacheBCVLocalStorage();
+
+        /**
+         * Formatea cualquier fecha (String DD/M/YYYY, DD/MM/YYYY, YYYY-MM-DD, Date, Timestamp)
+         * a formato estándar internacional YYYY-MM-DD requerido por Firestore y APIs.
+         */
+        window.formatearFechaParaAPI = function(fecha) {
+            if (!fecha) return null;
+            if (typeof fecha === 'string') {
+                const limpia = fecha.trim();
+                // 1. Formato ISO: YYYY-MM-DD o YYYY/MM/DD
+                const matchISO = limpia.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+                if (matchISO) {
+                    const yyyy = matchISO[1];
+                    const mm = matchISO[2].padStart(2, '0');
+                    const dd = matchISO[3].padStart(2, '0');
+                    return `${yyyy}-${mm}-${dd}`;
+                }
+                // 2. Formato latino / venezolano: DD/MM/YYYY, D/M/YYYY, DD-MM-YYYY
+                const matchLatam = limpia.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+                if (matchLatam) {
+                    const dd = matchLatam[1].padStart(2, '0');
+                    const mm = matchLatam[2].padStart(2, '0');
+                    const yyyy = matchLatam[3];
+                    return `${yyyy}-${mm}-${dd}`;
+                }
+            }
+            // 3. Objeto Timestamp de Firestore
+            if (fecha && typeof fecha.toDate === 'function') {
+                try { fecha = fecha.toDate(); } catch(e) {}
+            } else if (fecha && typeof fecha.seconds === 'number') {
+                fecha = new Date(fecha.seconds * 1000);
+            }
+            // 4. Objeto Date estándar
+            const d = new Date(fecha);
+            if (!isNaN(d.getTime())) {
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                return `${yyyy}-${mm}-${dd}`;
+            }
+            return null;
+        };
+
+        window.normalizarFechaYYYYMMDD = window.formatearFechaParaAPI;
 
         /**
          * Ajusta automáticamente una fecha YYYY-MM-DD que caiga en Sábado o Domingo
@@ -14086,25 +14189,67 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
         };
 
         /**
-         * Busca la tasa histórica válida más cercana (hacia atrás) dentro de la caché local persistente
+         * Busca la tasa histórica en días hábiles inmediatamente anteriores (hasta 5 días atrás).
+         * Prioriza:
+         *  1. Caché local.
+         *  2. Firestore colección 'tasas_bcv'.
          */
-        function buscarTasaMasCercanaEnCache(fechaObjetivo) {
-            const keys = Object.keys(window.bcvHistoricoCache || {})
-                .filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k) && Number(window.bcvHistoricoCache[k]?.tasa) > 0)
-                .sort();
-            let mejor = null;
-            for (const k of keys) {
-                if (k <= fechaObjetivo) {
-                    mejor = { fecha: k, tasa: Number(window.bcvHistoricoCache[k].tasa) };
+        async function buscarTasaDiasHabilesAnteriores(fechaISO, maxDias = 5) {
+            if (!fechaISO || !/^\d{4}-\d{2}-\d{2}$/.test(fechaISO)) return null;
+            const parts = fechaISO.split('-');
+            const year = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1;
+            const day = parseInt(parts[2], 10);
+
+            for (let i = 1; i <= maxDias; i++) {
+                const d = new Date(year, month, day - i, 12, 0, 0);
+                const prevISO = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+                // 1. Revisar caché local
+                if (window.bcvHistoricoCache && window.bcvHistoricoCache[prevISO]) {
+                    const t = Number(window.bcvHistoricoCache[prevISO].tasa);
+                    if (window.esTasaValida(t, prevISO)) {
+                        return {
+                            tasa: t,
+                            fuente: `Día hábil anterior (${prevISO})`,
+                            fechaReferencia: prevISO,
+                            esFallback: false
+                        };
+                    }
+                }
+
+                // 2. Revisar Firestore tasas_bcv
+                try {
+                    if (typeof db !== 'undefined') {
+                        const snap = await getDoc(doc(db, "tasas_bcv", prevISO));
+                        if (snap.exists()) {
+                            const data = snap.data();
+                            const tasaDoc = Number(data.usd);
+                            if (window.esTasaValida(tasaDoc, prevISO)) {
+                                window.bcvHistoricoCache[prevISO] = {
+                                    tasa: tasaDoc,
+                                    fuente: data.fuente || 'Firestore tasas_bcv',
+                                    esFallback: false
+                                };
+                                guardarCacheBCVLocalStorage(window.bcvHistoricoCache);
+                                return {
+                                    tasa: tasaDoc,
+                                    fuente: `Día hábil anterior (${prevISO})`,
+                                    fechaReferencia: prevISO,
+                                    esFallback: false
+                                };
+                            }
+                        }
+                    }
+                } catch (e) {
+                    // Silenciar errores de lectura en búsqueda retroactiva
                 }
             }
-            return mejor;
+            return null;
         }
 
         // =========================================================================
         // ⚙️ CONFIGURACIÓN DE CONEXIÓN A API CAMBIARIA BCV (TASAS HISTÓRICAS)
-        // =========================================================================
-        // Configuración centralizada para consumir tasas oficiales de la fecha exacta.
         // =========================================================================
         window.CONFIG_BCV_HISTORICO = {
             // 🌐 1. URL DEL ENDPOINT HISTÓRICO DE CROM STUDIO O TU PROPIO PROXY:
@@ -14117,10 +14262,7 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
             apiKey: '',
 
             // ⏱️ 3. TIEMPO MÁXIMO DE ESPERA (TIMEOUT):
-            timeoutMs: 4000,
-
-            // 🛡️ 4. TASA DE RESPALDO DE SEGURIDAD (Si la red o API externa no responde):
-            tasaFallback: (typeof window.tasaBCVOficial !== 'undefined' && window.tasaBCVOficial > 0) ? window.tasaBCVOficial : 46.50
+            timeoutMs: 3500
         };
 
         /**
@@ -14182,57 +14324,104 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
         };
 
         /**
-         * 🏛️ REGLA 2: INTEGRACIÓN REAL DE API BCV (PROMESAS ASÍNCRONAS)
-         * Función asíncrona dedicada obtenerTasaHistoricaBCV(fecha):
-         * Realiza fetch a la API pública de Crom Studio (o proxy configurado).
-         * Si la red o endpoint no responden, simula el retraso asíncrono y usa fallback seguro.
-         * 
-         * @param {string|Date} fecha - Fecha en que ocurrió la facturación
-         * @returns {Promise<number>} - Tasa numérica de cambio oficial del día
+         * 🏛️ OBTENCIÓN DE TASA HISTÓRICA BCV MULTI-NIVEL (CERO FALLBACKS FICTICIOS):
+         * Prioridad estricta:
+         * 1. Tasa guardada en la factura (tasaBCV o tasa_cambio_dia) si es válida (> 100 para 2026+).
+         * 2. Caché local persistente (bcvHistoricoCache).
+         * 3. Colección 'tasas_bcv/{YYYY-MM-DD}' en Firestore.
+         * 4. Búsqueda en días hábiles anteriores (hasta 5 días atrás) en caché y Firestore.
+         * 5. Tasa en vivo si la fecha es hoy (DolarApi / Ticker superior).
+         * 6. Endpoint de API histórica externa (Crom Studio).
+         * Si ninguna fuente tiene la tasa:
+         * -> Retorna null (NUNCA 46.50 ni ninguna tasa inventada).
          */
-        window.obtenerTasaHistoricaBCV = async function(fecha) {
+        window.obtenerTasaHistoricaBCV = async function(fecha, factura = null) {
             const fechaOriginal = window.formatearFechaParaAPI(fecha);
+            if (!fechaOriginal) return null;
 
-            // 1. Caché persistente en localStorage para fecha original
-            if (window.bcvHistoricoCache[fechaOriginal] && Number(window.bcvHistoricoCache[fechaOriginal].tasa) > 0) {
-                return Number(window.bcvHistoricoCache[fechaOriginal].tasa);
+            // 1. Tasa registrada directamente en la factura (si es válida)
+            if (factura) {
+                const tasaFac = parseFloat(factura.tasaBCV ?? factura.tasa_cambio_dia);
+                if (window.esTasaValida(tasaFac, fechaOriginal)) {
+                    window.bcvHistoricoCache[fechaOriginal] = {
+                        tasa: tasaFac,
+                        fuente: 'Factura Registrada',
+                        esFallback: false
+                    };
+                    guardarCacheBCVLocalStorage(window.bcvHistoricoCache);
+                    return tasaFac;
+                }
             }
 
-            // 2. Ajuste de fin de semana: Sábado o Domingo -> Viernes hábil anterior
-            const fechaConsulta = window.ajustarFechaFinDeSemana(fechaOriginal);
+            // 2. Caché local en memoria / localStorage
+            if (window.bcvHistoricoCache && window.bcvHistoricoCache[fechaOriginal]) {
+                const tasaCache = Number(window.bcvHistoricoCache[fechaOriginal].tasa);
+                if (window.esTasaValida(tasaCache, fechaOriginal)) {
+                    return tasaCache;
+                }
+            }
 
-            // Si la fecha ajustada (viernes) ya está en caché, reutilizarla directamente sin petición
-            if (window.bcvHistoricoCache[fechaConsulta] && Number(window.bcvHistoricoCache[fechaConsulta].tasa) > 0) {
-                const itemCached = window.bcvHistoricoCache[fechaConsulta];
-                const tasaCached = Number(itemCached.tasa);
+            // 3. Colección 'tasas_bcv' en Firestore
+            try {
+                if (typeof db !== 'undefined') {
+                    const docSnap = await getDoc(doc(db, "tasas_bcv", fechaOriginal));
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        const tasaDoc = parseFloat(data.usd);
+                        if (window.esTasaValida(tasaDoc, fechaOriginal)) {
+                            window.bcvHistoricoCache[fechaOriginal] = {
+                                tasa: tasaDoc,
+                                fuente: data.fuente || 'Firestore tasas_bcv',
+                                esFallback: false
+                            };
+                            guardarCacheBCVLocalStorage(window.bcvHistoricoCache);
+                            return tasaDoc;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn("[CRM Divisas BCV] Error leyendo Firestore tasas_bcv:", e?.message);
+            }
+
+            // 4. Búsqueda en días hábiles anteriores (hasta 5 días atrás por fines de semana/feriados)
+            const tasaPrev = await buscarTasaDiasHabilesAnteriores(fechaOriginal, 5);
+            if (tasaPrev && window.esTasaValida(tasaPrev.tasa, fechaOriginal)) {
                 window.bcvHistoricoCache[fechaOriginal] = {
-                    tasa: tasaCached,
-                    fuente: fechaOriginal !== fechaConsulta ? `Viernes hábil (${fechaConsulta})` : itemCached.fuente,
-                    esFallback: itemCached.esFallback || false
+                    tasa: tasaPrev.tasa,
+                    fuente: tasaPrev.fuente,
+                    esFallback: false
                 };
                 guardarCacheBCVLocalStorage(window.bcvHistoricoCache);
-                return tasaCached;
+                return tasaPrev.tasa;
             }
 
-            const cfg = window.CONFIG_BCV_HISTORICO;
-            const urlConsulta = cfg.urlBase.replace('{FECHA_FORMATO_API}', encodeURIComponent(fechaConsulta));
-
-            const controller = new AbortController();
-            const timeoutTimer = setTimeout(() => controller.abort(), cfg.timeoutMs);
-
-            let tasaObtenida = null;
-            let fuenteObtenida = '';
-
-            try {
-                const headers = { 'Accept': 'application/json' };
-                if (cfg.apiKey && cfg.apiKey.trim() !== '') {
-                    headers['Authorization'] = cfg.apiKey.startsWith('Bearer ') ? cfg.apiKey : `Bearer ${cfg.apiKey.trim()}`;
+            // 5. Si la fecha es hoy, usar tasa oficial en vivo del panel superior
+            const hoyISO = new Date().toISOString().split('T')[0];
+            if (fechaOriginal === hoyISO) {
+                const tasaViva = parseFloat(window.tasaVivaBCV ?? window._ultimoUsdBcv ?? window.tasaBCVOficial);
+                if (window.esTasaValida(tasaViva, hoyISO)) {
+                    window.bcvHistoricoCache[fechaOriginal] = {
+                        tasa: tasaViva,
+                        fuente: 'DolarApi Oficial (En Vivo)',
+                        esFallback: false
+                    };
+                    guardarCacheBCVLocalStorage(window.bcvHistoricoCache);
+                    return tasaViva;
                 }
+            }
 
-                // Fetch real asíncrono a la API histórica
+            // 6. Consulta asíncrona a API externa histórica (Crom Studio)
+            try {
+                const cfg = window.CONFIG_BCV_HISTORICO;
+                const fechaConsulta = window.ajustarFechaFinDeSemana(fechaOriginal);
+                const urlConsulta = cfg.urlBase.replace('{FECHA_FORMATO_API}', encodeURIComponent(fechaConsulta));
+
+                const controller = new AbortController();
+                const timeoutTimer = setTimeout(() => controller.abort(), cfg.timeoutMs || 3500);
+
                 const response = await fetch(urlConsulta, {
                     method: 'GET',
-                    headers: headers,
+                    headers: { 'Accept': 'application/json' },
                     signal: controller.signal
                 });
                 clearTimeout(timeoutTimer);
@@ -14245,124 +14434,213 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
                         dataObj?.promedio ?? dataObj?.tasa ?? dataObj?.valor ?? dataObj?.dolar ?? dataObj?.data?.rate
                     );
 
-                    if (tasaExtraida && !isNaN(tasaExtraida) && tasaExtraida > 0) {
-                        tasaObtenida = tasaExtraida;
-                        fuenteObtenida = 'API Crom Studio (Histórico)';
+                    if (window.esTasaValida(tasaExtraida, fechaOriginal)) {
+                        window.bcvHistoricoCache[fechaOriginal] = {
+                            tasa: tasaExtraida,
+                            fuente: 'API Crom Studio (Histórico)',
+                            esFallback: false
+                        };
+                        guardarCacheBCVLocalStorage(window.bcvHistoricoCache);
+
+                        // Persistir en Firestore tasas_bcv para todo el equipo
+                        if (typeof db !== 'undefined') {
+                            setDoc(doc(db, "tasas_bcv", fechaOriginal), {
+                                usd: tasaExtraida,
+                                fecha: fechaOriginal,
+                                fuente: "API Crom Studio (Histórico)",
+                                timestamp: Date.now()
+                            }, { merge: true }).catch(() => {});
+                        }
+                        return tasaExtraida;
                     }
                 }
             } catch (err) {
-                clearTimeout(timeoutTimer);
+                // Timeout o error de red silenciado
             }
 
-            // Si la API histórica devolvió una tasa válida (> 0)
-            if (tasaObtenida && tasaObtenida > 0) {
-                window.bcvHistoricoCache[fechaConsulta] = {
-                    tasa: tasaObtenida,
-                    fuente: fuenteObtenida,
-                    esFallback: false
-                };
-                if (fechaOriginal !== fechaConsulta) {
-                    window.bcvHistoricoCache[fechaOriginal] = {
-                        tasa: tasaObtenida,
-                        fuente: `Viernes hábil (${fechaConsulta})`,
-                        esFallback: false
-                    };
-                }
-                guardarCacheBCVLocalStorage(window.bcvHistoricoCache);
-                return tasaObtenida;
-            }
-
-            // 3. Respaldo para 404 / Feriados / Fin de semana sin registro / Error:
-            // Intentar recuperar primero la tasa del día hábil anterior más cercano registrada en la caché
-            let fallbackTasa = cfg.tasaFallback;
-            let fallbackFuente = `Fallback (${Number(cfg.tasaFallback).toFixed(2)} Bs/$)`;
-
-            const tasaPrevia = buscarTasaMasCercanaEnCache(fechaConsulta);
-            if (tasaPrevia && tasaPrevia.tasa > 0) {
-                fallbackTasa = tasaPrevia.tasa;
-                fallbackFuente = `Día hábil anterior (${tasaPrevia.fecha}: ${Number(tasaPrevia.tasa).toFixed(2)} Bs/$)`;
-            } else if (typeof window.tasaBCVOficial !== 'undefined' && Number(window.tasaBCVOficial) > 0) {
-                fallbackTasa = Number(window.tasaBCVOficial);
-                fallbackFuente = `Tasa Actual Panel (${fallbackTasa.toFixed(2)} Bs/$)`;
-            }
-
-            // Se guarda en la caché persistente para no volver a intentar consultarla ni ensuciar la consola
-            window.bcvHistoricoCache[fechaConsulta] = {
-                tasa: fallbackTasa,
-                fuente: fallbackFuente,
-                esFallback: true
-            };
-            if (fechaOriginal !== fechaConsulta) {
-                window.bcvHistoricoCache[fechaOriginal] = {
-                    tasa: fallbackTasa,
-                    fuente: `Fin de semana (${fallbackFuente})`,
-                    esFallback: true
-                };
-            }
-            guardarCacheBCVLocalStorage(window.bcvHistoricoCache);
-
-            return fallbackTasa;
+            // 7. Si no se encontró tasa en ninguna fuente: RETORNAR NULL (JAMÁS 46.50)
+            return null;
         };
 
         // Alias retrocompatible
         window.obtenerTasaBCVHistoricaAsync = async function(fecha, tasaPrevia) {
-            if (tasaPrevia && Number(tasaPrevia) > 0) {
+            const fechaKey = window.formatearFechaParaAPI(fecha);
+            if (tasaPrevia && window.esTasaValida(tasaPrevia, fechaKey)) {
                 return { tasa: Number(tasaPrevia), fuente: 'Registrada', esFallback: false };
             }
             const tasa = await window.obtenerTasaHistoricaBCV(fecha);
-            const fechaStr = window.formatearFechaParaAPI(fecha);
-            return window.bcvHistoricoCache[fechaStr] || { tasa, fuente: 'API BCV', esFallback: false };
+            if (tasa && window.esTasaValida(tasa, fechaKey)) {
+                return window.bcvHistoricoCache[fechaKey] || { tasa, fuente: 'BCV Oficial', esFallback: false };
+            }
+            return { tasa: null, fuente: 'Sin tasa histórica', esFallback: false, sinTasa: true };
+        };
+
+        /**
+         * ⚡ MODAL INTERACTIVO DE REGISTRO RÁPIDO DE TASA HISTÓRICA BCV:
+         * Permite al administrador cargar manualmente la tasa oficial del día
+         * cuando una factura en Bs. no la tiene registrada, guardándola en Firestore 'tasas_bcv'
+         * y recalculando inmediatamente el CRM del cliente.
+         */
+        window.abrirModalCargarTasaHistorica = async function(fechaISO, facturaId, fechaOriginal, docId) {
+            const fechaLimpia = window.formatearFechaParaAPI(fechaISO || fechaOriginal);
+            const tasaSugerida = (window.tasaVivaBCV || window._ultimoUsdBcv || 926.36).toFixed(2);
+            const fechaVisual = fechaOriginal || fechaLimpia;
+
+            const { value: tasaIngresada } = await Swal.fire({
+                title: `<span style="font-family: 'Oswald', sans-serif; font-size: 20px; color: #1e293b;"><i class="fas fa-coins text-amber-500 mr-2"></i>Registrar Tasa BCV Histórica</span>`,
+                html: `
+                    <div style="text-align: left; font-size: 13px; color: #475569; margin-bottom: 12px; line-height: 1.5;">
+                        <p style="margin: 0 0 8px 0;">
+                            Ingresa la tasa oficial del BCV correspondiente a la fecha 
+                            <strong style="color: #0f172a; font-family: monospace; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">${SecuritySanitizer.escapeHtml(fechaVisual)}</strong>
+                            ${facturaId ? ` (Factura <code>${SecuritySanitizer.escapeHtml(facturaId)}</code>)` : ''}.
+                        </p>
+                        <p style="margin: 0 0 10px 0; font-size: 11.5px; color: #64748b;">
+                            Esta tasa se guardará en la colección <code style="color: #385723; font-weight: bold;">tasas_bcv/${fechaLimpia}</code> de Firestore y recalculará inmediatamente todas las facturas de esa fecha en el CRM.
+                        </p>
+                    </div>
+                `,
+                input: 'number',
+                inputAttributes: {
+                    step: '0.01',
+                    min: '1',
+                    placeholder: `Ej: ${tasaSugerida}`
+                },
+                inputValue: '',
+                showCancelButton: true,
+                confirmButtonText: '<i class="fas fa-save mr-1"></i> Guardar y Recalcular',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#385723',
+                cancelButtonColor: '#64748b',
+                focusConfirm: false,
+                preConfirm: (valor) => {
+                    const num = parseFloat(valor);
+                    if (!num || isNaN(num) || num <= 0) {
+                        Swal.showValidationMessage('Ingresa un valor numérico de tasa válido (> 0)');
+                        return false;
+                    }
+                    if (fechaLimpia >= '2026-01-01' && num < 100) {
+                        Swal.showValidationMessage('Para fechas del 2026 la tasa BCV debe ser mayor a 100 Bs/$.');
+                        return false;
+                    }
+                    return num;
+                }
+            });
+
+            if (!tasaIngresada) return;
+
+            const tasaNum = parseFloat(tasaIngresada);
+
+            try {
+                // 1. Guardar en Firestore colección tasas_bcv
+                if (typeof db !== 'undefined') {
+                    await setDoc(doc(db, "tasas_bcv", fechaLimpia), {
+                        usd: tasaNum,
+                        fecha: fechaLimpia,
+                        fuente: "Manual (Administrador CRM)",
+                        timestamp: Date.now()
+                    }, { merge: true });
+
+                    // Si hay docId de factura en Firestore, actualizarlo también
+                    if (docId) {
+                        updateDoc(doc(db, "facturas", docId), {
+                            tasaBCV: tasaNum,
+                            tasa_cambio_dia: tasaNum
+                        }).catch(() => {});
+                    }
+                }
+
+                // 2. Guardar en caché local
+                window.bcvHistoricoCache[fechaLimpia] = {
+                    tasa: tasaNum,
+                    fuente: "Manual (Admin CRM)",
+                    esFallback: false
+                };
+                guardarCacheBCVLocalStorage(window.bcvHistoricoCache);
+
+                // 3. Recalcular cliente actual inmediatamente
+                if (window.clienteSeleccionadoCRM) {
+                    await window.normalizarFacturasClienteAsync(window.clienteSeleccionadoCRM);
+                }
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Tasa BCV Guardada',
+                    html: `<p style="font-size: 13px;">Tasa de <strong>${tasaNum.toFixed(2)} Bs/$</strong> guardada para la fecha <strong>${fechaLimpia}</strong>. El historial y LTV del cliente han sido recalculados con éxito.</p>`,
+                    confirmButtonColor: '#385723',
+                    timer: 2500,
+                    timerProgressBar: true
+                });
+
+            } catch (err) {
+                console.error("[CRM Modal Tasa] Error guardando tasa:", err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error al Guardar',
+                    text: err?.message || 'No se pudo guardar la tasa en Firestore.',
+                    confirmButtonColor: '#dc2626'
+                });
+            }
         };
 
         /**
          * ⚡ FLUJO ASÍNCRONO DE NORMALIZACIÓN CAMBIARIA:
          * 1. Itera sobre las facturas filtradas del cliente.
-         * 2. Si la factura es en 'VES', llama a await window.obtenerTasaHistoricaBCV(factura.fecha).
-         * 3. Divide el monto VES por la tasa extraída de la API.
-         * 4. Suma al Total Normalizado del cliente (LTV) y calcula el Ticket Promedio (AOV).
-         * 5. Renderiza en el DOM (Actualizando la tarjeta del cliente y la tabla de historial).
+         * 2. Si la factura es en 'VES', consulta la tasa histórica oficial.
+         * 3. Si tiene tasa válida, divide el monto VES entre la tasa real.
+         * 4. Si NO tiene tasa registrada, marca la factura con alerta y la excluye de la sumatoria USD.
+         * 5. Suma al Total Normalizado del cliente (LTV) y calcula el Ticket Promedio (AOV) solo con facturas valoradas.
+         * 6. Renderiza en el DOM (Actualizando la tarjeta del cliente y la tabla de historial).
          */
         window.normalizarFacturasClienteAsync = async function(cliente) {
             if (!cliente || !Array.isArray(cliente.facturas) || cliente.facturas.length === 0) {
                 return cliente;
             }
 
-            let huboFallback = false;
+            let facturasSinTasaCount = 0;
 
             // Iteración asíncrona sobre cada factura filtrada
             await Promise.all(cliente.facturas.map(async (f) => {
                 const moneda = String(f.moneda_pago || f.moneda || 'USD').toUpperCase().trim();
                 const montoBruto = parseFloat(f.monto_facturado ?? f.monto ?? f.total) || 0;
+                const fechaKey = window.formatearFechaParaAPI(f.fecha);
 
                 if (moneda === 'VES' || moneda === 'BS') {
                     f.moneda_pago = 'VES';
-                    // Llamada asíncrona dedicada a la API BCV
-                    const tasaOficial = await window.obtenerTasaHistoricaBCV(f.fecha);
-                    f.tasa_cambio_dia = tasaOficial;
+                    const tasaOficial = await window.obtenerTasaHistoricaBCV(f.fecha, f);
 
-                    const fechaKey = window.formatearFechaParaAPI(f.fecha);
-                    const cacheInfo = window.bcvHistoricoCache[fechaKey];
-                    f.fuente_tasa = cacheInfo?.fuente || 'API BCV';
-                    if (cacheInfo?.esFallback) huboFallback = true;
-
-                    // División estricta: monto en Bolívares ÷ Tasa Oficial BCV de la fecha
-                    const tasa = Number(tasaOficial) || 1;
-                    f.monto_usd = Math.round((tasa > 0 ? (montoBruto / tasa) : montoBruto) * 100) / 100;
+                    if (tasaOficial && window.esTasaValida(tasaOficial, fechaKey)) {
+                        f.tasa_cambio_dia = Number(tasaOficial);
+                        f.fuente_tasa = window.bcvHistoricoCache[fechaKey]?.fuente || 'BCV Oficial';
+                        f.sinTasaHistorica = false;
+                        // División estricta: monto en Bolívares ÷ Tasa Oficial BCV real de la fecha
+                        f.monto_usd = Math.round((montoBruto / f.tasa_cambio_dia) * 100) / 100;
+                    } else {
+                        // ⚠️ Sin tasa histórica: se excluye de la sumatoria en USD
+                        f.tasa_cambio_dia = null;
+                        f.monto_usd = null;
+                        f.fuente_tasa = 'Sin tasa histórica';
+                        f.sinTasaHistorica = true;
+                        facturasSinTasaCount++;
+                    }
                 } else {
                     // Transacciones en USD
                     f.moneda_pago = 'USD';
                     f.monto_usd = montoBruto;
                     f.tasa_cambio_dia = 1.00;
                     f.fuente_tasa = 'USD Directo';
+                    f.sinTasaHistorica = false;
                 }
             }));
 
-            // Sumar al Total Normalizado del cliente (LTV) y calcular Ticket Promedio (AOV)
-            const totalNormalizado = cliente.facturas.reduce((sum, f) => sum + (f.monto_usd || 0), 0);
+            // Sumar al Total Normalizado del cliente (LTV) solo aquellas facturas con monto_usd válido (> 0)
+            const facturasConUSDValido = cliente.facturas.filter(f => typeof f.monto_usd === 'number' && f.monto_usd > 0);
+            const totalNormalizado = facturasConUSDValido.reduce((sum, f) => sum + f.monto_usd, 0);
+
             cliente.totalComprado = Math.round(totalNormalizado * 100) / 100;
             cliente.frecuenciaCompra = cliente.facturas.length;
-            cliente.ticketPromedio = (cliente.frecuenciaCompra > 0)
-                ? Math.round((cliente.totalComprado / cliente.frecuenciaCompra) * 100) / 100
+            cliente.ticketPromedio = (facturasConUSDValido.length > 0)
+                ? Math.round((cliente.totalComprado / facturasConUSDValido.length) * 100) / 100
                 : 0;
 
             // Renderizar en el DOM: Tarjeta de Métricas
@@ -14376,8 +14654,8 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
             if (elAOV) elAOV.innerText = window.formatearMonedaUSD(cliente.ticketPromedio);
 
             if (elNotice) {
-                if (huboFallback) {
-                    elNotice.innerHTML = `<span style="display: inline-flex; align-items: center; gap: 4px; background: #fffbeb; color: #b45309; border: 1px solid #fde68a; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;"><i class="fas fa-exclamation-triangle"></i> Tasa de respaldo aplicada</span>`;
+                if (facturasSinTasaCount > 0) {
+                    elNotice.innerHTML = `<span style="display: inline-flex; align-items: center; gap: 4px; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;"><i class="fas fa-exclamation-triangle"></i> ${facturasSinTasaCount} en Bs. sin tasa (excluidas de LTV)</span>`;
                     elNotice.style.display = 'inline-block';
                 } else {
                     elNotice.innerHTML = `<span style="display: inline-flex; align-items: center; gap: 4px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;"><i class="fas fa-check-circle"></i> Tasas BCV validadas</span>`;
@@ -14703,25 +14981,46 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
                     ? `Bs. ${Number(f.monto_facturado).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                     : `$${Number(f.monto_facturado).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+                const fechaKey = window.formatearFechaParaAPI(f.fecha);
                 let tasaDisplay = '';
+                let montoUsdDisplay = '';
+
                 if (esVES) {
-                    if (f.tasa_cambio_dia && Number(f.tasa_cambio_dia) > 0) {
-                        const esFall = f.fuente_tasa && f.fuente_tasa.includes('Fallback');
+                    if (f.sinTasaHistorica || !f.tasa_cambio_dia) {
+                        const fechaParam = SecuritySanitizer.escapeHtml(fechaKey || f.fecha || '');
+                        const facIdParam = SecuritySanitizer.escapeHtml(f.id || '');
+                        const fechaOrigParam = SecuritySanitizer.escapeHtml(f.fecha || '');
+                        const docIdParam = SecuritySanitizer.escapeHtml(f.docId || '');
+                        tasaDisplay = `
+                            <button type="button" 
+                                onclick="window.abrirModalCargarTasaHistorica('${fechaParam}', '${facIdParam}', '${fechaOrigParam}', '${docIdParam}')" 
+                                style="display: inline-flex; align-items: center; gap: 4px; background: #fee2e2; color: #b91c1c; border: 1px solid #f87171; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05);" 
+                                title="Haz clic para registrar la tasa oficial BCV de este día">
+                                <i class="fas fa-exclamation-triangle text-red-500"></i> ⚠️ Sin tasa histórica
+                            </button>
+                        `;
+                        montoUsdDisplay = `
+                            <span style="color: #94a3b8; font-size: 11.5px; font-style: italic; font-weight: 600;">
+                                <i class="fas fa-hourglass-half" style="font-size: 10px;"></i> Pendiente tasa
+                            </span>
+                        `;
+                    } else {
+                        const fuente = f.fuente_tasa || 'BCV';
                         tasaDisplay = `
                             <div style="display: inline-flex; flex-direction: column; align-items: center; gap: 2px;">
-                                <span style="font-weight: 800; color: ${esFall ? '#b45309' : '#15803d'}; font-size: 12px; font-family: monospace;">
+                                <span style="font-weight: 800; color: #15803d; font-size: 12px; font-family: monospace;">
                                     ${Number(f.tasa_cambio_dia).toFixed(2)} Bs/$
                                 </span>
-                                <span style="font-size: 9.5px; color: ${esFall ? '#92400e' : '#166534'}; background: ${esFall ? '#fef3c7' : '#f0fdf4'}; border: 1px solid ${esFall ? '#fde68a' : '#bbf7d0'}; padding: 0.5px 5px; border-radius: 4px;">
-                                    ${SecuritySanitizer.escapeHtml(f.fuente_tasa || 'BCV')}
+                                <span style="font-size: 9.5px; color: #166534; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 0.5px 5px; border-radius: 4px;">
+                                    ${SecuritySanitizer.escapeHtml(fuente)}
                                 </span>
                             </div>
                         `;
-                    } else {
-                        tasaDisplay = `<span style="color: #64748b; font-size: 11px;"><i class="fas fa-sync fa-spin"></i> Consultando...</span>`;
+                        montoUsdDisplay = window.formatearMonedaUSD(f.monto_usd);
                     }
                 } else {
                     tasaDisplay = `<span style="color: #94a3b8; font-size: 11.5px; font-family: monospace;">1.00 (USD)</span>`;
+                    montoUsdDisplay = window.formatearMonedaUSD(f.monto_usd);
                 }
 
                 return `
@@ -14739,7 +15038,7 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
                             ${tasaDisplay}
                         </td>
                         <td style="padding: 10px 14px; text-align: right; font-weight: 900; font-family: 'Oswald', sans-serif; color: #385723; font-size: 14.5px;">
-                            ${window.formatearMonedaUSD(f.monto_usd)}
+                            ${montoUsdDisplay}
                         </td>
                         <td style="padding: 10px 14px; text-align: center;">
                             <span style="display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; ${badgeStyle}">
@@ -14813,6 +15112,7 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
 
                         // Se asigna explícitamente tipo_documento: 'Factura' y estatus: 'Pagado y Despachado'
                         transaccionesAnalizar.push({
+                            docId: docSnap.id,
                             id: fac.nro ? `FAC-#${fac.nro}` : `FAC-${docSnap.id.substring(0, 6).toUpperCase()}`,
                             tipo_documento: 'Factura',
                             cliente: (fac.cliente || 'Consumidor Final').trim(),
@@ -15013,6 +15313,7 @@ ESTRUCTURA EXACTA REQUERIDA (Responde solo este JSON):
                         const tasaRegistrada = parseFloat(fac.tasa_cambio_dia ?? fac.tasaBCV) || null;
 
                         transaccionesAnalizar.push({
+                            docId: docSnap.id,
                             id: fac.nro ? `FAC-#${fac.nro}` : `FAC-${docSnap.id.substring(0, 6).toUpperCase()}`,
                             tipo_documento: 'Factura',
                             cliente: (fac.cliente || 'Consumidor Final').trim(),
