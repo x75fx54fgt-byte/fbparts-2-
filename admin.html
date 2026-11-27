@@ -1328,8 +1328,11 @@
                             
                         </button>
                         <div id="dropdown-notificaciones" class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl z-50 hidden text-gray-800 border border-gray-100">
-                            <div class="p-3 border-b border-gray-100 bg-gray-50 rounded-t-lg">
-                                <h4 class="font-bold text-sm text-brandDark m-0"><i class="fas fa-exclamation-circle text-orange-500"></i> Notificaciones de Cobranza</h4>
+                            <div class="p-3 border-b border-gray-100 bg-gray-50 rounded-t-lg flex items-center justify-between">
+                                <h4 class="font-bold text-sm text-brandDark m-0"><i class="fas fa-exclamation-circle text-orange-500"></i> Cobranzas</h4>
+                                <button type="button" onclick="activarNotificacionesPushFCM(true)" class="text-xs text-brand hover:underline font-semibold flex items-center gap-1" title="Activar o verificar alertas Web Push">
+                                    <i class="fas fa-satellite-dish"></i> Web Push
+                                </button>
                             </div>
                             <ul id="lista-notificaciones" class="max-h-64 overflow-y-auto p-0 m-0 list-none">
                                 <!-- JS inyectará facturas aquí -->

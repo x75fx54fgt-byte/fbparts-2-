@@ -1,7 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, getDocs, getDoc, setDoc, addDoc, doc, updateDoc, deleteDoc, query, where, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, getDoc, setDoc, addDoc, doc, updateDoc, deleteDoc, query, where, arrayUnion, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+        import { getMessaging, getToken, onMessage, isSupported } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
         // 🤫 Silenciar banner promocional de Puter.js en consola
         if (typeof puter !== 'undefined') puter.quiet = true;
@@ -166,6 +167,235 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
         window.currentAdminDocId = null; 
         
         let salesChartInstance = null; 
+
+        // ==========================================
+        // 🔔 FIREBASE CLOUD MESSAGING (FCM) - PWA & iOS WEB PUSH
+        // ==========================================
+
+        /**
+         * 🔑 VAPID KEY PÚBLICA DE FIREBASE CLOUD MESSAGING
+         * Reemplaza 'PEGA_AQUI_TU_VAPID_KEY' por tu clave pública generada en:
+         * Firebase Console > Configuración del Proyecto > Cloud Messaging > Certificados Web Push > Par de claves
+         */
+        const FCM_VAPID_KEY = 'PEGA_AQUI_TU_VAPID_KEY';
+
+        let messagingInstance = null;
+
+        // Detección de dispositivo iOS (iPhone / iPad / iPod)
+        function esDispositivoIOS() {
+            return (
+                /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+            );
+        }
+
+        // Detección de modo PWA Standalone (instalada en pantalla de inicio de iOS/Android)
+        function esModoPWAStandalone() {
+            return (
+                window.matchMedia('(display-mode: standalone)').matches ||
+                window.navigator.standalone === true
+            );
+        }
+
+        // Actualizar visualmente el botón de la campana (#btn-campana)
+        function actualizarIndicadorCampanaPush(activo) {
+            const btn = document.getElementById('btn-campana');
+            if (!btn) return;
+
+            let dot = document.getElementById('indicador-push-activo');
+            if (activo) {
+                btn.setAttribute('title', 'Alertas Activas (Web Push Conectado)');
+                if (!dot) {
+                    dot = document.createElement('span');
+                    dot.id = 'indicador-push-activo';
+                    dot.className = 'absolute bottom-1 right-1 w-2.5 h-2.5 bg-green-500 border-2 border-[#385723] rounded-full shadow-sm';
+                    btn.appendChild(dot);
+                } else {
+                    dot.style.display = 'block';
+                }
+            } else {
+                btn.setAttribute('title', 'Notificaciones');
+                if (dot) dot.style.display = 'none';
+            }
+        }
+
+        // Inicializar Firebase Messaging con soporte cross-browser
+        async function inicializarFCM() {
+            try {
+                const soportado = await isSupported();
+                if (!soportado) {
+                    console.log('ℹ️ [FCM] Firebase Messaging no es compatible en este navegador.');
+                    return null;
+                }
+
+                messagingInstance = getMessaging(app);
+                console.log('✅ [FCM] Firebase Messaging inicializado con éxito.');
+
+                // 3. Notificaciones en primer plano (Foreground listener)
+                onMessage(messagingInstance, (payload) => {
+                    console.log('📬 [FCM] Notificación en primer plano recibida:', payload);
+                    const titulo = payload.notification?.title || payload.data?.title || 'F&B Parts - Notificación';
+                    const cuerpo = payload.notification?.body || payload.data?.body || 'Nueva actualización en el panel.';
+
+                    if (typeof Swal !== 'undefined') {
+                        const Toast = Swal.mixin({
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 5000,
+                            timerProgressBar: true,
+                            didOpen: (toast) => {
+                                toast.addEventListener('mouseenter', Swal.stopTimer);
+                                toast.addEventListener('mouseleave', Swal.resumeTimer);
+                            }
+                        });
+                        Toast.fire({
+                            icon: 'info',
+                            title: SecuritySanitizer.escapeHtml(titulo),
+                            text: SecuritySanitizer.cleanText(cuerpo, 250)
+                        });
+                    }
+                });
+
+                // Si ya tiene permiso concedido, verificar estado visual y token silenciosamente
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    actualizarIndicadorCampanaPush(true);
+                    sincronizarTokenFCM(false);
+                }
+
+                return messagingInstance;
+            } catch (err) {
+                console.warn('⚠️ [FCM] Aviso al inicializar Messaging:', err);
+                return null;
+            }
+        }
+
+        // Sincronizar y persistir token en Firestore: fcm_tokens/{token}
+        async function sincronizarTokenFCM(mostrarFeedback = true) {
+            try {
+                if (!('serviceWorker' in navigator)) return;
+                if (!messagingInstance) {
+                    messagingInstance = await inicializarFCM();
+                    if (!messagingInstance) return;
+                }
+
+                if (!FCM_VAPID_KEY || FCM_VAPID_KEY === 'PEGA_AQUI_TU_VAPID_KEY') {
+                    console.warn('⚠️ [FCM] VAPID Key no configurada. Reemplaza PEGA_AQUI_TU_VAPID_KEY en admin_logic.js');
+                    if (mostrarFeedback && typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'VAPID Key Requerida',
+                            text: 'Debes configurar tu VAPID Key pública en admin_logic.js para generar el token de notificaciones.',
+                            confirmButtonColor: '#385723'
+                        });
+                    }
+                    return;
+                }
+
+                const registration = await navigator.serviceWorker.ready;
+                const token = await getToken(messagingInstance, {
+                    vapidKey: FCM_VAPID_KEY,
+                    serviceWorkerRegistration: registration
+                });
+
+                if (token) {
+                    console.log('🔑 [FCM] Token Push obtenido:', token.substring(0, 15) + '...');
+                    
+                    // Guardar en Firestore: fcm_tokens/{token}
+                    await setDoc(doc(db, "fcm_tokens", token), {
+                        token: token,
+                        uid: auth.currentUser?.uid || 'anonimo',
+                        dispositivo: navigator.userAgent,
+                        actualizado: serverTimestamp()
+                    }, { merge: true });
+
+                    actualizarIndicadorCampanaPush(true);
+
+                    if (mostrarFeedback && typeof Swal !== 'undefined') {
+                        const Toast = Swal.mixin({
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 4000,
+                            timerProgressBar: true
+                        });
+                        Toast.fire({
+                            icon: 'success',
+                            title: '¡Alertas activadas exitosamente!'
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error('❌ [FCM] Error al sincronizar token Push:', err);
+                if (mostrarFeedback && typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de Notificaciones',
+                        text: 'No se pudo obtener el token de notificaciones: ' + (err.message || err),
+                        confirmButtonColor: '#385723'
+                    });
+                }
+            }
+        }
+
+        // 2. Activar permisos y guardar token (gesto directo de usuario compatible con iOS)
+        window.activarNotificacionesPushFCM = async function(mostrarFeedback = true) {
+            // Validar soporte de notificaciones y service worker
+            if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+                if (mostrarFeedback && typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'No compatible',
+                        text: 'Tu navegador no soporta notificaciones Web Push.',
+                        confirmButtonColor: '#385723'
+                    });
+                }
+                return;
+            }
+
+            // Validar restricción estricta de Apple en iOS (Safari regular vs Standalone PWA)
+            if (esDispositivoIOS() && !esModoPWAStandalone()) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Instala la app en tu pantalla de inicio',
+                        html: 'En iPhone / iOS las notificaciones Web Push requieren instalar la PWA:<br><br>' +
+                              '1. Toca el botón <strong>Compartir</strong> <i class="fas fa-share-square"></i> en Safari.<br>' +
+                              '2. Selecciona <strong>"Añadir a pantalla de inicio"</strong> <i class="fas fa-plus-square"></i>.<br>' +
+                              '3. Abre la app desde tu pantalla de inicio para activar las alertas.',
+                        confirmButtonColor: '#385723',
+                        confirmButtonText: 'Entendido'
+                    });
+                }
+                return;
+            }
+
+            try {
+                const permiso = await Notification.requestPermission();
+                if (permiso === 'granted') {
+                    await sincronizarTokenFCM(mostrarFeedback);
+                } else if (permiso === 'denied') {
+                    actualizarIndicadorCampanaPush(false);
+                    if (mostrarFeedback && typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Permiso Denegado',
+                            text: 'Las notificaciones están bloqueadas en los ajustes de tu navegador.',
+                            confirmButtonColor: '#385723'
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error('❌ [FCM] Error solicitando permisos:', err);
+            }
+        };
+
+        // Exponer helpers en window
+        window.actualizarIndicadorCampanaPush = actualizarIndicadorCampanaPush;
+        window.sincronizarTokenFCM = sincronizarTokenFCM;
+
+        // Auto-inicializar FCM
+        inicializarFCM(); 
 
         // ==========================================
         // GESTIÓN DE SESIÓN Y PERFIL (DEFENSIVO Y RESILIENTE)
@@ -7081,6 +7311,13 @@ REGLAS CRÍTICAS:
         window.toggleNotificaciones = function() {
             const dropdown = document.getElementById('dropdown-notificaciones');
             if (dropdown) dropdown.classList.toggle('hidden');
+
+            // Gesto directo de usuario (iOS friendly): si las alertas no están configuradas, solicitar activación
+            if ('Notification' in window && Notification.permission === 'default') {
+                if (typeof window.activarNotificacionesPushFCM === 'function') {
+                    window.activarNotificacionesPushFCM(true);
+                }
+            }
         };
 
         // Cerrar dropdown si hace clic afuera
